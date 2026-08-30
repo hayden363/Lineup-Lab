@@ -1,0 +1,12 @@
+fastapi
+uvicorn[standard]
+pandas
+numpy
+nfl_data_py
+Pillow
+requests
+bcrypt
+feedparser
+python-dotenv
+cryptography
+PyJWT

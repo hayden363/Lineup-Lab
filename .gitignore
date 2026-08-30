@@ -1,0 +1,12 @@
+.venv/
+data_cache/
+__pycache__/
+*.pyc
+.DS_Store
+big_board.html
+edgeboard.db
+.env
+.app_secret_key
+design_moodboard/
+*.bak-*
+*.db.bak*
