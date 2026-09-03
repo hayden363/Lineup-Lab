@@ -63,6 +63,10 @@ def _send(to_email, subject, text_body, html_body):
         raise MailNotConfigured(
             "GMAIL_ADDRESS / GMAIL_APP_PASSWORD not set — see engine/mail.py or .env.example"
         )
+    # configured() guarantees both are set, but that's invisible to pyright
+    # across the function-call boundary — spell it out so smtp.login() below
+    # type-checks as the non-Optional strs they actually are here.
+    assert GMAIL_ADDRESS is not None and GMAIL_APP_PASSWORD is not None
 
     msg = EmailMessage()
     msg["Subject"] = subject

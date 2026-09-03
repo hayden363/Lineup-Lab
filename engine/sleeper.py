@@ -165,6 +165,28 @@ def all_players(force=False):
     return _cached_get(f"{SLEEPER_BASE}/players/nfl", "all_players", PLAYERS_TTL, force)
 
 
+def live_injury_statuses(force=False):
+    """gsis_id -> current injury designation (Out/Doubtful/Questionable/...),
+    straight from Sleeper's live player list — the actual "is this real
+    person playing this week" signal, refreshed on Sleeper's own cadence
+    (see all_players), not tied to whatever stat season the app's box-score
+    data happens to be pinned to (engine/data.py's season resolver, which
+    can genuinely lag a full season behind — see README). A player's own
+    box-score-derived metrics can be perfectly real and still describe a
+    season that's over; this field describes right now."""
+    players = all_players(force=force)
+    crosswalk = id_crosswalk(force=force)
+    out = {}
+    for sleeper_id, p in players.items():
+        status = p.get("injury_status")
+        if not status:
+            continue
+        gsis_id = crosswalk.get(sleeper_id)
+        if gsis_id:
+            out[gsis_id] = status
+    return out
+
+
 _INACTIVE_GSIS_IDS = None
 
 
@@ -328,19 +350,36 @@ def raw_roster_players(league_id, force=False):
 
 
 def resolve_unscored_player(sleeper_id, force=False):
-    """Name/team for a player id outside our QB/RB/WR/TE stat universe —
+    """Name/team/photo for a roster slot our own stat engine can't price —
     defenses (Sleeper's own id for a D/ST is just the team code, e.g.
-    "PHI") and kickers. Sleeper's full player list still has a real
-    name/team for them even though we don't attach a SCORE/PROJ."""
+    "PHI"), kickers, and (this is the important one) any other player
+    Sleeper knows about that our gsis id crosswalk simply doesn't cover.
+    That crosswalk (nfl_data_py.import_ids()) isn't exhaustive — an older
+    or journeyman player can be for-real on a roster and still miss it,
+    and the old behavior of only handling DEF/K here meant anyone else in
+    that gap just silently vanished from the lineup instead of showing up
+    unscored. No position restriction now: if Sleeper has them, they show.
+
+    Real photos, not a generic icon: Sleeper hosts team logos and player
+    photos directly, at a predictable URL, independent of our own data —
+    https://sleepercdn.com/images/team_logos/nfl/{abbr}.png for a defense,
+    https://sleepercdn.com/content/nfl/players/thumb/{sleeper_id}.jpg for
+    a person (kicker or otherwise)."""
     players = all_players(force=force)
     p = players.get(sleeper_id)
     if not p:
         return None
-    pos = p.get("position")
-    if pos not in ("DEF", "K"):
-        return None
+    pos = p.get("position") or "?"
     if pos == "DEF":
         name = f"{p.get('first_name', '')} {p.get('last_name', '')}".strip() or f"{sleeper_id} D/ST"
+        headshot = f"https://sleepercdn.com/images/team_logos/nfl/{sleeper_id.lower()}.png"
     else:
-        name = p.get("full_name") or f"{p.get('first_name', '')} {p.get('last_name', '')}".strip()
-    return {"position": pos, "player_display_name": name, "recent_team": p.get("team") or sleeper_id}
+        name = p.get("full_name") or f"{p.get('first_name', '')} {p.get('last_name', '')}".strip() or sleeper_id
+        headshot = f"https://sleepercdn.com/content/nfl/players/thumb/{sleeper_id}.jpg"
+    return {"position": pos, "player_display_name": name, "recent_team": p.get("team") or sleeper_id,
+            "headshot_url": headshot,
+            # Live current depth-chart slot (e.g. RB1/RB2) — Sleeper's own,
+            # refreshed on the same cadence as everything else in
+            # all_players(). Real signal for a player with no personal
+            # stat history yet: see engine/role_baseline.py.
+            "depth_chart_order": p.get("depth_chart_order")}

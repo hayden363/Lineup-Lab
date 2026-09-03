@@ -40,7 +40,79 @@ function initialsAvatarUri(name) {
 // call inline (keeps the CSP-sensitive inline-handler surface trivial: a
 // plain attribute swap, no function invocation).
 function headshotAttrs(p) {
-  return `src="${proxyImg(p.headshot_url)}" data-fb="${initialsAvatarUri(p.player_display_name)}" onerror="this.onerror=null;this.src=this.dataset.fb"`;
+  return `src="${proxyImg(p.headshot_url)}" data-fb="${initialsAvatarUri(p.player_display_name)}"`;
+}
+
+// Every image fallback in this app used to be an inline onerror="..."
+// attribute — this app's own CSP header (server.py: script-src 'self',
+// no unsafe-inline / unsafe-hashes) silently blocks ALL of those in any
+// browser that actually enforces CSP, so a broken image just showed a
+// broken-image icon instead of ever falling back. One delegated listener
+// in the capture phase (the "error" event doesn't bubble, so capture is
+// the only way to catch it from a single top-level listener) replaces
+// every one of them, CSP-compliant, driven by data-fb-* attributes set
+// where the <img> is built instead of an inline handler.
+document.addEventListener("error", (e) => {
+  const img = e.target;
+  if (img?.tagName !== "IMG") return;
+  const d = img.dataset;
+  if (d.fb && img.src !== d.fb) { img.src = d.fb; return; }
+  if (d.fbEmoji) { img.outerHTML = `<span class="team-emoji">${d.fbEmoji}</span>`; return; }
+  if (d.fbHide != null) { img.style.display = "none"; return; }
+  if (d.fbRemove != null) { img.remove(); return; }
+  if (d.fbNoimageWrap != null) { img.closest(".news-img-wrap")?.classList.add("no-image"); return; }
+}, true);
+
+// One delegated listener, real tactile feedback everywhere a button gets
+// clicked instead of wiring a ripple onto every button individually —
+// same "single top-level listener" shape as the image-fallback one
+// above. Skipped under prefers-reduced-motion (the CSS hides the
+// element anyway; not spawning it at all avoids even the DOM churn).
+const RIPPLE_TARGETS = ".primary-btn, .pill, .nav-item, .week-arrow";
+const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+if (!prefersReducedMotion) {
+  document.addEventListener("click", (e) => {
+    const btn = e.target.closest(RIPPLE_TARGETS);
+    if (!btn || btn.disabled) return;
+    const rect = btn.getBoundingClientRect();
+    const size = Math.max(rect.width, rect.height) * 1.4;
+    const ripple = document.createElement("span");
+    ripple.className = "btn-ripple";
+    ripple.style.width = ripple.style.height = `${size}px`;
+    ripple.style.left = `${e.clientX - rect.left - size / 2}px`;
+    ripple.style.top = `${e.clientY - rect.top - size / 2}px`;
+    btn.appendChild(ripple);
+    // animationend alone isn't reliable enough to hang cleanup on — a
+    // backgrounded tab or a throttled compositor can delay or skip it
+    // entirely, which would otherwise leave orphaned .btn-ripple spans
+    // piling up in the DOM for the life of the page. Whichever fires
+    // first wins; the leftover is a no-op (remove() on an already-gone
+    // node throws nothing).
+    ripple.addEventListener("animationend", () => ripple.remove());
+    setTimeout(() => ripple.remove(), 650);
+
+    // Primary buttons additionally get the real press-pulse designed in
+    // Figma (see style.css's PRIMARY BUTTON PRESS PULSE block — scale
+    // spring + glow breathe, real get_motion_context output, not
+    // hand-tuned). A toggled class, not :active, since :active only
+    // lasts as long as the mouse stays down — too brief for an 800ms
+    // release animation on a normal click.
+    if (btn.classList.contains("primary-btn")) {
+      btn.classList.remove("pulse");
+      void btn.offsetWidth; // restart the animation if clicked again mid-animation
+      btn.classList.add("pulse");
+      setTimeout(() => btn.classList.remove("pulse"), 850);
+    }
+  });
+}
+
+// Which generated Picsart accent art (see static/img/accent-*.png) sits
+// behind the player detail modal's header, per position group.
+function posAccentClass(pos) {
+  if (pos === "QB") return "acc-qb";
+  if (pos === "DEF" || pos === "DST") return "acc-def";
+  if (pos === "K") return "acc-k";
+  return "acc-skill"; // RB / WR / TE
 }
 
 function safeUrl(u) {
@@ -213,9 +285,14 @@ const state = {
   startsit: [],
   tradeA: [],
   tradeB: [],
+  tradeTeamA: null,          // {team_name, avatar_url} — for the trade analysis header
+  tradeTeamB: null,
+  tradeOpponentRosterId: null,
   shopRoster: [],             // my own roster, for the "pick a player to shop" trade finder picker
   shopSelected: new Set(),    // player_ids currently selected to shop
   newsScope: "team",          // "team" | "league" | "opponent"
+  notifications: [],          // real, actionable alerts — currently: starters marked OUT/Doubtful
+  compareSelected: new Map(), // player_id -> full player row, for the Big Board "Compare" tray (max 4)
 };
 
 function saveScoring() { localStorage.setItem("eb_scoring", state.scoring); }
@@ -257,9 +334,28 @@ function scoringQS() {
 
 // ---------------------------------------------------------------- tabs ----
 const TAB_IDS = ["board", "myteam", "draft", "startsit", "trade", "waivers", "news", "settings"];
+// The home/landing tab once the gate clears — My Team, not Big Board.
+const DEFAULT_TAB = "myteam";
+
+// One shared indicator bar that slides to whichever sidebar tab is
+// active (Settings lives outside .sidebar-nav in its own section, so it
+// just gets its own background highlight like before — no bar to slide
+// to there). Re-run on anything that can change row positions: a tab
+// switch, the sidebar collapsing/expanding, the mobile drawer opening,
+// or the window resizing across the mobile breakpoint.
+function positionNavIndicator(tab) {
+  const indicator = document.getElementById("nav-active-indicator");
+  if (!indicator) return;
+  const btn = document.querySelector(`.sidebar-nav .nav-item[data-tab="${tab}"]`);
+  if (!btn) { indicator.style.opacity = "0"; return; }
+  indicator.style.opacity = "1";
+  indicator.style.transform = `translateY(${btn.offsetTop + btn.offsetHeight * 0.2}px)`;
+  indicator.style.height = `${btn.offsetHeight * 0.6}px`;
+}
 
 function switchTab(tab) {
   document.querySelectorAll(".nav-item[data-tab]").forEach((b) => b.classList.toggle("active", b.dataset.tab === tab));
+  positionNavIndicator(tab);
   state.tab = tab;
   TAB_IDS.forEach((t) => { $(`#tab-${t}`).style.display = t === tab ? "" : "none"; });
   const activeSection = $(`#tab-${tab}`);
@@ -268,7 +364,7 @@ function switchTab(tab) {
   activeSection.classList.add("tab-fade-in");
   if (tab !== "draft") stopDraftPolling();
   if (tab === "waivers") loadWaivers();
-  if (tab === "myteam") loadMyTeam();
+  if (tab === "myteam") { loadMyTeam(); loadLiveScores(); }
   if (tab === "draft") loadDraftTab();
   if (tab === "startsit") loadStartSitTab();
   if (tab === "news") loadNews();
@@ -298,13 +394,18 @@ function initSidebar() {
     const isCollapsed = document.body.classList.toggle("sidebar-collapsed");
     localStorage.setItem("eb_sidebar_collapsed", isCollapsed ? "1" : "0");
     document.querySelector(".account-dropdown")?.remove();
+    positionNavIndicator(state.tab);
   });
 
   $("#mobile-menu-btn").addEventListener("click", () => {
     document.body.classList.add("mobile-drawer-open");
     document.documentElement.classList.add("mobile-drawer-open");
+    positionNavIndicator(state.tab);
   });
   $("#sidebar-backdrop").addEventListener("click", closeMobileDrawer);
+  window.addEventListener("resize", () => positionNavIndicator(state.tab));
+
+  $("#notif-bell").addEventListener("click", toggleNotifDropdown);
 
   $("#sidebar-add-league").addEventListener("click", () => {
     switchTab("settings");
@@ -328,7 +429,7 @@ function renderSidebarTeams() {
   }
   list.innerHTML = state.teams.map((t) => `
     <div class="sidebar-team-row${t.active ? " active" : ""}" data-team-id="${esc(t.id)}" title="${esc(t.team_name)}">
-      ${t.avatar_url ? `<img src="${proxyImg(t.avatar_url)}" onerror="this.outerHTML='<span class=&quot;team-emoji&quot;>🏈</span>'" alt="">` : `<span class="team-emoji">🏈</span>`}
+      ${t.avatar_url ? `<img src="${proxyImg(t.avatar_url)}" data-fb-emoji="🏈" alt="">` : `<span class="team-emoji">🏈</span>`}
       <span class="st-name">${esc(t.team_name)}</span>
     </div>`).join("");
   list.querySelectorAll(".sidebar-team-row").forEach((row) => {
@@ -362,6 +463,15 @@ function renderSidebarTeams() {
 function initPosPills() {
   const boardPills = $("#pos-pills");
   const waiverPills = $("#waivers-pos-pills");
+
+  const allBtn = el("button", "pill", "All");
+  allBtn.addEventListener("click", () => {
+    waiverPills.querySelectorAll(".pill").forEach((p) => p.classList.remove("active"));
+    allBtn.classList.add("active");
+    loadWaivers("ALL");
+  });
+  waiverPills.appendChild(allBtn);
+
   POSITIONS.forEach((pos) => {
     const b1 = el("button", "pill" + (pos === state.pos ? " active" : ""), pos);
     b1.addEventListener("click", () => {
@@ -463,8 +573,12 @@ function renderBoardRows(players, cols, showProj) {
     .filter((p) => !q || (p.player_display_name || "").toLowerCase().includes(q) || (p.recent_team || "").toLowerCase().includes(q))
     .forEach((p) => {
       const tr = el("tr");
+      const selected = state.compareSelected.has(p.player_id);
       let html = `<td class="rank-cell">${esc(p.rank)}</td>`;
-      html += `<td>${playerCellHtml(p)}</td>`;
+      html += `<td><div class="board-player-row">
+          <button type="button" class="cmp-check${selected ? " selected" : ""}" data-pid="${esc(p.player_id)}" aria-pressed="${selected}" title="${selected ? "Remove from compare" : "Add to compare"}"><span class="check">${selected ? "✓" : ""}</span></button>
+          ${playerCellHtml(p)}
+        </div></td>`;
       html += `<td>${scoreCell(p.SCORE)}</td>`;
       html += `<td>${formCell(p.FORM)}</td>`;
       html += `<td>${FMT.d1(p.fpts_per_game)}</td>`;
@@ -473,9 +587,188 @@ function renderBoardRows(players, cols, showProj) {
       });
       if (showProj) html += `<td>${FMT.d1(p.PROJ)}</td>`;
       tr.innerHTML = html;
+      // The checkbox is its own click target (stopPropagation) so picking a
+      // player to compare doesn't also pop open the player-detail modal —
+      // the row itself still does that for every other click, unchanged.
+      tr.querySelector(".cmp-check").addEventListener("click", (e) => {
+        e.stopPropagation();
+        toggleCompare(p, e.currentTarget);
+      });
       tr.addEventListener("click", () => openPlayerModal(p.player_id, state.opp));
       body.appendChild(tr);
     });
+}
+
+// ------------------------------------------------------- compare tray -----
+// Cross-position, whole-universe player comparison — pick any 2-4 players
+// off the Big Board (not just your own roster, unlike Start/Sit) and see
+// them side by side with the best real number in each category called out.
+const CMP_MAX = 4;
+
+function toggleCompare(p, btn) {
+  const already = state.compareSelected.has(p.player_id);
+  if (!already && state.compareSelected.size >= CMP_MAX) {
+    const tray = $("#compare-tray");
+    tray.classList.remove("shake"); void tray.offsetWidth; tray.classList.add("shake");
+    return;
+  }
+  if (already) state.compareSelected.delete(p.player_id);
+  else state.compareSelected.set(p.player_id, p);
+  if (btn) {
+    const isSel = state.compareSelected.has(p.player_id);
+    btn.classList.toggle("selected", isSel);
+    btn.querySelector(".check").textContent = isSel ? "✓" : "";
+    btn.setAttribute("aria-pressed", String(isSel));
+    btn.title = isSel ? "Remove from compare" : "Add to compare";
+  }
+  renderCompareTray();
+}
+
+function renderCompareTray() {
+  const tray = $("#compare-tray");
+  const chips = $("#compare-tray-chips");
+  const openBtn = $("#compare-open-btn");
+  const n = state.compareSelected.size;
+  if (!n) { tray.style.display = "none"; return; }
+  tray.style.display = "";
+  chips.innerHTML = [...state.compareSelected.values()].map((p) => `
+    <div class="cmp-chip">
+      <img ${headshotAttrs(p)} alt="">
+      <span>${esc(p.player_display_name)}</span>
+      <button type="button" class="chip-x" data-pid="${esc(p.player_id)}">✕</button>
+    </div>`).join("");
+  chips.querySelectorAll(".chip-x").forEach((b) => {
+    b.addEventListener("click", () => {
+      const pid = b.dataset.pid;
+      state.compareSelected.delete(pid);
+      // keep the board's own checkbox in sync if that row is on screen
+      const boardBtn = document.querySelector(`.cmp-check[data-pid="${CSS.escape(pid)}"]`);
+      if (boardBtn) {
+        boardBtn.classList.remove("selected");
+        boardBtn.querySelector(".check").textContent = "";
+        boardBtn.setAttribute("aria-pressed", "false");
+      }
+      renderCompareTray();
+    });
+  });
+  openBtn.disabled = n < 2;
+  openBtn.textContent = n < 2 ? "Compare" : `Compare (${n})`;
+}
+
+// One metric row across every selected player — real values only (a
+// missing stat renders "—" and is excluded from that row's "who's best"
+// call, never treated as a zero). `higherIsBetter` covers every metric
+// this app has (SCORE/FORM/FPTS/PROJ/floor/ceiling are all "more is
+// better" reads) but is a real parameter, not a hardcoded assumption,
+// in case that's ever not true for something added later.
+function cmpBestIds(players, key, higherIsBetter = true) {
+  const vals = players.map((p) => p[key]).filter((v) => v != null);
+  if (vals.length < 2) return new Set(); // nothing to call a "winner" against
+  const best = higherIsBetter ? Math.max(...vals) : Math.min(...vals);
+  return new Set(players.filter((p) => p[key] === best).map((p) => p.player_id));
+}
+
+function cmpRowHtml(label, p, key, opts = {}) {
+  const { decimals = 1, suffix = "", signed = false, maxVal = null, isBest = false } = opts;
+  const value = p[key];
+  if (value == null) {
+    return `<div class="cmp-row"><span class="cmp-row-label">${esc(label)}</span><span class="cmp-row-val muted">—</span></div>`;
+  }
+  const bar = maxVal != null
+    ? `<div class="cmp-row-track"><div class="cmp-row-fill${isBest ? " best" : ""}" style="width:${Math.max(4, Math.round((Math.max(0, value) / Math.max(maxVal, 0.1)) * 100))}%"></div></div>`
+    : "";
+  return `<div class="cmp-row${isBest ? " best" : ""}">
+    <span class="cmp-row-label">${esc(label)}${isBest ? ' <span class="cmp-crown">👑</span>' : ""}</span>
+    <span class="cmp-row-val" data-target="${value}" data-decimals="${decimals}" data-suffix="${esc(suffix)}" data-signed="${signed ? "1" : "0"}"></span>
+    ${bar}
+  </div>`;
+}
+
+function cmpCardHtml(p, players, isTopOverall, delayMs) {
+  const scoreBest = cmpBestIds(players, "SCORE");
+  const formBest = cmpBestIds(players, "FORM");
+  const fptsBest = cmpBestIds(players, "fpts_per_game");
+  const hasProj = players.some((x) => x.PROJ != null);
+  const projBest = hasProj ? cmpBestIds(players, "PROJ") : new Set();
+  const floorBest = cmpBestIds(players, "floor");
+  const ceilBest = cmpBestIds(players, "ceiling");
+
+  const maxOf = (key) => Math.max(0.1, ...players.map((x) => x[key]).filter((v) => v != null));
+
+  let rows = cmpRowHtml("SCORE", p, "SCORE", { decimals: 1, maxVal: maxOf("SCORE"), isBest: scoreBest.has(p.player_id) });
+  rows += cmpRowHtml("FORM", p, "FORM", { decimals: 1, suffix: "%", signed: true, isBest: formBest.has(p.player_id) });
+  rows += cmpRowHtml("FPTS/G", p, "fpts_per_game", { decimals: 1, maxVal: maxOf("fpts_per_game"), isBest: fptsBest.has(p.player_id) });
+  if (hasProj) rows += cmpRowHtml("PROJ", p, "PROJ", { decimals: 1, maxVal: maxOf("PROJ"), isBest: projBest.has(p.player_id) });
+  rows += cmpRowHtml("Floor", p, "floor", { decimals: 1, maxVal: maxOf("ceiling"), isBest: floorBest.has(p.player_id) });
+  rows += cmpRowHtml("Ceiling", p, "ceiling", { decimals: 1, maxVal: maxOf("ceiling"), isBest: ceilBest.has(p.player_id) });
+
+  return `<div class="cmp-card ${posAccentClass(p.position)}${isTopOverall ? " cmp-top" : ""}" data-pid="${esc(p.player_id)}" style="animation-delay:${delayMs}ms">
+    ${isTopOverall ? `<span class="badge-recommended cmp-top-badge">TOP OVERALL</span>` : ""}
+    <img ${headshotAttrs(p)} alt="">
+    <div class="cmp-name">${esc(p.player_display_name)}${injuryFlagHtml(p.injury_status)}</div>
+    <div class="cmp-meta">${esc(p.position)} · ${esc(p.recent_team)}</div>
+    <div class="cmp-rows">${rows}</div>
+  </div>`;
+}
+
+function openCompareModal() {
+  const players = [...state.compareSelected.values()];
+  if (players.length < 2) return;
+
+  // Real tally, not a fabricated overall score: count how many of the
+  // categories above each player actually won outright, same "best in
+  // this row" sets cmpCardHtml computes per-metric. Ties (a shared max)
+  // count for every player who hit it, same as the per-row crown.
+  const winCounts = new Map(players.map((p) => [p.player_id, 0]));
+  [["SCORE", true], ["FORM", true], ["fpts_per_game", true], ["PROJ", true], ["floor", true], ["ceiling", true]].forEach(([key]) => {
+    cmpBestIds(players, key).forEach((pid) => winCounts.set(pid, (winCounts.get(pid) || 0) + 1));
+  });
+  const maxWins = Math.max(...winCounts.values());
+  const topId = maxWins > 0 ? [...winCounts.entries()].find(([, n]) => n === maxWins)?.[0] : null;
+
+  const root = $("#modal-root");
+  root.innerHTML = `<div class="modal-backdrop"><div class="modal cmp-modal">
+    <div class="modal-header">
+      <div><h2>Compare Players</h2><div class="muted">Best real number in each category is highlighted.</div></div>
+      <button class="modal-close">✕</button>
+    </div>
+    <div class="cmp-grid">${players.map((p, i) => cmpCardHtml(p, players, p.player_id === topId, i * 80)).join("")}</div>
+  </div></div>`;
+  syncModalScrollLock();
+  root.querySelector(".modal-backdrop").addEventListener("click", (e) => {
+    if (e.target.classList.contains("modal-backdrop")) closeModal();
+  });
+  root.querySelector(".modal-close").addEventListener("click", closeModal);
+  // Reuse the existing player-detail modal for "tell me more" — clicking a
+  // compare card swaps modals rather than cramming the full breakdown in here too.
+  root.querySelectorAll(".cmp-card[data-pid]").forEach((card) => {
+    card.addEventListener("click", () => openPlayerModal(card.dataset.pid, state.opp));
+  });
+
+  const countEls = root.querySelectorAll(".cmp-row-val[data-target]");
+  countEls.forEach((node) => {
+    countUp(node, Number(node.dataset.target), {
+      decimals: Number(node.dataset.decimals || 1),
+      signed: node.dataset.signed === "1",
+      duration: 650,
+    });
+  });
+  setTimeout(() => {
+    countEls.forEach((node) => { node.textContent += node.dataset.suffix || ""; });
+  }, 680);
+}
+
+function initCompareTray() {
+  $("#compare-open-btn").addEventListener("click", openCompareModal);
+  $("#compare-clear-btn").addEventListener("click", () => {
+    document.querySelectorAll(".cmp-check.selected").forEach((btn) => {
+      btn.classList.remove("selected");
+      btn.querySelector(".check").textContent = "";
+      btn.setAttribute("aria-pressed", "false");
+    });
+    state.compareSelected.clear();
+    renderCompareTray();
+  });
 }
 
 async function loadBoard() {
@@ -518,6 +811,42 @@ function closeModal() {
   syncModalScrollLock();
 }
 
+// Friendly labels for the raw per-week counting-stat columns board.py's
+// player_detail() now includes in weekly_log (position-dependent — a QB's
+// weekly_log has different keys than a WR's, hence the fallback to the
+// raw key itself for anything not in this map).
+const WEEKLY_STAT_LABELS = {
+  fpts: "Fantasy Points",
+  completions: "Completions", attempts: "Attempts", passing_yards: "Passing Yards",
+  passing_tds: "Passing TDs", passing_epa: "Passing EPA",
+  carries: "Carries", rushing_yards: "Rushing Yards", rushing_tds: "Rushing TDs", rushing_epa: "Rushing EPA",
+  targets: "Targets", receptions: "Receptions", receiving_yards: "Receiving Yards",
+  receiving_tds: "Receiving TDs", receiving_epa: "Receiving EPA", receiving_air_yards: "Air Yards",
+  receiving_yards_after_catch: "YAC", target_share: "Target Share",
+};
+
+// Every stat in weekly_log gets the same treatment fpts always had: a
+// dashed line at that stat's own average across the games shown, with
+// any week below it colored red — "did they hit their own number that
+// week", generalized from just fantasy points to whichever stat is picked.
+function weeklyChartHtml(weeks, statKey) {
+  const vals = weeks.map((w) => w[statKey]).filter((v) => v != null);
+  if (!vals.length) return '<span class="muted">No data logged for this stat yet.</span>';
+  const avg = vals.reduce((a, b) => a + b, 0) / vals.length;
+  const maxV = Math.max(1, avg, ...vals.map((v) => Math.max(0, v)));
+  const avgPct = Math.max(0, Math.min(100, (avg / maxV) * 100));
+  const decimals = Number.isInteger(avg) && vals.every((v) => Number.isInteger(v)) ? 0 : 1;
+  const bars = weeks.map((w) => {
+    const v = w[statKey];
+    if (v == null) return `<div class="bar" style="height:2%;opacity:.3" title="Week ${esc(w.week)}: no data"><div class="wk-label">${esc(w.week)}</div></div>`;
+    const h = Math.max(2, Math.round((Math.max(0, v) / maxV) * 100));
+    const below = v < avg ? " below-avg" : "";
+    return `<div class="bar${below}" style="height:${h}%" title="Week ${esc(w.week)}: ${v.toFixed(decimals)} (avg ${avg.toFixed(decimals)})"><div class="wk-label">${esc(w.week)}</div></div>`;
+  }).join("");
+  const avgLine = avg > 0 ? `<div class="weeklog-avg-line" style="bottom:${avgPct}%" data-label="Avg ${avg.toFixed(decimals)}"></div>` : "";
+  return avgLine + bars;
+}
+
 async function openPlayerModal(playerId, opp) {
   const root = $("#modal-root");
   root.innerHTML = `<div class="modal-backdrop"><div class="modal"><div class="loading">Loading…</div></div></div>`;
@@ -535,33 +864,65 @@ async function openPlayerModal(playerId, opp) {
     return;
   }
 
+  root.innerHTML = `<div class="modal-backdrop"><div class="modal ${posAccentClass(p.position)}">
+    <div class="modal-header">
+      <img ${headshotAttrs(p)} alt="">
+      <div>
+        <h2>${esc(p.player_display_name)}${injuryFlagHtml(p.injury_status)}</h2>
+        <div class="muted">${esc(p.position)} · ${esc(p.recent_team)} ${p.next_opponent ? "· Next: vs " + esc(p.next_opponent) + " (Wk " + esc(p.next_week) + ")" : ""}</div>
+      </div>
+      <button class="modal-close">✕</button>
+    </div>
+    ${playerStatsBodyHtml(p)}
+    <div class="section-label">Latest News</div>
+    <div id="player-news-slot" class="player-news-slot"><div class="loading small">Checking for news…</div></div>
+  </div></div>`;
+
+  root.querySelector(".modal-backdrop").addEventListener("click", (e) => {
+    if (e.target.classList.contains("modal-backdrop")) closeModal();
+  });
+  root.querySelector(".modal-close").addEventListener("click", closeModal);
+  wirePlayerStatsBody(root, p);
+
+  // Fetched separately from the rest of the modal (real RSS + an optional
+  // AI summary can take a moment, especially the AI call) so opening the
+  // modal never waits on it.
+  loadPlayerNews(playerId, root);
+}
+
+// The SCORE/FORM/matchup grid + per-stat gauges + weekly chart — shared
+// between the full player modal and the inline expand-in-place panel on
+// a Start/Sit card (see startSitCardHtml/toggleSSExpand below), so both
+// surfaces show the exact same real breakdown instead of two versions
+// drifting apart. Scoped by `.closest(container)` in wirePlayerStatsBody
+// rather than a hardcoded id, since more than one of these can be open
+// at once (several expanded Start/Sit cards) — an id would collide.
+function playerStatsBodyHtml(p) {
+  // Every percentage-based stat gets a little breakdown bar under its
+  // number — a real visual, not just a number, for every stat that has
+  // a natural 0–100 scale to plot against.
   const sections = (DETAIL_METRICS[p.position] || []).map(([label, metrics]) => {
-    const tiles = metrics.map(([key, mlabel, fmt]) => `
-      <div class="metric-tile"><div class="label">${esc(mlabel)}</div><div class="value">${fmt(p[key])}</div></div>
-    `).join("");
+    const tiles = metrics.map(([key, mlabel, fmt]) => {
+      const raw = p[key];
+      const gauge = fmt === FMT.pct && raw != null
+        ? `<div class="gauge"><span style="width:${Math.max(0, Math.min(100, raw))}%"></span></div>` : "";
+      // "Games" alone reads as "this many games so far" — tag it with the
+      // actual season it's counting, since the underlying data source
+      // (nflverse) currently tops out at a completed prior season rather
+      // than the season that's actually live right now.
+      const gLabel = key === "games" && state.meta?.season ? `${mlabel} (${state.meta.season})` : mlabel;
+      return `<div class="metric-tile"><div class="label">${esc(gLabel)}</div><div class="value">${fmt(raw)}</div>${gauge}</div>`;
+    }).join("");
     return `<div class="section-label">${esc(label)}</div><div class="metric-grid">${tiles}</div>`;
   }).join("");
 
   const weeks = p.weekly_log || [];
-  const maxFp = Math.max(1, ...weeks.map((w) => w.fpts || 0));
-  const bars = weeks.map((w) => {
-    const h = Math.max(2, Math.round((Math.max(0, w.fpts) / maxFp) * 100));
-    return `<div class="bar" style="height:${h}%"><div class="wk-label">${esc(w.week)}</div></div>`;
-  }).join("");
-
-  const nextOpp = p.next_opponent ? `Next: vs ${esc(p.next_opponent)} (Wk ${esc(p.next_week)})` : "";
+  const statKeys = ["fpts", ...Object.keys(weeks[0] || {}).filter((k) => !["week", "opponent_team", "fpts"].includes(k))];
+  const statOptions = statKeys.map((k) => `<option value="${esc(k)}">${esc(WEEKLY_STAT_LABELS[k] || k)}</option>`).join("");
   const matchupLine = p.matchup_factor != null
     ? `<div class="metric-tile"><div class="label">Matchup vs ${esc(p.matchup_opponent)}</div><div class="value">${p.matchup_factor.toFixed(2)}x</div></div>` : "";
 
-  root.innerHTML = `<div class="modal-backdrop"><div class="modal">
-    <div class="modal-header">
-      <img ${headshotAttrs(p)} alt="">
-      <div>
-        <h2>${esc(p.player_display_name)}</h2>
-        <div class="muted">${esc(p.position)} · ${esc(p.recent_team)} ${nextOpp ? "· " + nextOpp : ""}</div>
-      </div>
-      <button class="modal-close">✕</button>
-    </div>
+  return `
     <div class="metric-grid">
       <div class="metric-tile"><div class="label">SCORE</div><div class="value" style="color:var(--accent)">${FMT.d1(p.SCORE)}</div></div>
       <div class="metric-tile"><div class="label">FORM</div><div class="value">${formCell(p.FORM)}</div></div>
@@ -569,14 +930,58 @@ async function openPlayerModal(playerId, opp) {
       ${matchupLine}
     </div>
     ${sections}
-    <div class="section-label">Weekly Fantasy Points</div>
-    <div class="weeklog">${bars || '<span class="muted">No games logged yet.</span>'}</div>
-  </div></div>`;
+    <div class="section-label weeklog-header">
+      <span>Weekly Breakdown</span>
+      ${statKeys.length > 1 ? `<select class="weeklog-stat-select">${statOptions}</select>` : ""}
+    </div>
+    <div class="weeklog">${weeks.length ? weeklyChartHtml(weeks, "fpts") : '<span class="muted">No games logged yet.</span>'}</div>`;
+}
 
-  root.querySelector(".modal-backdrop").addEventListener("click", (e) => {
-    if (e.target.classList.contains("modal-backdrop")) closeModal();
+// Wires the stat-picker inside whatever container just received
+// playerStatsBodyHtml() — `container` is the modal root for the full
+// modal, or one card's own expand panel for the inline case.
+function wirePlayerStatsBody(container, p) {
+  const weeks = p.weekly_log || [];
+  container.querySelector(".weeklog-stat-select")?.addEventListener("change", (e) => {
+    container.querySelector(".weeklog").innerHTML = weeklyChartHtml(weeks, e.target.value);
   });
-  root.querySelector(".modal-close").addEventListener("click", closeModal);
+}
+
+function playerNewsCardHtml(it) {
+  const img = it.image
+    ? `<img class="pn-thumb" src="${safeUrl(it.image)}" alt="" data-fb-remove="1">`
+    : "";
+  return `<a class="pn-card" href="${safeUrl(it.link)}" target="_blank" rel="noopener noreferrer">
+    ${img}
+    <div class="pn-body">
+      <div class="pn-title">${esc(it.title)}</div>
+      <div class="pn-meta">${esc(it.source)}${it.published ? " · " + esc(it.published) : ""}</div>
+    </div>
+  </a>`;
+}
+
+async function loadPlayerNews(playerId, root) {
+  const slot = root.querySelector("#player-news-slot");
+  if (!slot) return;  // modal was closed/replaced before this resolved
+  try {
+    const data = await api(`/api/player/${playerId}/news`);
+    // root may have been re-rendered (modal closed, another player opened)
+    // by the time this async call resolves — re-check before touching the DOM.
+    const liveSlot = document.getElementById("player-news-slot");
+    if (!liveSlot || !document.body.contains(liveSlot)) return;
+
+    const summaryHtml = data.ai_summary
+      ? `<div class="pn-ai-summary"><div class="pn-ai-label">AI SUMMARY</div><p>${esc(data.ai_summary)}</p></div>`
+      : "";
+    if (!data.items || !data.items.length) {
+      liveSlot.innerHTML = summaryHtml || `<div class="muted small">No current news found for this player.</div>`;
+      return;
+    }
+    liveSlot.innerHTML = summaryHtml + `<div class="pn-cards">${data.items.map(playerNewsCardHtml).join("")}</div>`;
+  } catch (e) {
+    const liveSlot = document.getElementById("player-news-slot");
+    if (liveSlot) liveSlot.innerHTML = `<div class="muted small">Couldn't load news right now.</div>`;
+  }
 }
 
 // ------------------------------------------------------- player picker ----
@@ -618,22 +1023,32 @@ function initPicker(containerId, onAdd) {
 }
 
 // ------------------------------------------------------------ start/sit ----
+// The first player picked lands in the left slot, the second in the right
+// one (a real vs-style layout, not just a row of small pills) — later
+// picks (3rd/4th, still supported) simply continue filling slots left to
+// right in the order they were clicked.
 function renderStartSitChips() {
   const row = $("#startsit-chips");
   row.innerHTML = "";
-  state.startsit.forEach((p) => {
-    const chip = el("div", "chip");
-    chip.innerHTML = `<img ${headshotAttrs(p)} alt="">
-      <span>${esc(p.player_display_name)}</span>
-      <select class="opp-select"><option value="">vs…</option>${state.meta.teams.map((t) => `<option value="${esc(t)}" ${p.opp === t ? "selected" : ""}>${esc(t)}</option>`).join("")}</select>
-      <button class="chip-x">✕</button>`;
-    chip.querySelector(".opp-select").addEventListener("change", (e) => { p.opp = e.target.value; });
-    chip.querySelector(".chip-x").addEventListener("click", () => {
+  state.startsit.forEach((p, i) => {
+    const slot = el("div", "ss-slot");
+    slot.style.animationDelay = `${i * 70}ms`;
+    slot.innerHTML = `<button class="ss-slot-x" aria-label="Remove">✕</button>
+      <img ${headshotAttrs(p)} alt="">
+      <div class="ss-slot-name">${esc(p.player_display_name)}${injuryFlagHtml(p.injury_status)}</div>
+      <div class="ss-slot-meta">${esc(p.position)} · ${esc(p.recent_team)}</div>
+      <select class="opp-select"><option value="">vs…</option>${state.meta.teams.map((t) => `<option value="${esc(t)}" ${p.opp === t ? "selected" : ""}>${esc(t)}</option>`).join("")}</select>`;
+    slot.querySelector(".opp-select").addEventListener("change", (e) => { p.opp = e.target.value; });
+    slot.querySelector(".ss-slot-x").addEventListener("click", () => {
       state.startsit = state.startsit.filter((x) => x.player_id !== p.player_id);
       renderStartSitChips();
       $(`#startsit-roster-picker .shop-chip[data-pid="${p.player_id}"]`)?.classList.remove("selected");
     });
-    row.appendChild(chip);
+    row.appendChild(slot);
+    if (i === 0 && state.startsit.length > 1) {
+      const vs = el("div", "ss-slot-vs", "VS");
+      row.insertBefore(vs, slot.nextSibling);
+    }
   });
   $("#startsit-compare").disabled = state.startsit.length < 2;
 }
@@ -649,30 +1064,42 @@ function formTrendPhrase(form) {
   return null; // "steady" isn't a reason to prefer one player, so it isn't worth a sentence
 }
 
-function startSitRationaleHtml(players) {
-  const valid = players.filter((p) => !p.error && p.PROJ != null).sort((a, b) => b.PROJ - a.PROJ);
-  if (valid.length < 2) return "";
-  const top = valid[0];
-  const paras = valid.slice(1).map((p) => {
-    const diff = (top.PROJ - p.PROJ).toFixed(1);
-    const bits = [];
-    let scoreCaveat = "";
-    if (top.SCORE != null && p.SCORE != null && Math.abs(top.SCORE - p.SCORE) >= 3) {
-      if (top.SCORE > p.SCORE) {
-        bits.push(`a higher SCORE (${FMT.d1(top.SCORE)} vs ${FMT.d1(p.SCORE)})`);
-      } else {
-        // PROJ favors top despite a lower season-long SCORE — worth flagging as
-        // an upset call, not silently claiming a "higher SCORE" that isn't true.
-        scoreCaveat = ` That's despite a lower season-long SCORE (${FMT.d1(top.SCORE)} vs ${FMT.d1(p.SCORE)}) — this week's projection is matchup/form-driven.`;
-      }
+// The "Start X over Y" sentence, comparing any two players — pulled out
+// of what used to be one shared paragraph loop so each player's own card
+// can carry its own slice of the analysis, instead of every explanation
+// living in one block up top disconnected from the players it's about.
+function startSitCompareSentence(top, p) {
+  const diff = (top.PROJ - p.PROJ).toFixed(1);
+  const bits = [];
+  let scoreCaveat = "";
+  if (top.SCORE != null && p.SCORE != null && Math.abs(top.SCORE - p.SCORE) >= 3) {
+    if (top.SCORE > p.SCORE) {
+      bits.push(`a higher SCORE (${FMT.d1(top.SCORE)} vs ${FMT.d1(p.SCORE)})`);
+    } else {
+      // PROJ favors top despite a lower season-long SCORE — worth flagging as
+      // an upset call, not silently claiming a "higher SCORE" that isn't true.
+      scoreCaveat = ` That's despite a lower season-long SCORE (${FMT.d1(top.SCORE)} vs ${FMT.d1(p.SCORE)}) — this week's projection is matchup/form-driven.`;
     }
-    const trend = formTrendPhrase(top.FORM);
-    if (trend) bits.push(`${esc(trend)} (FORM ${top.FORM >= 0 ? "+" : ""}${FMT.d1(top.FORM)}%)`);
-    if (top.matchup_tag && top.opponent) bits.push(`a ${esc(top.matchup_tag).toLowerCase()} matchup vs ${esc(top.opponent)}`);
-    const why = bits.length ? ` Backed by ${bits.join(" and ")}.` : "";
-    return `<p>Start <strong>${esc(top.player_display_name)}</strong> over <strong>${esc(p.player_display_name)}</strong> — projected for ${FMT.d1(top.PROJ)} pts vs ${FMT.d1(p.PROJ)} (+${diff}).${why}${scoreCaveat}</p>`;
-  });
-  return `<div class="ss-rationale"><div class="ss-rationale-label">WHY</div>${paras.join("")}</div>`;
+  }
+  const trend = formTrendPhrase(top.FORM);
+  if (trend) bits.push(`${esc(trend)} (FORM ${top.FORM >= 0 ? "+" : ""}${FMT.d1(top.FORM)}%)`);
+  if (top.matchup_tag && top.opponent) bits.push(`a ${esc(top.matchup_tag).toLowerCase()} matchup vs ${esc(top.opponent)}`);
+  const why = bits.length ? ` Backed by ${bits.join(" and ")}.` : "";
+  return `Start <strong>${esc(top.player_display_name)}</strong> over <strong>${esc(p.player_display_name)}</strong> — projected for ${FMT.d1(top.PROJ)} pts vs ${FMT.d1(p.PROJ)} (+${diff}).${why}${scoreCaveat}`;
+}
+
+// Analysis for one specific card: the top pick gets framed against the
+// single closest rival (the most relevant comparison for "why him"); every
+// other player gets the sentence explaining why the top pick beats them
+// specifically. Either way it renders inside THAT player's own card.
+function startSitAnalysisFor(p, top, valid) {
+  if (valid.length < 2) return "";
+  if (p.player_id === top.player_id) {
+    const rival = valid.find((x) => x.player_id !== top.player_id);
+    return rival ? startSitCompareSentence(top, rival)
+      : `Highest projection in this group at ${FMT.d1(top.PROJ)} pts.`;
+  }
+  return startSitCompareSentence(top, p);
 }
 
 function injuryFlagHtml(status) {
@@ -707,9 +1134,11 @@ function rangeBarHtml(p, scaleMin, scaleMax) {
     <div class="ss-range-labels"><span>Floor ${FMT.d1(floor)}</span><span>Ceiling ${FMT.d1(ceiling)}</span></div>`;
 }
 
-function startSitCardHtml(p, scaleMin, scaleMax, i) {
+function startSitCardHtml(p, scaleMin, scaleMax, i, analysisText) {
   const tierClass = "tier-" + (p.tier || "borderline").toLowerCase();
-  return `<div class="ss-card ${tierClass}" data-pid="${esc(p.player_id)}" style="animation-delay:${i * 60}ms">
+  const analysis = analysisText
+    ? `<div class="ss-analysis"><div class="ss-analysis-label">WHY</div><p>${analysisText}</p></div>` : "";
+  return `<div class="ss-card ${tierClass} ${posAccentClass(p.position)}" data-pid="${esc(p.player_id)}" style="animation-delay:${i * 60}ms">
     <div class="ss-card-top">
       <img ${headshotAttrs(p)} alt="">
       <div>
@@ -724,13 +1153,53 @@ function startSitCardHtml(p, scaleMin, scaleMax, i) {
     </div>
     ${rangeBarHtml(p, scaleMin, scaleMax)}
     <div class="ss-stat-chips">${statChipsHtml(p)}</div>
+    ${analysis}
+    <button class="ss-expand-toggle" type="button" aria-expanded="false">
+      <span>Full breakdown</span>
+      <svg viewBox="0 0 12 8" width="12" height="8"><path d="M1 1.5 6 6.5 11 1.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <div class="ss-expand-panel"></div>
   </div>`;
+}
+
+// Expand-in-place, not a separate modal: click a Start/Sit card and the
+// same real breakdown the player modal shows (gauges, weekly graph) opens
+// right there, so comparing two players' full stats doesn't mean losing
+// the side-by-side view. Fetched once per card and cached on the DOM
+// node itself — collapsing and re-expanding doesn't re-fetch.
+async function toggleSSExpand(card, playerId, opp) {
+  const panel = card.querySelector(".ss-expand-panel");
+  const toggle = card.querySelector(".ss-expand-toggle");
+  const isOpen = card.classList.toggle("expanded");
+  toggle.setAttribute("aria-expanded", String(isOpen));
+  if (!isOpen || panel.dataset.loaded) return;
+
+  panel.innerHTML = `<div class="loading small">Loading full breakdown…</div>`;
+  try {
+    const oppQS = opp ? `&opp=${opp}` : "";
+    const p = await api(`/api/player/${playerId}?${scoringQS().replace(/^&/, "")}${oppQS}`);
+    panel.innerHTML = playerStatsBodyHtml(p);
+    wirePlayerStatsBody(panel, p);
+    panel.dataset.loaded = "1";
+  } catch (e) {
+    panel.innerHTML = `<div class="empty">${esc(e.message)}</div>`;
+  }
 }
 
 async function runStartSit() {
   const opponents = {};
   state.startsit.forEach((p) => { if (p.opp) opponents[p.player_id] = p.opp; });
   const body = { player_ids: state.startsit.map((p) => p.player_id), opponents, scoring: scoringDict() };
+
+  // "locking in" flash on the slot cards themselves before the results
+  // land — the animation the compare click is supposed to trigger.
+  document.querySelectorAll("#startsit-chips .ss-slot").forEach((slot, i) => {
+    slot.classList.remove("confirming");
+    void slot.offsetWidth; // restart the animation if clicked more than once
+    slot.style.animationDelay = `${i * 90}ms`;
+    slot.classList.add("confirming");
+  });
+
   const results = $("#startsit-results");
   results.innerHTML = `<div class="loading">Comparing…</div>`;
   try {
@@ -740,21 +1209,58 @@ async function runStartSit() {
     const scaleMin = Math.min(0, ...valid.map((p) => (p.floor != null ? p.floor : p.PROJ)));
     const scaleMax = Math.max(1, ...valid.map((p) => (p.ceiling != null ? p.ceiling : p.PROJ)));
 
-    results.innerHTML = startSitRationaleHtml(sorted);
+    const top = valid[0];
+    results.innerHTML = "";
     let i = 0;
     sorted.forEach((p) => {
       if (p.error) {
         results.insertAdjacentHTML("beforeend", `<div class="result-card"><span>${esc(p.player_id)}: ${esc(p.error)}</span></div>`);
         return;
       }
-      results.insertAdjacentHTML("beforeend", startSitCardHtml(p, scaleMin, scaleMax, i++));
+      const analysis = top ? startSitAnalysisFor(p, top, valid) : "";
+      results.insertAdjacentHTML("beforeend", startSitCardHtml(p, scaleMin, scaleMax, i++, analysis));
     });
     results.querySelectorAll(".ss-card").forEach((card) => {
       const p = valid.find((x) => x.player_id === card.dataset.pid);
-      card.addEventListener("click", () => openPlayerModal(card.dataset.pid, p?.opponent));
+      // Scoped to the toggle button itself, not the whole card — the
+      // expanded panel holds its own interactive bits (the weekly stat
+      // picker), and a card-wide click handler would fight clicks
+      // inside those instead of just the intended expand/collapse.
+      card.querySelector(".ss-expand-toggle").addEventListener("click", () => toggleSSExpand(card, card.dataset.pid, p?.opponent));
     });
+    // This comparison just logged fresh predictions server-side (see
+    // /api/startsit) — refresh so "N pending" reflects them right away,
+    // rather than waiting for the next tab visit.
+    loadTrackRecord();
   } catch (e) {
     results.innerHTML = `<div class="empty">${esc(e.message)}</div>`;
+  }
+}
+
+// --------------------------------------------------------- track record ----
+// "How often has our own START call actually been right" — real accuracy,
+// graded only against real, already-played weeks (see engine/db.py's
+// get_track_record). A season with nothing resolved yet just hides the
+// strip rather than showing a hollow 0% or a fabricated placeholder.
+async function loadTrackRecord() {
+  const strip = $("#track-record-strip");
+  if (!state.user) { strip.style.display = "none"; return; }
+  try {
+    const data = await api("/api/track-record");
+    if (!data.resolved && !data.pending) { strip.style.display = "none"; return; }
+    strip.style.display = "";
+    const pctBlock = data.accuracy_pct != null
+      ? `<span class="tr-pct" data-target="${data.accuracy_pct}"></span>
+         <span class="tr-pct-lbl">of our START calls hit<br>(${data.correct}/${data.resolved} graded)</span>`
+      : `<span class="tr-pct muted">—</span><span class="tr-pct-lbl">no graded calls yet this season</span>`;
+    const pendingBlock = data.pending
+      ? `<span class="tr-pending">${data.pending} more logged, waiting on this week's games</span>` : "";
+    strip.innerHTML = `<div class="tr-stat">${pctBlock}</div>${pendingBlock}`;
+    const pctNode = strip.querySelector(".tr-pct[data-target]");
+    if (pctNode) countUp(pctNode, Number(pctNode.dataset.target), { decimals: 1, duration: 700 });
+    setTimeout(() => { if (pctNode) pctNode.textContent += "%"; }, 720);
+  } catch (e) {
+    strip.style.display = "none";
   }
 }
 
@@ -798,6 +1304,7 @@ async function loadStartSitTab() {
   gate.style.display = "none";
   body.style.display = "";
   await renderStartSitPicker();
+  loadTrackRecord();
 }
 
 $("#startsit-gate-btn")?.addEventListener("click", () => switchTab("settings"));
@@ -824,31 +1331,161 @@ function renderTradeChips(side) {
   $("#trade-analyze").disabled = !(state.tradeA.length && state.tradeB.length);
 }
 
+// ---- Trade analysis: value + real roster-needs recommendation, animated. ----
+const TRADE_TIER_META = {
+  great: { label: "Great Trade", css: "tier-great", icon: "🔥" },
+  smart: { label: "Smart Move", css: "tier-great", icon: "🎯" },
+  good_value: { label: "Good Value", css: "tier-good", icon: "📈" },
+  worth_it: { label: "Worth It", css: "tier-good", icon: "✅" },
+  fair: { label: "Fair", css: "tier-fair", icon: "⚖️" },
+  questionable: { label: "Questionable", css: "tier-questionable", icon: "🤔" },
+  good_value_bad_fit: { label: "Mixed Bag", css: "tier-questionable", icon: "🔀" },
+  bad_value: { label: "Bad Value", css: "tier-bad", icon: "📉" },
+  bad: { label: "Avoid", css: "tier-bad", icon: "⛔" },
+};
+
+// Animates a number counting up (or down, for a negative target) from 0 to
+// its final value with an ease-out curve — the "cool" reveal for the value
+// numbers, not just a static digit appearing.
+function countUp(node, target, { decimals = 1, signed = false, duration = 800 } = {}) {
+  const start = performance.now();
+  const sign = signed && target > 0 ? "+" : "";
+  function frame(now) {
+    const t = Math.min(1, (now - start) / duration);
+    const eased = 1 - Math.pow(1 - t, 3);
+    const val = target * eased;
+    node.textContent = (target < 0 ? "" : sign) + val.toFixed(decimals);
+    if (t < 1) requestAnimationFrame(frame);
+    else node.textContent = (target < 0 ? "" : sign) + target.toFixed(decimals);
+  }
+  requestAnimationFrame(frame);
+}
+
+// Need multiplier (0.82 deep .. 1.0 set .. 1.25 real need) -> a 20-100%
+// bar fill and a red/amber/green urgency class, same idea as the Start/Sit
+// tier badges elsewhere in this app.
+function needBarPct(mult) {
+  const clamped = Math.max(0.82, Math.min(1.25, mult));
+  return Math.round(((clamped - 0.82) / (1.25 - 0.82)) * 80 + 20);
+}
+function needBarClass(mult) {
+  if (mult >= 1.25) return "need-high";
+  if (mult >= 1.0) return "need-mid";
+  return "need-low";
+}
+
+function needBarsHtml(needs, touchedPositions) {
+  return POSITIONS.map((pos) => {
+    const mult = needs?.[pos];
+    if (mult == null) return "";
+    const touched = touchedPositions.has(pos) ? " touched" : "";
+    return `<div class="need-bar${touched}" title="${pos}: ${mult >= 1.25 ? "real need" : mult >= 1.0 ? "adequately filled" : "already deep"}">
+      <span class="need-bar-label">${pos}</span>
+      <span class="need-bar-track"><span class="need-bar-fill ${needBarClass(mult)}" data-pct="${needBarPct(mult)}"></span></span>
+    </div>`;
+  }).join("");
+}
+
+// A side's give-package can span positions, so there's no one "correct"
+// accent — pick a priority order (QB/DEF/K read as the headline decision
+// on a side; a pure skill-position side falls back to acc-skill) rather
+// than tagging nothing at all. Delegates the actual position->class
+// mapping to the same posAccentClass() the player-modal header already uses.
+function sideAccentClass(touchedPositions) {
+  if (!touchedPositions.size) return "";
+  if (touchedPositions.has("QB")) return posAccentClass("QB");
+  if (touchedPositions.has("DEF")) return posAccentClass("DEF");
+  if (touchedPositions.has("K")) return posAccentClass("K");
+  return posAccentClass([...touchedPositions][0]); // any remaining position is RB/WR/TE -> acc-skill anyway
+}
+
+function tradeSideCardHtml(sideKey, rec, teamName, touchedPositions, delayMs) {
+  const meta = TRADE_TIER_META[rec.tier] || TRADE_TIER_META.fair;
+  const label = sideKey === "side_a" ? "Side A" : "Side B";
+  const accent = sideAccentClass(touchedPositions);
+  return `<div class="tvc ${meta.css}${accent ? ` ${accent}` : ""}" style="animation-delay:${delayMs}ms">
+    <div class="tvc-header">
+      <span class="tvc-side-label">${esc(label)}${teamName ? ` · ${esc(teamName)}` : ""}</span>
+      <span class="trade-tier-badge ${meta.css}"><span class="tvc-icon">${meta.icon}</span>${esc(meta.label)}</span>
+    </div>
+    <div class="tvc-net">
+      <span class="tvc-net-num ${rec.net_value < 0 ? "neg" : "pos"}" data-target="${rec.net_value}"></span>
+      <span class="tvc-net-lbl">net value</span>
+    </div>
+    <div class="tvc-reason">${esc(rec.reason)}</div>
+    <div class="tvc-needs-label">Roster needs right now</div>
+    <div class="tvc-needs">${needBarsHtml(rec.needs, touchedPositions)}</div>
+  </div>`;
+}
+
+function tradePlayerCardHtml(p, delayMs) {
+  if (p.error) return `<div class="result-card" style="animation-delay:${delayMs}ms"><span>${esc(p.player_id)}: ${esc(p.error)}</span></div>`;
+  const accent = posAccentClass(p.position);
+  return `<div class="result-card${accent ? ` ${accent}` : ""}" style="animation-delay:${delayMs}ms">
+    <img ${headshotAttrs(p)} alt="">
+    <div><div class="name">${esc(p.player_display_name)}</div><div class="meta">${esc(p.position)} · ${esc(p.recent_team)} · SCORE ${FMT.d1(p.SCORE)}</div></div>
+    <div class="proj"><div class="num">${FMT.d1(p.value)}</div><div class="lbl">value</div></div>
+  </div>`;
+}
+
+function renderTradeAnalysis(data) {
+  const results = $("#trade-results");
+  const rec = data.recommendation;
+  const aTouched = new Set(data.side_a.players.filter((p) => p.position).map((p) => p.position));
+  const bTouched = new Set(data.side_b.players.filter((p) => p.position).map((p) => p.position));
+
+  let html = `<div class="trade-analysis">
+    <div class="trade-hero">
+      <div class="trade-hero-value-row">
+        <div class="thv-side">
+          <div class="thv-label">Side A gives up</div>
+          <div class="thv-num" data-target="${data.side_a.total_value}"></div>
+        </div>
+        <div class="thv-vs">⇄</div>
+        <div class="thv-side">
+          <div class="thv-label">Side B gives up</div>
+          <div class="thv-num" data-target="${data.side_b.total_value}"></div>
+        </div>
+      </div>
+      ${rec ? `<div class="trade-hero-headline">${esc(rec.headline)}</div>` : `<div class="trade-hero-headline muted">Sign in with a connected league to see a needs-aware recommendation, not just point totals.</div>`}
+    </div>`;
+
+  if (rec) {
+    html += `<div class="trade-verdict-cards">
+      ${tradeSideCardHtml("side_a", rec.side_a, state.tradeTeamA?.team_name, aTouched, 80)}
+      ${tradeSideCardHtml("side_b", rec.side_b, state.tradeTeamB?.team_name, bTouched, 200)}
+    </div>`;
+  }
+
+  html += `<div class="trade-players-compare">
+    <div class="section-label">Side A gives</div>
+    ${data.side_a.players.map((p, i) => tradePlayerCardHtml(p, 340 + i * 60)).join("")}
+    <div class="section-label">Side B gives</div>
+    ${data.side_b.players.map((p, i) => tradePlayerCardHtml(p, 340 + i * 60)).join("")}
+  </div></div>`;
+
+  results.innerHTML = html;
+
+  // Kick off the count-up + bar-fill animations now that the nodes exist.
+  results.querySelectorAll(".thv-num[data-target]").forEach((node) => countUp(node, Number(node.dataset.target)));
+  results.querySelectorAll(".tvc-net-num[data-target]").forEach((node) => countUp(node, Number(node.dataset.target), { signed: true }));
+  requestAnimationFrame(() => {
+    results.querySelectorAll(".need-bar-fill[data-pct]").forEach((node) => { node.style.width = node.dataset.pct + "%"; });
+  });
+}
+
 async function runTrade() {
   const body = {
     side_a: state.tradeA.map((p) => p.player_id),
     side_b: state.tradeB.map((p) => p.player_id),
     scoring: scoringDict(),
+    opponent_roster_id: state.tradeOpponentRosterId,
   };
   const results = $("#trade-results");
-  results.innerHTML = `<div class="loading">Analyzing…</div>`;
+  results.innerHTML = `<div class="trade-analyzing"><div class="trade-scan-bar"></div><span>Analyzing trade — value, then roster fit…</span></div>`;
   try {
     const data = await api("/api/trade", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-    const verdictText = data.verdict === "fair" ? "Roughly Fair" : data.verdict === "side_a" ? "Side A gives up more" : "Side B gives up more";
-    let html = `<div class="trade-verdict"><div class="big">${esc(verdictText)}</div>
-      <div class="muted">Side A: ${data.side_a.total_value} pts · Side B: ${data.side_b.total_value} pts · Diff: ${data.diff > 0 ? "+" : ""}${data.diff}</div></div>`;
-    ["side_a", "side_b"].forEach((sideKey) => {
-      html += `<div class="section-label">${sideKey === "side_a" ? "Side A" : "Side B"}</div>`;
-      data[sideKey].players.forEach((p) => {
-        if (p.error) { html += `<div class="result-card"><span>${esc(p.player_id)}: ${esc(p.error)}</span></div>`; return; }
-        html += `<div class="result-card">
-          <img ${headshotAttrs(p)} alt="">
-          <div><div class="name">${esc(p.player_display_name)}</div><div class="meta">${esc(p.position)} · ${esc(p.recent_team)} · SCORE ${FMT.d1(p.SCORE)}</div></div>
-          <div class="proj"><div class="num">${FMT.d1(p.value)}</div><div class="lbl">value</div></div>
-        </div>`;
-      });
-    });
-    results.innerHTML = html;
+    renderTradeAnalysis(data);
   } catch (e) {
     results.innerHTML = `<div class="empty">${esc(e.message)}</div>`;
   }
@@ -861,7 +1498,7 @@ function tradeRosterRowHtml(p, selected) {
   return `<div class="trade-roster-row${selected ? " selected" : ""}" data-pid="${esc(p.player_id)}">
     <img ${headshotAttrs(p)} alt="">
     <div>
-      <div class="name">${esc(p.player_display_name)}</div>
+      <div class="name">${esc(p.player_display_name)}${injuryFlagHtml(p.injury_status)}</div>
       <div class="meta">${esc(p.position)} · ${esc(p.recent_team)}</div>
     </div>
     <span class="proj-num">${FMT.d1(p.PROJ)}</span>
@@ -897,6 +1534,9 @@ async function loadTradeSide(side, rosterId) {
   try {
     const data = await api(`/api/trade/roster?roster_id=${rosterId}`);
     renderTradeRosterList(containerSel, data.players, side);
+    const teamInfo = { team_name: data.team_name, avatar_url: data.avatar_url };
+    if (side === "a") state.tradeTeamA = teamInfo;
+    else { state.tradeTeamB = teamInfo; state.tradeOpponentRosterId = rosterId; }
   } catch (e) {
     $(containerSel).innerHTML = `<div class="empty">${esc(e.message)}</div>`;
   }
@@ -947,25 +1587,38 @@ function initTrade() {
 // ------------------------------------------------------------- waivers ----
 async function loadWaivers(pos) {
   pos = pos || document.querySelector("#waivers-pos-pills .pill.active")?.textContent || "QB";
+  const isAll = pos === "ALL" || pos === "All";
   const body = $("#waivers-body");
   body.innerHTML = `<tr><td colspan="5">${skeletonRows(8, 2)}</td></tr>`;
 
   try {
-    const data = await api(`/api/waivers?pos=${pos}${scoringQS()}`);
+    // "All" = no pos filter at all, which is exactly how /api/waivers
+    // returns every position's own ranked list in one call.
+    const data = await api(`/api/waivers?${isAll ? "" : `pos=${pos}&`}${scoringQS().replace(/^&/, "")}`);
     $("#waivers-hint").textContent = data.league
       ? `Excluding everyone rostered in "${data.league.league_name}" (${data.league.team_name}) — synced to your account. 🔥 = trending adds on Sleeper, last 48h.`
       : `Not excluding any rostered players — sign in and connect your Sleeper league in Settings to see who's actually available.`;
     body.innerHTML = "";
-    (data.available[pos] || []).forEach((p) => {
+
+    // Re-sorted and re-ranked across all four positions combined, rather
+    // than four separate rank-1 lists stacked on top of each other.
+    const players = isAll
+      ? POSITIONS.flatMap((p) => data.available[p] || [])
+          .sort((a, b) => (b.SCORE ?? -1) - (a.SCORE ?? -1))
+          .map((p, i) => ({ ...p, rank: i + 1 }))
+      : (data.available[pos] || []);
+
+    players.forEach((p) => {
       const tr = el("tr");
       const trending = p.trending_adds > 0
         ? `<span class="trend-badge" title="${esc(p.trending_adds)} adds on Sleeper, last 48h">🔥 ${p.trending_adds >= 1000 ? (p.trending_adds / 1000).toFixed(1) + "k" : p.trending_adds}</span>` : "";
-      tr.innerHTML = `<td class="rank-cell">${esc(p.rank)}</td><td>${playerCellHtml(p)}${trending}</td>
+      const posBadge = isAll ? `<span class="pos-badge" style="margin-left:6px">${esc(p.position)}</span>` : "";
+      tr.innerHTML = `<td class="rank-cell">${esc(p.rank)}</td><td>${playerCellHtml(p)}${posBadge}${trending}</td>
         <td>${scoreCell(p.SCORE)}</td><td>${formCell(p.FORM)}</td><td>${FMT.d1(p.fpts_per_game)}</td>`;
       tr.addEventListener("click", () => openPlayerModal(p.player_id));
       body.appendChild(tr);
     });
-    if (!(data.available[pos] || []).length) {
+    if (!players.length) {
       body.innerHTML = `<tr><td colspan="5" class="empty">No qualifying players.</td></tr>`;
     }
     animateScoreBars();
@@ -986,7 +1639,7 @@ function rosterRowHtml(p, isBench) {
   return `<div class="myteam-roster-row${isBench ? " bench" : ""}${unscored ? " unscored" : ""}" data-pid="${esc(p.player_id)}" ${unscored ? 'data-unscored="1"' : ""}>
     <img ${headshotAttrs(p)} alt="">
     <span class="pos-badge">${esc(p.slot || p.position)}</span>
-    <span>${esc(p.player_display_name)}</span>
+    <span>${esc(p.player_display_name)}${injuryFlagHtml(p.injury_status)}</span>
     <span class="proj-num">${FMT.d1(p.PROJ)}</span>
   </div>`;
 }
@@ -1000,7 +1653,7 @@ function teamCardHtml(team, kind) {
     ${bench.map((p) => rosterRowHtml(p, true)).join("")}
   `;
   const avatar = team.avatar_url
-    ? `<img class="mt-avatar" src="${proxyImg(team.avatar_url)}" onerror="this.outerHTML='<span class=&quot;team-emoji&quot;>🏈</span>'" alt="">`
+    ? `<img class="mt-avatar" src="${proxyImg(team.avatar_url)}" data-fb-emoji="🏈" alt="">`
     : `<span class="team-emoji">🏈</span>`;
   return `<div class="myteam-card${kind === "opponent" ? " opponent" : ""}">
       <div class="mt-label">${kind === "mine" ? "MY TEAM" : "OPPONENT"}</div>
@@ -1045,7 +1698,7 @@ function leagueMatchupsHtml(matchups, myRosterId) {
   const rows = matchups.map((m) => {
     const sides = m.teams.map((t) => `
       <div class="lm-side${t.roster_id === myRosterId ? " me" : ""}">
-        ${t.avatar_url ? `<img src="${proxyImg(t.avatar_url)}" onerror="this.style.display='none'" alt="">` : ""}
+        ${t.avatar_url ? `<img src="${proxyImg(t.avatar_url)}" data-fb-hide="1" alt="">` : ""}
         <span class="lm-name">${esc(t.team_name)}</span>
         <span class="lm-proj">${FMT.d1(t.total_proj)}</span>
       </div>`).join(`<span class="lm-vs">vs</span>`);
@@ -1097,6 +1750,8 @@ async function loadMyTeam(week) {
     const weekQS = week ? `&week=${week}` : "";
     const data = await api(`/api/myteam?${(scoringQS() + weekQS).replace(/^&/, "")}`);
     renderMyTeamWeekSelector(data);
+    state.notifications = computeInjuryNotifications(data.my_team);
+    renderNotifBell();
     const onLiveWeek = data.live_week && data.live_week === data.nfl_week;
     let html = `<div class="hint">Week ${esc(data.nfl_week)}${onLiveWeek ? " · in progress" : ""} · ${esc(data.league_name)}</div>`;
     html += `<div class="myteam-summary">
@@ -1210,12 +1865,12 @@ async function loadDraftBoard(draftId) {
   content.style.display = "";
   content.innerHTML = `<div class="loading">Loading draft…</div>`;
   try {
-    const d = await api(`/api/draft/${draftId}${scoringQS().replace("&", "?")}`);
+    const d = await api(`/api/draft/${draftId}?${scoringQS().replace(/^&/, "")}`);
     renderDraftBoard(d);
     stopDraftPolling();
     if (!d.is_complete) {
       draftPollHandle = setInterval(async () => {
-        try { renderDraftBoard(await api(`/api/draft/${draftId}${scoringQS().replace("&", "?")}`)); }
+        try { renderDraftBoard(await api(`/api/draft/${draftId}?${scoringQS().replace(/^&/, "")}`)); }
         catch (e) { stopDraftPolling(); }
       }, 6000);
     }
@@ -1279,6 +1934,20 @@ function playerChipsHtml(players) {
     </div>`).join("");
 }
 
+// Purely presentational: the backend doesn't hand back a tier for a
+// suggestion (just a real value_diff), so bucket it here the same way
+// needBarClass() buckets a real need multiplier — a percentage of what
+// you're giving up, not a fixed points cutoff, since "give" value scale
+// varies a lot by player tier. Reuses the exact tier CSS/icons the Trade
+// Analyzer already defines (.trade-tier-badge.tier-*) for visual parity.
+function tradeFinderTier(pctDiff) {
+  if (pctDiff >= 15) return { css: "tier-great", label: "Great Value", icon: "🔥" };
+  if (pctDiff >= 5) return { css: "tier-good", label: "Good Value", icon: "📈" };
+  if (pctDiff >= -5) return { css: "tier-fair", label: "Fair Trade", icon: "⚖️" };
+  if (pctDiff >= -20) return { css: "tier-questionable", label: "Slight Overpay", icon: "🤔" };
+  return { css: "tier-bad", label: "Overpay", icon: "📉" };
+}
+
 async function loadTradeFinder(giveIds) {
   const block = $("#trade-finder-block");
   if (!state.user || !activeTeam()) { block.style.display = "none"; return; }
@@ -1295,47 +1964,97 @@ async function loadTradeFinder(giveIds) {
     return;
   }
 
-  results.innerHTML = `<div class="loading">Scanning the league for realistic trades…</div>`;
+  // Same scan-bar treatment as the Trade Analyzer's "Analyzing trade…" state
+  // — this used to be a bare loading string, at a visibly lower visual tier
+  // than the rest of the Trade tab.
+  results.innerHTML = `<div class="trade-analyzing"><div class="trade-scan-bar"></div><span>Scanning the league for realistic trades…</span></div>`;
   try {
     const giveQS = giveIds.map((id) => `&give=${encodeURIComponent(id)}`).join("");
-    const data = await api(`/api/trade-finder${scoringQS().replace("&", "?")}${giveQS}`);
+    // NOT `scoringQS().replace("&","?")` — that's a no-op when scoringQS()
+    // is empty (the common default-scoring case), leaving giveQS glued
+    // straight onto the path with no "?" at all: "/api/trade-finder&give=…"
+    // is a literal 404 to the router, not a query string — exactly the
+    // "trade finder always says Not Found" bug. A literal "?" plus
+    // stripping one leading "&" is well-formed either way.
+    const data = await api(`/api/trade-finder?${(scoringQS() + giveQS).replace(/^&/, "")}`);
     if (!data.suggestions.length) {
-      results.innerHTML = `<div class="hint">No realistic offers found for that player right now — try a different pick, or check back as values update.</div>`;
+      results.innerHTML = `<div class="empty tf-empty">No realistic offers found for that player right now — try a different pick, or check back as values update.</div>`;
       return;
     }
-    results.innerHTML = data.suggestions.map((s, i) => `
-      <div class="trade-suggestion" style="animation-delay:${i * 55}ms">
-        <div class="ts-opp">vs ${esc(s.opponent_team_name)}${s.fills_need ? ` · fills your ${esc(s.fills_need)} need` : ""}</div>
+    renderTradeFinderResults(results, data.suggestions);
+  } catch (e) {
+    results.innerHTML = `<div class="empty">${esc(e.message)}</div>`;
+  }
+}
+
+function renderTradeFinderResults(results, suggestions) {
+  const best = suggestions[0];
+  const bestGiveValue = best.you_give.reduce((sum, p) => sum + p.value, 0);
+  const bestPct = bestGiveValue > 0 ? (best.value_diff / bestGiveValue) * 100 : 0;
+  const bestTier = tradeFinderTier(bestPct);
+
+  let html = `<div class="tf-summary">
+    <span class="tf-summary-count" data-target="${suggestions.length}"></span>
+    <span class="tf-summary-lbl">realistic trade${suggestions.length === 1 ? "" : "s"} found</span>
+    <span class="tf-summary-best">best is <b>${esc(bestTier.label)}</b> vs ${esc(best.opponent_team_name)}</span>
+  </div>`;
+
+  html += suggestions.map((s, i) => {
+    const giveValue = s.you_give.reduce((sum, p) => sum + p.value, 0);
+    const pctDiff = giveValue > 0 ? (s.value_diff / giveValue) * 100 : 0;
+    const tier = tradeFinderTier(pctDiff);
+    const accent = s.fills_need ? posAccentClass(s.fills_need) : "";
+    return `
+      <div class="trade-suggestion ${tier.css}${accent ? ` ${accent}` : ""}${i === 0 ? " best-value" : ""}" style="animation-delay:${i * 70}ms">
+        <div class="ts-opp">
+          <span>vs ${esc(s.opponent_team_name)}${s.fills_need ? ` · fills your ${esc(s.fills_need)} need` : ""}</span>
+          <span class="trade-tier-badge ${tier.css}"><span class="tvc-icon">${tier.icon}</span>${esc(tier.label)}</span>
+          ${i === 0 ? `<span class="badge-recommended">BEST VALUE</span>` : ""}
+        </div>
         <div class="ts-swap">
           <div class="ts-side">${playerChipsHtml(s.you_give)}</div>
           <div class="ts-swap-icon">⇄</div>
           <div class="ts-side">${playerChipsHtml(s.you_get)}</div>
         </div>
         <div class="ts-footer">
-          <span class="ts-diff ${s.value_diff >= 0 ? "pos" : "neg"}">${s.value_diff >= 0 ? "+" : ""}${s.value_diff} pts</span>
+          <span class="ts-diff ${s.value_diff >= 0 ? "pos" : "neg"}" data-target="${s.value_diff}"></span>
           <button class="pill" data-give='${esc(JSON.stringify(s.you_give))}' data-get='${esc(JSON.stringify(s.you_get))}'>Load into builder</button>
         </div>
       </div>
-    `).join("");
-    results.querySelectorAll("button[data-give]").forEach((b) => {
-      b.addEventListener("click", () => {
-        // dataset getters already HTML-decode attribute entities, so these are plain JSON strings
-        state.tradeA = JSON.parse(b.dataset.give);
-        state.tradeB = JSON.parse(b.dataset.get);
-        renderTradeChips("a"); renderTradeChips("b");
-        window.scrollTo({ top: document.querySelector(".trade-columns").offsetTop - 80, behavior: "smooth" });
-      });
+    `;
+  }).join("");
+
+  results.innerHTML = html;
+
+  const countEl = results.querySelector(".tf-summary-count[data-target]");
+  if (countEl) countUp(countEl, Number(countEl.dataset.target), { decimals: 0, duration: 500 });
+  results.querySelectorAll(".ts-diff[data-target]").forEach((node) => {
+    countUp(node, Number(node.dataset.target), { signed: true, duration: 650 });
+  });
+  // countUp() overwrites textContent without the trailing unit — append it
+  // once the animation settles rather than fighting the rAF loop for it.
+  setTimeout(() => {
+    results.querySelectorAll(".ts-diff[data-target]").forEach((node) => {
+      node.textContent += " pts";
     });
-  } catch (e) {
-    results.innerHTML = `<div class="empty">${esc(e.message)}</div>`;
-  }
+  }, 680);
+
+  results.querySelectorAll("button[data-give]").forEach((b) => {
+    b.addEventListener("click", () => {
+      // dataset getters already HTML-decode attribute entities, so these are plain JSON strings
+      state.tradeA = JSON.parse(b.dataset.give);
+      state.tradeB = JSON.parse(b.dataset.get);
+      renderTradeChips("a"); renderTradeChips("b");
+      window.scrollTo({ top: document.querySelector(".trade-columns").offsetTop - 80, behavior: "smooth" });
+    });
+  });
 }
 
 // Shared "my own roster" cache — both the Trade Finder's shop picker and
 // the Start/Sit picker draw from the same synced roster, one fetch covers both.
 async function ensureMyRoster() {
   if (!state.shopRoster.length) {
-    const data = await api(`/api/myteam${scoringQS().replace("&", "?")}`);
+    const data = await api(`/api/myteam?${scoringQS().replace(/^&/, "")}`);
     state.shopRoster = data.my_team.players;
   }
   return state.shopRoster;
@@ -1346,7 +2065,17 @@ async function renderShopPicker() {
   try {
     await ensureMyRoster();
   } catch (e) { picker.innerHTML = ""; return; }
-  picker.innerHTML = state.shopRoster.map((p) => `
+  // Trade Finder's backend (engine/tools.py trade_finder) can only value
+  // a QB/RB/WR/TE that's actually in the scored board — DEF/K (which
+  // never get a personal SCORE, see _defense_row/_kicker_row) and any
+  // currently-unscored fallback player throw a hard ValueError if
+  // selected as something to shop, surfacing as "trade finder doesn't
+  // work" with no clue why. Filtering them out of the picker here fixes
+  // the actual bug (offering a selection the backend can't handle) —
+  // the fuller fix, giving DEF/K real shoppable trade values, is a
+  // separate, bigger backend feature, not this bug's fault line.
+  const shoppable = state.shopRoster.filter((p) => POSITIONS.includes(p.position) && p.SCORE != null);
+  picker.innerHTML = shoppable.map((p) => `
     <button type="button" class="shop-chip${state.shopSelected.has(p.player_id) ? " selected" : ""}" data-pid="${esc(p.player_id)}">
       <img ${headshotAttrs(p)} alt="">
       <span class="pos-badge">${esc(p.position)}</span>
@@ -1374,6 +2103,50 @@ function initTradeFinder() {
 }
 
 // ---------------------------------------------------------------- news ----
+// -------------------------------------------------------- live scores ----
+// Real in-game NFL scores (see /api/live-scores + engine/live_scores.py)
+// — free, public, no key. Lives on My Team since that's the home tab;
+// polls on a short interval only while that tab is actually the one
+// showing, so it isn't hammering ESPN's endpoint from a background tab.
+function liveScoreCardHtml(g) {
+  const isLive = g.state === "in";
+  const isFinal = g.state === "post";
+  const scoreLine = g.state === "pre"
+    ? `<span class="muted">vs</span>`
+    : `${g.away.score}–${g.home.score}`;
+  return `<div class="live-score-card${isLive ? " live" : ""}${isFinal ? " final" : ""}">
+    ${isLive ? `<span class="live-dot"></span>` : ""}
+    <div class="lsc-teams">
+      <span class="${g.away.winner ? "lsc-winner" : ""}">${esc(g.away.abbr)}</span>
+      <span class="lsc-score">${scoreLine}</span>
+      <span class="${g.home.winner ? "lsc-winner" : ""}">${esc(g.home.abbr)}</span>
+    </div>
+    <div class="lsc-status">${esc(isLive ? `Q${g.period} · ${g.display_clock}` : g.status_detail)}</div>
+  </div>`;
+}
+
+async function loadLiveScores() {
+  const strip = $("#live-scores-strip");
+  if (!strip) return;
+  try {
+    const data = await api("/api/live-scores");
+    const games = data.games || [];
+    if (!games.length) { strip.style.display = "none"; return; }
+    strip.innerHTML = games.map(liveScoreCardHtml).join("");
+    strip.style.display = "flex";
+  } catch (e) {
+    // a scoreboard hiccup shouldn't be loud — just leave whatever was
+    // showing (or stay hidden if this was the first load)
+  }
+}
+
+function initLiveScores() {
+  loadLiveScores();
+  setInterval(() => {
+    if (state.tab === "myteam" && document.visibilityState === "visible") loadLiveScores();
+  }, 20000);
+}
+
 function initNews() {
   $("#news-scope-tabs").querySelectorAll("button[data-scope]").forEach((b) => {
     b.addEventListener("click", () => {
@@ -1391,7 +2164,7 @@ function initNews() {
 function newsCardHtml(it, featured, i) {
   return `<a class="news-card${featured ? " featured" : ""}" href="${safeUrl(it.link)}" target="_blank" rel="noopener noreferrer" style="animation-delay:${Math.min(i, 8) * 50}ms">
     <div class="news-img-wrap${it.image ? "" : " no-image"}">
-      ${it.image ? `<img src="${proxyImg(it.image)}" alt="" loading="lazy" onerror="this.closest('.news-img-wrap').classList.add('no-image')">` : ""}
+      ${it.image ? `<img src="${proxyImg(it.image)}" alt="" loading="lazy" data-fb-noimage-wrap="1">` : ""}
       ${featured ? `<span class="news-badge">FEATURED</span>` : ""}
     </div>
     <div class="news-body">
@@ -1445,6 +2218,46 @@ function renderAccountButton() {
   btn.onclick = () => (state.user ? toggleAccountDropdown() : openAuthModal("login"));
 }
 
+// ------------------------------------------------------- notifications ----
+// Real, actionable alerts only — right now that's "a starter in your
+// current lineup is marked OUT or Doubtful" (Questionable is normal
+// noise every week and isn't worth interrupting anyone for).
+function computeInjuryNotifications(myTeam) {
+  if (!myTeam?.players) return [];
+  return myTeam.players
+    .filter((p) => p.is_starter && p.injury_status && p.injury_status !== "Questionable")
+    .map((p) => ({ player_id: p.player_id, name: p.player_display_name, status: p.injury_status, slot: p.slot || p.position }));
+}
+
+function renderNotifBell() {
+  const bell = $("#notif-bell");
+  const badge = $("#notif-badge");
+  const n = state.notifications.length;
+  bell.style.display = state.user && n > 0 ? "flex" : "none";
+  badge.style.display = n > 0 ? "flex" : "none";
+  badge.textContent = n > 9 ? "9+" : String(n);
+}
+
+function toggleNotifDropdown() {
+  const existing = document.querySelector(".notif-dropdown");
+  if (existing) { existing.remove(); return; }
+  const bell = $("#notif-bell");
+  const rect = bell.getBoundingClientRect();
+  const dd = el("div", "notif-dropdown");
+  dd.style.top = `${rect.bottom + 8}px`;
+  dd.style.left = `${rect.left}px`;
+  dd.innerHTML = `<div class="ad-header">Lineup Alerts</div>` + (state.notifications.length
+    ? state.notifications.map((n) => `<button data-pid="${esc(n.player_id)}">
+        <span class="injury-flag">${esc(n.status.toUpperCase())}</span> ${esc(n.slot)} ${esc(n.name)} is in your starting lineup this week.
+      </button>`).join("")
+    : `<div class="hint" style="padding:12px 14px">All clear — no starter alerts.</div>`);
+  dd.querySelectorAll("button[data-pid]").forEach((b) => b.addEventListener("click", () => { dd.remove(); openPlayerModal(b.dataset.pid); }));
+  document.body.appendChild(dd);
+  setTimeout(() => document.addEventListener("click", function closeOnce(e) {
+    if (!dd.contains(e.target) && !e.target.closest("#notif-bell")) { dd.remove(); document.removeEventListener("click", closeOnce); }
+  }), 0);
+}
+
 function toggleAccountDropdown() {
   const existing = document.querySelector(".account-dropdown");
   if (existing) { existing.remove(); return; }
@@ -1467,11 +2280,14 @@ async function doSignOut() {
   state.user = null; state.settings = null; state.teams = []; state.leagueScoringDict = null;
   state.shopRoster = []; state.shopSelected = new Set(); state.startsit = [];
   state.tradeA = []; state.tradeB = [];
+  state.notifications = [];
   document.querySelector(".account-dropdown")?.remove();
+  document.querySelector(".notif-dropdown")?.remove();
+  renderNotifBell();
   renderAccountButton();
   refreshScoringLeagueOption();
   renderSidebarTeams();
-  switchTab("board");
+  switchTab(DEFAULT_TAB);
   await proceedPastGate(); // sign-in is mandatory — this brings the gate right back
 }
 
@@ -1883,6 +2699,7 @@ function renderSettingsTab() {
   renderVerifyStatus();
 
   $("#settings-signout").onclick = doSignOut;
+  $("#settings-open-draft").onclick = () => switchTab("draft");
 
   $("#cp-submit").onclick = async () => {
     const msg = $("#cp-msg");
@@ -1899,13 +2716,12 @@ function renderSettingsTab() {
 
   renderTeamsList();
 
-  $("#set-espn-league").value = state.settings.espn_league_id || "";
   $("#set-espn-swid").value = "";
   $("#set-espn-s2").value = "";
   $("#set-espn-swid").placeholder = state.settings.espn_swid_set ? "•••••••• (already set — leave blank to keep)" : "SWID cookie (private leagues only)";
   $("#set-espn-s2").placeholder = state.settings.espn_s2_set ? "•••••••• (already set — leave blank to keep)" : "espn_s2 cookie (private leagues only)";
   $("#set-espn-save").onclick = async () => {
-    const updates = { espn_league_id: $("#set-espn-league").value };
+    const updates = {};
     if ($("#set-espn-swid").value) updates.espn_swid = $("#set-espn-swid").value;
     if ($("#set-espn-s2").value) updates.espn_s2 = $("#set-espn-s2").value;
     state.settings = await api("/api/settings", {
@@ -1939,7 +2755,7 @@ function renderTeamsList() {
   } else {
     list.innerHTML = state.teams.map((t) => `
       <div class="team-card${t.active ? " active" : ""}" data-team-id="${esc(t.id)}">
-        ${t.avatar_url ? `<img src="${proxyImg(t.avatar_url)}" onerror="this.style.display='none'" alt="">` : `<div class="team-card-noavatar">🏈</div>`}
+        ${t.avatar_url ? `<img src="${proxyImg(t.avatar_url)}" data-fb-hide="1" alt="">` : `<div class="team-card-noavatar">🏈</div>`}
         <div class="team-card-info">
           <div class="team-card-name">${esc(t.team_name)}</div>
           <div class="team-card-league">${esc(t.league_name || t.league_id)}</div>
@@ -1978,6 +2794,19 @@ function renderTeamsList() {
   connectArea.innerHTML = "";
   $("#set-connect-input").value = "";
 
+  let connectPlatform = "sleeper";
+  $("#set-connect-platform").querySelectorAll(".pill").forEach((p) => {
+    p.classList.toggle("active", p.dataset.platform === connectPlatform);
+    p.onclick = () => {
+      connectPlatform = p.dataset.platform;
+      $("#set-connect-platform").querySelectorAll(".pill").forEach((x) => x.classList.toggle("active", x === p));
+      $("#set-connect-input").placeholder = connectPlatform === "espn"
+        ? "Paste ESPN league URL or ID" : "Paste Sleeper league URL or ID";
+      $("#set-espn-disclaimer").style.display = connectPlatform === "espn" ? "" : "none";
+      connectArea.innerHTML = "";
+    };
+  });
+
   $("#set-connect-btn").onclick = async () => {
     const raw = $("#set-connect-input").value.trim();
     if (!raw) return;
@@ -1987,11 +2816,11 @@ function renderTeamsList() {
     try {
       const snap = await api("/api/teams/lookup", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ league_id_or_url: raw }),
+        body: JSON.stringify({ league_id_or_url: raw, platform: connectPlatform }),
       });
       connectArea.innerHTML = `<div class="hint">Which team is yours in "${esc(snap.league_name)}"?</div>` +
         snap.teams.map((t) => `<div class="league-team-row">
-            <span>${t.avatar_url ? `<img class="inline-avatar" src="${proxyImg(t.avatar_url)}" onerror="this.style.display='none'" alt="">` : ""}
+            <span>${t.avatar_url ? `<img class="inline-avatar" src="${proxyImg(t.avatar_url)}" data-fb-hide="1" alt="">` : ""}
               ${esc(t.team_name)}${t.owner ? " (" + esc(t.owner) + ")" : ""} — ${esc(t.player_ids.length)} rostered</span>
             <button class="pill" data-roster="${esc(t.roster_id)}" data-name="${esc(t.team_name)}" data-avatar="${safeUrl(t.avatar_url)}">This is me</button>
           </div>`).join("");
@@ -2002,6 +2831,7 @@ function renderTeamsList() {
             body: JSON.stringify({
               league_id: snap.league_id, league_name: snap.league_name,
               roster_id: parseInt(b.dataset.roster, 10), team_name: b.dataset.name, avatar_url: b.dataset.avatar || null,
+              platform: connectPlatform,
             }),
           });
           const teamsRes = await api("/api/teams");
@@ -2061,7 +2891,14 @@ function initSearch() {
 async function initMeta() {
   const meta = await api("/api/meta");
   state.meta = meta;
-  $("#season-badge").textContent = `${meta.season} SZN`;
+  // "SZN" read as "the app thinks it's currently this season" — it isn't;
+  // it's which completed season's real stats power SCORE/PROJ right now
+  // (the most recent one with games actually played), which is a
+  // different thing from what season your connected league is playing.
+  // Spelling that out here, not just in Settings, since this badge is the
+  // first season-related thing anyone sees.
+  $("#season-badge").textContent = `${meta.season} stats`;
+  $("#season-badge").title = `Player valuations are built from real ${meta.season} season stats — the most recent season with games actually played. Your connected league can be a newer season than that; this updates automatically once its games are in the books.`;
   const oppSelect = $("#opp-select");
   meta.teams.forEach((t) => {
     const opt = el("option");
@@ -2118,7 +2955,7 @@ async function proceedPastGate() {
   if (!state.teams.length) { renderGateConnectLeague(); return; }
   hideGate();
   initScoringSelect();
-  await loadBoard();
+  switchTab(DEFAULT_TAB);
 }
 
 function renderGateConnectLeague() {
@@ -2150,7 +2987,7 @@ function renderGateConnectLeague() {
       });
       resultsArea.innerHTML = `<div class="hint">Which team is yours in "${esc(snap.league_name)}"?</div>` +
         snap.teams.map((t) => `<div class="league-team-row">
-            <span>${t.avatar_url ? `<img class="inline-avatar" src="${proxyImg(t.avatar_url)}" onerror="this.style.display='none'" alt="">` : ""}
+            <span>${t.avatar_url ? `<img class="inline-avatar" src="${proxyImg(t.avatar_url)}" data-fb-hide="1" alt="">` : ""}
               ${esc(t.team_name)}${t.owner ? " (" + esc(t.owner) + ")" : ""} — ${esc(t.player_ids.length)} rostered</span>
             <button class="pill" data-roster="${esc(t.roster_id)}" data-name="${esc(t.team_name)}" data-avatar="${safeUrl(t.avatar_url)}">This is me</button>
           </div>`).join("");
@@ -2179,7 +3016,7 @@ function renderGateConnectLeague() {
   $("#gate-skip-league").addEventListener("click", async () => {
     hideGate();
     initScoringSelect();
-    await loadBoard();
+    switchTab(DEFAULT_TAB);
   });
 }
 
@@ -2197,7 +3034,9 @@ async function main() {
   initStartSit();
   initTrade();
   initTradeFinder();
+  initCompareTray();
   initNews();
+  initLiveScores();
   await initMeta();
 
   try {
@@ -2210,7 +3049,7 @@ async function main() {
 
   if (cameViaResetLink) {
     initScoringSelect();
-    await loadBoard();
+    switchTab(DEFAULT_TAB);
     return;
   }
   await proceedPastGate();
@@ -2222,4 +3061,44 @@ if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
     navigator.serviceWorker.register("/sw.js").catch(() => {});
   });
+}
+
+// ---------------------------------------------------------- count-up ----
+// Headline numbers (My Team's projected total, a Start/Sit card's proj)
+// animate up from 0 the moment they land in the DOM, instead of just
+// appearing — self-contained, so it works regardless of which function
+// rendered the element and needs no changes to those render functions.
+const COUNTUP_SELECTOR = ".mt-total, .ss-proj-num, .trade-verdict .big";
+
+function animateCountUp(el) {
+  if (el.dataset.counted) return;
+  const raw = el.textContent;
+  const match = raw.match(/-?[\d,]+\.?\d*/);
+  if (!match) return;
+  const target = parseFloat(match[0].replace(/,/g, ""));
+  if (!isFinite(target)) return;
+  el.dataset.counted = "1";
+  const decimals = (match[0].split(".")[1] || "").length;
+  const prefix = raw.slice(0, match.index);
+  const suffix = raw.slice(match.index + match[0].length);
+  const dur = 650;
+  const start = performance.now();
+  (function frame(now) {
+    const t = Math.min(1, (now - start) / dur);
+    const eased = 1 - Math.pow(1 - t, 3);
+    el.textContent = prefix + (target * eased).toFixed(decimals) + suffix;
+    if (t < 1) requestAnimationFrame(frame);
+  })(start);
+}
+
+if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+  new MutationObserver((muts) => {
+    for (const m of muts) {
+      for (const node of m.addedNodes) {
+        if (node.nodeType !== 1) continue;
+        if (node.matches?.(COUNTUP_SELECTOR)) animateCountUp(node);
+        node.querySelectorAll?.(COUNTUP_SELECTOR).forEach(animateCountUp);
+      }
+    }
+  }).observe(document.getElementById("app"), { childList: true, subtree: true });
 }

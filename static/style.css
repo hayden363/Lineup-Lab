@@ -31,8 +31,8 @@
   --ease-snap: cubic-bezier(0.34, 1.56, 0.64, 1);
   --dur: 220ms;
 
-  --mono: ui-monospace, "SF Mono", "Cascadia Code", "JetBrains Mono", Menlo, Consolas, monospace;
-  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, Arial, sans-serif;
+  --mono: "Roboto Mono", ui-monospace, "SF Mono", "Cascadia Code", "JetBrains Mono", Menlo, Consolas, monospace;
+  --sans: "Source Sans 3", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, Arial, sans-serif;
 }
 
 * { box-sizing: border-box; }
@@ -96,9 +96,9 @@ button, .pill, input, select, a.news-card, tbody tr, .team-card, .result-card,
 button { -webkit-tap-highlight-color: transparent; }
 
 #app {
-  max-width: 1180px;
-  margin-left: var(--sidebar-w);
-  padding: 20px 28px 64px;
+  max-width: 1800px;
+  margin: 0 auto 0 var(--sidebar-w);
+  padding: 20px clamp(20px, 3vw, 44px) 64px;
   transition: margin-left 260ms var(--sidebar-ease);
 }
 
@@ -254,11 +254,29 @@ body.sidebar-collapsed #sidebar { width: var(--sidebar-w-collapsed); }
 body.sidebar-collapsed #sidebar-toggle svg { transform: rotate(180deg); }
 
 .sidebar-nav {
+  position: relative;
   flex-shrink: 0;
   padding: 10px 10px;
   display: flex;
   flex-direction: column;
   gap: 2px;
+}
+
+/* One shared indicator that slides to whichever tab is active, instead
+   of each nav-item popping its own bar in/out independently — the
+   difference between a nav that feels alive and one that just toggles. */
+.nav-active-indicator {
+  position: absolute;
+  left: 0; top: 0;
+  width: 3px;
+  height: 0;
+  border-radius: 0 3px 3px 0;
+  background: var(--accent);
+  box-shadow: 0 0 10px var(--accent-glow);
+  transform: translateY(0);
+  opacity: 0;
+  pointer-events: none;
+  transition: transform 340ms var(--ease), height 340ms var(--ease), opacity 200ms var(--ease);
 }
 
 .nav-item {
@@ -277,6 +295,7 @@ body.sidebar-collapsed #sidebar-toggle svg { transform: rotate(180deg); }
   cursor: pointer;
   text-align: left;
   position: relative;
+  overflow: hidden;
   transition: background 0.15s, color 0.15s;
 }
 
@@ -285,16 +304,6 @@ body.sidebar-collapsed #sidebar-toggle svg { transform: rotate(180deg); }
 .nav-item.active {
   background: rgba(87,226,164,0.10);
   color: var(--accent);
-}
-
-.nav-item.active::before {
-  content: "";
-  position: absolute;
-  left: -10px; top: 20%; bottom: 20%;
-  width: 3px;
-  border-radius: 0 3px 3px 0;
-  background: var(--accent);
-  box-shadow: 0 0 10px var(--accent-glow);
 }
 
 .nav-icon {
@@ -493,6 +502,8 @@ body.sidebar-collapsed .sidebar-profile { justify-content: center; }
 }
 
 .pill {
+  position: relative;
+  overflow: hidden;
   border: 1px solid transparent;
   background: none;
   color: var(--muted);
@@ -746,6 +757,45 @@ tbody tr:last-child td { border-bottom: none; }
   font-size: 16px;
 }
 
+.player-news-slot { display: flex; flex-direction: column; gap: 10px; }
+.loading.small, .muted.small { font-size: 13px; padding: 6px 0; }
+
+.pn-ai-summary {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+.pn-ai-label {
+  font-size: 10px;
+  font-family: var(--mono);
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: var(--accent);
+  margin-bottom: 4px;
+}
+.pn-ai-summary p { margin: 0; font-size: 13px; line-height: 1.5; color: var(--text); }
+
+.pn-cards { display: flex; flex-direction: column; gap: 8px; }
+.pn-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 8px;
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 150ms var(--ease), transform 150ms var(--ease);
+}
+.pn-card:hover { border-color: var(--accent); transform: translateY(-1px); }
+.pn-thumb { width: 52px; height: 52px; border-radius: 8px; object-fit: cover; flex: none; background: var(--panel-3, var(--panel-2)); }
+.pn-body { min-width: 0; }
+.pn-title { font-size: 13px; font-weight: 700; line-height: 1.35; }
+.pn-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
 .metric-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
@@ -934,24 +984,6 @@ tbody tr:last-child td { border-bottom: none; }
   margin-left: 8px;
 }
 
-.ss-rationale {
-  background: var(--panel);
-  border: 1px solid var(--border-bright);
-  border-radius: var(--radius);
-  padding: 14px 18px;
-  margin-bottom: 14px;
-}
-.ss-rationale .ss-rationale-label {
-  font-size: 11px;
-  font-family: var(--mono);
-  font-weight: 700;
-  letter-spacing: 0.03em;
-  color: var(--accent);
-  margin-bottom: 8px;
-}
-.ss-rationale p { font-size: 13px; color: var(--text); line-height: 1.6; margin: 0 0 8px; }
-.ss-rationale p:last-child { margin-bottom: 0; }
-.ss-rationale strong { color: var(--accent); }
 
 .trade-columns {
   display: grid;
@@ -998,32 +1030,43 @@ tbody tr:last-child td { border-bottom: none; }
   margin-bottom: 10px;
 }
 
+/* Bigger and bolder than the original list — a scannable list still (a
+   15-player roster can't go full Start/Sit-card without turning into an
+   endless scroll), but the player himself is now the visual anchor of
+   the row instead of competing evenly with the proj number and check. */
 .trade-roster-row {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px 10px;
-  border-radius: 8px;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
   cursor: pointer;
-  transition: background 120ms var(--ease);
+  transition: background 120ms var(--ease), transform 120ms var(--ease);
 }
 .trade-roster-row:hover { background: var(--panel-2); }
+.trade-roster-row:active { transform: scale(0.985); }
 .trade-roster-row.selected {
   background: rgba(87,226,164,0.1);
   box-shadow: inset 0 0 0 1px var(--border-bright);
 }
-.trade-roster-row img { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; background: var(--panel-2); flex-shrink: 0; }
-.trade-roster-row .name { font-weight: 600; font-size: 13px; }
-.trade-roster-row .meta { font-size: 11px; color: var(--muted); }
-.trade-roster-row .proj-num { margin-left: auto; font-family: var(--mono); font-weight: 700; color: var(--accent); flex-shrink: 0; }
+.trade-roster-row img { width: 48px; height: 48px; border-radius: 50%; object-fit: cover; background: var(--panel-2); flex-shrink: 0; border: 2px solid transparent; transition: border-color 150ms var(--ease); }
+.trade-roster-row.selected img { border-color: var(--accent-dim); }
+.trade-roster-row .name { font-weight: 700; font-size: 15px; }
+.trade-roster-row .meta { font-size: 12px; color: var(--muted); margin-top: 1px; }
+.trade-roster-row .proj-num { margin-left: auto; font-family: var(--mono); font-weight: 700; font-size: 15px; color: var(--accent); flex-shrink: 0; }
 .trade-roster-row .check {
-  width: 16px; height: 16px;
+  width: 22px; height: 22px;
   border-radius: 50%;
   border: 1.5px solid var(--border-bright);
   flex-shrink: 0;
   display: flex; align-items: center; justify-content: center;
+  font-size: 12px;
+  transition: background 150ms var(--ease), border-color 150ms var(--ease), transform 150ms var(--ease-snap);
 }
-.trade-roster-row.selected .check { background: var(--accent); border-color: var(--accent); color: #0e1b15; font-size: 10px; font-weight: 900; }
+.trade-roster-row.selected .check {
+  background: var(--accent); border-color: var(--accent); color: #0e1b15; font-weight: 900;
+  animation: badgePop 320ms var(--ease-snap);
+}
 
 .trade-verdict {
   background: var(--panel);
@@ -1035,6 +1078,219 @@ tbody tr:last-child td { border-bottom: none; }
 }
 
 .trade-verdict .big { font-size: 22px; font-weight: 800; margin-bottom: 4px; }
+
+/* ---- Trade analysis: value + real roster-needs recommendation ---- */
+.trade-analyzing {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 32px 16px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.trade-scan-bar {
+  width: 100%;
+  max-width: 320px;
+  height: 3px;
+  border-radius: 999px;
+  background: var(--panel-2);
+  overflow: hidden;
+  position: relative;
+}
+.trade-scan-bar::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: 40%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  animation: tradeScan 1.1s ease-in-out infinite;
+}
+@keyframes tradeScan {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(350%); }
+}
+
+.trade-analysis { animation: fadeSlideUp 380ms var(--ease); }
+
+.trade-hero {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 22px 18px 18px;
+  text-align: center;
+  margin-bottom: 16px;
+  box-shadow: var(--shadow);
+  animation: fadeSlideUp 380ms var(--ease);
+}
+
+.trade-hero-value-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  margin-bottom: 14px;
+}
+.thv-side { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 96px; }
+.thv-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+.thv-num {
+  font-family: var(--mono);
+  font-size: 30px;
+  font-weight: 800;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.thv-vs {
+  font-size: 18px;
+  color: var(--accent);
+  opacity: 0.7;
+  animation: onClockPulse 2.4s ease-in-out infinite;
+}
+
+.trade-hero-headline {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  animation: fadeSlideUp 420ms var(--ease) 260ms both;
+}
+.trade-hero-headline.muted { font-weight: 500; color: var(--muted); font-size: 13px; }
+
+.trade-verdict-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+@media (max-width: 640px) { .trade-verdict-cards { grid-template-columns: 1fr; } }
+
+.tvc {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  box-shadow: var(--shadow);
+  opacity: 0;
+  animation: fadeSlideUp 420ms var(--ease) forwards;
+  border-left: 3px solid var(--border-bright);
+}
+.tvc.tier-great { border-left-color: var(--accent); box-shadow: var(--shadow), 0 0 24px -10px var(--accent-glow); }
+.tvc.tier-good { border-left-color: var(--accent-dim); }
+.tvc.tier-fair { border-left-color: var(--info); }
+.tvc.tier-questionable { border-left-color: var(--avg); }
+.tvc.tier-bad { border-left-color: var(--neg); opacity: 0.95; }
+
+/* Which position dominates this side's give-package — same accent art as
+   the Trade Finder cards above, so a Side A that's mostly a QB swap reads
+   the same way whether you found it or built it by hand. */
+.tvc[class*="acc-"]::before {
+  content: "";
+  position: absolute;
+  top: -34px; right: -26px;
+  width: 150px; height: 150px;
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+  mix-blend-mode: screen;
+  opacity: 0.16;
+  z-index: -1;
+  pointer-events: none;
+}
+.tvc.acc-qb::before { background-image: url("/img/accent-qb.webp"); }
+.tvc.acc-skill::before { background-image: url("/img/accent-skill.webp"); }
+.tvc.acc-def::before { background-image: url("/img/accent-def.webp"); }
+.tvc.acc-k::before { background-image: url("/img/accent-k.webp"); }
+
+.tvc-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.tvc-side-label { font-size: 12px; color: var(--muted); font-weight: 700; }
+
+.trade-tier-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  border-radius: 999px;
+  padding: 3px 10px;
+  border: 1px solid transparent;
+  animation: badgePop 420ms var(--ease-snap);
+}
+.trade-tier-badge.tier-great { background: var(--accent); color: #0e1b15; box-shadow: 0 0 10px -1px var(--accent-glow); }
+.trade-tier-badge.tier-good { background: rgba(94,238,173,0.14); color: var(--accent); border-color: var(--accent-dim); }
+.trade-tier-badge.tier-fair { background: rgba(100,194,236,0.14); color: var(--info); border-color: var(--info); }
+.trade-tier-badge.tier-questionable { background: rgba(232,193,92,0.14); color: var(--avg); border-color: var(--avg); }
+.trade-tier-badge.tier-bad { background: rgba(255,107,129,0.12); color: var(--neg); border-color: var(--neg); }
+
+.tvc-net { display: flex; align-items: baseline; gap: 6px; margin-bottom: 8px; }
+.tvc-net-num { font-family: var(--mono); font-size: 24px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.tvc-net-num.pos { color: var(--pos); }
+.tvc-net-num.neg { color: var(--neg); }
+.tvc-net-lbl { font-size: 11px; color: var(--muted); }
+
+.tvc-reason { font-size: 13px; color: var(--text); line-height: 1.4; margin-bottom: 14px; }
+
+.tvc-needs-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px; }
+.tvc-needs { display: flex; flex-direction: column; gap: 6px; }
+
+.need-bar { display: flex; align-items: center; gap: 8px; }
+.need-bar-label { width: 26px; flex-shrink: 0; font-size: 11px; font-weight: 700; color: var(--muted); }
+.need-bar.touched .need-bar-label { color: var(--text); }
+.need-bar-track {
+  flex: 1;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--panel-2);
+  overflow: hidden;
+}
+.need-bar-fill {
+  display: block;
+  height: 100%;
+  width: 0%;
+  border-radius: 999px;
+  transition: width 700ms var(--ease);
+}
+.need-bar-fill.need-high { background: var(--neg); }
+.need-bar-fill.need-mid { background: var(--avg); }
+.need-bar-fill.need-low { background: var(--pos); }
+.need-bar.touched .need-bar-track { box-shadow: 0 0 0 1px var(--border-bright); }
+
+.trade-players-compare .result-card {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  opacity: 0;
+  animation: fadeSlideUp 380ms var(--ease) forwards;
+}
+/* same position-accent art as the Trade Finder suggestion cards and the
+   Start/Sit ss-cards — each player being traded away gets tied to its own
+   position's real visual identity here too, not just on one side of Trade. */
+.trade-players-compare .result-card[class*="acc-"]::before {
+  content: "";
+  position: absolute;
+  top: -24px; right: -16px;
+  width: 100px; height: 100px;
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+  mix-blend-mode: screen;
+  opacity: 0.18;
+  z-index: -1;
+  pointer-events: none;
+}
+.trade-players-compare .result-card.acc-qb::before { background-image: url("/img/accent-qb.webp"); }
+.trade-players-compare .result-card.acc-skill::before { background-image: url("/img/accent-skill.webp"); }
+.trade-players-compare .result-card.acc-def::before { background-image: url("/img/accent-def.webp"); }
+.trade-players-compare .result-card.acc-k::before { background-image: url("/img/accent-k.webp"); }
 
 .league-team-row {
   display: flex;
@@ -1112,7 +1368,7 @@ tbody tr:last-child td { border-bottom: none; }
   padding: 28px;
   color: #eafff4;
   background: linear-gradient(180deg, rgba(4,10,7,0.35) 0%, rgba(4,10,7,0.55) 55%, rgba(4,10,7,0.9) 100%),
-              url("/img/auth-hero.png") center / cover no-repeat;
+              url("/img/auth-hero.webp") center / cover no-repeat;
   flex-direction: column;
   justify-content: space-between;
 }
@@ -1134,7 +1390,7 @@ tbody tr:last-child td { border-bottom: none; }
   padding: 48px;
   color: #eafff4;
   background: linear-gradient(180deg, rgba(4,10,7,0.35) 0%, rgba(4,10,7,0.55) 55%, rgba(4,10,7,0.92) 100%),
-              url("/img/auth-hero.png") center / cover no-repeat;
+              url("/img/auth-hero.webp") center / cover no-repeat;
   flex-direction: column;
   justify-content: space-between;
 }
@@ -1603,6 +1859,8 @@ tbody tr:last-child td { border-bottom: none; }
 }
 
 .week-arrow {
+  position: relative;
+  overflow: hidden;
   width: 30px; height: 30px;
   display: flex; align-items: center; justify-content: center;
   background: none;
@@ -1945,15 +2203,101 @@ tbody tr:last-child td { border-bottom: none; }
 .draft-picker-list { display: flex; flex-direction: column; gap: 8px; }
 
 /* --------------------------------------------------------- trade finder --- */
-.trade-suggestion {
+/* Hero header — same weight as the Trade Analyzer's .trade-hero panel,
+   with the swap/radar art (Picsart-generated, same style as the position
+   accents below) blended into the corner. */
+.tf-hero {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
   background: var(--panel);
   border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 18px 20px;
+  margin-bottom: 14px;
+  box-shadow: var(--shadow);
+  animation: fadeSlideUp 380ms var(--ease);
+}
+.tf-hero::before {
+  content: "";
+  position: absolute;
+  top: -60px; right: -60px;
+  width: 220px; height: 220px;
+  background: url("/img/trade-finder-hero.webp") center / contain no-repeat;
+  mix-blend-mode: screen;
+  opacity: 0.55;
+  z-index: -1;
+  pointer-events: none;
+  animation: tfRadarSpin 26s linear infinite;
+}
+@keyframes tfRadarSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .tf-hero::before { animation: none; } }
+
+/* Result summary strip — mirrors the Trade Analyzer's count-up numbers
+   (thv-num / tvc-net-num) so "found 3 trades" reads with the same weight
+   as "Side A gives up 42.1", not a plain sentence. */
+.tf-summary {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  padding: 2px 2px 14px;
+  animation: fadeSlideUp 340ms var(--ease);
+}
+.tf-summary-count {
+  font-family: var(--mono);
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+.tf-summary-lbl { font-size: 13px; color: var(--muted); }
+.tf-summary-best { font-size: 12px; color: var(--muted); margin-left: auto; }
+.tf-summary-best b { color: var(--text); }
+
+.trade-suggestion {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--border-bright);
   border-radius: var(--radius);
   padding: 14px 18px;
   margin-bottom: 10px;
   opacity: 0;
-  animation: fadeSlideUp 380ms var(--ease) forwards;
+  animation: tsCardPop 520ms var(--ease) forwards;
 }
+
+/* Value tiers, reusing the exact colors/classes .trade-tier-badge and .tvc
+   already define for the Trade Analyzer — same visual language, not a
+   second system to maintain. */
+.trade-suggestion.tier-great { border-left-color: var(--accent); }
+.trade-suggestion.tier-good { border-left-color: var(--accent-dim); }
+.trade-suggestion.tier-fair { border-left-color: var(--info); }
+.trade-suggestion.tier-questionable { border-left-color: var(--avg); }
+.trade-suggestion.tier-bad { border-left-color: var(--neg); }
+
+/* Position-accent art — same four Picsart images used on the player-modal
+   header, tying "fills your RB need" to the position's real visual identity
+   instead of just a text string. */
+.trade-suggestion[class*="acc-"]::before {
+  content: "";
+  position: absolute;
+  top: -30px; right: -20px;
+  width: 140px; height: 140px;
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+  mix-blend-mode: screen;
+  opacity: 0.22;
+  z-index: -1;
+  pointer-events: none;
+}
+.trade-suggestion.acc-qb::before { background-image: url("/img/accent-qb.webp"); }
+.trade-suggestion.acc-skill::before { background-image: url("/img/accent-skill.webp"); }
+.trade-suggestion.acc-def::before { background-image: url("/img/accent-def.webp"); }
+.trade-suggestion.acc-k::before { background-image: url("/img/accent-k.webp"); }
 
 .trade-suggestion:hover {
   border-color: var(--accent-dim);
@@ -1961,7 +2305,15 @@ tbody tr:last-child td { border-bottom: none; }
   transform: translateY(-1px);
 }
 
-.trade-suggestion .ts-opp { font-size: 12px; color: var(--muted); margin-bottom: 10px; }
+.trade-suggestion .ts-opp {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 10px;
+}
 
 .trade-suggestion .ts-swap {
   display: flex;
@@ -2047,25 +2399,71 @@ tbody tr:last-child td { border-bottom: none; }
 .startsit-right { position: sticky; top: 16px; }
 @media (max-width: 900px) { .startsit-right { position: static; } }
 
+/* Two big cards side by side when there's room for it — a real
+   head-to-head, not a cramped single-file list squeezed into a sidebar. */
+#startsit-results {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 14px;
+  align-items: start;
+}
+#startsit-results > .empty, #startsit-results > .loading { grid-column: 1 / -1; }
+
 .ss-card {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
   background: var(--panel);
   border: 1px solid var(--border);
   border-left: 3px solid var(--border-bright);
   border-radius: var(--radius);
-  padding: 16px 18px;
-  margin-bottom: 12px;
+  padding: 20px 20px 18px;
+  margin-bottom: 0;
   opacity: 0;
   animation: fadeSlideUp 380ms var(--ease) forwards;
 }
-.ss-card.tier-start { border-left-color: var(--accent); box-shadow: 0 0 20px -10px var(--accent-glow); }
+/* The recommended pick is bigger, not just glowing — real size (padding,
+   avatar, proj number), not a transform: scale(). A scale would fight
+   the fadeSlideUp entrance / recommendGlow animations below, which both
+   own the `transform`/`box-shadow` properties for as long as their
+   forwards fill-mode holds — a static transform on this rule would
+   simply never win. */
+.ss-card.tier-start {
+  border-left-color: var(--accent);
+  box-shadow: 0 0 20px -10px var(--accent-glow);
+  padding: 26px 26px 24px;
+}
+.ss-card.tier-start .ss-card-top img { width: 84px; height: 84px; }
+.ss-card.tier-start .ss-name { font-size: 21px; }
+.ss-card.tier-start .ss-proj-num { font-size: 40px; }
 .ss-card.tier-flex { border-left-color: var(--info); }
 .ss-card.tier-borderline { border-left-color: var(--avg); }
 .ss-card.tier-sit { border-left-color: var(--neg); opacity: 0.85; }
 
-.ss-card-top { display: flex; align-items: center; gap: 10px; }
-.ss-card-top img { width: 46px; height: 46px; border-radius: 50%; object-fit: cover; background: var(--panel-2); flex-shrink: 0; }
-.ss-name { font-weight: 700; font-size: 14px; display: flex; align-items: center; gap: 6px; }
-.ss-meta { font-size: 11px; color: var(--muted); margin-top: 1px; }
+/* the same generated position art that sits behind the player-detail
+   modal header (see the "PICSART ART" section) — quieter here since it's
+   behind a whole card of content, not just a header strip */
+.ss-card::before {
+  content: "";
+  position: absolute;
+  top: 0; right: 0;
+  width: 130px; height: 130px;
+  background-size: cover;
+  background-position: center;
+  mix-blend-mode: screen;
+  opacity: 0.16;
+  z-index: -1;
+  pointer-events: none;
+}
+.ss-card.acc-qb::before { background-image: url("/img/accent-qb.webp"); }
+.ss-card.acc-skill::before { background-image: url("/img/accent-skill.webp"); }
+.ss-card.acc-def::before { background-image: url("/img/accent-def.webp"); }
+.ss-card.acc-k::before { background-image: url("/img/accent-k.webp"); }
+
+.ss-card-top { display: flex; align-items: center; gap: 14px; }
+.ss-card-top img { width: 72px; height: 72px; border-radius: 50%; object-fit: cover; background: var(--panel-2); border: 2px solid var(--border-bright); flex-shrink: 0; }
+.ss-name { font-weight: 800; font-size: 18px; display: flex; align-items: center; gap: 6px; }
+.ss-meta { font-size: 12px; color: var(--muted); margin-top: 2px; }
 
 .ss-tier-badge {
   margin-left: auto;
@@ -2100,9 +2498,78 @@ tbody tr:last-child td { border-bottom: none; }
   justify-content: space-between;
   margin: 12px 0 8px;
 }
-.ss-proj-num { font-family: var(--mono); font-weight: 800; font-size: 26px; color: var(--text); }
-.ss-proj-num .ss-proj-lbl { font-family: var(--sans); font-weight: 500; font-size: 11px; color: var(--muted); margin-left: 6px; }
+.ss-proj-num { font-family: var(--mono); font-weight: 800; font-size: 34px; color: var(--text); white-space: nowrap; }
+.ss-proj-num .ss-proj-lbl { font-family: var(--sans); font-weight: 500; font-size: 11px; color: var(--muted); margin-left: 6px; white-space: nowrap; }
+
+/* At phone width the big proj number + "proj pts" label + "83%
+   confidence" all fighting for one row is what causes the label to
+   wrap mid-word — found testing on a real 375px viewport, not
+   hypothetical. Stack confidence below instead of shrinking the
+   number, since the number is the thing that's supposed to be big. */
+@media (max-width: 420px) {
+  .ss-proj-row { flex-wrap: wrap; gap: 4px 0; }
+  .ss-confidence { flex-basis: 100%; }
+}
 .ss-confidence { font-size: 11px; color: var(--muted); font-family: var(--mono); }
+
+/* the analysis lives inside the card it's about — directly under that
+   player's own numbers, not off in a separate shared callout up top. */
+.ss-analysis {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+.ss-analysis-label {
+  font-size: 10px;
+  font-family: var(--mono);
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: var(--accent);
+  margin-bottom: 6px;
+}
+.ss-analysis p { font-size: 13px; color: var(--text); line-height: 1.6; margin: 0; }
+
+/* Expand-in-place — the full player breakdown (same gauges/weekly chart
+   as the player modal, via playerStatsBodyHtml) opens right inside the
+   card instead of covering the comparison with a modal. */
+.ss-expand-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  margin-top: 14px;
+  padding: 9px;
+  background: none;
+  border: none;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color 150ms var(--ease);
+}
+.ss-expand-toggle:hover { color: var(--accent); }
+.ss-expand-toggle svg { transition: transform 250ms var(--ease); flex-shrink: 0; }
+.ss-card.expanded .ss-expand-toggle { color: var(--accent); }
+.ss-card.expanded .ss-expand-toggle svg { transform: rotate(180deg); }
+
+.ss-expand-panel {
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition: max-height 420ms var(--ease), opacity 300ms var(--ease), margin-top 420ms var(--ease);
+}
+.ss-card.expanded .ss-expand-panel {
+  max-height: 2600px;
+  opacity: 1;
+  margin-top: 10px;
+}
+.ss-expand-panel .section-label:first-child { margin-top: 0; }
+.ss-analysis strong { color: var(--accent); }
 
 .ss-range-track {
   position: relative;
@@ -2184,8 +2651,6 @@ button, .pill { -webkit-user-select: none; user-select: none; }
   transform: translateY(-1px);
   box-shadow: var(--shadow-glow);
 }
-.primary-btn:active:not(:disabled) { transform: translateY(0) scale(0.97); }
-
 .pill:active { transform: scale(0.95); }
 .pill.active { box-shadow: 0 0 0 1px var(--accent-dim) inset, 0 0 16px -4px var(--accent-glow); }
 
@@ -2278,4 +2743,746 @@ input:focus, select:focus { transform: translateY(-1px); }
   table { font-size: 12px; }
   thead th, tbody td { padding: 8px 6px; }
   .hide-mobile { display: none; }
+}
+
+/* ================================================================
+   WIDE-SCREEN LAYOUT — fill the room next to the sidebar instead of
+   leaving it empty; the pieces that shouldn't stretch (paragraphs,
+   the two-card matchup summary) get their own read-friendly cap.
+   ================================================================ */
+.settings-block p, .settings-block ul, .gate-sub, .ss-analysis p { max-width: 70ch; }
+
+#settings-logged-in {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+#settings-logged-in .settings-block { margin-bottom: 0; }
+
+.myteam-summary { max-width: 1180px; }
+
+@media (min-width: 1400px) {
+  .matchup-grid { grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); }
+  .news-grid { grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); }
+}
+
+/* ================================================================
+   BOLDER BUTTONS — gradient fill, a light sweep on hover, a firmer
+   press. Same footprint as before so nothing reflows.
+   ================================================================ */
+.primary-btn {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, var(--brand) 0%, var(--accent-dim) 130%);
+  box-shadow: var(--shadow-sm), inset 0 1px 0 rgba(255,255,255,0.08);
+  border-radius: 12px;
+  letter-spacing: 0.01em;
+}
+.primary-btn::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(115deg, transparent 35%, rgba(255,255,255,0.28) 50%, transparent 65%);
+  background-size: 220% 100%;
+  background-position: 150% 0;
+  transition: background-position 550ms var(--ease);
+  pointer-events: none;
+}
+.primary-btn:hover:not(:disabled)::before { background-position: -50% 0; }
+.primary-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-glow), inset 0 1px 0 rgba(255,255,255,0.12);
+}
+.primary-btn:active:not(:disabled) { transform: translateY(0); }
+
+/* ================================================================
+   PRIMARY BUTTON PRESS PULSE — real motion data, not hand-guessed:
+   designed in Figma with a CUSTOM_SPRING (bounce 0.45) on scale plus a
+   glow breathe on the shadow, then pulled out via get_motion_context.
+   Figma resolves the spring to a 51-point sampled linear() easing —
+   the exact curve, not an approximation of one — and (correctly) kept
+   scale and box-shadow as separate @keyframes rules rather than one:
+   each keyframe stop's `animation-timing-function` governs EVERY
+   property in that rule from that stop forward, so merging the two
+   tracks into one block would leak the scale spring's easing onto the
+   glow's segments. Triggered via a JS class toggle (see app.js) rather
+   than :active, since :active only lasts as long as the mouse button
+   is actually held — too short for an 800ms release animation to
+   finish on a normal click.
+   ================================================================ */
+@keyframes btnPulseGlow {
+  0% { animation-timing-function: step-end; box-shadow: var(--shadow-sm), 0 0 4px 0 var(--accent-glow); }
+  12.5% { animation-timing-function: ease-out; box-shadow: var(--shadow-sm), 0 0 4px 0 var(--accent-glow); }
+  62.5% { animation-timing-function: ease-in-out; box-shadow: var(--shadow-sm), 0 0 16px 0 var(--accent-glow); }
+  100% { box-shadow: var(--shadow-sm), 0 0 8px 0 var(--accent-glow); }
+}
+@keyframes btnPulseScale {
+  0% { transform: scale(0.96); }
+  12.5% {
+    transform: scale(0.96);
+    animation-timing-function: linear(0, 0.0328, 0.1177, 0.2359, 0.3715, 0.5117, 0.6464, 0.7686, 0.8739, 0.9601, 1.0267, 1.0745, 1.1054, 1.1218, 1.1263, 1.1218, 1.1108, 1.0958, 1.0786, 1.0609, 1.0439, 1.0286, 1.0154, 1.0046, 0.9963, 0.9904, 0.9866, 0.9846, 0.984, 0.9847, 0.9861, 0.988, 0.9902, 0.9924, 0.9945, 0.9965, 0.9981, 0.9995, 1.0005, 1.0012, 1.0017, 1.002, 1.002, 1.0019, 1.0017, 1.0015, 1.0012, 1.0009, 1.0007, 1.0004, 1.0002);
+  }
+  56.25% { transform: scale(1); }
+  100% { transform: scale(1); }
+}
+.primary-btn.pulse { animation: btnPulseGlow 800ms linear, btnPulseScale 800ms linear; }
+
+.pill:hover:not(:disabled):not(.active) { background: var(--panel-2); }
+.pill.active { background: linear-gradient(135deg, var(--brand) 0%, var(--accent-dim) 140%); }
+
+.week-arrow:hover:not(:disabled), #sidebar-add-league:hover {
+  box-shadow: 0 0 0 3px rgba(87,226,164,0.12);
+}
+
+.oauth-btn:active { transform: scale(0.97); }
+
+/* ================================================================
+   HIGHLIGHT ANIMATIONS — draw the eye to the choice the app is
+   actually recommending, not just decoration everywhere.
+   ================================================================ */
+@keyframes recommendGlow {
+  0%, 100% { box-shadow: var(--shadow), 0 0 0 1px var(--border-bright), 0 0 24px -8px var(--accent-glow); }
+  50% { box-shadow: var(--shadow), 0 0 0 1px var(--accent-dim), 0 0 38px -6px var(--accent-glow); }
+}
+.result-card.recommended { animation: recommendGlow 2.6s ease-in-out infinite; }
+
+/* .ss-card and .trade-suggestion already carry a fadeSlideUp entrance from
+   their base rule — combine rather than replace, or the glow would
+   silently cancel the entrance (the `animation` shorthand is one property). */
+.ss-card.tier-start {
+  animation: fadeSlideUp 380ms var(--ease) forwards, recommendGlow 2.6s ease-in-out 380ms infinite;
+}
+
+@keyframes badgePop {
+  0% { transform: scale(0.6); opacity: 0; }
+  60% { transform: scale(1.12); opacity: 1; }
+  100% { transform: scale(1); }
+}
+.badge-recommended, .ss-tier-badge.tier-start { animation: badgePop 420ms var(--ease-snap); }
+
+/* .trade-suggestion already carries a tsCardPop entrance from its base
+   rule — combine rather than replace, or the glow would silently cancel
+   the spring-pop entrance (the `animation` shorthand is one property). */
+.trade-suggestion.best-value {
+  border-color: var(--accent-dim);
+  animation: tsCardPop 520ms var(--ease) forwards, recommendGlow 2.6s ease-in-out 520ms infinite;
+}
+.trade-suggestion.best-value::after {
+  content: "";
+  position: absolute;
+  top: -46px; right: -46px;
+  width: 140px; height: 140px;
+  background: url("/img/accent-trade-best.webp") center / contain no-repeat;
+  mix-blend-mode: screen;
+  opacity: 0.5;
+  z-index: -1;
+  pointer-events: none;
+  animation: fadeIn 600ms var(--ease) 400ms both;
+}
+
+/* Card entrance — the exact spring sampled from Figma's Button Motion Demo
+   (see the primary-button pulse below for the full story): a
+   CUSTOM_SPRING(bounce 0.45) resolved to a 51-point linear() easing, reused
+   here instead of the plain fadeSlideUp so a freshly-scanned trade actually
+   "pops" into place rather than just sliding up. */
+@keyframes tsCardPop {
+  0% { opacity: 0; transform: scale(0.94) translateY(10px); }
+  10% {
+    opacity: 1; transform: scale(0.94) translateY(10px);
+    animation-timing-function: linear(0, 0.0328, 0.1177, 0.2359, 0.3715, 0.5117, 0.6464, 0.7686, 0.8739, 0.9601, 1.0267, 1.0745, 1.1054, 1.1218, 1.1263, 1.1218, 1.1108, 1.0958, 1.0786, 1.0609, 1.0439, 1.0286, 1.0154, 1.0046, 0.9963, 0.9904, 0.9866, 0.9846, 0.984, 0.9847, 0.9861, 0.988, 0.9902, 0.9924, 0.9945, 0.9965, 0.9981, 0.9995, 1.0005, 1.0012, 1.0017, 1.002, 1.002, 1.0019, 1.0017, 1.0015, 1.0012, 1.0009, 1.0007, 1.0004, 1.0002);
+  }
+  80% { opacity: 1; transform: scale(1) translateY(0); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* No-results state, same layout as .empty but its own art (a broken
+   swap loop) rather than the generic magnifying-glass. */
+.empty.tf-empty::before { background-image: url("/img/empty-trades.webp"); }
+
+/* ================================================================
+   PICSART ART — generated illustrations, blended in rather than
+   dropped in as flat images (mix-blend-mode: screen turns each
+   image's near-black background transparent against any panel).
+   ================================================================ */
+.gate-card {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+.gate-card::before {
+  content: "";
+  position: absolute;
+  top: -40px; left: 50%;
+  width: 260px; height: 260px;
+  transform: translateX(-50%);
+  background: url("/img/empty-sync.webp") center / contain no-repeat;
+  mix-blend-mode: screen;
+  opacity: 0.6;
+  z-index: -1;
+  pointer-events: none;
+}
+.gate-card > * { position: relative; }
+
+.empty {
+  position: relative;
+  isolation: isolate;
+  padding-top: 96px;
+}
+.empty::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 50%;
+  width: 96px; height: 96px;
+  transform: translateX(-50%);
+  background: url("/img/empty-results.webp") center / contain no-repeat;
+  mix-blend-mode: screen;
+  opacity: 0.7;
+  z-index: -1;
+  pointer-events: none;
+}
+/* scoped to modals carrying a position-accent class (the player detail
+   modal only — every other modal-header in the app is untouched) */
+.modal[class*="acc-"] .modal-header {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  margin: -20px -20px 16px;
+  padding: 20px 20px 16px;
+}
+.modal[class*="acc-"] .modal-header::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  mix-blend-mode: screen;
+  opacity: 0.4;
+  z-index: -1;
+  pointer-events: none;
+}
+.modal.acc-qb .modal-header::before { background-image: url("/img/accent-qb.webp"); }
+.modal.acc-skill .modal-header::before { background-image: url("/img/accent-skill.webp"); }
+.modal.acc-def .modal-header::before { background-image: url("/img/accent-def.webp"); }
+.modal.acc-k .modal-header::before { background-image: url("/img/accent-k.webp"); }
+
+@media (prefers-reduced-motion: reduce) {
+  .primary-btn::before { transition: none; }
+}
+
+/* ================================================================
+   START/SIT SLOTS — a real vs-style layout instead of small pills:
+   first pick lands on the left, second on the right, each one big
+   enough to actually look like a head-to-head comparison.
+   ================================================================ */
+.ss-slot-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+@keyframes slotPop {
+  0% { opacity: 0; transform: scale(0.85) translateY(10px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.ss-slot {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 168px;
+  background: var(--panel);
+  border: 1px solid var(--border-bright);
+  border-radius: var(--radius);
+  padding: 20px 14px 16px;
+  box-shadow: var(--shadow);
+  opacity: 0;
+  animation: slotPop 380ms var(--ease-snap) forwards;
+}
+
+.ss-slot img {
+  width: 68px; height: 68px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--panel-2);
+  border: 2px solid var(--border-bright);
+}
+
+.ss-slot-name { font-weight: 700; font-size: 14px; text-align: center; }
+.ss-slot-meta { font-size: 11px; color: var(--muted); text-align: center; }
+.ss-slot .opp-select {
+  width: 100%;
+  margin-top: 4px;
+  text-align: center;
+  font-size: 12px;
+  padding: 6px 8px;
+}
+
+.ss-slot-x {
+  position: absolute;
+  top: 8px; right: 8px;
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--panel-2);
+  color: var(--muted);
+  font-size: 11px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+.ss-slot-x:hover { color: var(--neg); border-color: var(--neg); }
+
+.ss-slot-vs {
+  font-family: var(--mono);
+  font-weight: 800;
+  font-size: 13px;
+  color: var(--muted);
+  border: 1px solid var(--border-bright);
+  background: var(--panel-2);
+  border-radius: 50%;
+  width: 34px; height: 34px;
+  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+}
+
+/* the animation the "Compare" click itself triggers, right on the cards
+   being compared — a quick confident lock-in flash before results land */
+@keyframes slotConfirm {
+  0% { opacity: 1; transform: scale(1); box-shadow: var(--shadow); border-color: var(--border-bright); }
+  40% { opacity: 1; transform: scale(1.07); box-shadow: var(--shadow-glow); border-color: var(--accent); }
+  100% { opacity: 1; transform: scale(1); box-shadow: var(--shadow); border-color: var(--border-bright); }
+}
+.ss-slot.confirming { animation: slotConfirm 500ms var(--ease-snap); }
+
+@media (max-width: 480px) {
+  .ss-slot { width: 130px; padding: 16px 10px 12px; }
+  .ss-slot img { width: 52px; height: 52px; }
+}
+
+/* ================================================================
+   PLAYER GRAPH — weekly fantasy points vs. this player's own season
+   average, so it reads as "hit / missed projection" per week instead
+   of just a bar chart with no reference point.
+   ================================================================ */
+.weeklog { position: relative; }
+.weeklog .bar.below-avg { background: var(--neg); }
+.weeklog-avg-line {
+  position: absolute;
+  left: 0; right: 0;
+  border-top: 2px dashed var(--accent);
+  z-index: 1;
+}
+.weeklog-avg-line::after {
+  content: attr(data-label);
+  position: absolute;
+  right: 0; top: -16px;
+  font-size: 10px;
+  font-family: var(--mono);
+  font-weight: 700;
+  color: var(--accent);
+  background: var(--panel);
+  padding: 0 4px;
+}
+
+/* ------------------------------------------------- metric gauges --- */
+.metric-tile { position: relative; }
+.metric-tile .gauge {
+  margin-top: 6px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border);
+  overflow: hidden;
+}
+.metric-tile .gauge > span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent-dim), var(--accent));
+  width: 0%;
+  transition: width 600ms var(--ease);
+}
+.metric-tile.below-avg .value { color: var(--neg); }
+.metric-tile.below-avg .gauge > span { background: var(--neg); }
+
+.weeklog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+#weeklog-stat-select {
+  padding: 5px 8px;
+  font-size: 11px;
+  font-family: var(--mono);
+}
+
+/* ================================================================
+   NOTIFICATIONS — a bell in the sidebar for real, actionable alerts
+   (a starter marked OUT/Doubtful this week), not decoration.
+   ================================================================ */
+.sidebar-icon-btn {
+  position: relative;
+  flex-shrink: 0;
+  width: 26px; height: 26px;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  color: var(--muted);
+  cursor: pointer;
+  margin-right: 4px;
+  transition: color 0.15s, border-color 0.15s;
+}
+.sidebar-icon-btn:hover { color: var(--accent); border-color: var(--accent-dim); }
+.sidebar-icon-btn svg { width: 14px; height: 14px; }
+body.sidebar-collapsed .sidebar-top .sidebar-icon-btn { display: none; }
+
+.notif-badge {
+  position: absolute;
+  top: -5px; right: -5px;
+  min-width: 15px;
+  height: 15px;
+  padding: 0 3px;
+  border-radius: 999px;
+  background: var(--neg);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 800;
+  font-family: var(--mono);
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 0 0 2px var(--panel);
+  animation: badgePop 420ms var(--ease-snap);
+}
+
+.notif-dropdown {
+  position: fixed;
+  z-index: 55;
+  width: 280px;
+  max-height: 320px;
+  overflow-y: auto;
+  background: var(--panel-2);
+  border: 1px solid var(--border-bright);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lift);
+  animation: dropIn 200ms var(--ease);
+}
+.notif-dropdown .ad-header {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+  font-weight: 700;
+  font-size: 13px;
+}
+.notif-dropdown button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  padding: 10px 14px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  cursor: pointer;
+}
+.notif-dropdown button:last-child { border-bottom: none; }
+.notif-dropdown button:hover { background: var(--panel); }
+
+/* ================================================================
+   LIVE SCORES — real in-game NFL scores, a horizontal strip on My
+   Team. Quiet by default (small, muted cards); a live game gets a
+   pulsing dot so it actually reads as "in progress" at a glance.
+   ================================================================ */
+.live-scores-strip {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  margin-bottom: 16px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-bright) transparent;
+}
+.live-scores-strip::-webkit-scrollbar { height: 4px; }
+.live-scores-strip::-webkit-scrollbar-thumb { background: var(--border-bright); border-radius: 3px; }
+
+.live-score-card {
+  position: relative;
+  flex-shrink: 0;
+  min-width: 108px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 8px 12px;
+  text-align: center;
+}
+.live-score-card.live { border-color: var(--accent-dim); box-shadow: 0 0 14px -6px var(--accent-glow); }
+.live-score-card.final { opacity: 0.65; }
+
+.lsc-teams {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-family: var(--mono);
+  font-weight: 700;
+  font-size: 12px;
+}
+.lsc-score { font-size: 13px; font-weight: 800; color: var(--text); }
+.lsc-winner { color: var(--accent); }
+
+.lsc-status {
+  margin-top: 3px;
+  font-size: 10px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.live-score-card.live .lsc-status { color: var(--accent); font-weight: 700; }
+
+.live-dot {
+  position: absolute;
+  top: 7px; right: 7px;
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--neg);
+  box-shadow: 0 0 6px 1px rgba(255,107,129,0.6);
+  animation: livePulse 1.4s ease-in-out infinite;
+}
+@keyframes livePulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(1.3); }
+}
+
+/* ================================================================
+   RIPPLE — a single delegated click listener (see app.js) adds one of
+   these spans to whichever .primary-btn/.pill/.nav-item/.week-arrow
+   was actually clicked, at the actual click point. Real tactile
+   feedback instead of just a color-shift on click.
+   ================================================================ */
+.btn-ripple {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.32);
+  transform: scale(0);
+  opacity: 1;
+  animation: rippleExpand 550ms var(--ease) forwards;
+  pointer-events: none;
+}
+@keyframes rippleExpand {
+  to { transform: scale(1); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .btn-ripple { display: none; }
+}
+
+/* ================================================================
+   COMPARE TRAY + MODAL — pick 2-4 players off the Big Board (any
+   position, any team, rostered or not — Start/Sit already covers
+   "compare my own roster", this covers the rest of the league too)
+   and see them side by side with the best real number per category
+   called out, not just a wall of numbers.
+   ================================================================ */
+.board-player-row { display: flex; align-items: center; gap: 10px; }
+
+.cmp-check {
+  flex-shrink: 0;
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  background: var(--panel-2);
+  border: 1.5px solid var(--border-bright);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px;
+  color: var(--accent);
+  cursor: pointer;
+  transition: background 150ms var(--ease), border-color 150ms var(--ease), transform 150ms var(--ease-snap);
+}
+.cmp-check:hover { border-color: var(--accent); }
+.cmp-check.selected {
+  background: var(--accent); border-color: var(--accent); color: #0e1b15; font-weight: 900;
+  animation: badgePop 320ms var(--ease-snap);
+}
+
+.compare-tray {
+  position: fixed;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  max-width: calc(100vw - 32px);
+  background: var(--panel-glass);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--border-bright);
+  border-radius: 999px;
+  padding: 8px 10px 8px 16px;
+  box-shadow: var(--shadow-lift);
+  animation: trayRise 320ms var(--ease-snap);
+}
+@keyframes trayRise {
+  0% { opacity: 0; transform: translateX(-50%) translateY(16px) scale(0.96); }
+  100% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+}
+.compare-tray.shake { animation: trayRise 320ms var(--ease-snap), modalShake 400ms; }
+
+.compare-tray-chips { display: flex; align-items: center; gap: 8px; overflow-x: auto; max-width: 46vw; }
+.cmp-chip {
+  display: flex; align-items: center; gap: 6px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 3px 8px 3px 3px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+  animation: badgePop 320ms var(--ease-snap);
+}
+.cmp-chip img { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; background: var(--panel); flex-shrink: 0; }
+.cmp-chip .chip-x {
+  background: none; border: none; color: var(--muted); cursor: pointer; font-size: 12px; padding: 2px;
+  display: flex; align-items: center; justify-content: center;
+}
+.cmp-chip .chip-x:hover { color: var(--neg); }
+
+.compare-tray-actions { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.compare-tray-actions .primary-btn { padding: 8px 18px; }
+
+@media (max-width: 640px) {
+  .compare-tray { left: 12px; right: 12px; bottom: 12px; transform: none; max-width: none; }
+  .compare-tray.shake { animation: modalShake 400ms; }
+  @keyframes trayRise { 0% { opacity: 0; transform: translateY(16px) scale(0.96); } 100% { opacity: 1; transform: translateY(0) scale(1); } }
+  .compare-tray-chips { max-width: 100%; }
+}
+
+.modal.cmp-modal { max-width: 960px; }
+.cmp-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 14px;
+}
+
+.cmp-card {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px 16px 16px;
+  text-align: center;
+  opacity: 0;
+  animation: tsCardPop 520ms var(--ease) forwards;
+}
+.cmp-card::before {
+  content: "";
+  position: absolute;
+  top: -30px; right: -30px;
+  width: 130px; height: 130px;
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+  mix-blend-mode: screen;
+  opacity: 0.16;
+  z-index: -1;
+  pointer-events: none;
+}
+.cmp-card.acc-qb::before { background-image: url("/img/accent-qb.webp"); }
+.cmp-card.acc-skill::before { background-image: url("/img/accent-skill.webp"); }
+.cmp-card.acc-def::before { background-image: url("/img/accent-def.webp"); }
+.cmp-card.acc-k::before { background-image: url("/img/accent-k.webp"); }
+.cmp-card:hover { border-color: var(--accent-dim); cursor: pointer; transform: translateY(-2px); transition: transform 150ms var(--ease), border-color 150ms var(--ease); }
+
+.cmp-card.cmp-top {
+  border-color: var(--accent-dim);
+  animation: tsCardPop 520ms var(--ease) forwards, recommendGlow 2.6s ease-in-out 520ms infinite;
+}
+.cmp-top-badge { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); margin: 0; }
+
+.cmp-card img { width: 64px; height: 64px; border-radius: 50%; object-fit: cover; background: var(--panel-2); margin: 6px auto 10px; display: block; }
+.cmp-name { font-weight: 800; font-size: 15px; display: flex; align-items: center; justify-content: center; gap: 6px; }
+.cmp-meta { font-size: 12px; color: var(--muted); margin-bottom: 14px; }
+
+.cmp-rows { display: flex; flex-direction: column; gap: 10px; text-align: left; }
+.cmp-row { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 4px 8px; }
+.cmp-row-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.03em; }
+.cmp-row.best .cmp-row-label { color: var(--text); }
+.cmp-row-val { font-family: var(--mono); font-weight: 800; font-size: 14px; font-variant-numeric: tabular-nums; }
+.cmp-row-val.muted { color: var(--muted); font-weight: 600; }
+.cmp-row.best .cmp-row-val { color: var(--accent); text-shadow: 0 0 10px var(--accent-glow); }
+.cmp-row-track {
+  grid-column: 1 / -1;
+  height: 5px;
+  border-radius: 999px;
+  background: var(--panel-2);
+  overflow: hidden;
+}
+.cmp-row-fill { display: block; height: 100%; border-radius: 999px; background: var(--border-bright); }
+.cmp-row-fill.best { background: var(--accent); box-shadow: 0 0 8px -1px var(--accent-glow); }
+/* Not badgePop reused as-is: that keyframe leaves opacity unset at 100%,
+   which is fine for badgePop's other, opacity:1-by-default users (the
+   omitted end value is filled in from the base, non-animated style) but
+   wrong here — the crown's base style is intentionally opacity:0 (hidden
+   until this animation's delay elapses), so the same "missing value ->
+   fall back to the base style" rule would silently animate it back to 0
+   right as the pop finishes. Every stop below sets opacity explicitly. */
+@keyframes crownPop {
+  0% { transform: scale(0.6); opacity: 0; }
+  60% { transform: scale(1.12); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+.cmp-crown {
+  display: inline-block;
+  font-size: 11px;
+  opacity: 0;
+  animation: crownPop 420ms var(--ease-snap) 700ms both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .compare-tray, .cmp-card, .cmp-crown { animation: none; opacity: 1; }
+}
+
+/* ================================================================
+   TRACK RECORD — real accuracy of this app's own START calls, graded
+   only against real played weeks (see engine/db.py get_track_record).
+   Hidden entirely until there's at least one logged decision so a
+   fresh season doesn't open with a hollow "0%".
+   ================================================================ */
+.track-record-strip {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 18px;
+  margin-bottom: 18px;
+  box-shadow: var(--shadow);
+  animation: fadeSlideUp 340ms var(--ease);
+}
+.tr-stat { display: flex; align-items: center; gap: 12px; }
+.tr-pct {
+  font-family: var(--mono);
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 0 12px var(--accent-glow);
+}
+.tr-pct.muted { color: var(--muted); font-size: 22px; text-shadow: none; }
+.tr-pct-lbl { font-size: 12px; color: var(--muted); line-height: 1.3; }
+.tr-pending {
+  font-size: 12px;
+  color: var(--muted);
+  margin-left: auto;
+  padding: 4px 10px;
+  background: var(--panel-2);
+  border-radius: 999px;
+  border: 1px solid var(--border);
 }

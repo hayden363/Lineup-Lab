@@ -15,7 +15,9 @@ SECURITY POSTURE (see README for the full writeup):
   - bcrypt password hashing, cryptographically random session tokens
   - httponly + SameSite=Lax session cookies, auto-`Secure` when served over https
   - ESPN cookies encrypted at rest (engine/crypto.py), never echoed back to the client
-  - rate limiting on auth endpoints (login/signup/resend/forgot-password)
+  - rate limiting on auth endpoints (login/signup/resend/forgot-password/
+    reset-password) and on unauthenticated-but-expensive ones (refresh,
+    per-player news) so a public launch isn't wide open to abuse
   - standard hardening response headers (nosniff, frame-deny, referrer policy)
   - no wildcard CORS — this process serves its own frontend, same-origin only
   - parameterized SQL everywhere (see engine/db.py); no string-built queries
@@ -29,20 +31,25 @@ import os
 import secrets
 import time
 from collections import defaultdict, deque
-from typing import Dict, List, Optional
+from contextlib import asynccontextmanager
+from typing import Any, Dict, List, Optional
 from urllib.parse import urlparse
 
 import requests
 from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from engine import data as data_layer
 from engine import db
+from engine import espn as espn_layer
+from engine import live_scores as live_scores_layer
 from engine import mail as mail_layer
 from engine import news as news_layer
 from engine import oauth as oauth_layer
+from engine import refresh_scheduler
 from engine import sleeper as sleeper_layer
 from engine import tools
 from engine.advanced import ADVANCED_COLS
@@ -51,7 +58,28 @@ from engine.board import (POSITIONS, build_board, load_bundle, matchup_multiplie
 from engine.metrics import WEIGHTS
 from engine.scoring import PRESETS
 
-app = FastAPI(title="Lineup Lab API")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Weekly-refresh automation (see engine/refresh_scheduler.py) — starts
+    # a background task that periodically force-refreshes the board data
+    # so it's never more than REFRESH_INTERVAL_HOURS stale, without
+    # needing a separate cron job/launchd plist. Cancelled cleanly on
+    # shutdown rather than left to die mid-fetch.
+    task = refresh_scheduler.start()
+    try:
+        yield
+    finally:
+        task.cancel()
+
+
+app = FastAPI(title="Lineup Lab API", lifespan=lifespan)
+# Nothing here was being compressed before — app.js/style.css (~190KB
+# combined) and every JSON board response went over the wire raw. gzip
+# shrinks text/JSON/JS/CSS by roughly 70-80%; skips anything already
+# under 500 bytes (not worth the CPU) and doesn't touch images (already
+# compressed formats, gzipping them again just wastes CPU for ~0 gain).
+app.add_middleware(GZipMiddleware, minimum_size=500)
 
 SESSION_COOKIE = "eb_session"
 
@@ -68,7 +96,9 @@ async def security_headers(request: Request, call_next):
     # CSP costs nothing here and blocks injected-script XSS even if a data
     # value somehow slipped past escaping
     response.headers["Content-Security-Policy"] = (
-        "default-src 'self'; img-src 'self' https: data:; style-src 'self' 'unsafe-inline'; "
+        "default-src 'self'; img-src 'self' https: data:; "
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+        "font-src 'self' https://fonts.gstatic.com; "
         "script-src 'self'; connect-src 'self'; frame-ancestors 'none'"
     )
     return response
@@ -99,12 +129,34 @@ login_rate_limit = rate_limit("login", limit=10, window_seconds=5 * 60)
 signup_rate_limit = rate_limit("signup", limit=5, window_seconds=15 * 60)
 mail_rate_limit = rate_limit("mail", limit=3, window_seconds=10 * 60)
 oauth_rate_limit = rate_limit("oauth", limit=15, window_seconds=5 * 60)
+# reset_password's token is a cryptographically random 256-bit
+# secrets.token_urlsafe(32) (see engine/db.py) — not brute-forceable
+# regardless — this is defense-in-depth, same reasoning as the other
+# auth endpoints above.
+reset_rate_limit = rate_limit("reset", limit=10, window_seconds=15 * 60)
+# /api/refresh force-refetches everything (nflverse weekly stats, full
+# play-by-play, NGS, schedule, snap counts — real network I/O, several
+# seconds of work) and had NO auth or limit at all before a public
+# launch made that a real concern: unauthenticated + unlimited meant
+# anyone could hammer it into a self-inflicted DoS / upstream-rate-limit
+# problem. POST /api/refresh still works for anyone within this budget —
+# it was never meant to be a privileged endpoint, just a bounded one.
+refresh_rate_limit = rate_limit("refresh", limit=3, window_seconds=10 * 60)
+# Player news can trigger a real Anthropic API call per distinct player
+# (see engine/news.py's ai_summary_for_player — cached per player, but
+# the cache doesn't stop someone from cycling through many different
+# players). Only matters once ANTHROPIC_API_KEY is actually set; harmless
+# either way.
+news_rate_limit = rate_limit("news", limit=30, window_seconds=60)
 
 OAUTH_STATE_COOKIE = "eb_oauth_state"
 
 
-def _clean(obj):
-    """Recursively replace NaN/inf with None so the JSON encoder doesn't choke."""
+def _clean(obj: Any) -> Any:
+    """Recursively replace NaN/inf with None so the JSON encoder doesn't choke.
+    Deliberately untyped input/output (Any) — it walks arbitrary JSON-shaped
+    data (dict/list/float/anything else) and preserves whatever shape it's
+    given; a precise type here would just be self-referential noise."""
     if isinstance(obj, float):
         return None if (math.isnan(obj) or math.isinf(obj)) else obj
     if isinstance(obj, dict):
@@ -298,7 +350,7 @@ def forgot_password(req: ForgotPasswordRequest, request: Request):
     return {"status": "ok", "message": "If that email has an account, a reset link is on its way."}
 
 
-@app.post("/api/auth/reset-password")
+@app.post("/api/auth/reset-password", dependencies=[Depends(reset_rate_limit)])
 def reset_password(req: ResetPasswordRequest, request: Request, response: Response):
     try:
         user = db.reset_password(req.token, req.new_password)
@@ -441,6 +493,30 @@ def api_player(player_id: str, opp: Optional[str] = Query(None),
     return _clean(detail)
 
 
+@app.get("/api/player/{player_id}/news", dependencies=[Depends(news_rate_limit)])
+def api_player_news(player_id: str, scoring: Optional[dict] = Depends(scoring_from_query), user=Depends(current_user)):
+    """Real news for one player (ESPN/CBS RSS, full-name matched — see
+    engine/news.py), plus a short AI-written summary of those same real
+    items when ANTHROPIC_API_KEY is configured (see .env.example) —
+    'not every player has an active story' is expected and fine: an
+    empty `items` list just means no real story matched this player
+    right now, not an error."""
+    scoring = _effective_scoring(scoring, user)
+    detail = player_detail(player_id, scoring=scoring)
+    if detail is None:
+        raise HTTPException(404, "player not found or not enough data")
+    items = news_layer.player_news(detail["player_display_name"], player_id=player_id)
+    summary = news_layer.ai_summary_for_player(
+        detail["player_display_name"], items,
+        position=detail.get("position"), injury_status=detail.get("injury_status"),
+        player_id=player_id,
+    )
+    return _clean({
+        "player_id": player_id, "player_display_name": detail["player_display_name"],
+        "items": items[:8], "ai_summary": summary,
+    })
+
+
 @app.get("/api/search")
 def api_search(q: str = Query(..., min_length=1), limit: int = Query(20, ge=1, le=50)):
     return {"query": q, "results": _clean(search_players(q, limit=limit))}
@@ -453,7 +529,7 @@ def api_team_next(team: str):
     return {"team": team.upper(), "opponent": opp, "week": wk_no}
 
 
-@app.post("/api/refresh")
+@app.post("/api/refresh", dependencies=[Depends(refresh_rate_limit)])
 def api_refresh():
     """Force-refetch all data (bypasses the disk cache)."""
     bundle = load_bundle(force=True)
@@ -473,13 +549,68 @@ def api_startsit(req: StartSitRequest, user=Depends(current_user)):
         raise HTTPException(400, "need at least 2 players to compare")
     scoring = _effective_scoring(req.scoring, user)
     result = tools.start_sit(req.player_ids, opponents=req.opponents, scoring=scoring)
+
+    # Track record: only for a signed-in user (nothing to attach an
+    # anonymous comparison to), and only players this actually has a real
+    # tier + a real upcoming week for — see engine/db.py's log_predictions
+    # docstring for why this is graded later, not right now.
+    if user:
+        loggable = [
+            {**p, "season": result["season"]}
+            for p in result["players"]
+            if "error" not in p and p.get("tier") and p.get("week") is not None
+        ]
+        try:
+            db.log_predictions(user["id"], loggable, scoring=scoring)
+        except Exception as e:
+            print(f"[track-record] failed to log start/sit predictions: {e}")
+
     return _clean(result)
+
+
+@app.get("/api/track-record")
+def api_track_record(user=Depends(require_user)):
+    """How often this app's own START calls have actually been right,
+    graded only against real, already-played weeks (see engine/db.py's
+    get_track_record) — `pending` counts logged-but-not-yet-graded calls
+    so a 0-decision season reads as 'nothing resolved yet', not silently
+    excluded from a smaller, falsely-clean sample."""
+    return _clean(db.get_track_record(user["id"]))
 
 
 class TradeRequest(BaseModel):
     side_a: List[str]
     side_b: List[str]
     scoring: Optional[dict] = None
+    opponent_roster_id: Optional[int] = None   # side B's real roster_id — needed to build a
+                                                # needs-aware recommendation, not just player IDs
+
+
+def _trade_league_ctx(user, opponent_roster_id, scoring):
+    """Best-effort context for a needs-aware trade recommendation: both
+    sides' full CURRENT rosters + the league's real starting-lineup
+    slots. None (not an error) when there's no signed-in active team, no
+    opponent picked yet, or the active league is on a platform this
+    doesn't support yet (ESPN — see engine/tools.py's _team_needs) —
+    /api/trade still returns a full value comparison either way, just
+    without the extra recommendation."""
+    if not user or opponent_roster_id is None:
+        return None
+    active = db.get_active_team(user["id"])
+    if not active or active.get("platform") == "espn":
+        # ESPN's league object doesn't expose starting-lineup slot counts
+        # the same shape sleeper's roster_positions does yet — rather
+        # than guess, this stays a disclosed gap (see README Roadmap)
+        # and the endpoint falls back to value-only for an ESPN team.
+        return None
+    try:
+        roster_a = tools.roster_player_list(active["league_id"], int(active["roster_id"]), scoring=scoring)
+        roster_b = tools.roster_player_list(active["league_id"], opponent_roster_id, scoring=scoring)
+        roster_positions = sleeper_layer.get_league(active["league_id"]).get("roster_positions")
+        return {"roster_a": roster_a, "roster_b": roster_b, "roster_positions": roster_positions}
+    except Exception as e:
+        print(f"[trade] couldn't build needs context (falling back to value-only): {e}")
+        return None
 
 
 @app.post("/api/trade")
@@ -487,7 +618,8 @@ def api_trade(req: TradeRequest, user=Depends(current_user)):
     if not req.side_a or not req.side_b:
         raise HTTPException(400, "both sides need at least 1 player")
     scoring = _effective_scoring(req.scoring, user)
-    result = tools.trade_analyzer(req.side_a, req.side_b, scoring=scoring)
+    league_ctx = _trade_league_ctx(user, req.opponent_roster_id, scoring)
+    result = tools.trade_analyzer(req.side_a, req.side_b, scoring=scoring, league_ctx=league_ctx)
     return _clean(result)
 
 
@@ -513,8 +645,14 @@ def api_waivers(
         active = db.get_active_team(user["id"])
         if active:
             try:
-                snap = sleeper_layer.league_snapshot(active["league_id"])
-                rostered_ids = set(snap["rostered_player_ids"])
+                if active.get("platform") == "espn":
+                    espn_s2, swid = db.get_espn_secrets(user["id"])
+                    snap = espn_layer.league_snapshot(active["league_id"], espn_layer.resolve_year(),
+                                                        espn_s2=espn_s2, swid=swid)
+                    rostered_ids = {p["gsis_id"] for t in snap["teams"] for p in t["roster"] if p["gsis_id"]}
+                else:
+                    snap = sleeper_layer.league_snapshot(active["league_id"])
+                    rostered_ids = set(snap["rostered_player_ids"])
                 if scoring is None:
                     scoring = snap["scoring"]
                 league_info = {"league_id": active["league_id"], "league_name": snap["league_name"],
@@ -537,14 +675,65 @@ def api_sleeper_league(league_id: str, refresh: bool = False):
     return _clean(snap)
 
 
+@app.get("/api/espn/{league_id}")
+def api_espn_league(league_id: str, year: Optional[int] = None, user=Depends(current_user)):
+    """Real ESPN league sync (see engine/espn.py) — raw league snapshot,
+    same shape /api/sleeper/{league_id} returns. My Team, Waivers, Trade
+    (team list + roster browsing), and League News all sync a connected
+    ESPN team the same as a Sleeper one now; Trade Finder's auto-suggest
+    is the one decision tool still Sleeper-only (see README Roadmap).
+    Public leagues work signed out; a private league needs the signed-in
+    user's own espn_s2/SWID from Settings (never sent back to the client
+    — see engine/db.py get_espn_secrets)."""
+    espn_s2, swid = db.get_espn_secrets(user["id"]) if user else (None, None)
+    year = year or espn_layer.resolve_year()
+    try:
+        snap = espn_layer.league_snapshot(league_id, year, espn_s2=espn_s2, swid=swid)
+    except Exception as e:
+        raise HTTPException(400, f"couldn't load ESPN league {league_id} for {year}: {e}")
+    return _clean(snap)
+
+
 class ConnectTeamRequest(BaseModel):
     league_id_or_url: str
+    platform: str = "sleeper"
+
+
+def _espn_teams_for_lookup(league_id, user):
+    """Same shape api_teams_lookup already returns for Sleeper
+    (league_id/league_name/scoring/teams[roster_id,team_name,owner,
+    avatar_url,player_ids]) built from engine/espn.py's own richer
+    per-team shape, so the frontend's existing pick-your-team flow (see
+    static/app.js renderGateConnectLeague) works unmodified for either
+    platform."""
+    espn_s2, swid = db.get_espn_secrets(user["id"]) if user else (None, None)
+    year = espn_layer.resolve_year()
+    snap = espn_layer.league_snapshot(league_id, year, espn_s2=espn_s2, swid=swid)
+    return {
+        "league_id": snap["league_id"], "league_name": snap["league_name"], "scoring": snap["scoring"],
+        "teams": [{
+            "roster_id": t["team_id"], "team_name": t["team_name"], "owner": t["owner"],
+            "avatar_url": t["logo_url"], "player_ids": [p["espn_id"] for p in t["roster"]],
+        } for t in snap["teams"]],
+    }
 
 
 @app.post("/api/teams/lookup")
-def api_teams_lookup(req: ConnectTeamRequest):
-    """Step 1 of connecting a team: accepts a bare Sleeper league ID OR a
-    pasted Sleeper league URL, and returns the league's teams to pick from."""
+def api_teams_lookup(req: ConnectTeamRequest, user=Depends(current_user)):
+    """Step 1 of connecting a team: accepts a bare league ID OR a pasted
+    league URL for either platform, and returns that league's teams to
+    pick from. A private ESPN league needs the signed-in user's own
+    espn_s2/SWID already saved in Settings (see engine/db.py
+    get_espn_secrets) — a public one works signed out, same as Sleeper."""
+    if req.platform == "espn":
+        league_id = espn_layer.parse_league_id(req.league_id_or_url)
+        if not league_id:
+            raise HTTPException(400, "Couldn't find a league ID in that — paste the league URL or its numeric ID.")
+        try:
+            return _clean(_espn_teams_for_lookup(league_id, user))
+        except Exception as e:
+            raise HTTPException(400, f"Couldn't load that ESPN league: {e}")
+
     league_id = sleeper_layer.parse_league_id(req.league_id_or_url)
     if not league_id:
         raise HTTPException(400, "Couldn't find a league ID in that — paste the league URL or its numeric ID.")
@@ -561,6 +750,7 @@ class AddTeamRequest(BaseModel):
     roster_id: int
     team_name: str
     avatar_url: Optional[str] = None
+    platform: str = "sleeper"
 
 
 @app.get("/api/teams")
@@ -571,7 +761,7 @@ def api_teams_list(user=Depends(require_user)):
 @app.post("/api/teams")
 def api_teams_add(req: AddTeamRequest, user=Depends(require_user)):
     team = db.add_connected_team(
-        user["id"], "sleeper", req.league_id, req.roster_id, req.team_name, req.league_name, req.avatar_url,
+        user["id"], req.platform, req.league_id, req.roster_id, req.team_name, req.league_name, req.avatar_url,
     )
     return team
 
@@ -599,10 +789,15 @@ def api_my_team(week: Optional[int] = Query(None, ge=1, le=25),
                  scoring: Optional[dict] = Depends(scoring_from_query), user=Depends(require_user)):
     active = db.get_active_team(user["id"])
     if not active:
-        raise HTTPException(400, "connect a Sleeper league in Settings first")
+        raise HTTPException(400, "connect a league in Settings first")
     scoring = _effective_scoring(scoring, user)
     try:
-        result = tools.my_team(active["league_id"], int(active["roster_id"]), scoring=scoring, week=week)
+        if active.get("platform") == "espn":
+            espn_s2, swid = db.get_espn_secrets(user["id"])
+            result = tools.my_team_espn(active["league_id"], int(active["roster_id"]), scoring=scoring, week=week,
+                                         espn_s2=espn_s2, swid=swid)
+        else:
+            result = tools.my_team(active["league_id"], int(active["roster_id"]), scoring=scoring, week=week)
     except Exception as e:
         raise HTTPException(400, str(e))
     return _clean(result)
@@ -615,7 +810,14 @@ def api_my_drafts(user=Depends(require_user)):
     can find the draft_id without the user hunting for it."""
     active = db.get_active_team(user["id"])
     if not active:
-        raise HTTPException(400, "connect a Sleeper league in Settings first")
+        raise HTTPException(400, "connect a league in Settings first")
+    if active.get("platform") == "espn":
+        # Live draft support is Sleeper-only by design (see README
+        # Roadmap) — an empty list here just hides the draft-board entry
+        # point in the UI, same as "no active draft" for a Sleeper
+        # league, rather than surfacing an error for a totally normal
+        # "your league is ESPN" case.
+        return {"roster_id": active["roster_id"], "drafts": []}
     try:
         drafts = sleeper_layer.get_league_drafts(active["league_id"])
     except Exception as e:
@@ -648,7 +850,16 @@ def api_trade_finder(target_roster_id: Optional[int] = Query(None),
                       scoring: Optional[dict] = Depends(scoring_from_query), user=Depends(require_user)):
     active = db.get_active_team(user["id"])
     if not active:
-        raise HTTPException(400, "connect a Sleeper league in Settings first")
+        raise HTTPException(400, "connect a league in Settings first")
+    if active.get("platform") == "espn":
+        # Not built yet — needs every other roster's positional needs
+        # scanned the way Sleeper's trade_finder does, which ESPN's
+        # league object exposes differently. My Team, Waivers, and the
+        # rest of Trade already work for ESPN (see README Roadmap); this
+        # is the one piece still Sleeper-only, called out clearly rather
+        # than failing with a confusing Sleeper-side error underneath.
+        raise HTTPException(400, "Trade Finder's auto-suggest isn't built for ESPN leagues yet "
+                                  "— Trade's manual roster browser works fine for ESPN in the meantime.")
     scoring = _effective_scoring(scoring, user)
     try:
         result = tools.trade_finder(active["league_id"], int(active["roster_id"]),
@@ -664,9 +875,13 @@ def api_trade_teams(user=Depends(require_user)):
     opponent switcher."""
     active = db.get_active_team(user["id"])
     if not active:
-        raise HTTPException(400, "connect a Sleeper league in Settings first")
+        raise HTTPException(400, "connect a league in Settings first")
     try:
-        teams = tools.league_team_list(active["league_id"])
+        if active.get("platform") == "espn":
+            espn_s2, swid = db.get_espn_secrets(user["id"])
+            teams = tools.league_team_list_espn(active["league_id"], espn_s2=espn_s2, swid=swid)
+        else:
+            teams = tools.league_team_list(active["league_id"])
     except Exception as e:
         raise HTTPException(400, str(e))
     return _clean({"my_roster_id": int(active["roster_id"]), "teams": teams})
@@ -679,10 +894,15 @@ def api_trade_roster(roster_id: int = Query(...), scoring: Optional[dict] = Depe
     tab's split-screen builder."""
     active = db.get_active_team(user["id"])
     if not active:
-        raise HTTPException(400, "connect a Sleeper league in Settings first")
+        raise HTTPException(400, "connect a league in Settings first")
     scoring = _effective_scoring(scoring, user)
     try:
-        result = tools.roster_player_list(active["league_id"], roster_id, scoring=scoring)
+        if active.get("platform") == "espn":
+            espn_s2, swid = db.get_espn_secrets(user["id"])
+            result = tools.roster_player_list_espn(active["league_id"], roster_id, scoring=scoring,
+                                                     espn_s2=espn_s2, swid=swid)
+        else:
+            result = tools.roster_player_list(active["league_id"], roster_id, scoring=scoring)
     except Exception as e:
         raise HTTPException(400, str(e))
     return _clean(result)
@@ -706,7 +926,12 @@ def api_news(scope: str = Query("team", pattern="^(team|opponent|league)$"), use
             active = db.get_active_team(user["id"])
             if active:
                 try:
-                    league_players = tools.league_all_player_names(active["league_id"])
+                    if active.get("platform") == "espn":
+                        espn_s2, swid = db.get_espn_secrets(user["id"])
+                        league_players = tools.league_all_player_names_espn(active["league_id"],
+                                                                              espn_s2=espn_s2, swid=swid)
+                    else:
+                        league_players = tools.league_all_player_names(active["league_id"])
                 except Exception as e:
                     print(f"[news] couldn't build league name list: {e}")
         tagged_by_link = {it["link"]: it for it in news_layer.filter_for_players(items, league_players)}
@@ -733,6 +958,14 @@ def api_news(scope: str = Query("team", pattern="^(team|opponent|league)$"), use
 
     filtered = news_layer.filter_for_players(items, team["my_team"]["players"])
     return {"scope": "team", "team_name": team["my_team"]["team_name"], "items": _clean(filtered)}
+
+
+@app.get("/api/live-scores")
+def api_live_scores():
+    """Real in-game NFL scores for the current week (see engine/live_scores.py)
+    — public data, no sign-in required, cached for 20s server-side so a
+    room full of open tabs doesn't turn into a request per tab."""
+    return {"games": live_scores_layer.live_scoreboard()}
 
 
 # ---- image proxy ----

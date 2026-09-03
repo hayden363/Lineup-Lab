@@ -13,6 +13,8 @@ Real version: nfl.import_weekly_data([SEASON]) has opponent + fantasy_points,
 so you group by (defense, position). Offline sample proves the math.
 """
 
+from typing import cast
+
 import numpy as np
 import pandas as pd
 
@@ -67,7 +69,11 @@ def run():
     print("\n===== DEFENSE MATCHUP FACTORS =====")
     print("(>1.0 = soft/good to attack | <1.0 = tough matchup)\n")
     tbl = pd.Series(factors).sort_index()
-    for (defense, pos), f in tbl.items():
+    # tbl's index is genuinely (defense, position) tuples — we just built it
+    # that way from `factors` above — but Series.items() only types its
+    # index as the generic Hashable, so pyright can't see the 2-tuple shape.
+    for idx, f in tbl.items():
+        defense, pos = cast(tuple, idx)
         tag = "SOFT ✅" if f > 1.08 else ("TOUGH ⛔" if f < 0.92 else "avg")
         print(f"  {defense:>4} vs {pos}: {f:>5}  {tag}")
 

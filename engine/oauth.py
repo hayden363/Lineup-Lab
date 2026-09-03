@@ -158,6 +158,11 @@ def apple_authorize_url(redirect_uri, state):
 def _apple_client_secret():
     """Apple doesn't take a static client secret — it takes a short-lived
     JWT you sign yourself with your Apple-issued private key."""
+    if not apple_configured():
+        raise OAuthError("Apple sign-in isn't configured on this server.")
+    # apple_configured() guarantees this, but that's invisible to pyright
+    # across the function-call boundary.
+    assert APPLE_PRIVATE_KEY is not None
     now = int(time.time())
     payload = {"iss": APPLE_TEAM_ID, "iat": now, "exp": now + 300, "aud": APPLE_ISSUER, "sub": APPLE_CLIENT_ID}
     headers = {"kid": APPLE_KEY_ID}

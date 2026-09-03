@@ -12,6 +12,9 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Lineup Lab">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;500;600;700;800&family=Roboto+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/style.css">
 </head>
 <body>
@@ -50,23 +53,24 @@
           <span class="brand-season" id="season-badge">…</span>
         </div>
       </div>
+      <button id="notif-bell" class="sidebar-icon-btn" aria-label="Lineup alerts" style="display:none">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3a4 4 0 0 0-4 4v2.2c0 .7-.24 1.38-.68 1.92L4 13.5h12l-1.32-2.38A3.1 3.1 0 0 1 14 9.2V7a4 4 0 0 0-4-4Z"/><path d="M8.2 16a1.8 1.8 0 0 0 3.6 0"/></svg>
+        <span id="notif-badge" class="notif-badge" style="display:none">0</span>
+      </button>
       <button id="sidebar-toggle" aria-label="Collapse sidebar">
         <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12.5 4l-6 6 6 6"/></svg>
       </button>
     </div>
 
     <div class="sidebar-nav">
-      <button class="nav-item active" data-tab="board">
+      <div class="nav-active-indicator" id="nav-active-indicator"></div>
+      <button class="nav-item" data-tab="board">
         <span class="nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16V9M10 16V4M16 16v-6"/></svg></span>
         <span class="nav-label">Big Board</span>
       </button>
-      <button class="nav-item" data-tab="myteam">
+      <button class="nav-item active" data-tab="myteam">
         <span class="nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2.5l6 2.2v4.4c0 4-2.6 6.6-6 8.4-3.4-1.8-6-4.4-6-8.4V4.7z"/></svg></span>
         <span class="nav-label">My Team</span>
-      </button>
-      <button class="nav-item" data-tab="draft">
-        <span class="nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="12" height="15" rx="1.5"/><path d="M7.5 8h5M7.5 11h5M7.5 14h3"/></svg></span>
-        <span class="nav-label">Draft</span>
       </button>
       <button class="nav-item" data-tab="startsit">
         <span class="nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 5l-3 3 3 3M3 8h9M14 12l3 3-3 3M17 15H8"/></svg></span>
@@ -111,7 +115,7 @@
   <div id="app">
     <div id="toast-root"></div>
 
-    <section id="tab-board">
+    <section id="tab-board" style="display:none">
       <div class="page-header">
         <h1>Big Board</h1>
         <p>Real stats, real Next Gen Stats, weighted into one 0–100 value.</p>
@@ -137,11 +141,12 @@
       </div>
     </section>
 
-    <section id="tab-myteam" style="display:none">
+    <section id="tab-myteam">
       <div class="page-header">
         <h1>My Team</h1>
         <p>Your synced roster, this week's real opponent, and the full league schedule.</p>
       </div>
+      <div id="live-scores-strip" class="live-scores-strip" style="display:none"></div>
       <div id="myteam-gate" class="gate-card" style="display:none">
         <div class="gate-icon">⬢</div>
         <div class="gate-title">Sync your league to see your team</div>
@@ -186,11 +191,12 @@
         <button class="primary-btn" id="startsit-gate-btn">Go to Settings</button>
       </div>
       <div id="startsit-body" style="display:none">
+        <div id="track-record-strip" class="track-record-strip" style="display:none"></div>
         <div class="startsit-layout">
           <div class="startsit-left">
             <div class="section-label">Your Roster — pick 2–4</div>
             <div id="startsit-roster-picker" class="shop-roster-picker startsit-picker-grid"></div>
-            <div class="chip-row" id="startsit-chips"></div>
+            <div class="ss-slot-row" id="startsit-chips"></div>
             <button class="primary-btn" id="startsit-compare" disabled>Compare</button>
           </div>
           <div class="startsit-right">
@@ -204,14 +210,16 @@
     <section id="tab-trade" style="display:none">
       <div class="page-header">
         <h1>Trade</h1>
-        <p>Build both sides of a trade to see who's giving up more rest-of-season value.</p>
+        <p>Build both sides of a trade to see who's giving up more rest-of-season value — and, synced to your league, a real recommendation on whether it actually fills either team's roster needs.</p>
       </div>
       <div id="trade-finder-block" style="display:none">
-        <div class="settings-block-title">Trade Finder <span class="opt-badge">scans your whole league</span></div>
-        <div class="hint" style="margin:0 0 10px">Pick one or more of your own players to shop — we'll scan every other roster for the best realistic return.</div>
+        <div class="tf-hero">
+          <div class="settings-block-title">Trade Finder <span class="opt-badge">scans your whole league</span></div>
+          <div class="hint" style="margin:0">Pick one or more of your own players to shop — we'll scan every other roster for the best realistic return.</div>
+        </div>
         <div id="shop-roster-picker" class="shop-roster-picker"></div>
         <div class="shop-actions">
-          <button class="pill" id="shop-find-btn" disabled>Find trades for selected</button>
+          <button class="primary-btn" id="shop-find-btn" disabled>Find trades for selected</button>
           <button class="link-btn" id="shop-clear-btn" type="button" style="display:none">Clear selection</button>
         </div>
         <div id="trade-finder-results"></div>
@@ -312,9 +320,14 @@
 
         <div class="settings-block">
           <div class="settings-block-title">My Leagues &amp; Teams</div>
-          <div class="hint">Connect as many Sleeper teams as you play in — paste the league's URL (from your browser's address bar) or just its ID. Switch which one is "active" any time; My Team, Waivers, and News all follow whichever team is active.</div>
+          <div class="hint">Connect as many teams as you play in, Sleeper or ESPN — paste the league's URL (from your browser's address bar) or just its ID. A private ESPN league also needs the espn_s2/SWID cookies below, saved first. Switch which one is "active" any time; My Team, Waivers, and News all follow whichever team is active.</div>
           <div id="set-teams-list"></div>
-          <div class="form-grid" style="margin-top:14px;">
+          <div class="pill-group" id="set-connect-platform" style="margin-top:14px;">
+            <button type="button" class="pill active" data-platform="sleeper">Sleeper</button>
+            <button type="button" class="pill" data-platform="espn">ESPN <span class="soon-badge" style="margin-left:4px">beta</span></button>
+          </div>
+          <div class="hint" id="set-espn-disclaimer" style="display:none;margin-top:8px">This isn't an official ESPN integration — it uses your own ESPN session cookies to read your league the same way your browser does, and may stop working if ESPN changes something on their end. Your cookies are encrypted at rest and never shown back to you or anyone else once saved. Disconnect anytime below.</div>
+          <div class="form-grid" style="margin-top:10px;">
             <input type="text" id="set-connect-input" placeholder="Paste Sleeper league URL or ID">
             <button class="primary-btn" id="set-connect-btn">Connect</button>
           </div>
@@ -322,16 +335,20 @@
         </div>
 
         <div class="settings-block">
-          <div class="settings-block-title">ESPN League <span class="soon-badge">coming soon</span></div>
-          <div class="hint">Fields save to your account already (encrypted); live roster sync isn't wired up yet — see Settings → About for status. What each field is for:</div>
+          <div class="settings-block-title">Draft Board</div>
+          <div class="hint">Live pick tracking and need-adjusted best-available, for a Sleeper snake draft.</div>
+          <button class="primary-btn" id="settings-open-draft">Open Draft Board</button>
+        </div>
+
+        <div class="settings-block">
+          <div class="settings-block-title">ESPN Cookies <span class="opt-badge">private leagues only</span></div>
+          <div class="hint">Only needed for a <em>private</em> ESPN league — a public one connects with just its league ID via "My Leagues &amp; Teams" above (pick ESPN there). These are the two session cookies that prove it's really you:</div>
           <ul style="margin:0 0 12px;">
-            <li><strong>League ID</strong> <span class="req-badge">required</span> — the number in your league's ESPN URL, e.g. <span class="mono">fantasy.espn.com/football/team?leagueId=1234567</span>.</li>
-            <li><strong>SWID</strong> and <strong>espn_s2</strong> <span class="opt-badge">optional</span> — only needed for a <em>private</em> league. They're session cookies proving it's really you; find them in your browser's dev tools (Application → Cookies → fantasy.espn.com) while logged into ESPN. Never type your actual ESPN password anywhere in this app.</li>
+            <li><strong>SWID</strong> and <strong>espn_s2</strong> — find them in your browser's dev tools (Application → Cookies → fantasy.espn.com) while logged into ESPN. Encrypted at rest, never shown back to you in full. Never type your actual ESPN password anywhere in this app.</li>
           </ul>
           <div class="form-grid">
-            <input type="text" id="set-espn-league" placeholder="ESPN league ID (required)">
-            <input type="password" id="set-espn-swid" placeholder="SWID cookie (optional — private leagues)">
-            <input type="password" id="set-espn-s2" placeholder="espn_s2 cookie (optional — private leagues)">
+            <input type="password" id="set-espn-swid" placeholder="SWID cookie (private leagues only)">
+            <input type="password" id="set-espn-s2" placeholder="espn_s2 cookie (private leagues only)">
             <button class="primary-btn" id="set-espn-save">Save</button>
           </div>
         </div>
@@ -369,6 +386,17 @@
 
   <div id="modal-root"></div>
   <div id="auth-modal-root"></div>
+
+  <!-- Big Board "Compare" tray — pick 2-4 players (any position, any team,
+       rostered or not) and see them side by side with the best value in
+       each real category highlighted. Hidden until at least one is picked. -->
+  <div id="compare-tray" class="compare-tray" style="display:none">
+    <div class="compare-tray-chips" id="compare-tray-chips"></div>
+    <div class="compare-tray-actions">
+      <button class="link-btn" id="compare-clear-btn" type="button">Clear</button>
+      <button class="primary-btn" id="compare-open-btn" type="button" disabled>Compare</button>
+    </div>
+  </div>
 
   <script src="/app.js"></script>
 </body>

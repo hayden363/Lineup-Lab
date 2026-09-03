@@ -1,0 +1,46 @@
+# Render Blueprint — https://render.com/docs/blueprint-spec
+#
+# Connect this repo in the Render dashboard (New -> Blueprint) and it
+# reads this file to configure the service. Every secret below is
+# `sync: false`, meaning Render prompts for it once in its dashboard
+# instead of it ever living in this file / git — same secrets .env.example
+# documents for local dev, just entered in Render's UI instead of a
+# local .env.
+#
+# Single instance on purpose (no autoscaling config here) — this app's
+# rate limiter and disk cache are in-process/on-disk (see server.py and
+# README's "known, disclosed limitations"), so more than one live
+# instance needs that addressed first, not just flipped on.
+services:
+  - type: web
+    name: lineup-lab
+    runtime: python
+    plan: starter
+    healthCheckPath: /api/health
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn server:app --host 0.0.0.0 --port $PORT --proxy-headers --forwarded-allow-ips=*
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.9.6
+      - key: REFRESH_INTERVAL_HOURS
+        value: "24"
+      # Required for accounts/sessions/settings to work at all.
+      - key: DATABASE_URL
+        sync: false
+      # Required so ESPN-cookie encryption survives future redeploys —
+      # generate once with:
+      #   python3 -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+      - key: APP_SECRET_KEY
+        sync: false
+      # Optional — each degrades gracefully if left unset (see
+      # .env.example for what each one enables).
+      - key: GMAIL_ADDRESS
+        sync: false
+      - key: GMAIL_APP_PASSWORD
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false

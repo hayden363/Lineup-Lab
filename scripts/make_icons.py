@@ -34,7 +34,7 @@ def main():
     img = img.crop((left, top, left + crop_side, top + crop_side))
 
     for name, size in SIZES.items():
-        out = img.resize((size, size), Image.LANCZOS)
+        out = img.resize((size, size), Image.Resampling.LANCZOS)
         out.save(os.path.join(ICONS_DIR, name))
         print(f"wrote {name} ({size}x{size})")
 

@@ -60,7 +60,12 @@ def compute_fantasy_points(wk, settings: ScoringSettings):
     """Recompute fantasy points per row from raw weekly counting stats."""
 
     def col(name):
-        return wk[name].fillna(0) if name in wk.columns else 0
+        # Always a Series, even when the column is missing — a bare `0`
+        # fallback would let `pts` below degrade from Series to a plain
+        # int/float whenever a counting-stat column is absent (e.g. a
+        # thinner data source), and .round(2) at the end would then crash
+        # with a real AttributeError, not just a type-checker complaint.
+        return wk[name].fillna(0) if name in wk.columns else pd.Series(0.0, index=wk.index)
 
     fumbles_lost = col("rushing_fumbles_lost") + col("receiving_fumbles_lost") + col("sack_fumbles_lost")
     two_pts = col("passing_2pt_conversions") + col("rushing_2pt_conversions") + col("receiving_2pt_conversions")

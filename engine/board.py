@@ -9,15 +9,38 @@ Pipeline: weekly stats -> base metrics -> SCORE (weighted) -> advanced
 projection vs an opponent defense.
 """
 
+from typing import TypedDict
+
 import numpy as np
 import pandas as pd
 
 from . import data
 from . import defense as defense_layer
 from .metrics import METRIC_FNS, WEIGHTS, score_players, form_adjustment
-from .advanced import qb_advanced, rb_advanced, wr_advanced, te_advanced, ADVANCED_COLS
+from .advanced import qb_advanced, rb_advanced, wr_advanced, te_advanced, weekly_epa, ADVANCED_COLS
 from .matchup import matchup_tag
 from .scoring import apply_scoring, ScoringSettings
+
+
+class Bundle(TypedDict):
+    """Every raw table a board needs for one season, as returned by
+    load_bundle(). A plain dict here would type as dict[str, <giant union
+    of every value type ever stored in it>] wherever it's read back out
+    (bundle["wk"], bundle.get("retired_ids"), ...) — this TypedDict gives
+    each key its own real type instead."""
+    season: int
+    wk: pd.DataFrame
+    pbp: pd.DataFrame
+    ngs_pass: pd.DataFrame
+    ngs_rush: pd.DataFrame
+    ngs_rec: pd.DataFrame
+    schedule: pd.DataFrame
+    defense_factors: pd.DataFrame
+    defense_league_avg: pd.Series
+    retired_ids: set
+    injury_status: dict
+    snap_pct: dict
+    redzone_touches: dict
 
 ADVANCED_FNS = {"QB": qb_advanced, "RB": rb_advanced, "WR": wr_advanced, "TE": te_advanced}
 NGS_KIND = {"QB": "passing", "RB": "rushing", "WR": "receiving", "TE": "receiving"}
@@ -29,12 +52,26 @@ POSITIONS = ("QB", "RB", "WR", "TE")
 # that would otherwise produce absurd rate stats off a tiny denominator.
 MIN_VOLUME = {"QB": 80, "RB": 20, "WR": 12, "TE": 8}
 
+# Raw per-week counting-stat columns to include in player_detail()'s
+# weekly_log, position by position — real numbers straight off the weekly
+# table (same one metrics.py's METRIC_FNS aggregate from), not just the
+# one fpts bar chart, so the frontend can plot a week-by-week trend for
+# whichever stat someone actually cares about.
+WEEKLY_LOG_COLUMNS = {
+    "QB": ["completions", "attempts", "passing_yards", "passing_tds", "passing_epa"],
+    "RB": ["carries", "rushing_yards", "rushing_tds", "rushing_epa", "targets", "receptions", "receiving_yards"],
+    "WR": ["targets", "receptions", "receiving_yards", "receiving_tds", "receiving_epa",
+           "receiving_air_yards", "receiving_yards_after_catch", "target_share"],
+    "TE": ["targets", "receptions", "receiving_yards", "receiving_tds", "receiving_epa",
+           "receiving_air_yards", "receiving_yards_after_catch", "target_share"],
+}
+
 
 def _cache_key(season):
     return season
 
 
-_BUNDLE_CACHE = {}
+_BUNDLE_CACHE: dict = {}
 
 
 def _availability_signals(pbp, season, force):
@@ -42,15 +79,22 @@ def _availability_signals(pbp, season, force):
     injury designation, offensive snap share, and red-zone touch volume.
     Each source is independently optional — one fetch failing just means
     that signal comes back empty for everyone, not that the board fails
-    to build."""
-    injury_status = {}
+    to build.
+
+    Injury status specifically comes from Sleeper's LIVE player list
+    (engine/sleeper.live_injury_statuses), not nflverse's `season`-pinned
+    injury report — this app's stat season can genuinely lag a full real
+    season behind (see README), and a designation from that old season
+    would be actively wrong, not just stale-but-harmless, for a player
+    whose situation has since changed. Snap share and red-zone touches
+    stay season-level on purpose (there's no live equivalent) — they're
+    real season context, not claimed to be "as of this week.\""""
     try:
-        inj = data.load_injuries(season, force=force)
-        if len(inj):
-            latest = inj.sort_values("week").groupby("gsis_id").last()
-            injury_status = latest["report_status"].dropna().to_dict()
+        from . import sleeper as sleeper_layer
+        injury_status = sleeper_layer.live_injury_statuses(force=force)
     except Exception as e:
-        print(f"[data] couldn't load injuries (skipped): {e}")
+        print(f"[data] couldn't load live injury statuses (skipped): {e}")
+        injury_status = {}
 
     snap_pct = {}
     try:
@@ -61,9 +105,13 @@ def _availability_signals(pbp, season, force):
             latest = snaps.sort_values("week").groupby("pfr_player_id").last()
             for pfr_id, row in latest.iterrows():
                 gsis_id = pfr_to_gsis.get(pfr_id)
+                # pandas-stubs 1.5.3.230321 mistypes Series.get()'s return as
+                # `Dtype` unconditionally (see pandas-stubs/core/generic.pyi) —
+                # it's actually a scalar value here, so notna()/float() below
+                # are real pyright false positives, not a code issue.
                 pct = row.get("offense_pct")
-                if gsis_id and pd.notna(pct):
-                    snap_pct[gsis_id] = float(pct)
+                if gsis_id and pd.notna(pct):  # type: ignore[reportCallIssue,reportArgumentType]
+                    snap_pct[gsis_id] = float(pct)  # type: ignore[reportArgumentType]
     except Exception as e:
         print(f"[data] couldn't load snap counts (skipped): {e}")
 
@@ -80,9 +128,12 @@ def _availability_signals(pbp, season, force):
     return injury_status, snap_pct, redzone_touches
 
 
-def load_bundle(season=None, force=False):
-    """Fetch (and cache) every raw table the board needs for a season."""
-    season = season or data.resolve_season()
+def load_bundle(season=None, force=False) -> Bundle:
+    """Fetch (and cache) every raw table the board needs for a season.
+    force=True also re-resolves the season itself (not just re-fetching
+    the previously-resolved one's data) — see resolve_season's docstring
+    for why that distinction matters for a periodic refresh."""
+    season = season or data.resolve_season(force=force)
     key = _cache_key(season)
     if not force and key in _BUNDLE_CACHE:
         return _BUNDLE_CACHE[key]
@@ -95,10 +146,15 @@ def load_bundle(season=None, force=False):
     schedule = data.load_schedule(season, force=force)
 
     # granular, multi-stat defensive profile (real per-play results — run
-    # defense, pass defense, pressure — not one blanket fpts-allowed number).
-    # Scoring-agnostic by construction (built from yards/TDs/completions,
-    # not fantasy points), so it's computed once per season, not per scoring.
+    # defense, pass defense, pressure — not one blanket fpts-allowed number)
+    # joined with a defense-side Next Gen Stats profile (real player-tracking
+    # data attributed to the defense on the field that week, via the
+    # schedule — see build_ngs_defense_profile). Scoring-agnostic by
+    # construction (built from yards/TDs/completions/tracking data, not
+    # fantasy points), so it's computed once per season, not per scoring.
     defense_profile = defense_layer.build_defense_profile(pbp)
+    ngs_defense_profile = defense_layer.build_ngs_defense_profile(ngs_pass, ngs_rush, ngs_rec, schedule)
+    defense_profile = defense_profile.join(ngs_defense_profile, how="outer")
     defense_factors, defense_league_avg = defense_layer.league_relative_factors(defense_profile)
 
     # Roster status is current, not season-stats-bound — this is what keeps a
@@ -122,7 +178,7 @@ def load_bundle(season=None, force=False):
 
     injury_status, snap_pct, redzone_touches = _availability_signals(pbp, season, force)
 
-    bundle = dict(season=season, wk=wk, pbp=pbp, ngs_pass=ngs_pass, ngs_rush=ngs_rush,
+    bundle = Bundle(season=season, wk=wk, pbp=pbp, ngs_pass=ngs_pass, ngs_rush=ngs_rush,
                   ngs_rec=ngs_rec, schedule=schedule, defense_factors=defense_factors,
                   defense_league_avg=defense_league_avg, retired_ids=retired_ids,
                   injury_status=injury_status, snap_pct=snap_pct, redzone_touches=redzone_touches)
@@ -152,7 +208,7 @@ def build_board(position, season=None, min_games=2, min_volume=None, scoring=Non
     board = base.join(adv, how="left")
 
     board["SCORE"] = score_players(base, WEIGHTS[position])
-    board["FORM"] = form_adjustment(wk, position)
+    board["FORM"] = form_adjustment(wk, position, weekly_epa=weekly_epa(bundle["pbp"], position))
     board["FORM"] = board["FORM"].reindex(board.index).fillna(0.0)
 
     board.index.name = "player_id"
@@ -253,8 +309,13 @@ def player_detail(player_id, season=None, scoring=None):
     row["scoring"] = board.attrs.get("scoring")
 
     wk_scored, _ = apply_scoring(prow, scoring)
+    # Real per-week raw counting stats, not just fantasy points — lets the
+    # frontend plot week-by-week trends/breakdowns for whichever stats
+    # actually apply to this position, not just one aggregate bar chart.
+    weekly_cols = WEEKLY_LOG_COLUMNS.get(position, [])
+    present_cols = [c for c in weekly_cols if c in wk_scored.columns]
     weekly_log = (wk_scored.sort_values("week")
-                  [["week", "opponent_team", "fpts_active"]]
+                  [["week", "opponent_team", "fpts_active"] + present_cols]
                   .rename(columns={"fpts_active": "fpts"})
                   .to_dict(orient="records"))
     row["weekly_log"] = weekly_log

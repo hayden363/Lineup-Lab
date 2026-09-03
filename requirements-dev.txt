@@ -1,0 +1,5 @@
+-r requirements.txt
+
+pyright
+pandas-stubs==1.5.3.230321  # matches the pandas 1.5.3 actually installed by requirements.txt right now —
+                            # re-pin this alongside pandas if that version ever moves, or pyright's errors go stale/wrong

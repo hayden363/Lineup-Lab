@@ -87,6 +87,32 @@ def te_advanced(pbp, ngs_receiving):
     return _receiver_advanced(pbp, ngs_receiving, "TE")
 
 
+_EPA_PLAY_COL = {"QB": "passer_player_id", "RB": "rusher_player_id", "WR": "receiver_player_id", "TE": "receiver_player_id"}
+_EPA_PLAY_TYPE = {"QB": "pass", "RB": "run", "WR": "pass", "TE": "pass"}
+
+
+def weekly_epa(pbp, position):
+    """Real per-play efficiency (EPA — Expected Points Added, from the same
+    play-by-play the season-level *_advanced() functions above already
+    use), kept at (player, week) grain instead of collapsed to one
+    season number.
+
+    This is the "how did the play actually go, independent of whether it
+    happened to end in a touchdown" signal — EPA already accounts for
+    down/distance/field position/score context, so a broken-tackle
+    house call and a stuffed-at-the-two carry that both "worked" in
+    box-score terms don't look identical here the way they would in raw
+    yards or points. engine/metrics.form_adjustment uses this to tell a
+    real hot streak (efficiency moved with the fantasy points) from a
+    touchdown-variance spike (points moved, efficiency didn't) — see that
+    function's docstring."""
+    col = _EPA_PLAY_COL[position]
+    plays = pbp[pbp["play_type"] == _EPA_PLAY_TYPE[position]]
+    g = plays.groupby([col, "week"])["epa"].mean()
+    g.index = g.index.set_names(["player_id", "week"])
+    return g.rename("epa")
+
+
 ADVANCED_COLS = {
     "QB": ["pressure_rate", "comp_pct_pressure", "cpoe", "avg_time_to_throw",
            "aggressiveness", "epa_per_play", "explosive_pass_rate"],

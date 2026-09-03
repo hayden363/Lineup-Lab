@@ -83,6 +83,52 @@ def _disk_cached(kind, season, fetch_fn, force=False):
 
 
 # ----------------------------------------------------------------------
+# WEEKLY PLAYER STATS — fetched directly, not through nfl_data_py
+# ----------------------------------------------------------------------
+# nflverse renamed this release from `player_stats` to `stats_player`
+# (the old tag's last real update was 2025-05-06, capped at the 2024
+# season; verified directly against the GitHub releases API, not
+# inferred). nfl_data_py 0.3.3 — the latest published release as of this
+# writing — still hardcodes the dead `player_stats` URL in
+# import_weekly_data(), so it silently 404s for any season the old tag
+# never got and this app's own season-resolution fallback (below) was
+# treating that as "no data exists yet," landing on 2024 even once a
+# real, current season was actually published under the new name.
+# Fetching the new tag directly (same nflverse project, same underlying
+# computation — verified real player-week values match the old table
+# exactly for the 2024 season, the one year both tags cover) fixes that
+# without waiting on an nfl_data_py release.
+#
+# A few columns got renamed on the new tag; aliased back to what the
+# rest of this app already expects, so nothing downstream has to change:
+#   team -> recent_team, passing_interceptions -> interceptions,
+#   sacks_suffered -> sacks, sack_yards_lost -> sack_yards (sign-flipped
+#   on the new tag; not currently used anywhere in this app, aliased for
+#   safety anyway).
+# One real, disclosed gap: `dakota` (nflverse's own EPA+CPOE QB
+# composite) isn't in the new tag at all, under this or any other name
+# checked (including the season-level file) — engine/metrics.py already
+# handles a missing dakota column gracefully (falls back to a neutral
+# 0.5 in SCORE rather than crashing or erroring), so this is a real but
+# non-breaking loss: that one QB metric goes neutral instead of being a
+# real differentiator. Nothing else in ADVANCED_COLS/QB_WEIGHTS is
+# affected — dakota's other half, EPA, is already covered independently
+# via play-by-play in engine/advanced.py.
+_STATS_PLAYER_RENAME = {
+    "team": "recent_team",
+    "passing_interceptions": "interceptions",
+    "sacks_suffered": "sacks",
+    "sack_yards_lost": "sack_yards",
+}
+
+
+def _fetch_stats_player_week(year):
+    url = f"https://github.com/nflverse/nflverse-data/releases/download/stats_player/stats_player_week_{year}.parquet"
+    df = pd.read_parquet(url)
+    return df.rename(columns=_STATS_PLAYER_RENAME)
+
+
+# ----------------------------------------------------------------------
 # SEASON RESOLUTION
 # nflverse tags a season's files as soon as week 1 data lands. If the
 # "current" season per the calendar isn't published yet, fall back to the
@@ -91,18 +137,25 @@ def _disk_cached(kind, season, fetch_fn, force=False):
 _resolved_season = None
 
 
-def resolve_season(preferred=None, lookback=4):
+def resolve_season(preferred=None, lookback=4, force=False):
+    """force=True bypasses the cached _resolved_season and re-probes from
+    the current year down — needed so a periodic refresh (see
+    engine/refresh_scheduler.py) can actually pick up a newly published
+    season, not just re-fetch whatever season was resolved once at
+    process start. A plain load_bundle(force=True) alone does NOT do
+    this (it re-fetches the already-resolved season's data), which is
+    exactly the trap this app already fell into once — see README."""
     global _resolved_season
+    if force:
+        _resolved_season = None
     if _resolved_season is not None and preferred is None:
         return _resolved_season
-
-    import nfl_data_py as nfl
 
     start = preferred or (pd.Timestamp.now().year)
     last_err = None
     for year in range(start, start - lookback - 1, -1):
         try:
-            probe = nfl.import_weekly_data([year], columns=["season", "week"])
+            probe = _fetch_stats_player_week(year)
             if len(probe):
                 if preferred is None:
                     _resolved_season = year
@@ -121,8 +174,7 @@ def load_weekly(season=None, force=False):
     season = season or resolve_season()
 
     def fetch():
-        import nfl_data_py as nfl
-        df = nfl.import_weekly_data([season])
+        df = _fetch_stats_player_week(season)
         print(f"[data] fetched weekly stats {season}: {len(df)} rows")
         return df
 
@@ -142,6 +194,14 @@ def load_pbp(season=None, force=False):
             "complete_pass", "sack", "qb_hit", "epa", "posteam", "defteam",
             "week", "pass", "qb_dropback", "interception", "pass_touchdown",
             "rush_touchdown", "touchdown", "yardline_100", "goal_to_go",
+            # defense/special-teams fantasy scoring (engine/defense_scoring.py):
+            # real takeaways, defensive/return TDs, safeties, blocked kicks.
+            "fumble_recovery_1_team", "safety", "td_team",
+            "punt_blocked", "field_goal_result",
+            # kicker fantasy scoring (engine/kicker_scoring.py): real FGs by
+            # distance, misses, extra points.
+            "kicker_player_id", "field_goal_attempt", "kick_distance",
+            "extra_point_attempt", "extra_point_result",
         ]
         return df[[c for c in keep if c in df.columns]]
 

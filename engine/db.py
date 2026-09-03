@@ -1,9 +1,17 @@
 """
-LOCAL ACCOUNT DATABASE
-========================
-SQLite (stdlib) — no external DB needed for a local app. Stores accounts,
-sessions, email-verification tokens, and each account's settings (which
-league is synced, which roster is "mine", scoring preference, etc.).
+ACCOUNT DATABASE — Postgres (Supabase)
+========================================
+Real hosted Postgres, not a local file — this is the piece that actually
+makes multi-user scaling possible. A SQLite file is one writer, one
+process, one disk; this is a real connection-pooled database that many
+app instances can share, which is the whole point of moving off it (see
+README's scaling notes).
+
+Reads DATABASE_URL from the environment (via .env — see .env.example for
+where to get it from your Supabase project's dashboard). Every public
+function below keeps the exact same name/signature/return shape it had
+as SQLite — every caller in this app (server.py, engine/oauth.py,
+engine/espn.py, etc.) needed zero changes for this migration.
 
 Email verification: a signup gets a one-time token (24h expiry) mailed to
 them via engine/mail.py (Gmail SMTP). If mail isn't configured (no
@@ -16,15 +24,25 @@ the current password.
 import os
 import re
 import secrets
-import sqlite3
 import time
+import uuid
 from contextlib import contextmanager
 
 import bcrypt
+import psycopg
+from psycopg.rows import dict_row
+from psycopg.types.json import Jsonb
+from psycopg_pool import ConnectionPool
 
 from . import crypto
 
-DB_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "edgeboard.db")
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass  # python-dotenv not installed — env vars can still be set another way
+
+DATABASE_URL = os.environ.get("DATABASE_URL")
 
 SESSION_TTL_SECONDS = 30 * 24 * 60 * 60  # 30 days
 VERIFY_TTL_SECONDS = 24 * 60 * 60         # verification links expire in 24h
@@ -32,119 +50,58 @@ VERIFY_TTL_SECONDS = 24 * 60 * 60         # verification links expire in 24h
 USERNAME_RE = re.compile(r"^[A-Za-z0-9_]{3,20}$")
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
+# A real connection pool, not "open a connection per request" — the
+# SQLite version could get away with a fresh connection every call
+# because a local file connection is nearly free; a real network
+# database is not, and a pool is what lets many app instances (or many
+# concurrent requests on one instance) share a small number of actual
+# TCP connections instead of each request paying a fresh
+# connect+authenticate round trip. min_size=0 so the app can still start
+# up (and every non-DB route still work) even before DATABASE_URL is set
+# or reachable — the pool just fails at first real use, not at import.
+_pool = None
+if DATABASE_URL:
+    _pool = ConnectionPool(DATABASE_URL, min_size=0, max_size=10, open=False)
+
+
+def _require_pool():
+    if _pool is None:
+        raise RuntimeError(
+            "DATABASE_URL isn't set — accounts/sessions/settings need a real Postgres "
+            "database now (see .env.example for how to get a connection string from "
+            "your Supabase project)."
+        )
+    return _pool
+
 
 @contextmanager
 def _conn():
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA foreign_keys = ON")
-    try:
-        yield conn
+    pool = _require_pool()
+    with pool.connection() as conn:
+        conn.row_factory = dict_row
+        with conn.cursor() as c:
+            yield c
         conn.commit()
-    finally:
-        conn.close()
 
 
 def init_db():
-    with _conn() as c:
-        c.execute("""CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT UNIQUE NOT NULL,
-            email TEXT UNIQUE NOT NULL,
-            password_hash TEXT NOT NULL,
-            created_at REAL NOT NULL,
-            email_verified INTEGER NOT NULL DEFAULT 0
-        )""")
-        c.execute("""CREATE TABLE IF NOT EXISTS sessions (
-            token TEXT PRIMARY KEY,
-            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-            created_at REAL NOT NULL,
-            expires_at REAL NOT NULL
-        )""")
-        c.execute("""CREATE TABLE IF NOT EXISTS user_settings (
-            user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
-            sleeper_league_id TEXT,
-            sleeper_roster_id INTEGER,
-            sleeper_team_name TEXT,
-            active_team_id INTEGER REFERENCES connected_teams(id) ON DELETE SET NULL,
-            espn_league_id TEXT,
-            espn_swid TEXT,
-            espn_s2 TEXT,
-            scoring_preset TEXT DEFAULT '',
-            theme TEXT DEFAULT 'high-tech',
-            updated_at REAL
-        )""")
-        c.execute("""CREATE TABLE IF NOT EXISTS verification_tokens (
-            token TEXT PRIMARY KEY,
-            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-            purpose TEXT NOT NULL DEFAULT 'verify',
-            created_at REAL NOT NULL,
-            expires_at REAL NOT NULL
-        )""")
-        # a user can connect more than one team/league; one of them is "active"
-        # (drives My Team / Waivers / News) via user_settings.active_team_id
-        c.execute("""CREATE TABLE IF NOT EXISTS connected_teams (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-            platform TEXT NOT NULL DEFAULT 'sleeper',
-            league_id TEXT NOT NULL,
-            league_name TEXT,
-            roster_id INTEGER,
-            team_name TEXT,
-            avatar_url TEXT,
-            created_at REAL NOT NULL,
-            UNIQUE(user_id, platform, league_id, roster_id)
-        )""")
-
-        # ---- migrations for DBs created before a given feature existed ----
-        user_cols = {row["name"] for row in c.execute("PRAGMA table_info(users)")}
-        if "email_verified" not in user_cols:
-            c.execute("ALTER TABLE users ADD COLUMN email_verified INTEGER NOT NULL DEFAULT 0")
-
-        verify_cols = {row["name"] for row in c.execute("PRAGMA table_info(verification_tokens)")}
-        if "purpose" not in verify_cols:
-            c.execute("ALTER TABLE verification_tokens ADD COLUMN purpose TEXT NOT NULL DEFAULT 'verify'")
-
-        # OAuth sign-in (Google/Apple): plain columns, not NOT NULL/UNIQUE at
-        # the ALTER level (SQLite can't add a constraint that way) — a
-        # partial unique index gets the same guarantee for the non-null
-        # rows. An OAuth-only account has no password_hash of its own; see
-        # create_oauth_user for the empty-string sentinel that avoids
-        # widening that column's NOT NULL constraint (which SQLite can't
-        # alter without a full table rebuild).
-        if "google_id" not in user_cols:
-            c.execute("ALTER TABLE users ADD COLUMN google_id TEXT")
-        if "apple_id" not in user_cols:
-            c.execute("ALTER TABLE users ADD COLUMN apple_id TEXT")
-        c.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_users_google_id ON users(google_id) WHERE google_id IS NOT NULL")
-        c.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_users_apple_id ON users(apple_id) WHERE apple_id IS NOT NULL")
-
-        settings_cols = {row["name"] for row in c.execute("PRAGMA table_info(user_settings)")}
-        if "active_team_id" not in settings_cols:
-            c.execute("ALTER TABLE user_settings ADD COLUMN active_team_id INTEGER "
-                       "REFERENCES connected_teams(id) ON DELETE SET NULL")
-
-        # one-time backfill: single-team era stored the connection directly on
-        # user_settings — migrate any of those rows into connected_teams so
-        # multi-team support doesn't lose an existing connection.
-        legacy = c.execute(
-            "SELECT user_id, sleeper_league_id, sleeper_roster_id, sleeper_team_name "
-            "FROM user_settings WHERE sleeper_league_id IS NOT NULL AND sleeper_league_id != '' "
-            "AND active_team_id IS NULL"
-        ).fetchall()
-        for row in legacy:
-            cur = c.execute(
-                "INSERT OR IGNORE INTO connected_teams "
-                "(user_id, platform, league_id, roster_id, team_name, created_at) "
-                "VALUES (?, 'sleeper', ?, ?, ?, ?)",
-                (row["user_id"], row["sleeper_league_id"], row["sleeper_roster_id"],
-                 row["sleeper_team_name"], time.time()),
-            )
-            new_id = cur.lastrowid or c.execute(
-                "SELECT id FROM connected_teams WHERE user_id=? AND league_id=? AND roster_id=?",
-                (row["user_id"], row["sleeper_league_id"], row["sleeper_roster_id"]),
-            ).fetchone()["id"]
-            c.execute("UPDATE user_settings SET active_team_id = ? WHERE user_id = ?", (new_id, row["user_id"]))
+    """Schema lives in Supabase migrations (see the project's migration
+    history), not runtime DDL here — a hosted multi-instance database
+    shouldn't have every app process racing to CREATE TABLE IF NOT
+    EXISTS against it on startup. This just verifies the pool can
+    actually reach the database, so a misconfigured DATABASE_URL fails
+    loudly at startup instead of on the first real request."""
+    if _pool is None:
+        print("[db] DATABASE_URL not set — accounts/sessions won't work until it is "
+              "(see .env.example). Everything else in the app still runs.")
+        return
+    try:
+        _pool.open()
+        with _conn() as c:
+            c.execute("SELECT 1")
+        print("[db] connected to Postgres")
+    except Exception as e:
+        print(f"[db] couldn't reach the database at startup: {e}")
 
 
 # ---------------------------------------------------------------- users ----
@@ -181,36 +138,37 @@ def create_user(username, email, password):
         raise AuthError("Password must be at least 8 characters.")
 
     with _conn() as c:
-        existing = c.execute(
-            "SELECT 1 FROM users WHERE lower(username) = lower(?) OR lower(email) = lower(?)",
+        c.execute(
+            "SELECT 1 FROM users WHERE lower(username) = lower(%s) OR lower(email) = lower(%s)",
             (username, email),
-        ).fetchone()
-        if existing:
+        )
+        if c.fetchone():
             raise AuthError("That username or email is already taken.")
-        cur = c.execute(
-            "INSERT INTO users (username, email, password_hash, created_at) VALUES (?, ?, ?, ?)",
+        c.execute(
+            "INSERT INTO users (username, email, password_hash, created_at) VALUES (%s, %s, %s, %s) RETURNING id",
             (username, email, _hash_password(password), time.time()),
         )
-        user_id = cur.lastrowid
+        user_id = c.fetchone()["id"]
         c.execute(
-            "INSERT INTO user_settings (user_id, updated_at) VALUES (?, ?)",
+            "INSERT INTO user_settings (user_id, updated_at) VALUES (%s, %s)",
             (user_id, time.time()),
         )
-        row = c.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
-        return _public(row)
+        c.execute("SELECT * FROM users WHERE id = %s", (user_id,))
+        return _public(c.fetchone())
 
 
 def authenticate(identifier, password):
     identifier = (identifier or "").strip()
     with _conn() as c:
-        row = c.execute(
-            "SELECT * FROM users WHERE lower(username) = lower(?) OR lower(email) = lower(?)",
+        c.execute(
+            "SELECT * FROM users WHERE lower(username) = lower(%s) OR lower(email) = lower(%s)",
             (identifier, identifier),
-        ).fetchone()
+        )
+        row = c.fetchone()
     if row and not row["password_hash"]:
-        # OAuth-only account (see create_oauth_user's "" sentinel) — never
-        # had a password to check, so say so instead of a generic "wrong
-        # password" that'd send someone hunting for a password they don't have.
+        # OAuth-only account (see find_or_create_oauth_user's "" sentinel) —
+        # never had a password to check, so say so instead of a generic
+        # "wrong password" that'd send someone hunting for one they don't have.
         via = "Google" if row["google_id"] else ("Apple" if row["apple_id"] else "Google/Apple")
         raise AuthError(f"This account signs in with {via} — use that button instead of a password.")
     if not row or not _check_password(password, row["password_hash"]):
@@ -225,11 +183,13 @@ def _unique_username_from(base):
     with _conn() as c:
         candidate = base
         n = 0
-        while c.execute("SELECT 1 FROM users WHERE lower(username) = lower(?)", (candidate,)).fetchone():
+        while True:
+            c.execute("SELECT 1 FROM users WHERE lower(username) = lower(%s)", (candidate,))
+            if not c.fetchone():
+                return candidate
             n += 1
             suffix = str(n)
             candidate = base[: 20 - len(suffix)] + suffix
-        return candidate
 
 
 def find_or_create_oauth_user(provider, provider_id, email, name_hint=None):
@@ -240,9 +200,9 @@ def find_or_create_oauth_user(provider, provider_id, email, name_hint=None):
 
     Google/Apple already verified the email themselves — an OAuth-created
     account starts pre-verified, no confirmation email needed. It also has
-    no password (empty-string sentinel; see the migration note above for
-    why that's a sentinel and not a real NULL) until/unless the person
-    later sets one from Settings — not built yet, tracked as a gap."""
+    no password (empty-string sentinel — an OAuth-only account has no
+    password of its own until/unless the person later sets one from
+    Settings, not built yet, tracked as a gap) until then."""
     email = (email or "").strip().lower()
     if not email:
         raise AuthError("Your Google/Apple account didn't share an email address — can't sign in without one.")
@@ -251,36 +211,39 @@ def find_or_create_oauth_user(provider, provider_id, email, name_hint=None):
     col = "google_id" if provider == "google" else "apple_id"
 
     with _conn() as c:
-        row = c.execute(f"SELECT * FROM users WHERE {col} = ?", (provider_id,)).fetchone()
+        c.execute(f"SELECT * FROM users WHERE {col} = %s", (provider_id,))
+        row = c.fetchone()
         if row:
             return _public(row)
 
-        row = c.execute("SELECT * FROM users WHERE lower(email) = lower(?)", (email,)).fetchone()
+        c.execute("SELECT * FROM users WHERE lower(email) = lower(%s)", (email,))
+        row = c.fetchone()
         if row:
-            c.execute(f"UPDATE users SET {col} = ? WHERE id = ?", (provider_id, row["id"]))
-            row = c.execute("SELECT * FROM users WHERE id = ?", (row["id"],)).fetchone()
-            return _public(row)
+            c.execute(f"UPDATE users SET {col} = %s WHERE id = %s", (provider_id, row["id"]))
+            c.execute("SELECT * FROM users WHERE id = %s", (row["id"],))
+            return _public(c.fetchone())
 
         username = _unique_username_from(name_hint or email.split("@")[0])
-        cur = c.execute(
+        c.execute(
             f"INSERT INTO users (username, email, password_hash, created_at, email_verified, {col}) "
-            f"VALUES (?, ?, '', ?, 1, ?)",
+            f"VALUES (%s, %s, '', %s, TRUE, %s) RETURNING id",
             (username, email, time.time(), provider_id),
         )
-        user_id = cur.lastrowid
-        c.execute("INSERT INTO user_settings (user_id, updated_at) VALUES (?, ?)", (user_id, time.time()))
-        row = c.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
-        return _public(row)
+        user_id = c.fetchone()["id"]
+        c.execute("INSERT INTO user_settings (user_id, updated_at) VALUES (%s, %s)", (user_id, time.time()))
+        c.execute("SELECT * FROM users WHERE id = %s", (user_id,))
+        return _public(c.fetchone())
 
 
 def change_password(user_id, current_password, new_password):
     with _conn() as c:
-        row = c.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
+        c.execute("SELECT * FROM users WHERE id = %s", (user_id,))
+        row = c.fetchone()
         if not row or not _check_password(current_password, row["password_hash"]):
             raise AuthError("Current password is incorrect.")
         if not new_password or len(new_password) < 8:
             raise AuthError("New password must be at least 8 characters.")
-        c.execute("UPDATE users SET password_hash = ? WHERE id = ?", (_hash_password(new_password), user_id))
+        c.execute("UPDATE users SET password_hash = %s WHERE id = %s", (_hash_password(new_password), user_id))
 
 
 # ------------------------------------------------------------- sessions ----
@@ -289,7 +252,7 @@ def create_session(user_id):
     now = time.time()
     with _conn() as c:
         c.execute(
-            "INSERT INTO sessions (token, user_id, created_at, expires_at) VALUES (?, ?, ?, ?)",
+            "INSERT INTO sessions (token, user_id, created_at, expires_at) VALUES (%s, %s, %s, %s)",
             (token, user_id, now, now + SESSION_TTL_SECONDS),
         )
     return token
@@ -299,17 +262,18 @@ def get_user_by_session(token):
     if not token:
         return None
     with _conn() as c:
-        row = c.execute(
+        c.execute(
             "SELECT u.* FROM sessions s JOIN users u ON u.id = s.user_id "
-            "WHERE s.token = ? AND s.expires_at > ?",
+            "WHERE s.token = %s AND s.expires_at > %s",
             (token, time.time()),
-        ).fetchone()
+        )
+        row = c.fetchone()
     return _public(row) if row else None
 
 
 def delete_session(token):
     with _conn() as c:
-        c.execute("DELETE FROM sessions WHERE token = ?", (token,))
+        c.execute("DELETE FROM sessions WHERE token = %s", (token,))
 
 
 # --------------------------------------------------------- email verification ----
@@ -318,9 +282,10 @@ def create_verification_token(user_id):
     now = time.time()
     with _conn() as c:
         # one live token per user per purpose — drop any earlier unused one
-        c.execute("DELETE FROM verification_tokens WHERE user_id = ? AND purpose = 'verify'", (user_id,))
+        c.execute("DELETE FROM verification_tokens WHERE user_id = %s AND purpose = 'verify'", (user_id,))
         c.execute(
-            "INSERT INTO verification_tokens (token, user_id, purpose, created_at, expires_at) VALUES (?, ?, 'verify', ?, ?)",
+            "INSERT INTO verification_tokens (token, user_id, purpose, created_at, expires_at) "
+            "VALUES (%s, %s, 'verify', %s, %s)",
             (token, user_id, now, now + VERIFY_TTL_SECONDS),
         )
     return token
@@ -330,16 +295,17 @@ def consume_verification_token(token):
     """Marks the token's user verified. Returns the public user record, or
     raises AuthError if the token is missing/expired/wrong purpose."""
     with _conn() as c:
-        row = c.execute(
-            "SELECT * FROM verification_tokens WHERE token = ? AND purpose = 'verify' AND expires_at > ?",
+        c.execute(
+            "SELECT * FROM verification_tokens WHERE token = %s AND purpose = 'verify' AND expires_at > %s",
             (token, time.time()),
-        ).fetchone()
+        )
+        row = c.fetchone()
         if not row:
             raise AuthError("That verification link is invalid or has expired.")
-        c.execute("UPDATE users SET email_verified = 1 WHERE id = ?", (row["user_id"],))
-        c.execute("DELETE FROM verification_tokens WHERE token = ?", (token,))
-        user = c.execute("SELECT * FROM users WHERE id = ?", (row["user_id"],)).fetchone()
-        return _public(user)
+        c.execute("UPDATE users SET email_verified = TRUE WHERE id = %s", (row["user_id"],))
+        c.execute("DELETE FROM verification_tokens WHERE token = %s", (token,))
+        c.execute("SELECT * FROM users WHERE id = %s", (row["user_id"],))
+        return _public(c.fetchone())
 
 
 # ------------------------------------------------------------ password reset ----
@@ -350,9 +316,10 @@ def create_reset_token(user_id):
     token = secrets.token_urlsafe(32)
     now = time.time()
     with _conn() as c:
-        c.execute("DELETE FROM verification_tokens WHERE user_id = ? AND purpose = 'reset'", (user_id,))
+        c.execute("DELETE FROM verification_tokens WHERE user_id = %s AND purpose = 'reset'", (user_id,))
         c.execute(
-            "INSERT INTO verification_tokens (token, user_id, purpose, created_at, expires_at) VALUES (?, ?, 'reset', ?, ?)",
+            "INSERT INTO verification_tokens (token, user_id, purpose, created_at, expires_at) "
+            "VALUES (%s, %s, 'reset', %s, %s)",
             (token, user_id, now, now + RESET_TTL_SECONDS),
         )
     return token
@@ -364,24 +331,26 @@ def reset_password(token, new_password):
     if not new_password or len(new_password) < 8:
         raise AuthError("Password must be at least 8 characters.")
     with _conn() as c:
-        row = c.execute(
-            "SELECT * FROM verification_tokens WHERE token = ? AND purpose = 'reset' AND expires_at > ?",
+        c.execute(
+            "SELECT * FROM verification_tokens WHERE token = %s AND purpose = 'reset' AND expires_at > %s",
             (token, time.time()),
-        ).fetchone()
+        )
+        row = c.fetchone()
         if not row:
             raise AuthError("That reset link is invalid or has expired.")
-        c.execute("UPDATE users SET password_hash = ? WHERE id = ?", (_hash_password(new_password), row["user_id"]))
-        c.execute("DELETE FROM verification_tokens WHERE token = ?", (token,))
+        c.execute("UPDATE users SET password_hash = %s WHERE id = %s", (_hash_password(new_password), row["user_id"]))
+        c.execute("DELETE FROM verification_tokens WHERE token = %s", (token,))
         # a successful reset also invalidates every existing session — if
         # someone else had access to the account, this logs them out too
-        c.execute("DELETE FROM sessions WHERE user_id = ?", (row["user_id"],))
-        user = c.execute("SELECT * FROM users WHERE id = ?", (row["user_id"],)).fetchone()
-        return _public(user)
+        c.execute("DELETE FROM sessions WHERE user_id = %s", (row["user_id"],))
+        c.execute("SELECT * FROM users WHERE id = %s", (row["user_id"],))
+        return _public(c.fetchone())
 
 
 def get_user_by_email(email):
     with _conn() as c:
-        row = c.execute("SELECT * FROM users WHERE lower(email) = lower(?)", ((email or "").strip(),)).fetchone()
+        c.execute("SELECT * FROM users WHERE lower(email) = lower(%s)", ((email or "").strip(),))
+        row = c.fetchone()
     return _public(row) if row else None
 
 
@@ -396,7 +365,8 @@ SETTINGS_FIELDS = PLAIN_SETTINGS_FIELDS + SECRET_SETTINGS_FIELDS
 
 def get_settings(user_id):
     with _conn() as c:
-        row = c.execute("SELECT * FROM user_settings WHERE user_id = ?", (user_id,)).fetchone()
+        c.execute("SELECT * FROM user_settings WHERE user_id = %s", (user_id,))
+        row = c.fetchone()
     if not row:
         row = {}
     out = {f: row[f] if row else None for f in PLAIN_SETTINGS_FIELDS}
@@ -410,7 +380,8 @@ def get_espn_secrets(user_id):
     """Decrypted ESPN cookies for actually making a request — internal use
     only, never returned from an API endpoint."""
     with _conn() as c:
-        row = c.execute("SELECT espn_swid, espn_s2 FROM user_settings WHERE user_id = ?", (user_id,)).fetchone()
+        c.execute("SELECT espn_swid, espn_s2 FROM user_settings WHERE user_id = %s", (user_id,))
+        row = c.fetchone()
     if not row:
         return None, None
     return crypto.decrypt(row["espn_swid"]), crypto.decrypt(row["espn_s2"])
@@ -423,10 +394,10 @@ def update_settings(user_id, updates):
     for k in SECRET_SETTINGS_FIELDS:
         if k in fields:
             fields[k] = crypto.encrypt(fields[k]) if fields[k] else None
-    set_clause = ", ".join(f"{k} = ?" for k in fields)
+    set_clause = ", ".join(f"{k} = %s" for k in fields)
     with _conn() as c:
         c.execute(
-            f"UPDATE user_settings SET {set_clause}, updated_at = ? WHERE user_id = ?",
+            f"UPDATE user_settings SET {set_clause}, updated_at = %s WHERE user_id = %s",
             (*fields.values(), time.time(), user_id),
         )
     return get_settings(user_id)
@@ -435,10 +406,10 @@ def update_settings(user_id, updates):
 # ---------------------------------------------------------- connected teams ----
 def list_connected_teams(user_id):
     with _conn() as c:
-        rows = c.execute(
-            "SELECT * FROM connected_teams WHERE user_id = ? ORDER BY created_at", (user_id,)
-        ).fetchall()
-        active = c.execute("SELECT active_team_id FROM user_settings WHERE user_id = ?", (user_id,)).fetchone()
+        c.execute("SELECT * FROM connected_teams WHERE user_id = %s ORDER BY created_at", (user_id,))
+        rows = c.fetchall()
+        c.execute("SELECT active_team_id FROM user_settings WHERE user_id = %s", (user_id,))
+        active = c.fetchone()
     active_id = active["active_team_id"] if active else None
     return [dict(r, active=(r["id"] == active_id)) for r in rows]
 
@@ -450,61 +421,188 @@ def add_connected_team(user_id, platform, league_id, roster_id, team_name, leagu
         c.execute(
             "INSERT INTO connected_teams "
             "(user_id, platform, league_id, league_name, roster_id, team_name, avatar_url, created_at) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?) "
-            "ON CONFLICT(user_id, platform, league_id, roster_id) "
-            "DO UPDATE SET team_name = excluded.team_name, league_name = excluded.league_name, "
-            "avatar_url = excluded.avatar_url",
+            "VALUES (%s, %s, %s, %s, %s, %s, %s, %s) "
+            "ON CONFLICT (user_id, platform, league_id, roster_id) "
+            "DO UPDATE SET team_name = EXCLUDED.team_name, league_name = EXCLUDED.league_name, "
+            "avatar_url = EXCLUDED.avatar_url",
             (user_id, platform, league_id, league_name, roster_id, team_name, avatar_url, time.time()),
         )
-        team = c.execute(
-            "SELECT * FROM connected_teams WHERE user_id=? AND platform=? AND league_id=? AND roster_id=?",
+        c.execute(
+            "SELECT * FROM connected_teams WHERE user_id=%s AND platform=%s AND league_id=%s AND roster_id=%s",
             (user_id, platform, league_id, roster_id),
-        ).fetchone()
+        )
+        team = c.fetchone()
         # first team a user connects becomes active automatically
-        current_active = c.execute("SELECT active_team_id FROM user_settings WHERE user_id = ?", (user_id,)).fetchone()
+        c.execute("SELECT active_team_id FROM user_settings WHERE user_id = %s", (user_id,))
+        current_active = c.fetchone()
         if current_active and current_active["active_team_id"] is None:
-            c.execute("UPDATE user_settings SET active_team_id = ? WHERE user_id = ?", (team["id"], user_id))
+            c.execute("UPDATE user_settings SET active_team_id = %s WHERE user_id = %s", (team["id"], user_id))
     return dict(team)
 
 
 def remove_connected_team(user_id, team_id):
     with _conn() as c:
-        row = c.execute("SELECT * FROM connected_teams WHERE id = ? AND user_id = ?", (team_id, user_id)).fetchone()
+        c.execute("SELECT * FROM connected_teams WHERE id = %s AND user_id = %s", (team_id, user_id))
+        row = c.fetchone()
         if not row:
             raise AuthError("Team not found.")
         # capture this BEFORE deleting — the FK's ON DELETE SET NULL on
-        # user_settings.active_team_id fires as part of the DELETE itself
-        # (foreign_keys=ON), so checking after would always see NULL already
-        active_before = c.execute(
-            "SELECT active_team_id FROM user_settings WHERE user_id = ?", (user_id,)
-        ).fetchone()
+        # user_settings.active_team_id fires as part of the DELETE itself,
+        # so checking after would always see NULL already
+        c.execute("SELECT active_team_id FROM user_settings WHERE user_id = %s", (user_id,))
+        active_before = c.fetchone()
         was_active = bool(active_before and active_before["active_team_id"] == team_id)
 
-        c.execute("DELETE FROM connected_teams WHERE id = ?", (team_id,))
+        c.execute("DELETE FROM connected_teams WHERE id = %s", (team_id,))
 
         if was_active:
-            fallback = c.execute(
-                "SELECT id FROM connected_teams WHERE user_id = ? ORDER BY created_at LIMIT 1", (user_id,)
-            ).fetchone()
-            c.execute("UPDATE user_settings SET active_team_id = ? WHERE user_id = ?",
+            c.execute(
+                "SELECT id FROM connected_teams WHERE user_id = %s ORDER BY created_at LIMIT 1", (user_id,)
+            )
+            fallback = c.fetchone()
+            c.execute("UPDATE user_settings SET active_team_id = %s WHERE user_id = %s",
                       (fallback["id"] if fallback else None, user_id))
 
 
 def set_active_team(user_id, team_id):
     with _conn() as c:
-        row = c.execute("SELECT 1 FROM connected_teams WHERE id = ? AND user_id = ?", (team_id, user_id)).fetchone()
-        if not row:
+        c.execute("SELECT 1 FROM connected_teams WHERE id = %s AND user_id = %s", (team_id, user_id))
+        if not c.fetchone():
             raise AuthError("Team not found.")
-        c.execute("UPDATE user_settings SET active_team_id = ? WHERE user_id = ?", (team_id, user_id))
+        c.execute("UPDATE user_settings SET active_team_id = %s WHERE user_id = %s", (team_id, user_id))
 
 
 def get_active_team(user_id):
     with _conn() as c:
-        row = c.execute(
+        c.execute(
             "SELECT ct.* FROM user_settings s JOIN connected_teams ct ON ct.id = s.active_team_id "
-            "WHERE s.user_id = ?", (user_id,)
-        ).fetchone()
+            "WHERE s.user_id = %s", (user_id,)
+        )
+        row = c.fetchone()
     return dict(row) if row else None
+
+
+# ----------------------------------------------------- track record -------
+# "How often has this app's own START call actually been right" — logged
+# at the moment a real decision is shown to a signed-in user (see
+# server.py's /api/startsit), graded later against real published stats
+# (see resolve_predictions, called from refresh_scheduler.py), never
+# simulated or backfilled. A week with no resolved rows yet just doesn't
+# count toward the record — that's the honest state, not an error.
+def log_predictions(user_id, players, kind="startsit", scoring=None):
+    """`players`: the full comparison group from one Start/Sit run, each a
+    dict with player_id/player_display_name/position/tier/confidence/PROJ/
+    season/week already resolved by the caller. One comparison_id ties the
+    whole group together so resolution can ask "who in this group actually
+    scored the most", not just "was this one player's tier right in
+    isolation" (a lone SIT call has nothing to be graded against otherwise).
+    Silently no-ops on an empty or single-player group — nothing to compare."""
+    if len(players) < 2:
+        return
+    comparison_id = str(uuid.uuid4())
+    now = time.time()
+    rows = [
+        (
+            user_id, comparison_id, kind, p["season"], p["week"], p["player_id"],
+            p.get("player_display_name"), p.get("position"), p.get("tier") or "BORDERLINE",
+            p.get("confidence"), p.get("PROJ"), Jsonb(scoring) if scoring else None, now,
+        )
+        for p in players
+    ]
+    with _conn() as c:
+        c.executemany(
+            "INSERT INTO predictions (user_id, comparison_id, kind, season, week, player_id, "
+            "player_display_name, position, tier, confidence, proj_pts, scoring, created_at) "
+            "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+            rows,
+        )
+
+
+def pending_resolution_groups():
+    """Distinct (season, week, scoring) combinations with at least one
+    still-unresolved prediction — so a caller (see tools.resolve_track_record)
+    only has to recompute one real actual-points lookup per distinct group,
+    not once per logged row."""
+    with _conn() as c:
+        c.execute("SELECT DISTINCT season, week, scoring FROM predictions WHERE resolved_at IS NULL")
+        return c.fetchall()
+
+
+def resolve_predictions(season, week, actual_fpts_by_player):
+    """Grade every still-unresolved prediction for one real, already-played
+    week against `actual_fpts_by_player` (player_id -> real fpts, sourced
+    from the same weekly stats the rest of the app scores off of — see
+    engine/board.py). Per comparison_id group: the group's real winner is
+    whoever actually scored the most of the players that data covers (a
+    player with no real stats that week — bye, DNP — is left out of the
+    "who won" comparison entirely, not treated as a real 0); every row
+    tiered START is correct iff it's tied for that real max. Returns how
+    many rows got resolved, so a caller can log/skip silently on 0."""
+    with _conn() as c:
+        c.execute(
+            "SELECT id, comparison_id, player_id, tier FROM predictions "
+            "WHERE season = %s AND week = %s AND resolved_at IS NULL",
+            (season, week),
+        )
+        pending = c.fetchall()
+        if not pending:
+            return 0
+
+        by_group = {}
+        for row in pending:
+            by_group.setdefault(row["comparison_id"], []).append(row)
+
+        now = time.time()
+        resolved = 0
+        for group_rows in by_group.values():
+            scored = [(r, actual_fpts_by_player[r["player_id"]])
+                      for r in group_rows if r["player_id"] in actual_fpts_by_player]
+            if len(scored) < 2:
+                continue  # not enough of this group actually has real stats yet to call a winner
+            group_best = max(pts for _, pts in scored)
+            for r, pts in scored:
+                was_correct = (r["tier"] == "START") and pts >= group_best - 1e-9
+                c.execute(
+                    "UPDATE predictions SET resolved_at = %s, actual_pts = %s, was_correct = %s WHERE id = %s",
+                    (now, pts, was_correct, r["id"]),
+                )
+                resolved += 1
+        return resolved
+
+
+def get_track_record(user_id):
+    """Real, resolved-only accuracy: of every START call this user's app
+    has actually made and that has since been graded against a real
+    played week, how many were the group's real top scorer. `pending`
+    is how many more calls are logged but still waiting on that week's
+    stats — surfaced so the UI can say "N more decisions still pending"
+    instead of quietly excluding them, which would read as a smaller
+    (and more flattering) sample than what's actually been called."""
+    with _conn() as c:
+        c.execute(
+            "SELECT COUNT(*) AS n, COUNT(*) FILTER (WHERE was_correct) AS correct "
+            "FROM predictions WHERE user_id = %s AND tier = 'START' AND resolved_at IS NOT NULL",
+            (user_id,),
+        )
+        resolved = c.fetchone()
+        c.execute(
+            "SELECT COUNT(*) AS n FROM predictions "
+            "WHERE user_id = %s AND tier = 'START' AND resolved_at IS NULL",
+            (user_id,),
+        )
+        pending = c.fetchone()["n"]
+        c.execute(
+            "SELECT season, week, player_display_name, position, actual_pts, proj_pts, was_correct "
+            "FROM predictions WHERE user_id = %s AND tier = 'START' AND resolved_at IS NOT NULL "
+            "ORDER BY resolved_at DESC LIMIT 10",
+            (user_id,),
+        )
+        recent = c.fetchall()
+    return {
+        "resolved": resolved["n"], "correct": resolved["correct"],
+        "accuracy_pct": round(100 * resolved["correct"] / resolved["n"], 1) if resolved["n"] else None,
+        "pending": pending, "recent": recent,
+    }
 
 
 init_db()
