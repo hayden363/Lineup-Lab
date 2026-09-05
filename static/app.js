@@ -283,6 +283,7 @@ const state = {
   leagueScoringDict: null,   // cached scoring dict of the active team's league
   scoring: localStorage.getItem("eb_scoring") || "",   // "" | "half_ppr" | "standard" | "league"
   startsit: [],
+  ssSwapped: false,          // Start/Sit head-to-head display order (2-player case only)
   tradeA: [],
   tradeB: [],
   tradeTeamA: null,          // {team_name, avatar_url} — for the trade analysis header
@@ -1179,19 +1180,6 @@ function startSitCompareSentence(top, p) {
   return `Start <strong>${esc(top.player_display_name)}</strong> over <strong>${esc(p.player_display_name)}</strong> — projected for ${FMT.d1(top.PROJ)} pts vs ${FMT.d1(p.PROJ)} (+${diff}).${why}${scoreCaveat}`;
 }
 
-// Analysis for one specific card: the top pick gets framed against the
-// single closest rival (the most relevant comparison for "why him"); every
-// other player gets the sentence explaining why the top pick beats them
-// specifically. Either way it renders inside THAT player's own card.
-function startSitAnalysisFor(p, top, valid) {
-  if (valid.length < 2) return "";
-  if (p.player_id === top.player_id) {
-    const rival = valid.find((x) => x.player_id !== top.player_id);
-    return rival ? startSitCompareSentence(top, rival)
-      : `Highest projection in this group at ${FMT.d1(top.PROJ)} pts.`;
-  }
-  return startSitCompareSentence(top, p);
-}
 
 function injuryFlagHtml(status) {
   if (!status) return "";
@@ -1261,11 +1249,18 @@ function rangeBarHtml(p, scaleMin, scaleMax) {
     <div class="ss-range-labels"><span>Floor ${FMT.d1(floor)}</span><span>Ceiling ${FMT.d1(ceiling)}</span></div>`;
 }
 
-function startSitCardHtml(p, scaleMin, scaleMax, i, analysisText) {
+// The hero card — one per compared player. The per-card "WHY" text this
+// used to carry moved into one shared ssNarrativeHtml() card instead
+// (see runStartSit): a real 2-bullet summary about the top pick, not N
+// separate paragraphs repeating the same comparison from each angle.
+// `recommended` (the actual single best pick, not just "tier === START"
+// — a comparison can have more than one real START-tier player) gets
+// the pulsing glow: a real, ongoing animation, not a one-shot pop, so
+// it keeps reading as "this one" while you're looking at the group.
+function startSitCardHtml(p, scaleMin, scaleMax, i, recommended) {
   const tierClass = "tier-" + (p.tier || "borderline").toLowerCase();
-  const analysis = analysisText
-    ? `<div class="ss-analysis"><div class="ss-analysis-label">WHY</div><p>${analysisText}</p></div>` : "";
-  return `<div class="ss-card ${tierClass} ${posAccentClass(p.position)}" data-pid="${esc(p.player_id)}" style="animation-delay:${i * 60}ms">
+  return `<div class="ss-card ss-hero ${tierClass}${recommended ? " recommended" : ""} ${posAccentClass(p.position)}" data-pid="${esc(p.player_id)}" style="animation-delay:${i * 60}ms">
+    ${recommended ? `<div class="ss-rec-badge">Start Recommendation</div>` : ""}
     <div class="ss-card-top">
       <img ${headshotAttrs(p)} alt="">
       <div>
@@ -1280,12 +1275,185 @@ function startSitCardHtml(p, scaleMin, scaleMax, i, analysisText) {
     </div>
     ${rangeBarHtml(p, scaleMin, scaleMax)}
     <div class="ss-stat-chips">${statChipsHtml(p)}</div>
-    ${analysis}
     <button class="ss-expand-toggle" type="button" aria-expanded="false">
-      <span>Full breakdown</span>
+      <span>Full player breakdown</span>
       <svg viewBox="0 0 12 8" width="12" height="8"><path d="M1 1.5 6 6.5 11 1.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
     </button>
     <div class="ss-expand-panel"></div>
+  </div>`;
+}
+
+// ---------------------------------------------- shared breakdown panel ----
+// One tabbed panel comparing every player in the group side by side per
+// real metric, instead of each player's own card repeating its own
+// numbers in isolation. Works for 2-4 players (Start/Sit's real range) —
+// each row is a small multi-bar chart, one segment per player on a
+// shared scale, not a fixed two-sided "vs" layout that would break past
+// 2 players.
+const SS_TAB_COLORS = ["var(--accent)", "var(--neg)", "var(--info)", "var(--violet)"];
+
+function ssMultiBarRowHtml(label, sub, players, valueFn, displayFn, maxOverride) {
+  const values = players.map(valueFn);
+  const max = maxOverride || Math.max(...values.map((v) => Math.abs(v || 0)), 1);
+  const rows = players.map((p, i) => {
+    const v = values[i];
+    const pct = Math.max(2, Math.min(100, (Math.abs(v || 0) / max) * 100));
+    const color = SS_TAB_COLORS[i % SS_TAB_COLORS.length];
+    return `<div class="ss-mb-row">
+      <span class="ss-mb-name">${esc((p.player_display_name || "").split(" ").slice(-1)[0])}</span>
+      <div class="ss-mb-track"><span class="ss-mb-fill" data-pct="${pct}" style="background:${color};box-shadow:0 0 8px -1px ${color};"></span></div>
+      <span class="ss-mb-val tabular" style="color:${color}">${esc(displayFn(v, p))}</span>
+    </div>`;
+  }).join("");
+  return `<div class="ss-metric-block">
+    <div class="ss-metric-head"><span class="ss-metric-label">${esc(label)}</span>${sub ? `<span class="ss-metric-sub">${esc(sub)}</span>` : ""}</div>
+    ${rows}
+  </div>`;
+}
+
+function ssDivergeRowHtml(p, color, scaleMax) {
+  scaleMax = scaleMax || 15;
+  const value = p.FORM || 0;
+  const clamped = Math.max(-scaleMax, Math.min(scaleMax, value));
+  const pct = (Math.abs(clamped) / scaleMax) * 50;
+  const positive = clamped >= 0;
+  const left = positive ? 50 : 50 - pct;
+  return `<div class="ss-mb-row">
+    <span class="ss-mb-name">${esc((p.player_display_name || "").split(" ").slice(-1)[0])}</span>
+    <div class="ss-diverge-track"><span class="ss-diverge-mid"></span>
+      <span class="ss-diverge-fill" data-pct="${pct}" data-left="${left}" style="background:${positive ? "var(--accent)" : "var(--neg)"};box-shadow:0 0 8px -1px ${positive ? "var(--accent-glow)" : "var(--neg-glow)"};"></span>
+    </div>
+    <span class="ss-mb-val tabular" style="color:${positive ? "var(--accent)" : "var(--neg)"}">${value >= 0 ? "+" : ""}${FMT.d1(value)}%</span>
+  </div>`;
+}
+
+function ssMatchupRowHtml(p) {
+  // Real spectrum, not a fabricated radar: tough .. average .. soft, from
+  // the real matchup_tag /api/startsit already computes per opponent
+  // (engine/matchup.matchup_tag) — that endpoint only returns the
+  // discrete tag, not Big Board's continuous matchup_factor, so the dot
+  // position is discrete too (three real stops, not an invented
+  // in-between value). No opponent set (the common rest-of-season case)
+  // is shown as a real, honest neutral state, not guessed.
+  const hasOpp = p.opponent && p.matchup_tag != null;
+  const pos = !hasOpp ? 0 : p.matchup_tag === "soft" ? 1 : p.matchup_tag === "tough" ? -1 : 0;
+  const pctFromLeft = 50 + pos * 50;
+  const tag = hasOpp ? p.matchup_tag : "no matchup set";
+  const color = !hasOpp ? "var(--muted)" : p.matchup_tag === "soft" ? "var(--accent)" : p.matchup_tag === "tough" ? "var(--neg)" : "var(--info)";
+  return `<div class="ss-mb-row">
+    <span class="ss-mb-name">${esc((p.player_display_name || "").split(" ").slice(-1)[0])}</span>
+    <div class="ss-spectrum-track">
+      <span class="ss-spectrum-mid"></span>
+      <span class="ss-spectrum-dot" data-left="${pctFromLeft}" style="background:${color};box-shadow:0 0 8px -1px ${color};"></span>
+    </div>
+    <span class="ss-mb-val" style="color:${color}">${esc((tag || "").toUpperCase())}</span>
+  </div>`;
+}
+
+function ssBreakdownPanelHtml(players) {
+  const maxProj = Math.max(...players.map((p) => p.ceiling != null ? p.ceiling : p.PROJ), 1);
+  const maxRz = Math.max(...players.map((p) => p.redzone_touches || 0), 1);
+  const tabs = [
+    { key: "overview", label: "Overview", icon: "⚡" },
+    { key: "volume", label: "Volume & Usage", icon: "◇" },
+    { key: "matchup", label: "Matchup", icon: "◎" },
+    { key: "trends", label: "Trends & Availability", icon: "◷" },
+  ];
+  const tabBtns = tabs.map((t, i) => `<button type="button" class="ss-tab-btn${i === 0 ? " active" : ""}" data-ss-tab="${t.key}"><span>${t.icon}</span>${esc(t.label)}</button>`).join("");
+
+  const overview =
+    ssMultiBarRowHtml("Projected Points", "", players, (p) => p.PROJ, (v) => FMT.d1(v), maxProj) +
+    ssMultiBarRowHtml("Floor", "25th pct., real game log", players, (p) => (p.floor != null ? p.floor : p.PROJ), (v) => FMT.d1(v), maxProj) +
+    ssMultiBarRowHtml("Ceiling", "75th pct., real game log", players, (p) => (p.ceiling != null ? p.ceiling : p.PROJ), (v) => FMT.d1(v), maxProj);
+
+  const volume =
+    ssMultiBarRowHtml("Snap Share", "", players, (p) => (p.snap_pct || 0) * 100, (v) => Math.round(v) + "%", 100) +
+    ssMultiBarRowHtml("Red-Zone Touches", "", players, (p) => p.redzone_touches || 0, (v) => Math.round(v), maxRz) +
+    ssMultiBarRowHtml("SCORE", "0–100 composite", players, (p) => p.SCORE || 0, (v) => FMT.d1(v), 100);
+
+  const matchup = `<div class="ss-metric-block">
+    <div class="ss-metric-head"><span class="ss-metric-label">Matchup Difficulty</span><span class="ss-metric-sub">tough ← average → soft, real per-stat defense factor</span></div>
+    ${players.map(ssMatchupRowHtml).join("")}
+  </div>`;
+
+  const trends = `<div class="ss-metric-block">
+      <div class="ss-metric-head"><span class="ss-metric-label">Recent Form</span><span class="ss-metric-sub">recency-weighted vs. own season average</span></div>
+      ${players.map((p) => ssDivergeRowHtml(p)).join("")}
+    </div>
+    <div class="ss-metric-block">
+      <div class="ss-metric-head"><span class="ss-metric-label">Availability</span><span class="ss-metric-sub">weeks since a real logged game — this app's real signal in place of weather, which it has no real data source for</span></div>
+      ${players.map((p) => {
+        const dark = p.weeks_since_played != null && p.weeks_since_played >= 3;
+        return `<div class="ss-mb-row">
+          <span class="ss-mb-name">${esc((p.player_display_name || "").split(" ").slice(-1)[0])}</span>
+          <span class="ss-avail ${dark ? "dark" : "ok"}">${dark ? `Last game Wk ${esc(p.last_active_week)} (${esc(p.weeks_since_played)} wks ago)` : "Active"}</span>
+        </div>`;
+      }).join("")}
+    </div>`;
+
+  return `<div class="ss-breakdown">
+    <div class="ss-breakdown-head"><span class="ss-breakdown-title">Deep Analytical Breakdown</span></div>
+    <div class="ss-tabbar">${tabBtns}</div>
+    <div class="ss-tab-body" data-ss-tab-body="overview">${overview}</div>
+    <div class="ss-tab-body" data-ss-tab-body="volume" hidden>${volume}</div>
+    <div class="ss-tab-body" data-ss-tab-body="matchup" hidden>${matchup}</div>
+    <div class="ss-tab-body" data-ss-tab-body="trends" hidden>${trends}</div>
+  </div>`;
+}
+
+function wireSSBreakdownTabs(container) {
+  const btns = container.querySelectorAll(".ss-tab-btn");
+  btns.forEach((btn) => btn.addEventListener("click", () => {
+    btns.forEach((b) => b.classList.toggle("active", b === btn));
+    container.querySelectorAll("[data-ss-tab-body]").forEach((body) => {
+      body.hidden = body.dataset.ssTabBody !== btn.dataset.ssTab;
+    });
+    animateSSBars(container);
+  }));
+}
+
+function animateSSBars(container) {
+  const apply = () => {
+    container.querySelectorAll(".ss-mb-fill[data-pct]").forEach((el) => {
+      if (el.closest("[hidden]")) return;
+      el.style.width = el.dataset.pct + "%";
+    });
+    container.querySelectorAll(".ss-diverge-fill[data-pct]").forEach((el) => {
+      if (el.closest("[hidden]")) return;
+      el.style.width = el.dataset.pct + "%";
+      el.style.left = el.dataset.left + "%";
+    });
+    container.querySelectorAll(".ss-spectrum-dot[data-left]").forEach((el) => {
+      if (el.closest("[hidden]")) return;
+      el.style.left = el.dataset.left + "%";
+    });
+  };
+  requestAnimationFrame(() => requestAnimationFrame(apply));
+  setTimeout(apply, 60);
+}
+
+// ------------------------------------------------------- narrative card ----
+// One real "AI Recommendation Summary" — a crisp couple of bullets about
+// the actual top pick, built from the same real comparison sentence
+// engine already computes (startSitCompareSentence), not a separate
+// invented narrative. Second bullet adds the volume/usage angle that
+// sentence doesn't already cover, so it's a genuine second point, not a
+// rephrasing of the first.
+function ssNarrativeHtml(top, rival, players) {
+  if (!rival) return "";
+  const bullets = [startSitCompareSentence(top, rival)];
+  const snapGap = Math.round(((top.snap_pct || 0) - (rival.snap_pct || 0)) * 100);
+  const rzGap = (top.redzone_touches || 0) - (rival.redzone_touches || 0);
+  if (Math.abs(snapGap) >= 5 || Math.abs(rzGap) >= 3) {
+    const who = snapGap >= 0 ? top : rival;
+    const other = snapGap >= 0 ? rival : top;
+    bullets.push(`${esc(who.player_display_name)} carries the real usage edge too — ${Math.abs(snapGap)} points more snap share and ${Math.abs(rzGap)} more red-zone touches than ${esc(other.player_display_name)}.`);
+  } else {
+    bullets.push(`Usage is close between them (snap share within ${Math.abs(snapGap)} points, red-zone touches within ${Math.abs(rzGap)}) — the call comes down to the numbers above, not a lopsided role.`);
+  }
+  return `<div class="ss-narrative">
+    <div class="ss-narrative-head"><span>⚡</span><span class="ss-narrative-title">AI Recommendation Summary</span></div>
+    <ul>${bullets.map((b) => `<li><span class="ss-dot"></span><span>${b}</span></li>`).join("")}</ul>
   </div>`;
 }
 
@@ -1337,16 +1505,29 @@ async function runStartSit() {
     const scaleMax = Math.max(1, ...valid.map((p) => (p.ceiling != null ? p.ceiling : p.PROJ)));
 
     const top = valid[0];
-    results.innerHTML = "";
-    let i = 0;
-    sorted.forEach((p) => {
-      if (p.error) {
-        results.insertAdjacentHTML("beforeend", `<div class="result-card"><span>${esc(p.player_id)}: ${esc(p.error)}</span></div>`);
-        return;
-      }
-      const analysis = top ? startSitAnalysisFor(p, top, valid) : "";
-      results.insertAdjacentHTML("beforeend", startSitCardHtml(p, scaleMin, scaleMax, i++, analysis));
-    });
+    const errors = sorted.filter((p) => p.error)
+      .map((p) => `<div class="result-card"><span>${esc(p.player_id)}: ${esc(p.error)}</span></div>`).join("");
+
+    // Swap only makes sense as a literal head-to-head — a real 2-player
+    // comparison — not a 3-4 player grid, which has no "other side" to
+    // swap with. Reorders display only; selection/data are untouched.
+    const isHeadToHead = valid.length === 2;
+    const heroOrder = isHeadToHead && state.ssSwapped ? [valid[1], valid[0]] : valid;
+    const heroCards = heroOrder.map((p, i) => startSitCardHtml(p, scaleMin, scaleMax, i, p.player_id === top?.player_id)).join("");
+    const swapBtn = isHeadToHead
+      ? `<button type="button" class="ss-swap-btn" id="ss-swap-btn" title="Swap sides">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M7 4v13M7 17l-3-3M7 17l3-3M17 20V7M17 7l3 3M17 7l-3 3"/>
+          </svg>
+        </button>` : "";
+
+    results.innerHTML = `
+      ${errors}
+      <div class="ss-hero-row${isHeadToHead ? " head-to-head" : ""}">${heroCards}${swapBtn}</div>
+      ${valid.length >= 2 ? ssBreakdownPanelHtml(valid) : ""}
+      ${top ? ssNarrativeHtml(top, valid.find((x) => x.player_id !== top.player_id), valid) : ""}
+    `;
+
     results.querySelectorAll(".ss-card").forEach((card) => {
       const p = valid.find((x) => x.player_id === card.dataset.pid);
       // Scoped to the toggle button itself, not the whole card — the
@@ -1355,7 +1536,15 @@ async function runStartSit() {
       // inside those instead of just the intended expand/collapse.
       card.querySelector(".ss-expand-toggle").addEventListener("click", () => toggleSSExpand(card, card.dataset.pid, p?.opponent));
     });
+    const breakdown = results.querySelector(".ss-breakdown");
+    if (breakdown) wireSSBreakdownTabs(breakdown);
+    $("#ss-swap-btn")?.addEventListener("click", (e) => {
+      state.ssSwapped = !state.ssSwapped;
+      e.currentTarget.classList.add("spin");
+      runStartSit();
+    });
     animateSSRings();
+    if (breakdown) animateSSBars(breakdown);
     // This comparison just logged fresh predictions server-side (see
     // /api/startsit) — refresh so "N pending" reflects them right away,
     // rather than waiting for the next tab visit.
@@ -1439,6 +1628,34 @@ $("#startsit-gate-btn")?.addEventListener("click", () => switchTab("settings"));
 
 function initStartSit() {
   $("#startsit-compare").addEventListener("click", runStartSit);
+  initSSScoringToggle();
+}
+
+// A real segmented toggle in the tool's own header — not a separate,
+// disconnected piece of state: it drives the exact same state.scoring
+// the sidebar's #scoring-select does (and keeps that select in sync,
+// so the two never disagree), then re-runs the live comparison
+// immediately if one's already on screen, so switching formats here
+// actually recomputes real PROJ/floor/ceiling rather than just
+// changing a label.
+function initSSScoringToggle() {
+  const bar = $("#ss-scoring-toggle");
+  const sync = () => {
+    bar.querySelectorAll("button").forEach((b) => b.classList.toggle("active", (state.scoring || "") === b.dataset.scoring));
+  };
+  sync();
+  bar.querySelectorAll("button").forEach((b) => {
+    b.addEventListener("click", () => {
+      if ((state.scoring || "") === b.dataset.scoring) return;
+      state.scoring = b.dataset.scoring;
+      saveScoring();
+      const sel = $("#scoring-select");
+      if (sel) sel.value = state.scoring;
+      sync();
+      if (state.tab === "board") loadBoard();
+      if (state.startsit.length >= 2 && $("#startsit-results .ss-hero")) runStartSit();
+    });
+  });
 }
 
 // --------------------------------------------------------------- trade ----

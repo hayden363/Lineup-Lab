@@ -1098,5 +1098,16 @@ def _style_css():
     return FileResponse("static/style.css", media_type="text/css", headers={"Cache-Control": "no-cache"})
 
 
+# The page shell itself has the exact same staleness risk as app.js/
+# style.css above, and it's the one that actually bit real testing
+# tonight: a browser served a cached index.html with none of a brand-new
+# section's markup (the Start/Sit toolbar) even on a fresh navigation,
+# because the catch-all mount below sets no Cache-Control on "/" either.
+# Same fix, same reasoning.
+@app.get("/", include_in_schema=False)
+def _index():
+    return FileResponse("static/index.html", media_type="text/html", headers={"Cache-Control": "no-cache"})
+
+
 # ---- static frontend (must be mounted last so /api/* above takes priority) ----
 app.mount("/", StaticFiles(directory="static", html=True), name="static")

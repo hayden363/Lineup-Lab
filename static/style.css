@@ -20,6 +20,8 @@
   --neg-glow: rgba(255, 107, 129, 0.35);
   --avg-glow: rgba(232, 193, 92, 0.35);
   --info-glow: rgba(100, 194, 236, 0.35);
+  --violet: #a78bfa;
+  --violet-glow: rgba(167, 139, 250, 0.35);
 
   --radius-sm: 8px;
   --radius: 16px;
@@ -2550,6 +2552,122 @@ tbody tr:last-child td { border-bottom: none; }
 @media (max-width: 420px) {
   .ss-proj-row { flex-wrap: wrap; gap: 4px 0; }
 }
+
+/* ============================================================
+   START/SIT TOTAL REWORK — tool header, head-to-head hero row
+   with swap, shared N-way breakdown panel, shared narrative card.
+   Real data throughout (engine/tools.py's start_sit()); the one
+   place with no real data source (weather) is disclosed as
+   "Availability" instead of invented — see ssBreakdownPanelHtml.
+   ============================================================ */
+.ss-toolbar {
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px;
+  padding: 14px 18px; margin-bottom: 18px;
+  background: var(--panel-glass);
+  -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+  border: 1px solid var(--border-bright);
+  border-radius: var(--radius);
+  box-shadow: 0 0 24px -10px var(--accent-glow);
+}
+.ss-toolbar-brand { display: flex; align-items: center; gap: 12px; }
+.ss-toolbar-mark {
+  width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center;
+  font-size: 17px; background: linear-gradient(150deg, var(--accent-glow), rgba(100,194,236,0.18));
+  border: 1px solid var(--border-bright);
+}
+.ss-toolbar-title { font-weight: 800; font-size: 17px; letter-spacing: 0.01em; }
+.ss-toolbar-sub { font-size: 11px; color: var(--muted); margin-top: 1px; }
+.ss-scoring-toggle { display: flex; align-items: center; border: 1px solid var(--border); border-radius: 10px; padding: 3px; background: rgba(255,255,255,0.02); }
+.ss-scoring-toggle button {
+  font-family: var(--mono); font-size: 12px; font-weight: 700; letter-spacing: 0.02em;
+  padding: 7px 13px; border-radius: 7px; border: none; background: none; color: var(--muted); cursor: pointer;
+  transition: background 150ms var(--ease), color 150ms var(--ease);
+}
+.ss-scoring-toggle button:hover { color: var(--text); }
+.ss-scoring-toggle button.active { background: var(--accent); color: #0e1b15; }
+
+/* --- hero row (swap for the real 2-player case) ---
+   Always wraps when there isn't room — this tab's own two-column
+   .startsit-layout gives the results side roughly half the page, which
+   is real width but not a fixed amount, so a hard `nowrap` here (an
+   earlier version of this rule) could force two 260px-min cards + the
+   swap button past the actual container width with no visible warning
+   — the second card just overflowed off-screen. Wrap-by-default with a
+   real min-width instead: side-by-side whenever there's room, stacked
+   otherwise, never silently clipped. */
+.ss-hero-row { display: flex; align-items: stretch; gap: 16px; flex-wrap: wrap; }
+.ss-hero-row .ss-hero { flex: 1 1 240px; min-width: 0; }
+.ss-swap-btn {
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  width: 44px; height: 44px; align-self: center; border-radius: 50%;
+  background: var(--panel-glass); border: 1px solid var(--border-bright); color: var(--accent);
+  cursor: pointer; box-shadow: 0 0 20px -8px var(--accent-glow);
+  transition: transform 400ms var(--ease-snap);
+}
+.ss-swap-btn:hover { transform: scale(1.08); }
+.ss-swap-btn.spin { transform: rotate(180deg); }
+@media (max-width: 700px) {
+  .ss-swap-btn { order: 3; margin: 4px auto 0; }
+}
+
+/* real, ongoing pulse on the actual single best pick — not every
+   tier-start card, just the one the engine actually recommends */
+.ss-rec-badge {
+  display: inline-block; margin-bottom: 10px; padding: 4px 11px; border-radius: 999px;
+  font-family: var(--mono); font-size: 10px; font-weight: 800; letter-spacing: 0.06em;
+  background: var(--accent); color: #0e1b15;
+}
+@keyframes ssRecPulse {
+  0%, 100% { box-shadow: 0 0 26px -8px var(--accent-glow); }
+  50% { box-shadow: 0 0 40px -4px var(--accent-glow); }
+}
+.ss-card.recommended { animation: fadeSlideUp 380ms var(--ease) forwards, ssRecPulse 2.4s ease-in-out 380ms infinite; }
+@media (prefers-reduced-motion: reduce) { .ss-card.recommended { animation: fadeSlideUp 380ms var(--ease) forwards; } }
+
+/* --- shared deep analytical breakdown panel (N-way) --- */
+.ss-breakdown { margin-top: 20px; border-radius: var(--radius); background: var(--panel-glass); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); border: 1px solid var(--border-bright); box-shadow: 0 0 28px -12px var(--info-glow); overflow: hidden; opacity: 0; animation: fadeSlideUp 380ms var(--ease) 120ms forwards; }
+.ss-breakdown-head { padding: 16px 18px 0; }
+.ss-breakdown-title { font-weight: 800; font-size: 15px; }
+.ss-tabbar { display: flex; gap: 2px; padding: 12px 12px 0; border-bottom: 1px solid var(--border); overflow-x: auto; }
+.ss-tab-btn {
+  display: flex; align-items: center; gap: 6px; white-space: nowrap;
+  padding: 9px 13px; border-radius: 8px 8px 0 0; border: none; border-bottom: 2px solid transparent;
+  background: none; color: var(--muted); font-family: var(--mono); font-size: 12px; font-weight: 700; letter-spacing: 0.02em; cursor: pointer;
+}
+.ss-tab-btn:hover { color: var(--text); }
+.ss-tab-btn.active { color: var(--info); border-bottom-color: var(--info); background: rgba(255,255,255,0.03); }
+.ss-tab-body { padding: 18px; }
+.ss-metric-block + .ss-metric-block { margin-top: 18px; padding-top: 18px; border-top: 1px solid var(--border); }
+.ss-metric-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+.ss-metric-label { font-family: var(--mono); font-size: 11px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.ss-metric-sub { font-size: 10px; color: var(--muted); text-align: right; }
+
+.ss-mb-row { display: grid; grid-template-columns: 84px 1fr 60px; align-items: center; gap: 10px; margin-bottom: 8px; }
+.ss-mb-row:last-child { margin-bottom: 0; }
+.ss-mb-name { font-size: 12px; font-weight: 700; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ss-mb-track { position: relative; height: 7px; border-radius: 999px; background: rgba(255,255,255,0.06); overflow: hidden; }
+.ss-mb-fill { position: absolute; top: 0; left: 0; height: 100%; border-radius: 999px; width: 0%; transition: width 700ms var(--ease); }
+.ss-mb-val { font-family: var(--mono); font-size: 12px; font-weight: 700; text-align: right; }
+
+.ss-diverge-track { position: relative; height: 7px; border-radius: 999px; background: rgba(255,255,255,0.06); overflow: hidden; }
+.ss-diverge-mid { position: absolute; top: -3px; left: 50%; width: 2px; height: 13px; background: var(--border-bright); transform: translateX(-1px); }
+.ss-diverge-fill { position: absolute; top: 0; height: 100%; width: 0%; left: 50%; transition: width 700ms var(--ease), left 700ms var(--ease); }
+
+.ss-spectrum-track { position: relative; height: 4px; border-radius: 999px; background: linear-gradient(90deg, var(--neg), var(--avg), var(--accent)); opacity: 0.35; }
+.ss-spectrum-mid { position: absolute; top: -4px; left: 50%; width: 1px; height: 12px; background: rgba(255,255,255,0.3); }
+.ss-spectrum-dot { position: absolute; top: 50%; width: 10px; height: 10px; border-radius: 50%; transform: translate(-50%, -50%); left: 50%; transition: left 700ms var(--ease); }
+
+.ss-avail { font-family: var(--mono); font-size: 12px; font-weight: 700; }
+.ss-avail.ok { color: var(--accent); }
+.ss-avail.dark { color: var(--neg); }
+
+/* --- shared narrative card --- */
+.ss-narrative { margin-top: 16px; padding: 18px; border-radius: var(--radius); background: var(--panel-glass); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); border: 1px solid var(--border-bright); box-shadow: 0 0 24px -10px var(--accent-glow); opacity: 0; animation: fadeSlideUp 380ms var(--ease) 220ms forwards; }
+.ss-narrative-head { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; font-weight: 800; font-size: 14px; }
+.ss-narrative ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.ss-narrative li { display: flex; gap: 10px; font-size: 13px; line-height: 1.6; color: var(--text); }
+.ss-narrative li strong { color: var(--accent); }
+.ss-dot { margin-top: 6px; width: 6px; height: 6px; border-radius: 999px; background: var(--info); flex-shrink: 0; }
 
 /* the analysis lives inside the card it's about — directly under that
    player's own numbers, not off in a separate shared callout up top. */
