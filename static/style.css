@@ -17,6 +17,9 @@
   --tough: #ff6b81;
   --avg: #e8c15c;
   --info: #64c2ec;
+  --neg-glow: rgba(255, 107, 129, 0.35);
+  --avg-glow: rgba(232, 193, 92, 0.35);
+  --info-glow: rgba(100, 194, 236, 0.35);
 
   --radius-sm: 8px;
   --radius: 16px;
@@ -2427,7 +2430,9 @@ tbody tr:last-child td { border-bottom: none; }
   position: relative;
   isolation: isolate;
   overflow: hidden;
-  background: var(--panel);
+  background: var(--panel-glass);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
   border: 1px solid var(--border);
   border-left: 3px solid var(--border-bright);
   border-radius: var(--radius);
@@ -2436,6 +2441,14 @@ tbody tr:last-child td { border-bottom: none; }
   opacity: 0;
   animation: fadeSlideUp 380ms var(--ease) forwards;
 }
+/* Every tier gets a real glow, not just a border-left stripe — color-
+   coded the same way the tier badge already is (--accent/--info/--avg/
+   --neg), just extended to a soft ambient box-shadow so the whole card
+   reads as "this one's the good one" / "this one's risky" at a glance. */
+.ss-card.tier-flex { border-left-color: var(--info); box-shadow: 0 0 20px -10px var(--info-glow); }
+.ss-card.tier-borderline { border-left-color: var(--avg); box-shadow: 0 0 20px -10px var(--avg-glow); }
+.ss-card.tier-sit { border-left-color: var(--neg); box-shadow: 0 0 20px -10px var(--neg-glow); opacity: 0.9; }
+
 /* The recommended pick is bigger, not just glowing — real size (padding,
    avatar, proj number), not a transform: scale(). A scale would fight
    the fadeSlideUp entrance / recommendGlow animations below, which both
@@ -2444,15 +2457,29 @@ tbody tr:last-child td { border-bottom: none; }
    simply never win. */
 .ss-card.tier-start {
   border-left-color: var(--accent);
-  box-shadow: 0 0 20px -10px var(--accent-glow);
+  box-shadow: 0 0 26px -8px var(--accent-glow);
   padding: 26px 26px 24px;
 }
 .ss-card.tier-start .ss-card-top img { width: 84px; height: 84px; }
 .ss-card.tier-start .ss-name { font-size: 21px; }
 .ss-card.tier-start .ss-proj-num { font-size: 40px; }
-.ss-card.tier-flex { border-left-color: var(--info); }
-.ss-card.tier-borderline { border-left-color: var(--avg); }
-.ss-card.tier-sit { border-left-color: var(--neg); opacity: 0.85; }
+
+/* confidence ring — real value from the backend's own tier-confidence
+   math, filled in via animateSSRings() (same double-rAF-then-settle
+   technique as animateScoreBars, driving a conic-gradient angle instead
+   of a width). */
+.ss-ring { position: relative; width: 52px; height: 52px; flex-shrink: 0; margin-left: auto; }
+.ss-ring-bg {
+  position: absolute; inset: 0; border-radius: 50%;
+  transition: background 900ms var(--ease);
+  -webkit-mask-image: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 4px));
+          mask-image: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 4px));
+}
+.ss-ring-label { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.ss-ring-pct { font-family: var(--mono); font-weight: 800; font-size: 12px; line-height: 1; }
+.ss-ring-tag { font-size: 7px; letter-spacing: 0.1em; color: var(--muted); margin-top: 2px; }
+.ss-card.tier-start .ss-ring { width: 60px; height: 60px; }
+.ss-card.tier-start .ss-ring-pct { font-size: 14px; }
 
 /* the same generated position art that sits behind the player-detail
    modal header (see the "PICSART ART" section) — quieter here since it's
@@ -2515,16 +2542,14 @@ tbody tr:last-child td { border-bottom: none; }
 .ss-proj-num { font-family: var(--mono); font-weight: 800; font-size: 34px; color: var(--text); white-space: nowrap; }
 .ss-proj-num .ss-proj-lbl { font-family: var(--sans); font-weight: 500; font-size: 11px; color: var(--muted); margin-left: 6px; white-space: nowrap; }
 
-/* At phone width the big proj number + "proj pts" label + "83%
-   confidence" all fighting for one row is what causes the label to
-   wrap mid-word — found testing on a real 375px viewport, not
-   hypothetical. Stack confidence below instead of shrinking the
-   number, since the number is the thing that's supposed to be big. */
+/* At phone width the big proj number + "proj pts" label fighting the
+   tier badge for one row is what caused label wrapping before
+   (confidence moved into the ring up top, in the header row, since) —
+   found testing on a real 375px viewport, not hypothetical. Keep the
+   wrap allowance as a safe default. */
 @media (max-width: 420px) {
   .ss-proj-row { flex-wrap: wrap; gap: 4px 0; }
-  .ss-confidence { flex-basis: 100%; }
 }
-.ss-confidence { font-size: 11px; color: var(--muted); font-family: var(--mono); }
 
 /* the analysis lives inside the card it's about — directly under that
    player's own numbers, not off in a separate shared callout up top. */

@@ -1199,22 +1199,12 @@ function injuryFlagHtml(status) {
   return ` <span class="injury-flag${mild ? " questionable" : ""}">${esc(status.toUpperCase())}</span>`;
 }
 
-// A player who's stopped appearing in the weekly data well behind their
-// OWN team's own most recent game (release, benching, an injury that
-// never got a live Sleeper designation) — see engine/board.py's real,
-// team-relative weeks_since_played for why this isn't just "vs the
-// league's current week" (that comparison is meaningless once a season
-// ends — every team's own last week varies by 4+ depending on whether
-// they made the playoffs). A real gap the season-average PROJ elsewhere
-// doesn't surface on its own. Shown alongside the injury flag, not
-// instead of it — a player can have both, or neither.
-function goneDarkFlagHtml(p) {
-  if (p.weeks_since_played == null || p.weeks_since_played < 3 || p.last_active_week == null) return "";
-  return ` <span class="injury-flag questionable" title="Last real game: Week ${esc(p.last_active_week)} — ${esc(p.weeks_since_played)} weeks behind ${esc(p.recent_team) || "their team"}'s own most recent game">GONE DARK</span>`;
-}
-
+// Kept as the single call site every player-name render uses (Big
+// Board/Waivers, player modal, Start/Sit, My Team, Trade picker) so any
+// future status badge only needs wiring in once, here — see git history
+// for the "gone dark" badge this used to also render, removed per request.
 function statusFlagsHtml(p) {
-  return injuryFlagHtml(p.injury_status) + goneDarkFlagHtml(p);
+  return injuryFlagHtml(p.injury_status);
 }
 
 function statChipsHtml(p) {
@@ -1228,6 +1218,34 @@ function statChipsHtml(p) {
 // Every card's floor/ceiling bar shares one scale across the whole
 // comparison so the bars are actually comparable at a glance, not just
 // individually accurate.
+// Small conic-gradient confidence ring, real value from the backend's
+// own _tier_confidence math (engine/tools.py) — animated in via
+// animateSSRings() below, same double-rAF-then-settle technique the
+// rest of this app already uses for width-based bars (see
+// animateScoreBars/need-bar-fill), just driving a conic-gradient angle
+// instead of a width.
+function confidenceRingHtml(p, tierClass) {
+  if (p.confidence == null) return "";
+  const colorVar = tierClass === "tier-start" ? "--accent" : tierClass === "tier-sit" ? "--neg" : tierClass === "tier-borderline" ? "--avg" : "--info";
+  return `<div class="ss-ring" data-ring data-value="${p.confidence}" data-color-var="${colorVar}">
+    <div class="ss-ring-bg" style="background:conic-gradient(var(${colorVar}) 0deg, var(--border) 0deg)"></div>
+    <div class="ss-ring-label"><span class="ss-ring-pct">${p.confidence}%</span><span class="ss-ring-tag">CONF</span></div>
+  </div>`;
+}
+
+function animateSSRings() {
+  const apply = () => {
+    document.querySelectorAll(".ss-ring[data-ring]").forEach((el) => {
+      const value = parseFloat(el.dataset.value);
+      const colorVar = el.dataset.colorVar;
+      const bg = el.querySelector(".ss-ring-bg");
+      bg.style.background = `conic-gradient(var(${colorVar}) ${value * 3.6}deg, var(--border) 0deg)`;
+    });
+  };
+  requestAnimationFrame(() => requestAnimationFrame(apply));
+  setTimeout(apply, 60);
+}
+
 function rangeBarHtml(p, scaleMin, scaleMax) {
   const span = Math.max(scaleMax - scaleMin, 0.1);
   const floor = p.floor != null ? p.floor : p.PROJ;
@@ -1254,11 +1272,11 @@ function startSitCardHtml(p, scaleMin, scaleMax, i, analysisText) {
         <div class="ss-name">${esc(p.player_display_name)}${statusFlagsHtml(p)}</div>
         <div class="ss-meta">${esc(p.position)} · ${esc(p.recent_team)}${p.opponent ? " · vs " + esc(p.opponent) + " (" + esc(p.matchup_tag) + ")" : " · rest-of-season blend"}</div>
       </div>
-      <div class="ss-tier-badge ${tierClass}">${esc(p.tier || "—")}</div>
+      ${confidenceRingHtml(p, tierClass)}
     </div>
     <div class="ss-proj-row">
       <div class="ss-proj-num">${FMT.d1(p.PROJ)}<span class="ss-proj-lbl">proj pts</span></div>
-      <div class="ss-confidence">${p.confidence != null ? p.confidence + "% confidence" : ""}</div>
+      <div class="ss-tier-badge ${tierClass}">${esc(p.tier || "—")}</div>
     </div>
     ${rangeBarHtml(p, scaleMin, scaleMax)}
     <div class="ss-stat-chips">${statChipsHtml(p)}</div>
@@ -1337,6 +1355,7 @@ async function runStartSit() {
       // inside those instead of just the intended expand/collapse.
       card.querySelector(".ss-expand-toggle").addEventListener("click", () => toggleSSExpand(card, card.dataset.pid, p?.opponent));
     });
+    animateSSRings();
     // This comparison just logged fresh predictions server-side (see
     // /api/startsit) — refresh so "N pending" reflects them right away,
     // rather than waiting for the next tab visit.
@@ -3179,7 +3198,16 @@ const COUNTUP_SELECTOR = ".mt-total, .ss-proj-num, .trade-verdict .big";
 
 function animateCountUp(el) {
   if (el.dataset.counted) return;
-  const raw = el.textContent;
+  // Only the element's own leading text node gets touched — a sibling
+  // label element (e.g. .ss-proj-num's "proj pts" <span>) has to survive
+  // untouched. Reading/writing el.textContent here (the original
+  // approach) flattens the whole element, silently deleting any child
+  // element and its spacing along with it — found for real on the
+  // Start/Sit cards ("19.4proj pts", no gap) once actually rendered
+  // in-browser, not caught by testing the HTML string in isolation.
+  const textNode = Array.prototype.find.call(el.childNodes, (n) => n.nodeType === 3 && n.textContent.trim());
+  if (!textNode) return;
+  const raw = textNode.textContent;
   const match = raw.match(/-?[\d,]+\.?\d*/);
   if (!match) return;
   const target = parseFloat(match[0].replace(/,/g, ""));
@@ -3193,7 +3221,7 @@ function animateCountUp(el) {
   (function frame(now) {
     const t = Math.min(1, (now - start) / dur);
     const eased = 1 - Math.pow(1 - t, 3);
-    el.textContent = prefix + (target * eased).toFixed(decimals) + suffix;
+    textNode.textContent = prefix + (target * eased).toFixed(decimals) + suffix;
     if (t < 1) requestAnimationFrame(frame);
   })(start);
 }
