@@ -56,16 +56,36 @@ def _json_cache_path(name):
     return os.path.join(CACHE_DIR, f"sleeper_{name}.json")
 
 
+# Process-lifetime in-memory front-cache, same idea as data.py's _MEM —
+# without it, a "cache hit" here still meant re-reading and re-parsing the
+# on-disk JSON from scratch on every single call. Harmless for the small
+# per-league payloads, but all_players() (~5-15MB, every NFL player ever)
+# is called once per unscored roster slot (DEF/K/crosswalk-miss) — a real
+# league sync calls it dozens of times per request (measured: 97 calls,
+# 8.2s of an 11.4s my_team() request, almost entirely JSON parsing the
+# same bytes over and over). Keyed by cache_name, same as the disk cache.
+_MEM: dict = {}
+
+
 def _cached_get(url, cache_name, ttl, force=False):
-    path = _json_cache_path(cache_name)
-    if not force and os.path.exists(path) and (time.time() - os.path.getmtime(path)) < ttl:
-        with open(path) as f:
-            return json.load(f)
+    if not force:
+        mem = _MEM.get(cache_name)
+        if mem and (time.time() - mem[0]) < ttl:
+            return mem[1]
+        path = _json_cache_path(cache_name)
+        if os.path.exists(path):
+            mtime = os.path.getmtime(path)
+            if (time.time() - mtime) < ttl:
+                with open(path) as f:
+                    data = json.load(f)
+                _MEM[cache_name] = (mtime, data)
+                return data
     resp = requests.get(url, timeout=15)
     resp.raise_for_status()
     data = resp.json()
-    with open(path, "w") as f:
+    with open(_json_cache_path(cache_name), "w") as f:
         json.dump(data, f)
+    _MEM[cache_name] = (time.time(), data)
     return data
 
 
