@@ -271,11 +271,24 @@ def form_adjustment(wk, position, weekly_epa=None, halflife=2.5, min_games_full_
        moves halfway toward the process-based signal. Half, not all the
        way: touchdown variance is real and well-documented (see any
        "TD rate regression" analysis) but not pure noise, since the same
-       usage that produces yardage also creates the scoring opportunity."""
+       usage that produces yardage also creates the scoring opportunity.
+
+    4. A MID-SEASON TEAM CHANGE resets the baseline. Comparing "recent
+       form" against a season average that blends games with a different
+       team (different scheme, QB, offensive line, target competition) is
+       misleading in either direction — it can flatten a real improvement
+       after landing in a better offense, or mask a real decline after
+       landing in a worse one. Filtered to just the player's current
+       team's own games, which naturally lets the sample-size confidence
+       shrinkage above (point 2) handle "not many games yet since the
+       trade" the same honest way it already handles "not many games yet
+       this season" — no separate rule needed for it."""
     sub = wk[wk["position"] == position]
     adj = {}
     for pid, pdata in sub.groupby("player_id"):
         pdata = pdata.sort_values("week")
+        current_team = pdata["recent_team"].iloc[-1]
+        pdata = pdata[pdata["recent_team"] == current_team]
         fpts_pct = _recency_weighted_pct(pdata["fpts_active"].to_numpy(), halflife, min_games_full_confidence)
         pct = fpts_pct
 
