@@ -24,6 +24,27 @@ def _league_scoring_settings(league_id):
         return None
 
 
+def _opponent_adjusted_proj(board, gsis_id, pos, bundle, scoring, week=None):
+    """PROJ for one player against their own REAL upcoming NFL opponent
+    (via data.next_opponent, resolved from their recent_team) rather than
+    rest_of_season_value()'s season-long average across every defense.
+    That average is the right number for trade/start-sit/waiver tools
+    comparing many possible weeks/opponents at once — but "my team, this
+    week" has one specific real matchup, and every player showing the
+    exact same number regardless of who they actually play is wrong for
+    that view. Falls back to the season-average when there's no real
+    upcoming opponent to resolve (bye week, end of season, or a team
+    missing from the schedule) so a player never just shows a blank."""
+    row = board.loc[[gsis_id]]
+    recent_team = row["recent_team"].iloc[0] if "recent_team" in row.columns else None
+    opp = None
+    if recent_team:
+        opp, _ = data.next_opponent(bundle["schedule"], recent_team, week)
+    if opp:
+        return round(float(project_vs(row, pos, opp, bundle=bundle, scoring=scoring)["PROJ"].iloc[0]), 1)
+    return round(float(rest_of_season_value(row, pos, bundle=bundle, scoring=scoring).iloc[0]), 1)
+
+
 def _defense_board(bundle, league_id=None):
     """Real DEF/ST board for this season (see engine/defense_scoring.py) —
     scored with the real league's own Sleeper scoring settings when we
@@ -385,7 +406,7 @@ def trade_analyzer(side_a_ids, side_b_ids, season=None, scoring=None, league_ctx
 
 def _roster_players(raw_ids, bundle, get_board, scoring, crosswalk=None, starters=None,
                      slot_labels=None, def_board=None, k_board=None, k_team_baseline=None,
-                     rank_baselines=None, resolve_unscored=None):
+                     rank_baselines=None, resolve_unscored=None, week=None):
     """Real starting lineup (in real slot order — QB/RB/RB/WR/WR/TE/FLEX/
     FLEX/DEF/K, whatever the league actually runs, including multi-FLEX)
     first, then bench sorted by projected value. `starters`/`slot_labels`
@@ -451,7 +472,7 @@ def _roster_players(raw_ids, bundle, get_board, scoring, crosswalk=None, starter
         if gsis_id not in board.index:
             return None
         row = board.loc[gsis_id].to_dict()
-        proj = round(float(rest_of_season_value(board.loc[[gsis_id]], pos, bundle=bundle, scoring=scoring).iloc[0]), 1)
+        proj = _opponent_adjusted_proj(board, gsis_id, pos, bundle, scoring, week=week)
         return {
             "player_id": gsis_id, "position": pos,
             "player_display_name": row.get("player_display_name"),
@@ -478,7 +499,7 @@ def _roster_players(raw_ids, bundle, get_board, scoring, crosswalk=None, starter
 
 
 def _team_total(raw_ids, bundle, get_board, scoring, crosswalk=None, starters=None,
-                 def_board=None, k_board=None, k_team_baseline=None, rank_baselines=None):
+                 def_board=None, k_board=None, k_team_baseline=None, rank_baselines=None, week=None):
     """Same 'starters only' rule as _roster_players, for the lighter-weight
     'every other matchup this week' view that doesn't need full rosters."""
     crosswalk = crosswalk or {}
@@ -515,7 +536,7 @@ def _team_total(raw_ids, bundle, get_board, scoring, crosswalk=None, starters=No
         board = get_board(pos)
         if gsis_id not in board.index:
             continue
-        total += float(rest_of_season_value(board.loc[[gsis_id]], pos, bundle=bundle, scoring=scoring).iloc[0])
+        total += _opponent_adjusted_proj(board, gsis_id, pos, bundle, scoring, week=week)
     return round(total, 1)
 
 
@@ -608,7 +629,7 @@ def roster_player_list(league_id, roster_id, season=None, scoring=None):
         if gsis_id not in board.index:
             continue
         row = board.loc[gsis_id].to_dict()
-        proj = round(float(rest_of_season_value(board.loc[[gsis_id]], pos, bundle=bundle, scoring=scoring).iloc[0]), 1)
+        proj = _opponent_adjusted_proj(board, gsis_id, pos, bundle, scoring)
         players.append({
             "player_id": gsis_id, "position": pos,
             "player_display_name": row.get("player_display_name"),
@@ -706,7 +727,7 @@ def my_team(league_id, roster_id, season=None, scoring=None, week=None):
         players, total = _roster_players(raw_ids, bundle, get_board, scoring,
                                           crosswalk=crosswalk, starters=starters, slot_labels=slot_labels,
                                           def_board=def_board, k_board=k_board, k_team_baseline=k_team_baseline,
-                                          rank_baselines=rank_baselines)
+                                          rank_baselines=rank_baselines, week=week)
         return {"roster_id": entry["roster_id"], "team_name": entry["team_name"],
                 "avatar_url": entry.get("avatar_url") or entry.get("owner_avatar_url"),
                 "owner": entry.get("owner"), "players": players, "total_proj": total}
@@ -732,7 +753,7 @@ def my_team(league_id, roster_id, season=None, scoring=None, week=None):
             "total_proj": _team_total(raw_rosters.get(e["roster_id"], e["player_ids"]), bundle, get_board, scoring,
                                        crosswalk=crosswalk, starters=starters_by_roster.get(e["roster_id"], []),
                                        def_board=def_board, k_board=k_board, k_team_baseline=k_team_baseline,
-                                       rank_baselines=rank_baselines),
+                                       rank_baselines=rank_baselines, week=week),
         } for e in entries]
         league_matchups.append({"matchup_id": pair["matchup_id"], "teams": sides})
     result["league_matchups"] = league_matchups
@@ -799,7 +820,7 @@ def my_team_espn(league_id, team_id, season=None, scoring=None, week=None, year=
         players, total = _roster_players(raw_ids, bundle, get_board, scoring,
                                           crosswalk=crosswalk, starters=starters, slot_labels=slot_labels,
                                           def_board=def_board, k_board=k_board, k_team_baseline=k_team_baseline,
-                                          rank_baselines=rank_baselines, resolve_unscored=resolve_unscored)
+                                          rank_baselines=rank_baselines, resolve_unscored=resolve_unscored, week=week)
         return {"roster_id": t.team_id, "team_name": t.team_name,
                 "avatar_url": t.logo_url or None, "owner": espn_layer.owner_name(t),
                 "players": players, "total_proj": total}
