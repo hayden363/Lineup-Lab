@@ -825,12 +825,21 @@ tbody tr:last-child td { border-bottom: none; }
   display: flex;
   align-items: flex-end;
   gap: 4px;
-  height: 70px;
+  height: 106px;      /* 70px bar area + room inside the box for both labels */
+  padding: 16px 2px 20px;
   margin-top: 6px;
+  /* A full season (18+ weeks) needs more room per bar than shrinking to
+     fit ever allows without labels colliding — scroll horizontally
+     instead of cramming. overflow-y stays hidden (not "visible") on
+     purpose: the labels are positioned to land inside this padding, not
+     to spill outside the box, so nothing is actually clipped by it —
+     see the padding-vs-negative-offset math on .bar-value/.wk-label. */
+  overflow-x: auto;
+  overflow-y: hidden;
 }
 
 .weeklog .bar {
-  flex: 1;
+  flex: 0 0 28px; /* fixed width, not shrink-to-fit — see .weeklog comment */
   background: var(--accent-dim);
   border-radius: 3px 3px 0 0;
   min-height: 2px;
@@ -844,6 +853,18 @@ tbody tr:last-child td { border-bottom: none; }
   text-align: center;
   font-size: 9px;
   color: var(--muted);
+  white-space: nowrap;
+}
+
+.weeklog .bar .bar-value {
+  position: absolute;
+  top: -14px;
+  left: 0; right: 0;
+  text-align: center;
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
 }
 
 /* Pickers, chips, tool buttons */

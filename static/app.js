@@ -841,7 +841,13 @@ function weeklyChartHtml(weeks, statKey) {
     if (v == null) return `<div class="bar" style="height:2%;opacity:.3" title="Week ${esc(w.week)}: no data"><div class="wk-label">${esc(w.week)}</div></div>`;
     const h = Math.max(2, Math.round((Math.max(0, v) / maxV) * 100));
     const below = v < avg ? " below-avg" : "";
-    return `<div class="bar${below}" style="height:${h}%" title="Week ${esc(w.week)}: ${v.toFixed(decimals)} (avg ${avg.toFixed(decimals)})"><div class="wk-label">${esc(w.week)}</div></div>`;
+    // The exact number, visible on the chart itself — not just in the
+    // hover title (useless on mobile, and easy to miss even with a
+    // pointer since nothing on the bar itself hints there's a tooltip).
+    return `<div class="bar${below}" style="height:${h}%" title="Week ${esc(w.week)}: ${v.toFixed(decimals)} (avg ${avg.toFixed(decimals)})">
+      <div class="bar-value">${v.toFixed(decimals)}</div>
+      <div class="wk-label">${esc(w.week)}</div>
+    </div>`;
   }).join("");
   const avgLine = avg > 0 ? `<div class="weeklog-avg-line" style="bottom:${avgPct}%" data-label="Avg ${avg.toFixed(decimals)}"></div>` : "";
   return avgLine + bars;
