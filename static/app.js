@@ -549,9 +549,14 @@ function formCell(form) {
 }
 
 function playerCellHtml(p) {
+  // The Big Board table is the app's highest-traffic scanning surface —
+  // real injury/gone-dark signals belong here too, not just once you've
+  // already clicked into one specific player's modal (statusFlagsHtml
+  // was previously wired into 6 other surfaces but missed this one,
+  // the actual Big Board row template).
   return `<div class="player-cell">
       <img ${headshotAttrs(p)} alt="">
-      <div><div class="player-name">${esc(p.player_display_name) || "—"}</div><div class="player-team">${esc(p.recent_team)}</div></div>
+      <div><div class="player-name">${esc(p.player_display_name) || "—"}${statusFlagsHtml(p)}</div><div class="player-team">${esc(p.recent_team)}</div></div>
     </div>`;
 }
 
@@ -705,7 +710,7 @@ function cmpCardHtml(p, players, isTopOverall, delayMs) {
   return `<div class="cmp-card ${posAccentClass(p.position)}${isTopOverall ? " cmp-top" : ""}" data-pid="${esc(p.player_id)}" style="animation-delay:${delayMs}ms">
     ${isTopOverall ? `<span class="badge-recommended cmp-top-badge">TOP OVERALL</span>` : ""}
     <img ${headshotAttrs(p)} alt="">
-    <div class="cmp-name">${esc(p.player_display_name)}${injuryFlagHtml(p.injury_status)}</div>
+    <div class="cmp-name">${esc(p.player_display_name)}${statusFlagsHtml(p)}</div>
     <div class="cmp-meta">${esc(p.position)} · ${esc(p.recent_team)}</div>
     <div class="cmp-rows">${rows}</div>
   </div>`;
@@ -874,7 +879,7 @@ async function openPlayerModal(playerId, opp) {
     <div class="modal-header">
       <img ${headshotAttrs(p)} alt="">
       <div>
-        <h2>${esc(p.player_display_name)}${injuryFlagHtml(p.injury_status)}</h2>
+        <h2>${esc(p.player_display_name)}${statusFlagsHtml(p)}</h2>
         <div class="muted">${esc(p.position)} · ${esc(p.recent_team)} ${p.next_opponent ? "· Next: vs " + esc(p.next_opponent) + " (Wk " + esc(p.next_week) + ")" : ""}</div>
       </div>
       <button class="modal-close">✕</button>
@@ -935,6 +940,7 @@ function playerStatsBodyHtml(p) {
       <div class="metric-tile"><div class="label">FPTS/G</div><div class="value">${FMT.d1(p.fpts_per_game)}</div></div>
       ${matchupLine}
     </div>
+    ${projectionCompareSlotHtml()}
     ${sections}
     <div class="section-label weeklog-header">
       <span>Weekly Breakdown</span>
@@ -951,6 +957,85 @@ function wirePlayerStatsBody(container, p) {
   container.querySelector(".weeklog-stat-select")?.addEventListener("change", (e) => {
     container.querySelector(".weeklog").innerHTML = weeklyChartHtml(weeks, e.target.value);
   });
+  loadProjectionCompare(p.player_id, p.matchup_opponent, container);
+}
+
+// ------------------------------------------- projection breakdown ----
+// Real published FantasyPros consensus next to our own PROJ (see
+// engine/external_projections.py for sourcing/matching). Fetched
+// separately from the rest of playerStatsBodyHtml — same reasoning as
+// loadPlayerNews below: an external call never blocks opening the modal
+// — and shared by both the full player modal and a Start/Sit card's
+// inline expand, since both render through playerStatsBodyHtml.
+//
+// The reveal — bars growing in width, staggered, then the delta badge
+// popping in on the same spring curve already used for the app's button
+// press (CUSTOM_SPRING bounce 0.45, pulled via Figma's get_motion_context
+// from the same design file as everything else's motion, not hand-tuned)
+// — was designed and keyframed in that Figma file before being ported
+// to CSS below (see .pc-fill/.pc-badge.pc-in in style.css).
+function projectionCompareSlotHtml() {
+  return `<div class="pc-slot"><div class="loading small">Checking real consensus…</div></div>`;
+}
+
+function projectionCompareHtml(ourProj, consensus, week) {
+  const wkTag = week ? `<span class="pc-wk">WK ${esc(week)}</span>` : "";
+  if (!consensus.configured) {
+    return `<div class="pc-card pc-empty">
+      <div class="section-label pc-header"><span>Projection Breakdown</span></div>
+      <div class="muted small">Consensus comparison isn't connected yet.</div>
+    </div>`;
+  }
+  if (ourProj == null || consensus.proj == null) {
+    return `<div class="pc-card pc-empty">
+      <div class="section-label pc-header"><span>Projection Breakdown</span>${wkTag}</div>
+      <div class="muted small">No real ${esc(consensus.source)} number for this player${week ? " this week" : ""} yet.</div>
+    </div>`;
+  }
+
+  const max = Math.max(ourProj, consensus.proj, 0.1);
+  const ourPct = Math.max(2, Math.round((ourProj / max) * 100));
+  const theirPct = Math.max(2, Math.round((consensus.proj / max) * 100));
+  const delta = ourProj - consensus.proj;
+  const ahead = delta >= 0;
+
+  return `<div class="pc-card">
+    <div class="section-label pc-header"><span>Projection Breakdown</span>${wkTag}</div>
+    <div class="pc-row">
+      <div class="pc-row-label"><span>Lineup Lab</span><span class="pc-val pc-val-ours">${FMT.d1(ourProj)}</span></div>
+      <div class="pc-track"><span class="pc-fill pc-fill-ours" data-pct="${ourPct}"></span></div>
+    </div>
+    <div class="pc-row">
+      <div class="pc-row-label"><span>${esc(consensus.source)}</span><span class="pc-val pc-val-theirs">${FMT.d1(consensus.proj)}</span></div>
+      <div class="pc-track"><span class="pc-fill pc-fill-theirs" data-pct="${theirPct}"></span></div>
+    </div>
+    <div class="pc-badge ${ahead ? "pc-up" : "pc-down"}">${ahead ? "▲" : "▼"} ${Math.abs(delta).toFixed(1)} PTS ${ahead ? "AHEAD OF" : "BEHIND"} CONSENSUS</div>
+    <div class="muted small pc-source-note">${esc(consensus.detail)}</div>
+  </div>`;
+}
+
+async function loadProjectionCompare(playerId, opp, container) {
+  const slot = container.querySelector(".pc-slot");
+  if (!slot || !playerId) return;
+  try {
+    const oppQS = opp ? `&opp=${opp}` : "";
+    const data = await api(`/api/player/${playerId}/projection-compare?${(scoringQS() + oppQS).replace(/^&/, "")}`);
+    if (!document.body.contains(slot)) return; // modal closed/replaced before this resolved
+    slot.outerHTML = projectionCompareHtml(data.our_proj, data.consensus, data.consensus?.week);
+    // Trigger the entrance transitions one frame after insert (same
+    // technique as the Trade Analyzer's need-bar-fill: render at the
+    // 0-state first so the browser registers it, then flip to the real
+    // state so the width/opacity/scale transitions actually animate
+    // instead of snapping straight to their end value).
+    requestAnimationFrame(() => {
+      container.querySelectorAll(".pc-fill[data-pct]").forEach((el) => { el.style.width = el.dataset.pct + "%"; });
+      container.querySelector(".pc-badge")?.classList.add("pc-in");
+    });
+  } catch (e) {
+    if (document.body.contains(slot)) {
+      slot.outerHTML = `<div class="pc-card pc-empty"><div class="muted small">Couldn't load the projection comparison right now.</div></div>`;
+    }
+  }
 }
 
 function playerNewsCardHtml(it) {
@@ -1041,7 +1126,7 @@ function renderStartSitChips() {
     slot.style.animationDelay = `${i * 70}ms`;
     slot.innerHTML = `<button class="ss-slot-x" aria-label="Remove">✕</button>
       <img ${headshotAttrs(p)} alt="">
-      <div class="ss-slot-name">${esc(p.player_display_name)}${injuryFlagHtml(p.injury_status)}</div>
+      <div class="ss-slot-name">${esc(p.player_display_name)}${statusFlagsHtml(p)}</div>
       <div class="ss-slot-meta">${esc(p.position)} · ${esc(p.recent_team)}</div>
       <select class="opp-select"><option value="">vs…</option>${state.meta.teams.map((t) => `<option value="${esc(t)}" ${p.opp === t ? "selected" : ""}>${esc(t)}</option>`).join("")}</select>`;
     slot.querySelector(".opp-select").addEventListener("change", (e) => { p.opp = e.target.value; });
@@ -1114,6 +1199,24 @@ function injuryFlagHtml(status) {
   return ` <span class="injury-flag${mild ? " questionable" : ""}">${esc(status.toUpperCase())}</span>`;
 }
 
+// A player who's stopped appearing in the weekly data well behind their
+// OWN team's own most recent game (release, benching, an injury that
+// never got a live Sleeper designation) — see engine/board.py's real,
+// team-relative weeks_since_played for why this isn't just "vs the
+// league's current week" (that comparison is meaningless once a season
+// ends — every team's own last week varies by 4+ depending on whether
+// they made the playoffs). A real gap the season-average PROJ elsewhere
+// doesn't surface on its own. Shown alongside the injury flag, not
+// instead of it — a player can have both, or neither.
+function goneDarkFlagHtml(p) {
+  if (p.weeks_since_played == null || p.weeks_since_played < 3 || p.last_active_week == null) return "";
+  return ` <span class="injury-flag questionable" title="Last real game: Week ${esc(p.last_active_week)} — ${esc(p.weeks_since_played)} weeks behind ${esc(p.recent_team) || "their team"}'s own most recent game">GONE DARK</span>`;
+}
+
+function statusFlagsHtml(p) {
+  return injuryFlagHtml(p.injury_status) + goneDarkFlagHtml(p);
+}
+
 function statChipsHtml(p) {
   const chips = [];
   if (p.snap_pct != null) chips.push(`Snap ${Math.round(p.snap_pct * 100)}%`);
@@ -1148,7 +1251,7 @@ function startSitCardHtml(p, scaleMin, scaleMax, i, analysisText) {
     <div class="ss-card-top">
       <img ${headshotAttrs(p)} alt="">
       <div>
-        <div class="ss-name">${esc(p.player_display_name)}${injuryFlagHtml(p.injury_status)}</div>
+        <div class="ss-name">${esc(p.player_display_name)}${statusFlagsHtml(p)}</div>
         <div class="ss-meta">${esc(p.position)} · ${esc(p.recent_team)}${p.opponent ? " · vs " + esc(p.opponent) + " (" + esc(p.matchup_tag) + ")" : " · rest-of-season blend"}</div>
       </div>
       <div class="ss-tier-badge ${tierClass}">${esc(p.tier || "—")}</div>
@@ -1504,7 +1607,7 @@ function tradeRosterRowHtml(p, selected) {
   return `<div class="trade-roster-row${selected ? " selected" : ""}" data-pid="${esc(p.player_id)}">
     <img ${headshotAttrs(p)} alt="">
     <div>
-      <div class="name">${esc(p.player_display_name)}${injuryFlagHtml(p.injury_status)}</div>
+      <div class="name">${esc(p.player_display_name)}${statusFlagsHtml(p)}</div>
       <div class="meta">${esc(p.position)} · ${esc(p.recent_team)}</div>
     </div>
     <span class="proj-num">${FMT.d1(p.PROJ)}</span>
@@ -1645,7 +1748,7 @@ function rosterRowHtml(p, isBench) {
   return `<div class="myteam-roster-row${isBench ? " bench" : ""}${unscored ? " unscored" : ""}" data-pid="${esc(p.player_id)}" ${unscored ? 'data-unscored="1"' : ""}>
     <img ${headshotAttrs(p)} alt="">
     <span class="pos-badge">${esc(p.slot || p.position)}</span>
-    <span>${esc(p.player_display_name)}${injuryFlagHtml(p.injury_status)}</span>
+    <span>${esc(p.player_display_name)}${statusFlagsHtml(p)}</span>
     <span class="proj-num">${FMT.d1(p.PROJ)}</span>
   </div>`;
 }

@@ -3122,7 +3122,95 @@ input:focus, select:focus { transform: translateY(-1px); }
 .metric-tile.below-avg .value { color: var(--neg); }
 .metric-tile.below-avg .gauge > span { background: var(--neg); }
 
-.weeklog-header {
+/* ============================================================
+   PROJECTION BREAKDOWN — our PROJ vs. real published consensus
+   (see engine/external_projections.py). The bar-grow + badge-pop
+   entrance was designed and keyframed in Figma first (the same file
+   -bf's other motion lives in), then ported here:
+     - bars: WIDTH 0 -> target, ease-out cubic-bezier(0,0,0.58,1),
+       staggered 150ms — a real Figma-authored curve, not var(--ease),
+       though the two read almost identically.
+     - badge: opacity + CUSTOM_SPRING(bounce 0.45) scale pop, delayed
+       until the bars finish — the exact same spring already used for
+       this app's Primary Button press (get_motion_context confirmed
+       both nodes share the one spring in that file), reused rather
+       than re-derived, so this reveal feels like part of the same
+       motion language instead of a one-off.
+   ============================================================ */
+.pc-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 18px 18px;
+  margin: 4px 0 8px;
+  animation: fadeSlideUp 380ms var(--ease) forwards;
+}
+.pc-card.pc-empty { padding: 14px 18px; }
+.pc-header.section-label { margin: 0 0 12px; }
+.pc-wk { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+
+.pc-row { margin-bottom: 12px; }
+.pc-row:last-of-type { margin-bottom: 14px; }
+.pc-row-label {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 6px;
+  font-size: 13px;
+  font-weight: 700;
+}
+.pc-val { font-family: var(--mono); font-weight: 800; font-size: 15px; }
+.pc-val-ours { color: var(--accent); }
+.pc-val-theirs { color: var(--info); }
+
+.pc-track {
+  display: block;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--panel-2);
+  overflow: hidden;
+}
+.pc-fill {
+  display: block;
+  height: 100%;
+  width: 0%;
+  border-radius: 999px;
+  /* real Figma-authored ease-out, see get_motion_context on the
+     "Fill" nodes in the Projection Comparison Card frame */
+  transition: width 600ms cubic-bezier(0, 0, 0.58, 1);
+}
+.pc-fill-ours { background: var(--accent); }
+.pc-fill-theirs { background: var(--info); transition-delay: 150ms; }
+
+.pc-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-family: var(--mono);
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  opacity: 0;
+  transform: scale(0.85);
+  /* real spring pulled from Figma via get_motion_context — same
+     CUSTOM_SPRING(bounce: 0.45) as the app's own Primary Button press */
+  transition: opacity 150ms cubic-bezier(0, 0, 0.58, 1) 800ms,
+              transform 350ms linear(0, 0.0328, 0.1177, 0.2359, 0.3715, 0.5117, 0.6464,
+                0.7686, 0.8739, 0.9601, 1.0267, 1.0745, 1.1054, 1.1218, 1.1263, 1.1218,
+                1.1108, 1.0958, 1.0786, 1.0609, 1.0439, 1.0286, 1.0154, 1.0046, 0.9963,
+                0.9904, 0.9866, 0.9846, 0.984, 0.9847, 0.9861, 0.988, 0.9902, 0.9924,
+                0.9945, 0.9965, 0.9981, 0.9995, 1.0005, 1.0012, 1.0017, 1.002, 1.002,
+                1.0019, 1.0017, 1.0015, 1.0012, 1.0009, 1.0007, 1.0004, 1.0002) 800ms;
+}
+.pc-badge.pc-in { opacity: 1; transform: scale(1); }
+.pc-badge.pc-up { background: rgba(94,238,173,0.14); color: var(--accent); border: 1px solid var(--accent-dim); }
+.pc-badge.pc-down { background: rgba(255,107,129,0.12); color: var(--neg); border: 1px solid rgba(255,107,129,0.4); }
+
+.pc-source-note { margin-top: 10px; }
+
+.weeklog-header, .pc-header {
   display: flex;
   align-items: center;
   justify-content: space-between;

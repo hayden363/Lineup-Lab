@@ -45,6 +45,20 @@ def _opponent_adjusted_proj(board, gsis_id, pos, bundle, scoring, week=None):
     return round(float(rest_of_season_value(row, pos, bundle=bundle, scoring=scoring).iloc[0]), 1)
 
 
+def real_proj_for_player(player_id, position, bundle=None, scoring=None, week=None, season=None):
+    """Public wrapper around _opponent_adjusted_proj for one player, for
+    callers outside this module (currently: server.py's Projection
+    Breakdown endpoint) that want the exact same real PROJ number My Team
+    already shows — not a second, differently-computed projection for
+    the same player. Returns None if the player isn't on this position's
+    board (e.g. not enough real games logged this season)."""
+    bundle = bundle or load_bundle(season)
+    board = build_board(position, season=season, scoring=scoring)
+    if player_id not in board.index:
+        return None
+    return _opponent_adjusted_proj(board, player_id, position, bundle, scoring, week=week)
+
+
 def _defense_board(bundle, league_id=None):
     """Real DEF/ST board for this season (see engine/defense_scoring.py) —
     scored with the real league's own Sleeper scoring settings when we
@@ -329,6 +343,12 @@ def start_sit(player_ids, opponents=None, season=None, scoring=None):
             "floor": _clean_num(row.get("floor")), "ceiling": _clean_num(row.get("ceiling")),
             "snap_pct": _clean_num(row.get("snap_pct")), "redzone_touches": _clean_num(row.get("redzone_touches")),
             "injury_status": _clean_num(row.get("injury_status")),
+            # "Gone dark" signal (engine/board.py) — exactly the kind of
+            # thing a real Start/Sit call needs to know: comparing two
+            # players' PROJ without surfacing that one of them hasn't
+            # actually played in 11 weeks is a real gap, not a cosmetic one.
+            "weeks_since_played": _clean_num(row.get("weeks_since_played")),
+            "last_active_week": _clean_num(row.get("last_active_week")),
         })
 
     valid = [r for r in results if "error" not in r]
@@ -513,6 +533,12 @@ def _roster_players(raw_ids, bundle, get_board, scoring, crosswalk=None, starter
             "fpts_per_game": row.get("fpts_per_game"), "PROJ": proj,
             "injury_status": _clean_num(row.get("injury_status")),
             "is_starter": is_starter, "slot": slot,
+            # Same "gone dark" signal as start_sit() above — My Team is
+            # the surface where this matters most: a started player who
+            # hasn't actually played in weeks is exactly the kind of thing
+            # that should be visible without having to click into them.
+            "weeks_since_played": _clean_num(row.get("weeks_since_played")),
+            "last_active_week": _clean_num(row.get("last_active_week")),
         }
 
     starter_set = set(starters)
@@ -673,6 +699,14 @@ def roster_player_list(league_id, roster_id, season=None, scoring=None):
             "recent_team": row.get("recent_team"), "headshot_url": row.get("headshot_url"),
             "SCORE": row.get("SCORE"), "PROJ": proj,
             "injury_status": _clean_num(row.get("injury_status")),
+            # Same "gone dark" signal as start_sit()/_roster_players() —
+            # a fourth allowlist that had the same gap (see this app's
+            # memory notes on why this needs adding deliberately in each
+            # one): the Trade tab's roster picker is exactly where you'd
+            # want to know a player you're about to offer/request hasn't
+            # actually played in months.
+            "weeks_since_played": _clean_num(row.get("weeks_since_played")),
+            "last_active_week": _clean_num(row.get("last_active_week")),
         })
     players.sort(key=lambda p: -p["PROJ"])
     return {"roster_id": roster_id, "team_name": entry["team_name"],
@@ -950,8 +984,13 @@ def roster_player_list_espn(league_id, roster_id, year=None, season=None, scorin
                                def_board=def_board, k_board=k_board, k_team_baseline=k_team_baseline,
                                rank_baselines=rank_baselines, resolve_unscored=resolve_unscored,
                                fragility=fragility)
-    players = [{k: r[k] for k in ("player_id", "position", "player_display_name", "recent_team",
-                                    "headshot_url", "SCORE", "PROJ", "injury_status")} for r in rows]
+    # .get(), not r[k]: DEF/K/role-rank-fallback rows (_defense_row/
+    # _kicker_row/_role_rank_row) don't carry weeks_since_played/
+    # last_active_week at all (no board row to source them from) —
+    # bracket access here would KeyError on exactly those real rosters.
+    players = [{k: r.get(k) for k in ("player_id", "position", "player_display_name", "recent_team",
+                                       "headshot_url", "SCORE", "PROJ", "injury_status",
+                                       "weeks_since_played", "last_active_week")} for r in rows]
     players.sort(key=lambda p: -(p["PROJ"] or 0))
     return {"roster_id": roster_id, "team_name": team.team_name,
             "avatar_url": team.logo_url or None, "owner": espn_layer.owner_name(team), "players": players}

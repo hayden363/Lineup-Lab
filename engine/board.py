@@ -281,6 +281,40 @@ def _build_board_uncached(position, season, min_volume, scoring):
     board["floor"] = fpts_by_player.quantile(0.25).reindex(board.index).clip(lower=0)
     board["ceiling"] = fpts_by_player.quantile(0.75).reindex(board.index)
 
+    # "Gone dark" signal: a player can stop appearing in the weekly data
+    # (release, benching, an injury that never got a live Sleeper
+    # designation — see J.K. Dobbins, week 10+ this season, still showing
+    # a normal-looking season-average PROJ with nothing surfacing "hasn't
+    # played in N weeks") without engine.sleeper's injury_status catching
+    # it. Real, not inferred: the gap between this player's own last real
+    # game week and their OWN TEAM's most recent played week — deliberately
+    # NOT the league-wide "current week" (data.current_week), which is
+    # meaningless for this once a season ends (every team's own last week
+    # varies — 18 for a non-playoff team, up to 22 for a Super Bowl
+    # participant — so comparing everyone to one league-wide week falsely
+    # flags the entire non-playoff-team player pool as "dark" the moment
+    # the season is over; verified this the hard way against live 2025
+    # data, which is now a fully completed season). Comparing each player
+    # to their own team's own last game is robust whether the season is
+    # still live or has already finished. Distinct from the
+    # retired-player filter below (a released-but-not-retired or quietly
+    # benched player wouldn't be caught by that).
+    # Plain float (not a nullable Int64) so a rare unmapped team code
+    # degrades to a normal NaN -> None, same as every other optional
+    # numeric column here — server.py's _clean() already handles that.
+    board["last_active_week"] = wk.groupby("player_id")["week"].max().reindex(board.index)
+    schedule = bundle["schedule"]
+    played = schedule[schedule["home_score"].notna()] if "home_score" in schedule else schedule.iloc[0:0]
+    if len(played):
+        team_last_week = pd.concat([
+            played[["week", "home_team"]].rename(columns={"home_team": "team"}),
+            played[["week", "away_team"]].rename(columns={"away_team": "team"}),
+        ]).groupby("team")["week"].max()
+    else:
+        team_last_week = pd.Series(dtype="float64")
+    team_last_played = board["recent_team"].map(team_last_week)
+    board["weeks_since_played"] = (team_last_played - board["last_active_week"]).clip(lower=0)
+
     retired_ids = bundle.get("retired_ids")
     if retired_ids:
         board = board[~board.index.isin(retired_ids)]

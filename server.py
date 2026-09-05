@@ -45,6 +45,7 @@ from pydantic import BaseModel
 from engine import data as data_layer
 from engine import db
 from engine import espn as espn_layer
+from engine import external_projections as external_projections_layer
 from engine import live_scores as live_scores_layer
 from engine import mail as mail_layer
 from engine import news as news_layer
@@ -148,6 +149,11 @@ refresh_rate_limit = rate_limit("refresh", limit=3, window_seconds=10 * 60)
 # players). Only matters once ANTHROPIC_API_KEY is actually set; harmless
 # either way.
 news_rate_limit = rate_limit("news", limit=30, window_seconds=60)
+# Same shape as news_rate_limit — one real outbound call to FantasyPros
+# per distinct position/week combo (cached an hour, see
+# engine/external_projections.py), harmless either way, but only matters
+# once FANTASYPROS_API_KEY is actually set.
+projcompare_rate_limit = rate_limit("projcompare", limit=30, window_seconds=60)
 
 OAUTH_STATE_COOKIE = "eb_oauth_state"
 
@@ -514,6 +520,56 @@ def api_player_news(player_id: str, scoring: Optional[dict] = Depends(scoring_fr
     return _clean({
         "player_id": player_id, "player_display_name": detail["player_display_name"],
         "items": items[:8], "ai_summary": summary,
+    })
+
+
+@app.get("/api/player/{player_id}/projection-compare", dependencies=[Depends(projcompare_rate_limit)])
+def api_player_projection_compare(player_id: str, opp: Optional[str] = Query(None),
+                                   scoring: Optional[dict] = Depends(scoring_from_query),
+                                   user=Depends(current_user)):
+    """Our PROJ next to real published FantasyPros consensus for the same
+    player — see engine/external_projections.py for sourcing. Always
+    returns our own number; `consensus.proj` is None (not a guess) when
+    FANTASYPROS_API_KEY isn't set, the fetch failed, or this player wasn't
+    matched — the frontend renders a real 'not connected' state for that,
+    same pattern as player news without ANTHROPIC_API_KEY set."""
+    scoring = _effective_scoring(scoring, user)
+    detail = player_detail(player_id, scoring=scoring)
+    if detail is None:
+        raise HTTPException(404, "player not found or not enough data")
+
+    bundle = load_bundle()
+    if opp:
+        # A specific requested opponent (e.g. viewing this player's card
+        # from a Start/Sit matchup) — same math as the no-opp case below,
+        # just against that exact defense instead of their real schedule.
+        board = build_board(detail["position"], scoring=scoring)
+        our_proj = None
+        if player_id in board.index:
+            projected = project_vs(board.loc[[player_id]], detail["position"], opp.upper(),
+                                    bundle=bundle, scoring=scoring)
+            our_proj = round(float(projected["PROJ"].iloc[0]), 1)
+    else:
+        # Same real, opponent-adjusted PROJ My Team already shows for this
+        # player (engine.tools.real_proj_for_player — a thin wrapper
+        # around the exact _opponent_adjusted_proj helper My Team uses,
+        # resolved against their real upcoming opponent) — never a
+        # second, differently-computed number for the same player.
+        our_proj = tools.real_proj_for_player(player_id, detail["position"], bundle=bundle, scoring=scoring)
+
+    # FantasyPros' `scoring` query param is one of STD/HALF/PPR — map our
+    # settings dict to the closest match by reception value rather than a
+    # preset name (custom league scoring has no exact FantasyPros
+    # equivalent; PPR is the closest default for anything in between).
+    reception = (scoring or {}).get("reception", 1.0)
+    fp_scoring = "STD" if reception <= 0.01 else ("HALF" if reception < 0.99 else "PPR")
+    consensus = external_projections_layer.projection_for_player(
+        detail["player_display_name"], detail["position"], bundle["season"],
+        week=detail.get("next_week"), scoring=fp_scoring,
+    )
+    return _clean({
+        "player_id": player_id, "player_display_name": detail["player_display_name"],
+        "our_proj": our_proj, "consensus": consensus,
     })
 
 
@@ -1014,6 +1070,32 @@ def api_img_proxy(url: str = Query(...)):
     with open(meta_path, "w") as f:
         f.write(content_type)
     return Response(content=resp.content, media_type=content_type, headers={"Cache-Control": "public, max-age=86400"})
+
+
+# The two files that change on every deploy and are correctness-critical
+# if stale (a returning user silently running yesterday's JS against
+# today's API shape) get an explicit `Cache-Control: no-cache` — NOT
+# "don't cache," but "always revalidate with the server first" (a cheap
+# conditional GET against the Last-Modified/ETag the StaticFiles mount
+# below already sets; a 304 costs basically nothing). Found this the hard
+# way while testing the Projection Breakdown/GONE DARK work above: with
+# no Cache-Control at all (StaticFiles' default), a browser can serve a
+# stale app.js indefinitely with no revalidation, which — combined with
+# this app's deploy-and-forget workflow (commit + push, Render
+# auto-deploys, no version-hashed filenames) — means a real returning
+# user could silently keep running old frontend code after a deploy until
+# something forces a hard refresh. Registered before the catch-all mount
+# so these two take priority for their exact paths; everything else
+# (icons, images, manifest, sw.js) keeps the mount's default behavior,
+# which is fine for assets that don't change every deploy.
+@app.get("/app.js", include_in_schema=False)
+def _app_js():
+    return FileResponse("static/app.js", media_type="text/javascript", headers={"Cache-Control": "no-cache"})
+
+
+@app.get("/style.css", include_in_schema=False)
+def _style_css():
+    return FileResponse("static/style.css", media_type="text/css", headers={"Cache-Control": "no-cache"})
 
 
 # ---- static frontend (must be mounted last so /api/* above takes priority) ----
