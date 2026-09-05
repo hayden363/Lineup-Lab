@@ -9,7 +9,6 @@ Pipeline: weekly stats -> base metrics -> SCORE (weighted) -> advanced
 projection vs an opponent defense.
 """
 
-import concurrent.futures
 from typing import TypedDict
 
 import numpy as np
@@ -93,8 +92,7 @@ def _scoring_cache_key(scoring):
 
 def _snap_pct_from(snaps, crosswalk):
     """Real per-player offense-snap-share, from already-fetched snap-count
-    + id-crosswalk tables — pure computation, no I/O (see load_bundle,
-    which fetches both of these concurrently with everything else)."""
+    + id-crosswalk tables — pure computation, no I/O."""
     snap_pct = {}
     pfr_to_gsis = dict(zip(crosswalk["pfr_id"], crosswalk["gsis_id"]))
     if len(snaps):
@@ -128,18 +126,27 @@ def load_bundle(season=None, force=False) -> Bundle:
     the previously-resolved one's data) — see resolve_season's docstring
     for why that distinction matters for a periodic refresh.
 
-    Every table below is an independent network fetch — a different
-    nflverse/Sleeper URL, none depending on any other's result. Fetched
-    one at a time, that's 10+ round-trips stacked sequentially (measured
-    directly: ~16s on a cold cache). Fired off together instead, wall-clock
-    time drops to roughly whichever single one is slowest (~3s) rather
-    than the sum of all of them. Required core tables (wk/pbp/ngs/
-    schedule) still raise on failure, same as before parallelizing —
-    concurrent.futures only changes WHEN each one runs, not whether a
-    failure there is fatal. The optional enrichments below (retired-status,
-    live injury, snap share) keep their existing per-source try/except
-    degrade-gracefully behavior: real per-player signals that live outside
-    the box score, each independently optional — one fetch failing just
+    Fetched sequentially, on purpose — NOT via a thread pool. That was
+    tried (see git history) on the theory that these are independent
+    network fetches that could overlap; measured on the actual host this
+    runs on, it made cold loads slower, not faster (45s+, worse than
+    before). Render's free tier caps this instance at ~0.15 of one CPU
+    core — real, measured — and several threads all wanting to parse
+    JSON/parquet at once contend hard for that sliver, on top of however
+    much the shared egress bandwidth also degrades under several
+    simultaneous downloads. What helps on a full dev machine can be a net
+    loss on a resource-capped host; measure on the real target, not just
+    locally. The one durable fix for "this is slow" here is avoiding
+    paying this cost at all as often as possible — see load_pbp's own
+    memory fix, which (by fixing the OOM crash loop) is what actually
+    keeps this process alive long enough that most requests hit the
+    warm _BUNDLE_CACHE below instead of ever reaching this cold path.
+
+    Each source below is independently optional except the required core
+    tables (wk/pbp/ngs/schedule), which raise on failure same as always.
+    The optional enrichments (retired-status, live injury, snap share)
+    degrade gracefully — real per-player signals that live outside the
+    box score, each independently optional — one fetch failing just
     means that signal comes back empty for everyone, not that the whole
     board fails to build.
 
@@ -158,57 +165,43 @@ def load_bundle(season=None, force=False) -> Bundle:
 
     from . import sleeper as sleeper_layer
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=11) as pool:
-        f_wk = pool.submit(data.load_weekly, season, force=force)
-        f_pbp = pool.submit(data.load_pbp, season, force=force)
-        f_ngs_pass = pool.submit(data.load_ngs, "passing", season, force=force)
-        f_ngs_rush = pool.submit(data.load_ngs, "rushing", season, force=force)
-        f_ngs_rec = pool.submit(data.load_ngs, "receiving", season, force=force)
-        f_schedule = pool.submit(data.load_schedule, season, force=force)
-        f_player_status = pool.submit(data.load_player_status, force=force)
-        f_inactive_ids = pool.submit(sleeper_layer.inactive_gsis_ids, force=force)
-        f_injury_status = pool.submit(sleeper_layer.live_injury_statuses, force=force)
-        f_snap_counts = pool.submit(data.load_snap_counts, season, force=force)
-        f_pfr_crosswalk = pool.submit(data.load_pfr_crosswalk, force=force)
+    wk = data.load_weekly(season, force=force)
+    pbp = data.load_pbp(season, force=force)
+    ngs_pass = data.load_ngs("passing", season, force=force)
+    ngs_rush = data.load_ngs("rushing", season, force=force)
+    ngs_rec = data.load_ngs("receiving", season, force=force)
+    schedule = data.load_schedule(season, force=force)
 
-        # Required — raise same as before if any of these fail.
-        wk = f_wk.result()
-        pbp = f_pbp.result()
-        ngs_pass = f_ngs_pass.result()
-        ngs_rush = f_ngs_rush.result()
-        ngs_rec = f_ngs_rec.result()
-        schedule = f_schedule.result()
+    # Roster status is current, not season-stats-bound — this is what
+    # keeps a player who has since retired (but still has real stats
+    # from the season we're valuing off of) out of the board entirely,
+    # everywhere it's used. Two independent real signals, unioned:
+    # nflverse's own "RET" status tag, and Sleeper's live "no current
+    # NFL team" (the same data your actual league runs on — catches a
+    # retirement/release nflverse hasn't tagged yet, which is common
+    # since our season stats already lag, see data.py).
+    retired_ids = set()
+    try:
+        status_df = data.load_player_status(force=force)
+        retired_ids |= set(status_df.loc[status_df["status"] == "RET", "gsis_id"])
+    except Exception as e:
+        print(f"[data] couldn't load nflverse player status (skipped): {e}")
+    try:
+        retired_ids |= sleeper_layer.inactive_gsis_ids(force=force)
+    except Exception as e:
+        print(f"[data] couldn't load Sleeper player status (skipped): {e}")
 
-        # Roster status is current, not season-stats-bound — this is what
-        # keeps a player who has since retired (but still has real stats
-        # from the season we're valuing off of) out of the board entirely,
-        # everywhere it's used. Two independent real signals, unioned:
-        # nflverse's own "RET" status tag, and Sleeper's live "no current
-        # NFL team" (the same data your actual league runs on — catches a
-        # retirement/release nflverse hasn't tagged yet, which is common
-        # since our season stats already lag, see data.py).
-        retired_ids = set()
-        try:
-            status_df = f_player_status.result()
-            retired_ids |= set(status_df.loc[status_df["status"] == "RET", "gsis_id"])
-        except Exception as e:
-            print(f"[data] couldn't load nflverse player status (skipped): {e}")
-        try:
-            retired_ids |= f_inactive_ids.result()
-        except Exception as e:
-            print(f"[data] couldn't load Sleeper player status (skipped): {e}")
+    try:
+        injury_status = sleeper_layer.live_injury_statuses(force=force)
+    except Exception as e:
+        print(f"[data] couldn't load live injury statuses (skipped): {e}")
+        injury_status = {}
 
-        try:
-            injury_status = f_injury_status.result()
-        except Exception as e:
-            print(f"[data] couldn't load live injury statuses (skipped): {e}")
-            injury_status = {}
-
-        try:
-            snap_pct = _snap_pct_from(f_snap_counts.result(), f_pfr_crosswalk.result())
-        except Exception as e:
-            print(f"[data] couldn't load snap counts (skipped): {e}")
-            snap_pct = {}
+    try:
+        snap_pct = _snap_pct_from(data.load_snap_counts(season, force=force), data.load_pfr_crosswalk(force=force))
+    except Exception as e:
+        print(f"[data] couldn't load snap counts (skipped): {e}")
+        snap_pct = {}
 
     # granular, multi-stat defensive profile (real per-play results — run
     # defense, pass defense, pressure — not one blanket fpts-allowed number)
