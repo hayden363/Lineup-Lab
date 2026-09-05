@@ -9,6 +9,7 @@ Pipeline: weekly stats -> base metrics -> SCORE (weighted) -> advanced
 projection vs an opponent defense.
 """
 
+import concurrent.futures
 from typing import TypedDict
 
 import numpy as np
@@ -90,12 +91,57 @@ def _scoring_cache_key(scoring):
     return None if scoring is None else tuple(sorted(scoring.items()))
 
 
-def _availability_signals(pbp, season, force):
-    """Real per-player signals that live outside the box score: current
-    injury designation, offensive snap share, and red-zone touch volume.
-    Each source is independently optional — one fetch failing just means
-    that signal comes back empty for everyone, not that the board fails
-    to build.
+def _snap_pct_from(snaps, crosswalk):
+    """Real per-player offense-snap-share, from already-fetched snap-count
+    + id-crosswalk tables — pure computation, no I/O (see load_bundle,
+    which fetches both of these concurrently with everything else)."""
+    snap_pct = {}
+    pfr_to_gsis = dict(zip(crosswalk["pfr_id"], crosswalk["gsis_id"]))
+    if len(snaps):
+        latest = snaps.sort_values("week").groupby("pfr_player_id").last()
+        for pfr_id, row in latest.iterrows():
+            gsis_id = pfr_to_gsis.get(pfr_id)
+            # pandas-stubs 1.5.3.230321 mistypes Series.get()'s return as
+            # `Dtype` unconditionally (see pandas-stubs/core/generic.pyi) —
+            # it's actually a scalar value here, so notna()/float() below
+            # are real pyright false positives, not a code issue.
+            pct = row.get("offense_pct")
+            if gsis_id and pd.notna(pct):  # type: ignore[reportCallIssue,reportArgumentType]
+                snap_pct[gsis_id] = float(pct)  # type: ignore[reportArgumentType]
+    return snap_pct
+
+
+def _redzone_touches_from(pbp):
+    """Real red-zone touch counts, from already-fetched play-by-play —
+    pure computation, no I/O."""
+    if "yardline_100" not in pbp.columns:
+        return {}
+    rz = pbp[pbp["yardline_100"] <= 20]
+    rushes = rz.loc[rz["rusher_player_id"].notna(), "rusher_player_id"]
+    targets = rz.loc[rz["receiver_player_id"].notna(), "receiver_player_id"]
+    return pd.concat([rushes, targets]).value_counts().to_dict()
+
+
+def load_bundle(season=None, force=False) -> Bundle:
+    """Fetch (and cache) every raw table the board needs for a season.
+    force=True also re-resolves the season itself (not just re-fetching
+    the previously-resolved one's data) — see resolve_season's docstring
+    for why that distinction matters for a periodic refresh.
+
+    Every table below is an independent network fetch — a different
+    nflverse/Sleeper URL, none depending on any other's result. Fetched
+    one at a time, that's 10+ round-trips stacked sequentially (measured
+    directly: ~16s on a cold cache). Fired off together instead, wall-clock
+    time drops to roughly whichever single one is slowest (~3s) rather
+    than the sum of all of them. Required core tables (wk/pbp/ngs/
+    schedule) still raise on failure, same as before parallelizing —
+    concurrent.futures only changes WHEN each one runs, not whether a
+    failure there is fatal. The optional enrichments below (retired-status,
+    live injury, snap share) keep their existing per-source try/except
+    degrade-gracefully behavior: real per-player signals that live outside
+    the box score, each independently optional — one fetch failing just
+    means that signal comes back empty for everyone, not that the whole
+    board fails to build.
 
     Injury status specifically comes from Sleeper's LIVE player list
     (engine/sleeper.live_injury_statuses), not nflverse's `season`-pinned
@@ -105,61 +151,64 @@ def _availability_signals(pbp, season, force):
     whose situation has since changed. Snap share and red-zone touches
     stay season-level on purpose (there's no live equivalent) — they're
     real season context, not claimed to be "as of this week.\""""
-    try:
-        from . import sleeper as sleeper_layer
-        injury_status = sleeper_layer.live_injury_statuses(force=force)
-    except Exception as e:
-        print(f"[data] couldn't load live injury statuses (skipped): {e}")
-        injury_status = {}
-
-    snap_pct = {}
-    try:
-        snaps = data.load_snap_counts(season, force=force)
-        crosswalk = data.load_pfr_crosswalk(force=force)
-        pfr_to_gsis = dict(zip(crosswalk["pfr_id"], crosswalk["gsis_id"]))
-        if len(snaps):
-            latest = snaps.sort_values("week").groupby("pfr_player_id").last()
-            for pfr_id, row in latest.iterrows():
-                gsis_id = pfr_to_gsis.get(pfr_id)
-                # pandas-stubs 1.5.3.230321 mistypes Series.get()'s return as
-                # `Dtype` unconditionally (see pandas-stubs/core/generic.pyi) —
-                # it's actually a scalar value here, so notna()/float() below
-                # are real pyright false positives, not a code issue.
-                pct = row.get("offense_pct")
-                if gsis_id and pd.notna(pct):  # type: ignore[reportCallIssue,reportArgumentType]
-                    snap_pct[gsis_id] = float(pct)  # type: ignore[reportArgumentType]
-    except Exception as e:
-        print(f"[data] couldn't load snap counts (skipped): {e}")
-
-    redzone_touches = {}
-    try:
-        if "yardline_100" in pbp.columns:
-            rz = pbp[pbp["yardline_100"] <= 20]
-            rushes = rz.loc[rz["rusher_player_id"].notna(), "rusher_player_id"]
-            targets = rz.loc[rz["receiver_player_id"].notna(), "receiver_player_id"]
-            redzone_touches = pd.concat([rushes, targets]).value_counts().to_dict()
-    except Exception as e:
-        print(f"[data] couldn't compute red-zone touches (skipped): {e}")
-
-    return injury_status, snap_pct, redzone_touches
-
-
-def load_bundle(season=None, force=False) -> Bundle:
-    """Fetch (and cache) every raw table the board needs for a season.
-    force=True also re-resolves the season itself (not just re-fetching
-    the previously-resolved one's data) — see resolve_season's docstring
-    for why that distinction matters for a periodic refresh."""
     season = season or data.resolve_season(force=force)
     key = _cache_key(season)
     if not force and key in _BUNDLE_CACHE:
         return _BUNDLE_CACHE[key]
 
-    wk = data.load_weekly(season, force=force)
-    pbp = data.load_pbp(season, force=force)
-    ngs_pass = data.load_ngs("passing", season, force=force)
-    ngs_rush = data.load_ngs("rushing", season, force=force)
-    ngs_rec = data.load_ngs("receiving", season, force=force)
-    schedule = data.load_schedule(season, force=force)
+    from . import sleeper as sleeper_layer
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=11) as pool:
+        f_wk = pool.submit(data.load_weekly, season, force=force)
+        f_pbp = pool.submit(data.load_pbp, season, force=force)
+        f_ngs_pass = pool.submit(data.load_ngs, "passing", season, force=force)
+        f_ngs_rush = pool.submit(data.load_ngs, "rushing", season, force=force)
+        f_ngs_rec = pool.submit(data.load_ngs, "receiving", season, force=force)
+        f_schedule = pool.submit(data.load_schedule, season, force=force)
+        f_player_status = pool.submit(data.load_player_status, force=force)
+        f_inactive_ids = pool.submit(sleeper_layer.inactive_gsis_ids, force=force)
+        f_injury_status = pool.submit(sleeper_layer.live_injury_statuses, force=force)
+        f_snap_counts = pool.submit(data.load_snap_counts, season, force=force)
+        f_pfr_crosswalk = pool.submit(data.load_pfr_crosswalk, force=force)
+
+        # Required — raise same as before if any of these fail.
+        wk = f_wk.result()
+        pbp = f_pbp.result()
+        ngs_pass = f_ngs_pass.result()
+        ngs_rush = f_ngs_rush.result()
+        ngs_rec = f_ngs_rec.result()
+        schedule = f_schedule.result()
+
+        # Roster status is current, not season-stats-bound — this is what
+        # keeps a player who has since retired (but still has real stats
+        # from the season we're valuing off of) out of the board entirely,
+        # everywhere it's used. Two independent real signals, unioned:
+        # nflverse's own "RET" status tag, and Sleeper's live "no current
+        # NFL team" (the same data your actual league runs on — catches a
+        # retirement/release nflverse hasn't tagged yet, which is common
+        # since our season stats already lag, see data.py).
+        retired_ids = set()
+        try:
+            status_df = f_player_status.result()
+            retired_ids |= set(status_df.loc[status_df["status"] == "RET", "gsis_id"])
+        except Exception as e:
+            print(f"[data] couldn't load nflverse player status (skipped): {e}")
+        try:
+            retired_ids |= f_inactive_ids.result()
+        except Exception as e:
+            print(f"[data] couldn't load Sleeper player status (skipped): {e}")
+
+        try:
+            injury_status = f_injury_status.result()
+        except Exception as e:
+            print(f"[data] couldn't load live injury statuses (skipped): {e}")
+            injury_status = {}
+
+        try:
+            snap_pct = _snap_pct_from(f_snap_counts.result(), f_pfr_crosswalk.result())
+        except Exception as e:
+            print(f"[data] couldn't load snap counts (skipped): {e}")
+            snap_pct = {}
 
     # granular, multi-stat defensive profile (real per-play results — run
     # defense, pass defense, pressure — not one blanket fpts-allowed number)
@@ -168,31 +217,18 @@ def load_bundle(season=None, force=False) -> Bundle:
     # schedule — see build_ngs_defense_profile). Scoring-agnostic by
     # construction (built from yards/TDs/completions/tracking data, not
     # fantasy points), so it's computed once per season, not per scoring.
+    # CPU-bound, so it runs after the fetches above complete rather than
+    # inside the thread pool.
     defense_profile = defense_layer.build_defense_profile(pbp)
     ngs_defense_profile = defense_layer.build_ngs_defense_profile(ngs_pass, ngs_rush, ngs_rec, schedule)
     defense_profile = defense_profile.join(ngs_defense_profile, how="outer")
     defense_factors, defense_league_avg = defense_layer.league_relative_factors(defense_profile)
 
-    # Roster status is current, not season-stats-bound — this is what keeps a
-    # player who has since retired (but still has real stats from the season
-    # we're valuing off of) out of the board entirely, everywhere it's used.
-    # Two independent real signals, unioned: nflverse's own "RET" status tag,
-    # and Sleeper's live "no current NFL team" (the same data your actual
-    # league runs on — catches a retirement/release nflverse hasn't tagged
-    # yet, which is common since our season stats already lag, see data.py).
-    retired_ids = set()
     try:
-        status_df = data.load_player_status(force=force)
-        retired_ids |= set(status_df.loc[status_df["status"] == "RET", "gsis_id"])
+        redzone_touches = _redzone_touches_from(pbp)
     except Exception as e:
-        print(f"[data] couldn't load nflverse player status (skipped): {e}")
-    try:
-        from . import sleeper as sleeper_layer
-        retired_ids |= sleeper_layer.inactive_gsis_ids(force=force)
-    except Exception as e:
-        print(f"[data] couldn't load Sleeper player status (skipped): {e}")
-
-    injury_status, snap_pct, redzone_touches = _availability_signals(pbp, season, force)
+        print(f"[data] couldn't compute red-zone touches (skipped): {e}")
+        redzone_touches = {}
 
     bundle = Bundle(season=season, wk=wk, pbp=pbp, ngs_pass=ngs_pass, ngs_rush=ngs_rush,
                   ngs_rec=ngs_rec, schedule=schedule, defense_factors=defense_factors,
