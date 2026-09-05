@@ -181,29 +181,46 @@ def load_weekly(season=None, force=False):
     return _disk_cached("weekly", season, fetch, force=force)
 
 
+# Every column build_board()'s pipeline actually reads off play-by-play —
+# see engine/advanced.py, engine/defense.py, engine/defense_scoring.py,
+# engine/kicker_scoring.py, and board.py's own red-zone-touch signal.
+PBP_KEEP_COLUMNS = [
+    "passer_player_id", "rusher_player_id", "receiver_player_id",
+    "play_type", "yards_gained", "air_yards", "yards_after_catch",
+    "complete_pass", "sack", "qb_hit", "epa", "posteam", "defteam",
+    "week", "pass", "qb_dropback", "interception", "pass_touchdown",
+    "rush_touchdown", "touchdown", "yardline_100", "goal_to_go",
+    # defense/special-teams fantasy scoring (engine/defense_scoring.py):
+    # real takeaways, defensive/return TDs, safeties, blocked kicks.
+    "fumble_recovery_1_team", "safety", "td_team",
+    "punt_blocked", "field_goal_result",
+    # kicker fantasy scoring (engine/kicker_scoring.py): real FGs by
+    # distance, misses, extra points.
+    "kicker_player_id", "field_goal_attempt", "kick_distance",
+    "extra_point_attempt", "extra_point_result",
+]
+
+
 def load_pbp(season=None, force=False):
     season = season or resolve_season()
 
     def fetch():
-        import nfl_data_py as nfl
-        df = nfl.import_pbp_data([season], downcast=True, cache=False)
+        # Fetched directly (same shape as _fetch_stats_player_week above),
+        # NOT via nfl_data_py.import_pbp_data() — that function has no way
+        # to ask for a subset of columns, so it fully materializes every
+        # one of the raw file's 372 columns (~48k rows -> ~390MB resident,
+        # measured directly) before this code got to prune it down to the
+        # ~30 it actually uses. Parquet is columnar, so passing `columns=`
+        # straight to pd.read_parquet() pushes the selection down to the
+        # reader itself — it never reads the other ~340 columns' data off
+        # disk/network in the first place. Measured directly: the same
+        # column set, fetched this way, is ~29MB instead of ~390MB. This
+        # was the actual cause of this app's OOM crashes on a 512MB host —
+        # not per-request compute, a single cold fetch of this one table.
+        url = f"https://github.com/nflverse/nflverse-data/releases/download/pbp/play_by_play_{season}.parquet"
+        df = pd.read_parquet(url, columns=PBP_KEEP_COLUMNS)
         print(f"[data] fetched play-by-play {season}: {len(df)} rows")
-        keep = [
-            "passer_player_id", "rusher_player_id", "receiver_player_id",
-            "play_type", "yards_gained", "air_yards", "yards_after_catch",
-            "complete_pass", "sack", "qb_hit", "epa", "posteam", "defteam",
-            "week", "pass", "qb_dropback", "interception", "pass_touchdown",
-            "rush_touchdown", "touchdown", "yardline_100", "goal_to_go",
-            # defense/special-teams fantasy scoring (engine/defense_scoring.py):
-            # real takeaways, defensive/return TDs, safeties, blocked kicks.
-            "fumble_recovery_1_team", "safety", "td_team",
-            "punt_blocked", "field_goal_result",
-            # kicker fantasy scoring (engine/kicker_scoring.py): real FGs by
-            # distance, misses, extra points.
-            "kicker_player_id", "field_goal_attempt", "kick_distance",
-            "extra_point_attempt", "extra_point_result",
-        ]
-        return df[[c for c in keep if c in df.columns]]
+        return df
 
     return _disk_cached("pbp", season, fetch, force=force)
 
