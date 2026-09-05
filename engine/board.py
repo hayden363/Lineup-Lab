@@ -19,7 +19,7 @@ from . import defense as defense_layer
 from .metrics import METRIC_FNS, WEIGHTS, score_players, form_adjustment
 from .advanced import qb_advanced, rb_advanced, wr_advanced, te_advanced, weekly_epa, ADVANCED_COLS
 from .matchup import matchup_tag
-from .scoring import apply_scoring, ScoringSettings
+from .scoring import apply_scoring, ScoringSettings, PRESETS
 
 
 class Bundle(TypedDict):
@@ -72,6 +72,22 @@ def _cache_key(season):
 
 
 _BUNDLE_CACHE: dict = {}
+
+# Every build_board() call, fully computed, keyed by (position, season,
+# scoring) — see build_board()'s docstring for why min_games/min_volume
+# aren't part of this key. Cleared wholesale on a forced bundle refresh
+# (load_bundle's force=True path below), since a cached board is only
+# valid for the raw tables it was built from.
+_BOARD_CACHE: dict = {}
+
+
+def _scoring_cache_key(scoring):
+    """A hashable stand-in for `scoring` to use as part of a cache key.
+    Safe because every real caller (server.py's scoring_from_query /
+    _effective_scoring) only ever produces None or a plain dict with a
+    fixed set of keys — never a partial dict, never a ScoringSettings
+    instance."""
+    return None if scoring is None else tuple(sorted(scoring.items()))
 
 
 def _availability_signals(pbp, season, force):
@@ -183,6 +199,13 @@ def load_bundle(season=None, force=False) -> Bundle:
                   defense_league_avg=defense_league_avg, retired_ids=retired_ids,
                   injury_status=injury_status, snap_pct=snap_pct, redzone_touches=redzone_touches)
     _BUNDLE_CACHE[key] = bundle
+    if force:
+        # Every previously-computed board was built from the raw tables
+        # this refresh just superseded — a whole-cache clear is simple,
+        # correct, and cheap next to the refresh itself (this only runs
+        # on the 24h scheduler tick or an explicit POST /api/refresh, not
+        # a hot path).
+        _BOARD_CACHE.clear()
     return bundle
 
 
@@ -192,17 +215,18 @@ def _ngs_for(position, bundle):
             "receiving": bundle["ngs_rec"]}[kind]
 
 
-def build_board(position, season=None, min_games=2, min_volume=None, scoring=None):
-    position = position.upper()
-    if position not in POSITIONS:
-        raise ValueError(f"position must be one of {POSITIONS}")
-
+def _build_board_uncached(position, season, min_volume, scoring):
+    """Everything build_board() actually computes: scored + advanced-merged
+    + FORM-adjusted + floor/ceiling, for every player at this position who
+    cleared the volume bar — deliberately NOT filtered by min_games here
+    (see build_board()'s docstring on why that's applied afterward,
+    cheaply, instead of being part of this function or the cache it feeds)."""
     bundle = load_bundle(season)
     wk, settings = apply_scoring(bundle["wk"], scoring)
 
     base = METRIC_FNS[position](wk)
     min_volume = MIN_VOLUME[position] if min_volume is None else min_volume
-    base = base[(base["games"] >= min_games) & (base["volume"] >= min_volume)]
+    base = base[base["volume"] >= min_volume]
 
     adv = ADVANCED_FNS[position](bundle["pbp"], _ngs_for(position, bundle))
     board = base.join(adv, how="left")
@@ -233,6 +257,51 @@ def build_board(position, season=None, min_games=2, min_volume=None, scoring=Non
         board = board[~board.index.isin(retired_ids)]
     board.attrs["scoring"] = settings.as_dict()
     return board.sort_values("SCORE", ascending=False)
+
+
+def build_board(position, season=None, min_games=2, min_volume=None, scoring=None):
+    """The scored/advanced/FORM/floor-ceiling board for one position,
+    cached by (position, season, scoring) — every real call site (the API,
+    waivers, trade/start-sit tools) ends up asking for the same handful of
+    these per refresh cycle, and rebuilding one from raw tables is the
+    single most expensive thing this app does (metrics + advanced NGS/pbp
+    merge + FORM's per-player recency math + floor/ceiling, all over the
+    full season). min_games/min_volume deliberately aren't part of the
+    cache key: neither affects the cost of any of that — they're a filter
+    applied afterward, so a `min_games=0` and a `min_games=3` request for
+    the same position/scoring share one cached computation instead of
+    paying for it twice."""
+    position = position.upper()
+    if position not in POSITIONS:
+        raise ValueError(f"position must be one of {POSITIONS}")
+    season = season or data.resolve_season()
+    key = (position, season, _scoring_cache_key(scoring))
+    board = _BOARD_CACHE.get(key)
+    if board is None:
+        board = _build_board_uncached(position, season, min_volume, scoring)
+        _BOARD_CACHE[key] = board
+    filtered = board[board["games"] >= min_games]
+    # .attrs propagation through boolean-mask indexing isn't guaranteed on
+    # pandas 1.5.3 (still marked experimental upstream) — set it explicitly
+    # rather than trust it survived the filter above.
+    filtered.attrs["scoring"] = board.attrs.get("scoring")
+    return filtered
+
+
+def warm_common_boards(season=None):
+    """Precompute + cache the handful of (position, scoring) combinations
+    real traffic actually hits — the no-override fast path plus the 3
+    named presets — so the first real request after a refresh (or a fresh
+    process start) doesn't pay full per-position compute cost alone.
+    A signed-in user's custom per-league scoring still computes on first
+    request as before; there's no bounded set of those to precompute."""
+    scorings = [None, PRESETS["standard"], PRESETS["half_ppr"], PRESETS["ppr"]]
+    for pos in POSITIONS:
+        for scoring in scorings:
+            try:
+                build_board(pos, season=season, scoring=scoring)
+            except Exception as e:
+                print(f"[board] warm skipped for {pos}/{scoring}: {e}")
 
 
 def matchup_multiplier(position, opp, bundle):

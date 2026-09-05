@@ -57,6 +57,18 @@ async def _refresh_loop():
         return
 
     print(f"[refresh_scheduler] auto-refresh enabled, every {interval / 3600:g}h")
+
+    # Warm the computed-board cache once at process start too, not just
+    # after the first tick — a fresh process (a restart, a fresh deploy)
+    # otherwise leaves the first handful of real requests to each pay the
+    # full per-position compute cost individually, exactly the redundant
+    # work board.py's cache exists to avoid. Uses whatever bundle is
+    # already resolved/cached (no forced re-fetch here).
+    try:
+        await asyncio.to_thread(board.warm_common_boards)
+    except Exception as e:
+        print(f"[refresh_scheduler] initial board warm skipped: {e}")
+
     while True:
         await asyncio.sleep(interval)
         started = time.time()
@@ -68,6 +80,10 @@ async def _refresh_loop():
             bundle = await asyncio.to_thread(board.load_bundle, None, True)
             print(f"[refresh_scheduler] refreshed season {bundle['season']} "
                   f"in {time.time() - started:.1f}s")
+            try:
+                await asyncio.to_thread(board.warm_common_boards, bundle["season"])
+            except Exception as e:
+                print(f"[refresh_scheduler] board warm skipped: {e}")
         except Exception as e:
             # A flaky fetch shouldn't kill the background task — it just
             # tries again next interval, same as any other cache miss
