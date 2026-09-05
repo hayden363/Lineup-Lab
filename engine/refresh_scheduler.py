@@ -58,16 +58,18 @@ async def _refresh_loop():
 
     print(f"[refresh_scheduler] auto-refresh enabled, every {interval / 3600:g}h")
 
-    # Warm the computed-board cache once at process start too, not just
-    # after the first tick — a fresh process (a restart, a fresh deploy)
-    # otherwise leaves the first handful of real requests to each pay the
-    # full per-position compute cost individually, exactly the redundant
-    # work board.py's cache exists to avoid. Uses whatever bundle is
-    # already resolved/cached (no forced re-fetch here).
-    try:
-        await asyncio.to_thread(board.warm_common_boards)
-    except Exception as e:
-        print(f"[refresh_scheduler] initial board warm skipped: {e}")
+    # Deliberately NOT warming the board cache here at process start (only
+    # after each scheduled/forced refresh below). Precomputing all 16
+    # (position, scoring) variants back-to-back is 16 real pandas builds
+    # in a tight burst — on a memory-constrained host, that burst itself
+    # can push RSS higher than any single request ever would (numpy/pandas'
+    # allocator doesn't reliably hand freed memory back to the OS between
+    # operations, so a rapid sequence of builds can ratchet peak RSS up
+    # even though each one's own live footprint is small). Running on
+    # every process start is exactly the wrong time to do that on a host
+    # that's already tight on memory — real traffic naturally spreads the
+    # same work out over time instead. See git history for why this was
+    # tried and reverted.
 
     while True:
         await asyncio.sleep(interval)
@@ -80,10 +82,12 @@ async def _refresh_loop():
             bundle = await asyncio.to_thread(board.load_bundle, None, True)
             print(f"[refresh_scheduler] refreshed season {bundle['season']} "
                   f"in {time.time() - started:.1f}s")
-            try:
-                await asyncio.to_thread(board.warm_common_boards, bundle["season"])
-            except Exception as e:
-                print(f"[refresh_scheduler] board warm skipped: {e}")
+            # Deliberately not eagerly warming board.py's cache here either
+            # (see the comment above this loop) — on a memory-constrained
+            # host, real request traffic filling the cache in naturally,
+            # one board at a time, is safer than a 16-build burst right
+            # after every refresh. board.warm_common_boards() still exists
+            # for a host with real headroom to call explicitly.
         except Exception as e:
             # A flaky fetch shouldn't kill the background task — it just
             # tries again next interval, same as any other cache miss
