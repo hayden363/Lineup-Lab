@@ -1622,6 +1622,72 @@ async function loadStartSitTab() {
   body.style.display = "";
   await renderStartSitPicker();
   loadTrackRecord();
+  loadStartSitSuggestions();
+}
+
+// ---------------------------------------------- top recommendations ----
+// The real top 3 (or fewer — /api/startsit/suggestions never pads to a
+// fixed count) start/sit calls on your own actual roster, shown above
+// the manual picker/compare tool — see engine.tools.
+// start_sit_suggestions_from_roster for how these are found (same-
+// position weakest-starter vs strongest-bench, real PROJ gap, most
+// actionable first). Each card is a real shortcut into the exact same
+// manual compare flow below, not a separate rendering path — clicking
+// one loads those two players into the picker and runs the real
+// comparison immediately.
+function ssSuggestCardHtml(s) {
+  const [a, b] = s.players; // a = weakest starter, b = strongest bench (start_sit_suggestions_from_roster's own order)
+  if (!a || !b || a.error || b.error) return "";
+  const swap = s.gap > 0;
+  const verdict = swap
+    ? `<span class="ss-suggest-verdict swap">▲ Real upgrade on your bench — +${FMT.d1(s.gap)} pts</span>`
+    : `<span class="ss-suggest-verdict hold">Starter confirmed — ahead by ${FMT.d1(Math.abs(s.gap))} pts</span>`;
+  const miniRow = (p, tone) => `<div class="ss-suggest-player ${tone}">
+    <img ${headshotAttrs(p)} alt="">
+    <div><div class="ss-suggest-name">${esc(p.player_display_name)}</div><div class="ss-suggest-proj tabular">${FMT.d1(p.PROJ)} pts</div></div>
+  </div>`;
+  return `<div class="ss-suggest-card${swap ? " swap" : ""}" data-starter="${esc(a.player_id)}" data-bench="${esc(b.player_id)}">
+    <div class="ss-suggest-pos">${esc(s.position)}</div>
+    <div class="ss-suggest-pair">
+      ${miniRow(a, "out")}
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="ss-suggest-arrow"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      ${miniRow(b, "in")}
+    </div>
+    ${verdict}
+  </div>`;
+}
+
+async function loadStartSitSuggestions() {
+  const wrap = $("#ss-suggestions");
+  const list = $("#ss-suggestions-list");
+  try {
+    const data = await api("/api/startsit/suggestions");
+    if (!data.suggestions.length) { wrap.style.display = "none"; return; }
+    list.innerHTML = data.suggestions.map(ssSuggestCardHtml).join("");
+    list.querySelectorAll(".ss-suggest-card").forEach((card) => {
+      card.addEventListener("click", () => loadSuggestionIntoCompare(card.dataset.starter, card.dataset.bench));
+    });
+    wrap.style.display = "";
+  } catch (e) {
+    // A real roster with fewer than 2 comparable positions (e.g. a
+    // brand-new team with no bench yet) is a normal state, not an
+    // error worth surfacing — just don't show the section.
+    wrap.style.display = "none";
+  }
+}
+
+async function loadSuggestionIntoCompare(starterId, benchId) {
+  const [starter, bench] = await Promise.all([
+    api(`/api/player/${starterId}`), api(`/api/player/${benchId}`),
+  ]).catch(() => [null, null]);
+  if (!starter || !bench) return;
+  state.startsit = [
+    { player_id: starter.player_id, player_display_name: starter.player_display_name, position: starter.position },
+    { player_id: bench.player_id, player_display_name: bench.player_display_name, position: bench.position },
+  ];
+  renderStartSitChips();
+  $(".ss-toolbar")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  runStartSit();
 }
 
 $("#startsit-gate-btn")?.addEventListener("click", () => switchTab("settings"));

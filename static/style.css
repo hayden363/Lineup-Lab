@@ -2560,6 +2560,33 @@ tbody tr:last-child td { border-bottom: none; }
    place with no real data source (weather) is disclosed as
    "Availability" instead of invented — see ssBreakdownPanelHtml.
    ============================================================ */
+
+/* --- top recommendations (real, own-roster, engine/tools.py's
+   start_sit_suggestions_from_roster) --- */
+#ss-suggestions { margin-bottom: 22px; }
+.ss-suggest-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; margin-top: 10px; }
+.ss-suggest-card {
+  cursor: pointer; padding: 14px 16px; border-radius: var(--radius);
+  background: var(--panel-glass); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+  border: 1px solid var(--border); transition: border-color 150ms var(--ease), transform 150ms var(--ease), box-shadow 150ms var(--ease);
+  opacity: 0; animation: fadeSlideUp 380ms var(--ease) forwards;
+}
+.ss-suggest-card:hover { transform: translateY(-2px); border-color: var(--border-bright); box-shadow: 0 0 20px -8px var(--accent-glow); }
+.ss-suggest-card.swap { border-color: rgba(52,230,122,0.35); }
+.ss-suggest-pos { font-family: var(--mono); font-size: 10px; font-weight: 800; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 10px; }
+.ss-suggest-pair { display: flex; align-items: center; gap: 8px; }
+.ss-suggest-player { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; }
+.ss-suggest-player img { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; background: var(--panel-2); flex-shrink: 0; }
+.ss-suggest-name { font-size: 12px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ss-suggest-proj { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+.ss-suggest-player.out .ss-suggest-name, .ss-suggest-player.out .ss-suggest-proj { color: var(--muted); text-decoration: line-through; text-decoration-color: rgba(255,107,129,0.5); }
+.ss-suggest-player.in .ss-suggest-proj { color: var(--accent); font-weight: 700; }
+.ss-suggest-arrow { color: var(--muted); flex-shrink: 0; }
+.ss-suggest-card.swap .ss-suggest-arrow { color: var(--accent); }
+.ss-suggest-verdict { display: block; margin-top: 10px; font-size: 11px; font-family: var(--mono); font-weight: 700; }
+.ss-suggest-verdict.swap { color: var(--accent); }
+.ss-suggest-verdict.hold { color: var(--muted); }
+
 .ss-toolbar {
   display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px;
   padding: 14px 18px; margin-bottom: 18px;

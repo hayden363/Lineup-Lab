@@ -624,6 +624,30 @@ def api_startsit(req: StartSitRequest, user=Depends(current_user)):
     return _clean(result)
 
 
+@app.get("/api/startsit/suggestions")
+def api_startsit_suggestions(week: Optional[int] = Query(None, ge=1, le=25),
+                              scoring: Optional[dict] = Depends(scoring_from_query), user=Depends(require_user)):
+    """The real top 3 (or fewer, if there genuinely aren't 3 — never
+    padded) start/sit calls worth checking on your own current roster,
+    for the Start/Sit tab's own top section. Same active-team resolution
+    as /api/myteam (Sleeper or ESPN), reused rather than duplicated."""
+    active = db.get_active_team(user["id"])
+    if not active:
+        raise HTTPException(400, "connect a league in Settings first")
+    scoring = _effective_scoring(scoring, user)
+    try:
+        if active.get("platform") == "espn":
+            espn_s2, swid = db.get_espn_secrets(user["id"])
+            roster = tools.my_team_espn(active["league_id"], int(active["roster_id"]), scoring=scoring, week=week,
+                                         espn_s2=espn_s2, swid=swid)["my_team"]["players"]
+        else:
+            roster = tools.my_team(active["league_id"], int(active["roster_id"]), scoring=scoring, week=week)["my_team"]["players"]
+        suggestions = tools.start_sit_suggestions_from_roster(roster, scoring=scoring, limit=3)
+    except Exception as e:
+        raise HTTPException(400, str(e))
+    return _clean({"suggestions": suggestions})
+
+
 @app.get("/api/track-record")
 def api_track_record(user=Depends(require_user)):
     """How often this app's own START calls have actually been right,

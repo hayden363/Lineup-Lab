@@ -360,6 +360,56 @@ def start_sit(player_ids, opponents=None, season=None, scoring=None):
     return {"season": bundle["season"], "players": results}
 
 
+def start_sit_suggestions_from_roster(roster_players, season=None, scoring=None, limit=3):
+    """The N most actionable real start/sit calls sitting on your own
+    current roster right now — `roster_players` is my_team()'s or
+    my_team_espn()'s `["my_team"]["players"]` list (same shape either
+    way, so this works for both platforms without caring which one).
+
+    For each real position where you have both a starter and a bench
+    option, compares your weakest real starter's PROJ against your
+    strongest real bench alternative AT THE SAME POSITION. Same-position
+    only for now — not FLEX-cross-position-aware (a bench RB is only
+    compared against your starting RB(s), never a FLEX slot a WR/TE
+    could also fill) — a real, disclosed scope limit, not a silently
+    missing case; a genuine lineup optimizer is a bigger, separate build.
+
+    Ranked by the real PROJ gap: a positive gap (bench beats starter) is
+    a genuine "you might want to swap this" call, sorted most-actionable
+    first; if every starter already correctly beats their bench, the
+    smallest (least negative) gaps sort first instead — still the real
+    calls most worth a second look, not a made-up filler set.
+
+    Each returned suggestion re-runs the exact real start_sit() compare
+    for that starter/bench pair (not a stripped-down roster row) — same
+    floor/ceiling/snap/matchup/tier/confidence shape the manual compare
+    tool already returns, so the frontend renders it with the exact same
+    real components, no separate/duplicated code path."""
+    by_pos = {}
+    for p in roster_players:
+        if p.get("position"):
+            by_pos.setdefault(p["position"], []).append(p)
+
+    candidates = []
+    for pos, group in by_pos.items():
+        starters = [p for p in group if p.get("is_starter") and p.get("PROJ") is not None]
+        bench = [p for p in group if not p.get("is_starter") and p.get("PROJ") is not None]
+        if not starters or not bench:
+            continue
+        weakest_starter = min(starters, key=lambda p: p["PROJ"])
+        best_bench = max(bench, key=lambda p: p["PROJ"])
+        gap = round(best_bench["PROJ"] - weakest_starter["PROJ"], 1)
+        candidates.append((pos, weakest_starter, best_bench, gap))
+
+    candidates.sort(key=lambda c: -c[3])
+
+    suggestions = []
+    for pos, starter, bench, gap in candidates[:limit]:
+        cmp = start_sit([starter["player_id"], bench["player_id"]], season=season, scoring=scoring)
+        suggestions.append({"position": pos, "gap": gap, "players": cmp["players"]})
+    return suggestions
+
+
 def resolve_track_record():
     """Grade every logged Start/Sit prediction (see server.py's
     /api/startsit -> db.log_predictions) whose real week has since been
