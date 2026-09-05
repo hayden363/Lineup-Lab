@@ -2051,7 +2051,7 @@ function rosterRowHtml(p, isBench) {
     <img ${headshotAttrs(p)} alt="">
     <span class="pos-badge">${esc(p.slot || p.position)}</span>
     <span>${esc(p.player_display_name)}${statusFlagsHtml(p)}</span>
-    <span class="proj-num">${FMT.d1(p.PROJ)}</span>
+    <span class="proj-num tabular">${FMT.d1(p.PROJ)}</span>
   </div>`;
 }
 
@@ -2066,11 +2066,11 @@ function teamCardHtml(team, kind) {
   const avatar = team.avatar_url
     ? `<img class="mt-avatar" src="${proxyImg(team.avatar_url)}" data-fb-emoji="🏈" alt="">`
     : `<span class="team-emoji">🏈</span>`;
-  return `<div class="myteam-card${kind === "opponent" ? " opponent" : ""}">
+  return `<div class="myteam-card lift-hover${kind === "opponent" ? " opponent" : ""}">
       <div class="mt-label">${kind === "mine" ? "MY TEAM" : "OPPONENT"}</div>
       <div class="mt-name-row">${avatar}<div class="mt-name">${esc(team.team_name)}</div></div>
       <div class="mt-total-lbl">PROJECTED (STARTERS)</div>
-      <div class="mt-total">${FMT.d1(team.total_proj)}</div>
+      <div class="mt-total tabular">${FMT.d1(team.total_proj)}</div>
       <div style="margin-top:14px">${rows}</div>
     </div>`;
 }

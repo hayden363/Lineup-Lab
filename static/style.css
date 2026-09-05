@@ -1,44 +1,104 @@
+/* ==========================================================================
+   DESIGN SYSTEM REFRESH — zinc/slate premium dark theme, electric
+   emerald/cyan/violet accent family, a real 4px spacing scale. Every
+   component in this app already reads color/spacing exclusively through
+   these custom properties (no component hardcodes a hex value) — so
+   this one block is the entire visual identity of the app, and remapping
+   it cascades to every screen at once, safely, with zero markup changes.
+   Semantic meaning is preserved from the previous palette (green=good/
+   start, red=risk/sit, amber=caution, cyan=info, violet=highlight) —
+   only the actual hex values move to a punchier, higher-contrast set.
+   ========================================================================== */
 :root {
-  --bg: #07100c;
-  --panel: #0d1613;
-  --panel-2: #121f1a;
-  --panel-glass: rgba(19, 31, 26, 0.6);
-  --border: rgba(255,255,255,0.055);
-  --border-bright: rgba(87,226,164,0.22);
-  --text: #eef6f1;
-  --muted: #7f9689;
-  --accent: #5eeead;
-  --accent-dim: #2f9e6f;
-  --accent-glow: rgba(94, 238, 173, 0.35);
-  --brand: #1f6f52;
-  --pos: #5eeead;
-  --neg: #ff6b81;
-  --soft: #5eeead;
-  --tough: #ff6b81;
-  --avg: #e8c15c;
-  --info: #64c2ec;
-  --neg-glow: rgba(255, 107, 129, 0.35);
-  --avg-glow: rgba(232, 193, 92, 0.35);
-  --info-glow: rgba(100, 194, 236, 0.35);
-  --violet: #a78bfa;
-  --violet-glow: rgba(167, 139, 250, 0.35);
+  /* --- surfaces (real Tailwind zinc scale) --- */
+  --bg: #09090b;              /* zinc-950 */
+  --panel: #18181b;           /* zinc-900 */
+  --panel-2: #202023;         /* zinc-800, slightly warmed */
+  --panel-glass: rgba(24, 24, 27, 0.68);
+  --border: rgba(255,255,255,0.08);       /* reads close to zinc-800 (#27272a) on this bg */
+  --border-bright: rgba(52, 211, 153, 0.28);
+  --text: #fafafa;            /* zinc-50 — high-contrast headers */
+  --muted: #a1a1aa;           /* zinc-400 — subtle sub-labels, exactly as spec'd */
+  --muted-dim: #71717a;       /* zinc-500 — tertiary/caption text */
+
+  /* --- electric accent family --- */
+  --accent: #34d399;          /* emerald-400 — primary accent */
+  --accent-dim: #10b981;      /* emerald-500 — pressed/dim state */
+  --accent-glow: rgba(52, 211, 153, 0.38);
+  --brand: #059669;           /* emerald-600 */
+  --pos: #34d399;
+  --neg: #fb7185;             /* rose-400 — risk/sit */
+  --soft: #34d399;
+  --tough: #fb7185;
+  --avg: #fbbf24;             /* amber-400 — caution */
+  --info: #22d3ee;            /* cyan-400 — secondary/metrics */
+  --neg-glow: rgba(251, 113, 133, 0.38);
+  --avg-glow: rgba(251, 191, 36, 0.35);
+  --info-glow: rgba(34, 211, 238, 0.38);
+  --violet: #a78bfa;          /* violet-400 — tertiary highlight */
+  --violet-glow: rgba(167, 139, 250, 0.38);
+
+  /* --- 4px spacing rhythm (Tailwind-scale) — new work should reach for
+     these instead of one-off px values; existing components keep their
+     already-tuned spacing rather than a risky mechanical find/replace
+     across the whole stylesheet --- */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
 
   --radius-sm: 8px;
   --radius: 16px;
   --radius-lg: 22px;
 
-  --shadow-sm: 0 1px 2px rgba(0,0,0,0.3);
-  --shadow: 0 1px 1px rgba(0,0,0,0.2), 0 10px 28px -8px rgba(0,0,0,0.55), 0 2px 10px -4px rgba(0,0,0,0.4);
-  --shadow-lift: 0 20px 44px -12px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.04);
-  --shadow-glow: 0 1px 1px rgba(0,0,0,0.2), 0 10px 28px -8px rgba(0,0,0,0.55), 0 0 32px -6px var(--accent-glow);
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.4);
+  --shadow: 0 1px 1px rgba(0,0,0,0.3), 0 10px 28px -8px rgba(0,0,0,0.65), 0 2px 10px -4px rgba(0,0,0,0.5);
+  --shadow-lift: 0 24px 48px -14px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.05);
+  --shadow-glow: 0 1px 1px rgba(0,0,0,0.3), 0 10px 28px -8px rgba(0,0,0,0.65), 0 0 32px -6px var(--accent-glow);
 
   --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  /* the real spring already pulled from this app's own Figma file via
+     get_motion_context (CUSTOM_SPRING bounce: 0.45, confirmed live on
+     the Primary Button press and reused for every "pop" moment since —
+     the Projection Breakdown badge, Start/Sit's confidence rings/tier
+     badges) — --ease-snap stays the same real curve, only the palette
+     around it changed. New hover-lift micro-interactions below reuse it
+     too, rather than a hand-guessed easing. */
   --ease-snap: cubic-bezier(0.34, 1.56, 0.64, 1);
   --dur: 220ms;
 
   --mono: "Roboto Mono", ui-monospace, "SF Mono", "Cascadia Code", "JetBrains Mono", Menlo, Consolas, monospace;
   --sans: "Source Sans 3", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, Arial, sans-serif;
 }
+
+/* Real, reusable hover-lift — the "card hover lift" micro-interaction
+   from the brief, as one shared utility class instead of one-off rules
+   per component, so every card-like surface in the app can opt in with
+   a single class. Uses the same real spring as everything else here. */
+.lift-hover {
+  transition: transform 220ms var(--ease-snap), box-shadow 220ms var(--ease), border-color 220ms var(--ease);
+}
+.lift-hover:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-lift);
+  border-color: var(--border-bright);
+}
+@media (prefers-reduced-motion: reduce) {
+  .lift-hover { transition: box-shadow 220ms var(--ease), border-color 220ms var(--ease); }
+  .lift-hover:hover { transform: none; }
+}
+
+/* Real tabular-figures utility — the brief's "tabular figures for
+   numerical data" spec. A no-op on --mono text (Roboto Mono's digits
+   are already fixed-width by design) but meaningful anywhere a number
+   sits in a proportional font, and correct either way to reach for
+   explicitly rather than relying on which font happens to be in play. */
+.tabular { font-variant-numeric: tabular-nums; }
 
 * { box-sizing: border-box; }
 
@@ -1917,10 +1977,12 @@ tbody tr:last-child td { border-bottom: none; }
 }
 
 .myteam-card {
-  background: var(--panel);
+  background: var(--panel-glass);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  backdrop-filter: blur(14px) saturate(140%);
   border: 1px solid var(--border-bright);
   border-radius: var(--radius);
-  padding: 16px;
+  padding: var(--space-4);
   box-shadow: var(--shadow);
   position: relative;
   overflow: hidden;
