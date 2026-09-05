@@ -230,13 +230,6 @@ body.sidebar-collapsed #sidebar { width: var(--sidebar-w-collapsed); }
   text-overflow: ellipsis;
 }
 
-.brand-season {
-  font-size: 10px;
-  color: var(--accent);
-  font-family: var(--mono);
-  letter-spacing: 0.03em;
-}
-
 #sidebar-toggle {
   flex-shrink: 0;
   width: 26px; height: 26px;

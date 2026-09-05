@@ -2897,14 +2897,12 @@ function initSearch() {
 async function initMeta() {
   const meta = await api("/api/meta");
   state.meta = meta;
-  // "SZN" read as "the app thinks it's currently this season" — it isn't;
-  // it's which completed season's real stats power SCORE/PROJ right now
-  // (the most recent one with games actually played), which is a
-  // different thing from what season your connected league is playing.
-  // Spelling that out here, not just in Settings, since this badge is the
-  // first season-related thing anyone sees.
-  $("#season-badge").textContent = `${meta.season} stats`;
-  $("#season-badge").title = `Player valuations are built from real ${meta.season} season stats — the most recent season with games actually played. Your connected league can be a newer season than that; this updates automatically once its games are in the books.`;
+  // The "which season is stats data actually from" explanation (it's the
+  // most recent one with games actually played, which can lag a newer
+  // live league season) used to show as a sidebar badge — removed from
+  // there, but the same real explanation is still surfaced in Settings
+  // (see renderSettingsTab's #settings-season-info) for anyone who wants
+  // to know exactly what's powering the numbers.
   const oppSelect = $("#opp-select");
   meta.teams.forEach((t) => {
     const opt = el("option");
