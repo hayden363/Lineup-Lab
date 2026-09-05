@@ -27,6 +27,8 @@ isn't really there.
 import numpy as np
 import pandas as pd
 
+from .metrics import _recency_weighted_pct
+
 DEFAULT_K_SCORING = dict(
     fgm_0_19=3.0, fgm_20_29=3.0, fgm_30_39=3.0, fgm_40_49=4.0,
     fgm_50_59=5.0, fgm_60p=6.0, fgmiss=-1.0, xpm=1.0, xpmiss=-1.0,
@@ -170,12 +172,14 @@ def build_kicker_board(pbp, scoring_settings=None, min_games=2):
                        if rng else pd.Series(50.0, index=board.index)).round(1)
 
     def _form(pdata):
+        # Same real recency-weighting + sample-size confidence shrinkage
+        # as skill positions (engine.metrics.form_adjustment) and DEF/ST
+        # (engine.defense_scoring — see that file's _form for the fuller
+        # writeup) — this had the identical blunt "last 3 games vs season
+        # average" gap DEF/ST used to have, same fix applies.
         pdata = pdata.sort_values("week")
-        season_avg = pdata["fpts"].mean()
-        recent_avg = pdata["fpts"].tail(3).mean()
-        if season_avg:
-            return round(float(np.clip((recent_avg - season_avg) / season_avg, -0.4, 0.4)) * 100, 1)
-        return 0.0
+        pct = _recency_weighted_pct(pdata["fpts"].to_numpy(), halflife=2.5, min_games_full_confidence=8)
+        return round(float(np.clip(pct, -0.4, 0.4)) * 100, 1)
 
     board["FORM"] = pd.Series({pid: _form(d) for pid, d in weekly.groupby("player_id") if pid in board.index})
     board.index.name = "player_id"
