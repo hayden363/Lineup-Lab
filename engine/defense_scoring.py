@@ -168,6 +168,56 @@ def build_defense_board(pbp, schedule, scoring_settings=None):
     return board.sort_values("SCORE", ascending=False)
 
 
+def build_offense_fragility(pbp, schedule, scoring_settings=None):
+    """For each real NFL offense, the real average DEF/ST fantasy points
+    OPPOSING defenses have scored while playing them this season — i.e.
+    how good a matchup this offense actually is for a DEF/ST slot, same
+    idea as every other matchup adjustment in this app (engine/defense.py
+    does this for offense-vs-defense; this is the mirror, defense-vs-
+    offense). Built from the same real weekly defensive-production table
+    build_defense_board already computes (sacks/takeaways/TDs/points
+    allowed), joined against the schedule to find each week's real
+    opponent, then averaged by that opponent — not a separate assumption,
+    the exact same real per-play results just grouped the other way.
+
+    factor is relative to the league-average DEF/ST output this season
+    (1.0 = neutral, >1.0 = this offense gives up more than average,
+    <1.0 = tougher than average to score DEF/ST points against)."""
+    def_settings = def_scoring_from_sleeper(scoring_settings)
+    weekly = build_defense_weekly(pbp, schedule)
+    weekly["fpts"] = score_defense_weekly(weekly, def_settings)
+
+    home = schedule[["week", "home_team", "away_team"]].rename(
+        columns={"home_team": "team", "away_team": "opponent"})
+    away = schedule[["week", "away_team", "home_team"]].rename(
+        columns={"away_team": "team", "home_team": "opponent"})
+    opp_lookup = pd.concat([home, away], ignore_index=True).set_index(["team", "week"])["opponent"]
+
+    weekly["opponent"] = opp_lookup.reindex(list(zip(weekly["defteam"], weekly["week"]))).values
+    weekly = weekly.dropna(subset=["opponent"])
+    if not len(weekly):
+        return pd.DataFrame(columns=["def_fpts_allowed_per_game", "games", "factor"])
+
+    league_avg = weekly["fpts"].mean()
+    g = weekly.groupby("opponent")
+    fragility = pd.DataFrame({
+        "def_fpts_allowed_per_game": g["fpts"].mean().round(2),
+        "games": g.size(),
+    })
+    fragility["factor"] = ((fragility["def_fpts_allowed_per_game"] / league_avg).round(3)
+                            if league_avg else 1.0)
+    return fragility
+
+
+def defense_matchup_factor(opponent_offense, fragility):
+    """How much a specific offense inflates/deflates DEF/ST fantasy
+    output relative to a neutral (league-average) opponent — 1.0
+    (neutral) if there's no real signal for this team code yet."""
+    if fragility is None or opponent_offense is None or opponent_offense not in fragility.index:
+        return 1.0
+    return float(fragility.loc[opponent_offense, "factor"])
+
+
 def resolve_defense_row(team_code, defense_board):
     """defense_board is keyed by nflverse team code; a Sleeper DEF roster
     slot's own id is the Sleeper team code (identical for every team
