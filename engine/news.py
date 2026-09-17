@@ -35,6 +35,24 @@ AI_SUMMARY_MODEL = "claude-opus-5"
 FEEDS = {
     "ESPN": "https://www.espn.com/espn/rss/nfl/news",
     "CBS Sports": "https://www.cbssports.com/rss/headlines/nfl/",
+    # Both added after team/opponent-scoped News came back empty in
+    # practice: ESPN/CBS's own top-NFL-news feeds are real but shallow
+    # (~40 entries each, general breaking news) — good odds of matching a
+    # top-of-the-league star, poor odds of matching most of an actual
+    # 15-player roster. These two are real, public RSS (checked
+    # robots.txt on both — no disallow on the feed itself, no bot-specific
+    # block) and skew toward exactly the per-team, per-player granularity
+    # (injury/practice reports, week-N starter decisions) this app's
+    # name-matching filter needs. Confirmed live: ProFootballRumors is
+    # already carrying real "Week 2" team-by-team QB/injury calls.
+    # Deliberately skipped: Yahoo Sports (real, working feed, but their
+    # robots.txt explicitly disallows the `anthropic-ai` user-agent
+    # site-wide — honoring that regardless of what a generic client
+    # would technically get away with); RotoWire (real feed, but its
+    # public RSS only returns 5 items, suggesting the full feed sits
+    # behind a paid tier — not confirmed enough to rely on).
+    "Pro Football Rumors": "https://www.profootballrumors.com/feed",
+    "ProFootballTalk": "https://profootballtalk.nbcsports.com/feed/",
 }
 
 TTL_SECONDS = 20 * 60

@@ -16,7 +16,7 @@ import pandas as pd
 
 from . import data
 from . import defense as defense_layer
-from .metrics import METRIC_FNS, WEIGHTS, score_players, form_adjustment
+from .metrics import METRIC_FNS, WEIGHTS, MIN_GAMES, score_players, form_adjustment
 from .advanced import qb_advanced, rb_advanced, wr_advanced, te_advanced, weekly_epa, ADVANCED_COLS
 from .matchup import matchup_tag
 from .scoring import apply_scoring, ScoringSettings, PRESETS
@@ -50,6 +50,9 @@ POSITIONS = ("QB", "RB", "WR", "TE")
 # Minimum "volume" (attempts / touches / targets, position-appropriate) to be
 # considered a qualified sample — filters out mop-up-duty / one-play noise
 # that would otherwise produce absurd rate stats off a tiny denominator.
+# This is a SEASON-TOTAL bar (checked against _build_board_uncached's
+# cumulative `volume` column) — see that function for why it's scaled by
+# games played before use, rather than applied as a flat number.
 MIN_VOLUME = {"QB": 80, "RB": 20, "WR": 12, "TE": 8}
 
 # Raw per-week counting-stat columns to include in player_detail()'s
@@ -255,7 +258,21 @@ def _build_board_uncached(position, season, min_volume, scoring):
 
     base = METRIC_FNS[position](wk)
     min_volume = MIN_VOLUME[position] if min_volume is None else min_volume
-    base = base[base["volume"] >= min_volume]
+    # min_volume is a SEASON-TOTAL bar, but early in a season nobody has
+    # had the chance to accumulate a full season's worth yet — checked
+    # this the hard way against real 2026 week-1 data: an established
+    # starting QB/WR/TE (Mahomes, Waddle, Nabers, ...) can have a real,
+    # single qualifying game and still fail a flat 80-attempt/12-target
+    # bar that assumes many games' worth of accumulation, which silently
+    # made them vanish everywhere a roster is resolved (My Team, Start/
+    # Sit, Trade pickers, News' player-name matching), not just rank
+    # lower. Scaling the bar by real games played, capped at MIN_GAMES
+    # (the same "don't rank off one game" floor build_board's caller
+    # already applies afterward), means this is a no-op for anyone with
+    # a normal, established sample — only the first MIN_GAMES-1 games of
+    # a season are affected.
+    scale = (base["games"].clip(upper=MIN_GAMES[position]) / MIN_GAMES[position])
+    base = base[base["volume"] >= min_volume * scale]
 
     adv = ADVANCED_FNS[position](bundle["pbp"], _ngs_for(position, bundle))
     board = base.join(adv, how="left")

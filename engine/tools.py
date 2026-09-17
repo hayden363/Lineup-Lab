@@ -572,7 +572,19 @@ def _roster_players(raw_ids, bundle, get_board, scoring, crosswalk=None, starter
             }
         board = get_board(pos)
         if gsis_id not in board.index:
-            return None
+            # Doesn't clear this position's RANKED-LIST bar (build_board's
+            # default min_games=2 — real early in a season, before almost
+            # anyone has 2 games yet). That bar exists so a fluky 1-game
+            # sample doesn't look like a ranked #1 among strangers on Big
+            # Board/Waivers — it has no business making an established
+            # player on YOUR OWN roster vanish. min_games isn't part of
+            # build_board's cache key (see its docstring), so asking for
+            # the same position/season/scoring at min_games=0 reuses the
+            # already-computed board — this costs nothing extra.
+            raw_board = build_board(pos, season=bundle["season"], min_games=0, scoring=scoring)
+            if gsis_id not in raw_board.index:
+                return None  # genuinely no real games logged this season at all
+            board = raw_board
         row = board.loc[gsis_id].to_dict()
         proj = _opponent_adjusted_proj(board, gsis_id, pos, bundle, scoring, week=week)
         return {
@@ -646,7 +658,14 @@ def _team_total(raw_ids, bundle, get_board, scoring, crosswalk=None, starters=No
             continue
         board = get_board(pos)
         if gsis_id not in board.index:
-            continue
+            # Same real early-season gap as _roster_players.build_row
+            # above — don't let a starter silently contribute 0 to the
+            # team total just because they haven't cleared build_board's
+            # ranked-list min_games bar yet this season.
+            raw_board = build_board(pos, season=bundle["season"], min_games=0, scoring=scoring)
+            if gsis_id not in raw_board.index:
+                continue
+            board = raw_board
         total += _opponent_adjusted_proj(board, gsis_id, pos, bundle, scoring, week=week)
     return round(total, 1)
 
