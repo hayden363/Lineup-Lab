@@ -555,9 +555,17 @@ function playerCellHtml(p) {
   // already clicked into one specific player's modal (statusFlagsHtml
   // was previously wired into 6 other surfaces but missed this one,
   // the actual Big Board row template).
-  return `<div class="player-cell">
+  //
+  // rank 1 is a real, already-computed signal (top SCORE for this exact
+  // position/scoring/opponent view) — not a fabricated "star" flag — so
+  // it's a fair thing to celebrate with a crown. Whichever list handed
+  // this player object a `rank` of 1 (Big Board or Waivers, the two
+  // callers of this shared template) means the same thing: best of the
+  // list you're currently looking at.
+  const isTop = p.rank === 1;
+  return `<div class="player-cell${isTop ? " player-cell-top" : ""}">
       <img ${headshotAttrs(p)} alt="">
-      <div><div class="player-name">${esc(p.player_display_name) || "—"}${statusFlagsHtml(p)}</div><div class="player-team">${esc(p.recent_team)}</div></div>
+      <div><div class="player-name">${isTop ? '<span class="top-crown" title="Top of this board">👑</span>' : ""}${esc(p.player_display_name) || "—"}${statusFlagsHtml(p)}</div><div class="player-team">${esc(p.recent_team)}</div></div>
     </div>`;
 }
 
@@ -579,6 +587,7 @@ function renderBoardRows(players, cols, showProj) {
     .filter((p) => !q || (p.player_display_name || "").toLowerCase().includes(q) || (p.recent_team || "").toLowerCase().includes(q))
     .forEach((p) => {
       const tr = el("tr");
+      if (p.rank === 1) tr.classList.add("board-row-top");
       const selected = state.compareSelected.has(p.player_id);
       let html = `<td class="rank-cell">${esc(p.rank)}</td>`;
       html += `<td><div class="board-player-row">
@@ -2021,6 +2030,7 @@ async function loadWaivers(pos) {
 
     players.forEach((p) => {
       const tr = el("tr");
+      if (p.rank === 1) tr.classList.add("board-row-top");
       const trending = p.trending_adds > 0
         ? `<span class="trend-badge" title="${esc(p.trending_adds)} adds on Sleeper, last 48h">🔥 ${p.trending_adds >= 1000 ? (p.trending_adds / 1000).toFixed(1) + "k" : p.trending_adds}</span>` : "";
       const posBadge = isAll ? `<span class="pos-badge" style="margin-left:6px">${esc(p.position)}</span>` : "";
