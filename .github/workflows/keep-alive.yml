@@ -1,0 +1,44 @@
+name: Keep Lineup Lab warm
+
+# FREE-TIER WORKAROUND, not a scaling solution — see README's Deployment
+# section. Render's free plan spins the service down after ~15 min with
+# no traffic; the next real request then eats a real ~60s cold start
+# (container provisioning + Python boot + this app's own nflverse data
+# fetch — measured directly, see README). This just pings the app often
+# enough that it never goes idle long enough to spin down.
+#
+# Runs on GitHub's infrastructure, independent of any machine or Claude
+# session being open — the built-in-app "scheduled task" mechanism only
+# fires while that app is running, which can't reliably keep a production
+# service warm. Costs nothing: this repo is public, so Actions minutes
+# are unlimited.
+#
+# To remove once the Render plan is upgraded to Starter (or higher) —
+# which eliminates spin-down entirely and is the real, permanent fix —
+# just delete this file. This ping alone does NOT make the app ready for
+# a large playerbase: it only stops one free instance from sleeping.
+# Real scaling needs the paid plan, and at that point also a shared
+# cache (Redis) for engine/board.py's in-memory board cache and the
+# in-memory rate limiter (server.py) if ever running more than one
+# instance — both currently correct but per-process, documented as a
+# single-instance assumption in README.
+
+on:
+  schedule:
+    # Every 10 minutes — comfortably under Render's ~15 min idle window,
+    # with margin for GitHub's own scheduler jitter (their docs disclose
+    # scheduled runs are best-effort and can be delayed, especially for
+    # low-traffic repos).
+    - cron: "*/10 * * * *"
+  workflow_dispatch: {} # manual "Run workflow" button, for testing this on demand
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping the live app
+        # --max-time 70: a cold hit takes ~60s end to end (measured) — give
+        # it room to actually finish instead of timing out mid-boot.
+        # -f: a non-2xx response fails the job so a real outage shows up
+        # as a red run in the Actions tab instead of silently doing nothing.
+        run: curl -sf --max-time 70 https://lineup-lab-awdv.onrender.com/api/meta -o /dev/null

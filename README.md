@@ -291,6 +291,38 @@ the recommended **Pylance** extension (prompted automatically via
 its language server) gets you the same checking live as you type, using the
 interpreter/settings already configured in `.vscode/settings.json`.
 
+## Deployment
+
+Live at https://lineup-lab-awdv.onrender.com, on Render's **free** web
+service plan — deliberate for now, not an oversight (see "Roadmap" for
+what changes before this could handle a real playerbase).
+
+**Known real limitation of the free plan**: it spins the service down
+after ~15 minutes with no traffic. The next request then pays a real
+cold start — measured directly: ~15-18s Render provisioning a fresh
+container, ~18s Python/FastAPI boot, ~25s for this app's own first-request
+nflverse data fetch (weekly stats/pbp/NGS/schedule/injuries/snap counts).
+**~62 seconds total**, once, then every request after is ~80ms until it
+goes idle again.
+
+**Workaround in place**: `.github/workflows/keep-alive.yml`, a GitHub
+Actions cron pinging `/api/meta` every 10 minutes — runs on GitHub's own
+infrastructure (unlimited free minutes, this repo is public), not tied to
+any machine or app being open, so it actually holds up unattended. This
+is a stopgap, not a scaling fix: it only stops one free instance from
+sleeping. **The real, permanent fix is upgrading the Render service to
+Starter (or higher)** — spin-down goes away entirely; do that instead of
+relying on the ping once cost isn't the constraint, then delete the
+workflow file.
+
+**What actually scaling to a real playerbase needs, beyond the plan
+upgrade** (none of this is built — real decisions for when it's needed,
+not silent gaps): multiple instances would need a shared cache (Redis)
+for `engine/board.py`'s board cache and `engine/sleeper.py`'s in-memory
+front-cache, both correct but per-process today; the rate limiter in
+`server.py` is also in-memory per-process, same caveat; Supabase/Postgres
+connection pooling at higher concurrency hasn't been load-tested.
+
 ## Legacy prototype scripts
 
 `valuation_engine.py`, `advanced_metrics.py`, `matchup.py`, and
