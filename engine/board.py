@@ -266,12 +266,23 @@ def _build_board_uncached(position, season, min_volume, scoring):
     # bar that assumes many games' worth of accumulation, which silently
     # made them vanish everywhere a roster is resolved (My Team, Start/
     # Sit, Trade pickers, News' player-name matching), not just rank
-    # lower. Scaling the bar by real games played, capped at MIN_GAMES
-    # (the same "don't rank off one game" floor build_board's caller
-    # already applies afterward), means this is a no-op for anyone with
-    # a normal, established sample — only the first MIN_GAMES-1 games of
-    # a season are affected.
-    scale = (base["games"].clip(upper=MIN_GAMES[position]) / MIN_GAMES[position])
+    # lower. Scaling the bar by real games played fixes that.
+    #
+    # Ramp window is MIN_GAMES+1, not MIN_GAMES — found the hard way
+    # against real week-2 data (still fresh season, this time verified on
+    # an actual 2-game sample rather than the 1-game case above): Mahomes
+    # threw a completely normal 74 attempts over his first 2 real games
+    # (~37/game, a healthy starter's workload) and STILL failed the flat
+    # 80-attempt bar at a cap of exactly MIN_GAMES=2 games — clear
+    # evidence the flat constants were calibrated for something closer to
+    # MIN_GAMES+1 games' worth of normal volume, not exactly MIN_GAMES.
+    # Ramping over MIN_GAMES+1 games instead fixes this (both Mahomes'
+    # and Burrow's real 2-game volume now clears) while every week from
+    # MIN_GAMES+1 onward — i.e. nearly this entire season — sees the
+    # exact same flat threshold as always, unchanged and still the
+    # already-extensively-verified default.
+    ramp_games = MIN_GAMES[position] + 1
+    scale = (base["games"].clip(upper=ramp_games) / ramp_games)
     base = base[base["volume"] >= min_volume * scale]
 
     adv = ADVANCED_FNS[position](bundle["pbp"], _ngs_for(position, bundle))
