@@ -102,6 +102,14 @@ async def security_headers(request: Request, call_next):
         "font-src 'self' https://fonts.gstatic.com; "
         "script-src 'self'; connect-src 'self'; frame-ancestors 'none'"
     )
+    # Real gap found in a security pass: this was missing entirely. Only
+    # meaningful (and only sent) once actually served over https — same
+    # scheme check the session/OAuth-state cookies already use to decide
+    # `Secure` — so plain local dev over http is unaffected. No `preload`:
+    # that's a real, harder-to-reverse commitment (submission to browsers'
+    # baked-in preload list) worth a deliberate decision, not a default.
+    if request.url.scheme == "https":
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
     return response
 
 

@@ -209,6 +209,14 @@ def find_or_create_oauth_user(provider, provider_id, email, name_hint=None):
     if not EMAIL_RE.match(email):
         raise AuthError("Google/Apple returned an email address that doesn't look valid.")
     col = "google_id" if provider == "google" else "apple_id"
+    # `col` only ever comes from the hardcoded ternary above — never from
+    # `provider` directly — so the f-strings below are safe today. This
+    # assert is defense-in-depth against that invariant quietly breaking
+    # in a future refactor (e.g. a dict lookup keyed by `provider` without
+    # noticing this function interpolates the result into raw SQL); a
+    # security pass flagged the f-string shape as worth hardening even
+    # though it verified safe as written.
+    assert col in ("google_id", "apple_id")
 
     with _conn() as c:
         c.execute(f"SELECT * FROM users WHERE {col} = %s", (provider_id,))
