@@ -3335,12 +3335,25 @@ async function initMeta() {
 // Sign-in is mandatory: nothing behind it renders until there's a real
 // signed-in user. A signed-in user with no connected league gets one more
 // full-screen step (skippable) before the app itself appears.
+//
+// Both functions below also clear .auth-pending (see index.html's
+// #boot-veil / style.css) — real bug found in a redesign pass: main()
+// awaits two sequential API calls (/api/meta, then /api/auth/me) before
+// either of these ever runs, and #gate-root itself starts display:none,
+// so there was a real window on every load where the full sidebar + tab
+// shell sat there visible and clickable by default, for signed-in and
+// signed-out visitors alike, before this function ever got a chance to
+// decide which state should actually show.
 function showGate() {
+  document.documentElement.classList.remove("auth-pending");
+  document.body.classList.remove("auth-pending");
   $("#gate-root").style.display = "flex";
   document.documentElement.classList.add("gate-locked");
   document.body.classList.add("gate-locked");
 }
 function hideGate() {
+  document.documentElement.classList.remove("auth-pending");
+  document.body.classList.remove("auth-pending");
   $("#gate-root").style.display = "none";
   document.documentElement.classList.remove("gate-locked");
   document.body.classList.remove("gate-locked");
@@ -3445,33 +3458,50 @@ async function main() {
   // that flow, whatever the current sign-in state happens to be.
   const cameViaResetLink = new URLSearchParams(window.location.search).has("reset_token");
 
-  handleUrlRedirects();
-  initSidebar();
-  initTabs();
-  initPosPills();
-  initSearch();
-  initStartSit();
-  initTrade();
-  initTradeFinder();
-  initCompareTray();
-  initNews();
-  initLiveScores();
-  await initMeta();
-
+  // Safety net for the new .auth-pending boot veil (see index.html/
+  // style.css): every REAL path below reaches showGate()/hideGate(),
+  // which clear it immediately once the actual sign-in state is known —
+  // but if anything in between throws (a real network failure on
+  // initMeta(), say), this `finally` guarantees the veil still comes down
+  // instead of leaving the page stuck on "Loading Lineup Lab…" forever
+  // with no way out. Worse-looking (whatever was underneath, un-gated)
+  // beats a permanently frozen spinner.
   try {
-    state.user = await api("/api/auth/me");
-  } catch (e) {
-    state.user = null;
-  }
-  renderAccountButton();
-  await loadSettingsIntoState();
+    handleUrlRedirects();
+    initSidebar();
+    initTabs();
+    initPosPills();
+    initSearch();
+    initStartSit();
+    initTrade();
+    initTradeFinder();
+    initCompareTray();
+    initNews();
+    initLiveScores();
+    await initMeta();
 
-  if (cameViaResetLink) {
-    initScoringSelect();
-    switchTab(DEFAULT_TAB);
-    return;
+    try {
+      state.user = await api("/api/auth/me");
+    } catch (e) {
+      state.user = null;
+    }
+    renderAccountButton();
+    await loadSettingsIntoState();
+
+    if (cameViaResetLink) {
+      // Same reasoning as showGate()/hideGate() — this branch is real
+      // "reveal the app" too, just without the gate on top of it.
+      document.documentElement.classList.remove("auth-pending");
+      document.body.classList.remove("auth-pending");
+      initScoringSelect();
+      switchTab(DEFAULT_TAB);
+      return;
+    }
+    await proceedPastGate();
+  } finally {
+    document.documentElement.classList.remove("auth-pending");
+    document.body.classList.remove("auth-pending");
   }
-  await proceedPastGate();
 }
 
 main();

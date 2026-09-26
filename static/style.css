@@ -1496,6 +1496,40 @@ tbody tr.board-row-top .rank-cell { color: var(--accent); font-weight: 800; }
   justify-content: space-between;
 }
 
+/* ------------------------------------------ auth-check boot veil --- */
+/* Hides the real app shell until app.js's main() has actually resolved
+   sign-in state — see index.html's comment on #boot-veil for the bug
+   this fixes. Same z-index as .gate-fullscreen below since the two are
+   mutually exclusive (this is gone the instant showGate()/hideGate()
+   runs) — never actually stacked, just matching the established
+   full-screen-takeover layer. */
+body.auth-pending #sidebar,
+body.auth-pending #app,
+body.auth-pending #mobile-menu-btn {
+  display: none;
+}
+.boot-veil {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: var(--bg);
+  color: var(--muted);
+  font-size: 14px;
+}
+body.auth-pending .boot-veil { display: flex; }
+.boot-veil::after {
+  content: "";
+  width: 16px; height: 16px;
+  border: 2px solid var(--border-bright);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 700ms linear infinite;
+}
+
 /* ------------------------------------------------- full-screen gate --- */
 .gate-fullscreen {
   position: fixed;

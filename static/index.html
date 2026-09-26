@@ -17,8 +17,19 @@
   <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;500;600;700;800&family=Roboto+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/style.css">
 </head>
-<body>
+<body class="auth-pending">
   <div class="bg-grid"></div>
+
+  <!-- Real bug found in a redesign pass: before app.js's main() resolves
+       who's actually signed in (two sequential awaited API calls), the
+       sidebar and every tab were visible and clickable by default —
+       #gate-root below starts display:none, so nothing was covering them.
+       That directly contradicts "sign-in is mandatory, nothing renders
+       until a real signed-in user" a few lines down. This neutral veil
+       (see style.css's `.auth-pending` rules) shows instead until
+       showGate()/hideGate() in app.js removes the class, whichever real
+       state turns out to be true. -->
+  <div id="boot-veil" class="boot-veil"><span>Loading Lineup Lab…</span></div>
 
   <div id="gate-root" class="gate-fullscreen" style="display:none">
     <div class="gate-fullscreen-visual">
