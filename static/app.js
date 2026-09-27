@@ -1190,10 +1190,19 @@ function startSitCompareSentence(top, p) {
 }
 
 
-function injuryFlagHtml(status) {
+function injuryFlagHtml(status, factorDetail) {
   if (!status) return "";
   const mild = status === "Questionable";
-  return ` <span class="injury-flag${mild ? " questionable" : ""}">${esc(status.toUpperCase())}</span>`;
+  // Real, disclosed reason PROJ moved (see engine/injury_impact.py) —
+  // only present where the backend actually attached it (Big Board's
+  // opponent view, the player modal; not yet threaded through My
+  // Team/Trade/Start-Sit's own row-builders, a real, smaller scope gap
+  // rather than a silently partial job). Never shown for a plain flag
+  // with no real backing factor.
+  const title = factorDetail
+    ? ` title="Historically ${factorDetail.median_pct_change >= 0 ? "+" : ""}${Math.round(factorDetail.median_pct_change * 100)}% for ${esc(factorDetail.body_part)} + ${esc(status)} (real median, n=${factorDetail.real_sample_size} games) — already reflected in PROJ"`
+    : "";
+  return ` <span class="injury-flag${mild ? " questionable" : ""}"${title}>${esc(status.toUpperCase())}</span>`;
 }
 
 // Kept as the single call site every player-name render uses (Big
@@ -1201,7 +1210,10 @@ function injuryFlagHtml(status) {
 // future status badge only needs wiring in once, here — see git history
 // for the "gone dark" badge this used to also render, removed per request.
 function statusFlagsHtml(p) {
-  return injuryFlagHtml(p.injury_status);
+  const factorDetail = (p.injury_factor != null && p.injury_factor !== 1 && p.injury_sample_n != null)
+    ? { median_pct_change: p.injury_factor - 1, body_part: p.injury_body_part, real_sample_size: p.injury_sample_n }
+    : null;
+  return injuryFlagHtml(p.injury_status, factorDetail);
 }
 
 function statChipsHtml(p) {

@@ -207,6 +207,30 @@ def live_injury_statuses(force=False):
     return out
 
 
+def live_injury_body_parts(force=False):
+    """gsis_id -> current real injury body part (e.g. "Hamstring",
+    "Ankle"), from Sleeper's own `injury_body_part` field — already
+    present on the raw player object, just not previously extracted by
+    anything in this app. Same real-time cadence/reasoning as
+    live_injury_statuses above; a separate function (not folded into
+    that one's return shape) since it existed and had exactly one caller
+    before this, and every existing caller of live_injury_statuses stays
+    unaffected. See engine/injury_impact.py for how this gets matched
+    against the real historical factor table — this function only
+    reports the real, raw value Sleeper gives us, no normalization."""
+    players = all_players(force=force)
+    crosswalk = id_crosswalk(force=force)
+    out = {}
+    for sleeper_id, p in players.items():
+        body_part = p.get("injury_body_part")
+        if not body_part:
+            continue
+        gsis_id = crosswalk.get(sleeper_id)
+        if gsis_id:
+            out[gsis_id] = body_part
+    return out
+
+
 _INACTIVE_GSIS_IDS = None
 
 

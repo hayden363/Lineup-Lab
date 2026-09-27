@@ -16,6 +16,7 @@ import pandas as pd
 
 from . import data
 from . import defense as defense_layer
+from . import injury_impact
 from .metrics import METRIC_FNS, WEIGHTS, MIN_GAMES, score_players, form_adjustment
 from .advanced import qb_advanced, rb_advanced, wr_advanced, te_advanced, weekly_epa, ADVANCED_COLS
 from .matchup import matchup_tag
@@ -39,6 +40,7 @@ class Bundle(TypedDict):
     defense_league_avg: pd.Series
     retired_ids: set
     injury_status: dict
+    injury_body_part: dict
     snap_pct: dict
     redzone_touches: dict
 
@@ -201,6 +203,12 @@ def load_bundle(season=None, force=False) -> Bundle:
         injury_status = {}
 
     try:
+        injury_body_part = sleeper_layer.live_injury_body_parts(force=force)
+    except Exception as e:
+        print(f"[data] couldn't load live injury body parts (skipped): {e}")
+        injury_body_part = {}
+
+    try:
         snap_pct = _snap_pct_from(data.load_snap_counts(season, force=force), data.load_pfr_crosswalk(force=force))
     except Exception as e:
         print(f"[data] couldn't load snap counts (skipped): {e}")
@@ -229,7 +237,8 @@ def load_bundle(season=None, force=False) -> Bundle:
     bundle = Bundle(season=season, wk=wk, pbp=pbp, ngs_pass=ngs_pass, ngs_rush=ngs_rush,
                   ngs_rec=ngs_rec, schedule=schedule, defense_factors=defense_factors,
                   defense_league_avg=defense_league_avg, retired_ids=retired_ids,
-                  injury_status=injury_status, snap_pct=snap_pct, redzone_touches=redzone_touches)
+                  injury_status=injury_status, injury_body_part=injury_body_part,
+                  snap_pct=snap_pct, redzone_touches=redzone_touches)
     _BUNDLE_CACHE[key] = bundle
     if force:
         # Every previously-computed board was built from the raw tables
@@ -297,6 +306,7 @@ def _build_board_uncached(position, season, min_volume, scoring):
     # Real availability/opportunity signals (see _availability_signals) —
     # merged on, not recomputed per position.
     board["injury_status"] = board.index.to_series().map(bundle.get("injury_status", {}))
+    board["injury_body_part"] = board.index.to_series().map(bundle.get("injury_body_part", {}))
     board["snap_pct"] = board.index.to_series().map(bundle.get("snap_pct", {}))
     board["redzone_touches"] = board.index.to_series().map(bundle.get("redzone_touches", {})).fillna(0).astype(int)
 
@@ -405,18 +415,56 @@ def matchup_multiplier(position, opp, bundle):
     return defense_layer.composite_multiplier(position, opp, factors)
 
 
+def _injury_multiplier_col(board, position):
+    """Real, historical-data-backed adjustment for a player CURRENTLY
+    carrying a live Questionable/Doubtful designation with a reported
+    body part — see engine/injury_impact.py for the full real methodology
+    and its disclosed limits. 1.0 (no change) for everyone else, including
+    a real "Out" designation (that's a separate question — will they play
+    at all — not "how do they perform while playing through it," which is
+    what this table actually measures)."""
+    if "injury_status" not in board.columns or "injury_body_part" not in board.columns:
+        return pd.Series(1.0, index=board.index)
+    return board.apply(
+        lambda r: injury_impact.injury_multiplier(position, r["injury_status"], r["injury_body_part"]),
+        axis=1,
+    )
+
+
+def _injury_sample_col(board, position):
+    """The real sample size (n) backing injury_factor above, or None when
+    no real adjustment applied — so the frontend can disclose WHY a
+    number moved (a real historical median, over N real games) instead of
+    silently changing it. Companion to _injury_multiplier_col, same
+    reasoning, kept separate so a caller that only needs the number
+    doesn't pay for building the detail dict."""
+    if "injury_status" not in board.columns or "injury_body_part" not in board.columns:
+        return pd.Series(None, index=board.index, dtype="object")
+
+    def _n(r):
+        detail = injury_impact.injury_adjustment_detail(position, r["injury_status"], r["injury_body_part"])
+        return detail["real_sample_size"] if detail else None
+    return board.apply(_n, axis=1)
+
+
 def project_vs(board, position, opp, bundle=None, season=None, scoring=None):
-    """Add a PROJ column: fpts_per_game adjusted for FORM and the real,
-    per-stat-category matchup factor vs this specific opponent defense."""
+    """Add a PROJ column: fpts_per_game adjusted for FORM, the real,
+    per-stat-category matchup factor vs this specific opponent defense,
+    and (new) a real historical injury-impact factor for anyone currently
+    Questionable/Doubtful with a reported body part."""
     bundle = bundle or load_bundle(season)
     factor = matchup_multiplier(position, opp, bundle)
     breakdown = defense_layer.matchup_breakdown(position, opp, bundle["defense_factors"]) if opp in bundle["defense_factors"].index else []
     form_mult = 1 + board["FORM"] / 100.0
+    injury_mult = _injury_multiplier_col(board, position)
+    injury_n = _injury_sample_col(board, position)
     board = board.copy()
     board["opponent"] = opp
     board["matchup_factor"] = factor
     board["matchup_tag"] = matchup_tag(factor)
-    board["PROJ"] = (board["fpts_per_game"] * form_mult * factor).round(1)
+    board["injury_factor"] = injury_mult
+    board["injury_sample_n"] = injury_n
+    board["PROJ"] = (board["fpts_per_game"] * form_mult * factor * injury_mult).round(1)
     board.attrs["matchup_breakdown"] = breakdown
     return board
 
@@ -424,12 +472,14 @@ def project_vs(board, position, opp, bundle=None, season=None, scoring=None):
 def rest_of_season_value(board, position, bundle=None, season=None, scoring=None):
     """A single blended projection per player: FORM-adjusted fpts/game
     averaged across every real defense's granular matchup factor (no
-    single specific opponent). Used by trade/start-sit/waiver tools that
+    single specific opponent), also carrying the same real injury-impact
+    factor project_vs applies. Used by trade/start-sit/waiver tools that
     need one number, not a per-opponent one."""
     bundle = bundle or load_bundle(season)
     avg_factor = defense_layer.league_average_composite(position, bundle["defense_factors"])
     form_mult = 1 + board["FORM"] / 100.0
-    return (board["fpts_per_game"] * form_mult * avg_factor).round(1)
+    injury_mult = _injury_multiplier_col(board, position)
+    return (board["fpts_per_game"] * form_mult * avg_factor * injury_mult).round(1)
 
 
 def search_players(query, season=None, limit=20):
