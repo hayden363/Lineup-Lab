@@ -1,6 +1,14 @@
 {
-  "generated_at": "2026-09-27T15:50:33",
+  "generated_at": "2026-09-27T16:12:26",
   "seasons_used": [
+    2010,
+    2011,
+    2012,
+    2013,
+    2014,
+    2015,
+    2016,
+    2017,
     2018,
     2019,
     2020,
@@ -13,90 +21,175 @@
   "min_n": 30,
   "method": "median real % change vs each player's own same-season healthy-week baseline, aggregated by position + real nflverse injury body part + report status (Questionable/Doubtful only \u2014 Out means DNP, nothing to measure)",
   "meta": {
-    "total_player_weeks": 47788,
-    "flagged_weeks_with_real_stat_line": 2034,
-    "usable_after_baseline_filter": 1870
+    "total_player_weeks": 92378,
+    "flagged_weeks_with_real_stat_line": 3868,
+    "usable_after_baseline_filter": 3529
   },
   "factors": {
     "RB|Ankle|Questionable": {
-      "n": 102,
-      "median_pct_change": -0.2252,
-      "mean_pct_change": 0.0311
+      "n": 176,
+      "median_pct_change": -0.2511,
+      "mean_pct_change": -0.0611
     },
     "RB|Knee|Questionable": {
-      "n": 81,
-      "median_pct_change": -0.3041,
-      "mean_pct_change": -0.2072
+      "n": 165,
+      "median_pct_change": -0.375,
+      "mean_pct_change": -0.1927
     },
     "RB|Hamstring|Questionable": {
-      "n": 42,
-      "median_pct_change": -0.4345,
-      "mean_pct_change": -0.2897
+      "n": 96,
+      "median_pct_change": -0.4031,
+      "mean_pct_change": -0.2468
     },
     "RB|Shoulder|Questionable": {
-      "n": 30,
-      "median_pct_change": 0.0238,
-      "mean_pct_change": 0.0304
+      "n": 54,
+      "median_pct_change": -0.1783,
+      "mean_pct_change": -0.1385
+    },
+    "RB|Groin|Questionable": {
+      "n": 50,
+      "median_pct_change": -0.2189,
+      "mean_pct_change": -0.1105
+    },
+    "RB|Foot|Questionable": {
+      "n": 43,
+      "median_pct_change": -0.3,
+      "mean_pct_change": -0.0846
+    },
+    "RB|Hip|Questionable": {
+      "n": 42,
+      "median_pct_change": -0.0191,
+      "mean_pct_change": -0.0068
+    },
+    "RB|Illness|Questionable": {
+      "n": 37,
+      "median_pct_change": -0.2108,
+      "mean_pct_change": -0.2586
+    },
+    "RB|Toe|Questionable": {
+      "n": 37,
+      "median_pct_change": -0.3515,
+      "mean_pct_change": -0.1938
+    },
+    "RB|Ribs|Questionable": {
+      "n": 32,
+      "median_pct_change": -0.3549,
+      "mean_pct_change": -0.1907
     },
     "TE|Knee|Questionable": {
-      "n": 69,
-      "median_pct_change": 0.0348,
-      "mean_pct_change": 0.2715
+      "n": 142,
+      "median_pct_change": -0.1722,
+      "mean_pct_change": 0.0872
     },
     "TE|Ankle|Questionable": {
-      "n": 46,
-      "median_pct_change": -0.375,
-      "mean_pct_change": -0.1397
+      "n": 112,
+      "median_pct_change": -0.3219,
+      "mean_pct_change": -0.1539
     },
     "TE|Shoulder|Questionable": {
-      "n": 33,
-      "median_pct_change": -0.1221,
-      "mean_pct_change": 0.0392
+      "n": 52,
+      "median_pct_change": -0.2634,
+      "mean_pct_change": -0.0713
     },
-    "WR|Hamstring|Questionable": {
-      "n": 141,
-      "median_pct_change": -0.2661,
-      "mean_pct_change": -0.1564
+    "TE|Hamstring|Questionable": {
+      "n": 51,
+      "median_pct_change": -0.1692,
+      "mean_pct_change": -0.0357
+    },
+    "TE|Hip|Questionable": {
+      "n": 38,
+      "median_pct_change": -0.1055,
+      "mean_pct_change": 0.1959
+    },
+    "TE|Back|Questionable": {
+      "n": 33,
+      "median_pct_change": -0.1489,
+      "mean_pct_change": 0.0662
+    },
+    "TE|Groin|Questionable": {
+      "n": 32,
+      "median_pct_change": -0.0479,
+      "mean_pct_change": 0.1586
+    },
+    "TE|Concussion|Questionable": {
+      "n": 31,
+      "median_pct_change": -0.0868,
+      "mean_pct_change": 0.0296
     },
     "WR|Knee|Questionable": {
-      "n": 133,
-      "median_pct_change": -0.2566,
-      "mean_pct_change": -0.0686
+      "n": 279,
+      "median_pct_change": -0.25,
+      "mean_pct_change": -0.0606
+    },
+    "WR|Hamstring|Questionable": {
+      "n": 256,
+      "median_pct_change": -0.2846,
+      "mean_pct_change": -0.1671
     },
     "WR|Ankle|Questionable": {
-      "n": 128,
-      "median_pct_change": -0.2859,
-      "mean_pct_change": -0.0134
+      "n": 246,
+      "median_pct_change": -0.2806,
+      "mean_pct_change": -0.0378
     },
     "WR|Shoulder|Questionable": {
-      "n": 79,
-      "median_pct_change": -0.2496,
-      "mean_pct_change": -0.0637
-    },
-    "WR|Illness|Questionable": {
-      "n": 51,
-      "median_pct_change": -0.2892,
-      "mean_pct_change": -0.1009
-    },
-    "WR|Groin|Questionable": {
-      "n": 47,
-      "median_pct_change": -0.4006,
-      "mean_pct_change": -0.1783
-    },
-    "WR|Hip|Questionable": {
-      "n": 46,
-      "median_pct_change": -0.1139,
-      "mean_pct_change": 0.0718
+      "n": 150,
+      "median_pct_change": -0.2655,
+      "mean_pct_change": -0.0752
     },
     "WR|Foot|Questionable": {
-      "n": 42,
-      "median_pct_change": -0.2205,
-      "mean_pct_change": -0.1102
+      "n": 104,
+      "median_pct_change": -0.2684,
+      "mean_pct_change": -0.1441
+    },
+    "WR|Groin|Questionable": {
+      "n": 90,
+      "median_pct_change": -0.4503,
+      "mean_pct_change": -0.2248
+    },
+    "WR|Hip|Questionable": {
+      "n": 75,
+      "median_pct_change": -0.2071,
+      "mean_pct_change": -0.0167
+    },
+    "WR|Illness|Questionable": {
+      "n": 68,
+      "median_pct_change": -0.3035,
+      "mean_pct_change": -0.0682
     },
     "WR|Back|Questionable": {
-      "n": 31,
-      "median_pct_change": -0.1369,
-      "mean_pct_change": -0.1578
+      "n": 63,
+      "median_pct_change": -0.154,
+      "mean_pct_change": -0.1106
+    },
+    "WR|Concussion|Questionable": {
+      "n": 51,
+      "median_pct_change": -0.0495,
+      "mean_pct_change": 0.0226
+    },
+    "WR|Calf|Questionable": {
+      "n": 48,
+      "median_pct_change": -0.2737,
+      "mean_pct_change": -0.214
+    },
+    "WR|Thigh|Questionable": {
+      "n": 43,
+      "median_pct_change": -0.0752,
+      "mean_pct_change": 0.1164
+    },
+    "WR|Toe|Questionable": {
+      "n": 42,
+      "median_pct_change": -0.3018,
+      "mean_pct_change": -0.1211
+    },
+    "WR|Ribs|Questionable": {
+      "n": 36,
+      "median_pct_change": -0.1841,
+      "mean_pct_change": -0.1697
+    },
+    "WR|Quadriceps|Questionable": {
+      "n": 34,
+      "median_pct_change": -0.3921,
+      "mean_pct_change": -0.1858
     }
   }
 }

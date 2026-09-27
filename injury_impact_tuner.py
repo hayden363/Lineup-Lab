@@ -33,8 +33,8 @@ reported alongside for transparency, not hidden.
 
 WHY NOT PER-PLAYER-SPECIFIC HISTORY (real scoping call, not a silent
 downgrade of the ask): checked the real numbers — even AGGREGATED across
-every player in the league and 8 real seasons, the best-populated
-(position, injury, status) buckets only reach the 100-150 real
+every player in the league and 16 real seasons, the best-populated
+(position, injury, status) buckets only reach the 200-280 real
 observation range. A single specific player's own career instances of
 one specific injury type will almost always be 0-2 real occurrences —
 nowhere near enough for a personal factor without fabricating false
@@ -158,7 +158,9 @@ def build_real_table(seasons, min_n=MIN_N):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--write", action="store_true", help="save engine/injury_impact_factors.json (default: dry run, prints only)")
-    ap.add_argument("--seasons", type=int, default=8, help="how many past real seasons to pull, most recent first (default 8)")
+    ap.add_argument("--seasons", type=int, default=16, help="how many past real seasons to pull, most recent first (default 16 — "
+                    "checked against 8: nearly doubles trusted-bucket coverage (16 -> 32) with stable medians "
+                    "(e.g. WR Hamstring -26.6%% -> -28.4%%), not a shift from the extra older seasons)")
     ap.add_argument("--min-n", type=int, default=MIN_N, help=f"minimum real observations to trust a bucket (default {MIN_N})")
     args = ap.parse_args()
 
