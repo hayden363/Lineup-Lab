@@ -24,6 +24,29 @@ def _league_scoring_settings(league_id):
         return None
 
 
+def _opponent_adjusted_proj_full(board, gsis_id, pos, bundle, scoring, week=None):
+    """Same real computation as _opponent_adjusted_proj below, also
+    returning the real injury-factor disclosure detail behind PROJ (None,
+    None when there isn't any — no live Questionable/Doubtful match, or
+    the rest_of_season_value fallback path, which bakes the real factor
+    into PROJ either way but doesn't return per-row detail — see
+    engine/board.py). Split out so every OTHER existing caller of
+    _opponent_adjusted_proj (team totals, the Projection Breakdown
+    endpoint) keeps getting a bare float and doesn't have to change."""
+    row = board.loc[[gsis_id]]
+    recent_team = row["recent_team"].iloc[0] if "recent_team" in row.columns else None
+    opp = None
+    if recent_team:
+        opp, _ = data.next_opponent(bundle["schedule"], recent_team, week)
+    if opp:
+        projected = project_vs(row, pos, opp, bundle=bundle, scoring=scoring)
+        proj = round(float(projected["PROJ"].iloc[0]), 1)
+        detail = (_clean_num(projected["injury_factor"].iloc[0]), _clean_num(projected["injury_sample_n"].iloc[0]))
+        return proj, detail
+    proj = round(float(rest_of_season_value(row, pos, bundle=bundle, scoring=scoring).iloc[0]), 1)
+    return proj, (None, None)
+
+
 def _opponent_adjusted_proj(board, gsis_id, pos, bundle, scoring, week=None):
     """PROJ for one player against their own REAL upcoming NFL opponent
     (via data.next_opponent, resolved from their recent_team) rather than
@@ -35,14 +58,7 @@ def _opponent_adjusted_proj(board, gsis_id, pos, bundle, scoring, week=None):
     that view. Falls back to the season-average when there's no real
     upcoming opponent to resolve (bye week, end of season, or a team
     missing from the schedule) so a player never just shows a blank."""
-    row = board.loc[[gsis_id]]
-    recent_team = row["recent_team"].iloc[0] if "recent_team" in row.columns else None
-    opp = None
-    if recent_team:
-        opp, _ = data.next_opponent(bundle["schedule"], recent_team, week)
-    if opp:
-        return round(float(project_vs(row, pos, opp, bundle=bundle, scoring=scoring)["PROJ"].iloc[0]), 1)
-    return round(float(rest_of_season_value(row, pos, bundle=bundle, scoring=scoring).iloc[0]), 1)
+    return _opponent_adjusted_proj_full(board, gsis_id, pos, bundle, scoring, week=week)[0]
 
 
 def real_proj_for_player(player_id, position, bundle=None, scoring=None, week=None, season=None):
@@ -50,12 +66,19 @@ def real_proj_for_player(player_id, position, bundle=None, scoring=None, week=No
     callers outside this module (currently: server.py's Projection
     Breakdown endpoint) that want the exact same real PROJ number My Team
     already shows — not a second, differently-computed projection for
-    the same player. Returns None if the player isn't on this position's
-    board (e.g. not enough real games logged this season)."""
+    the same player. Returns None if the player has no real games logged
+    this season at all (a genuinely real "nothing to show" case, not the
+    same early-season ranked-list gap the min_games=0 fallback below
+    covers for someone with a real, if sparse, sample)."""
     bundle = bundle or load_bundle(season)
     board = build_board(position, season=season, scoring=scoring)
     if player_id not in board.index:
-        return None
+        # Same real early-season gap as My Team/Start-Sit/Trade — you
+        # asked about this exact player by id, so the ranked-list bar
+        # (build_board's default min_games=2) has no business hiding them.
+        board = build_board(position, season=season, min_games=0, scoring=scoring)
+        if player_id not in board.index:
+            return None
     return _opponent_adjusted_proj(board, player_id, position, bundle, scoring, week=week)
 
 
@@ -318,8 +341,18 @@ def start_sit(player_ids, opponents=None, season=None, scoring=None):
             continue
         board = get_board(pos)
         if pid not in board.index:
-            results.append({"player_id": pid, "error": "not enough data this season"})
-            continue
+            # Same real early-season gap fixed in _roster_players/
+            # _team_total/roster_player_list — a specific player you're
+            # deliberately comparing (clicked in from your own roster, or
+            # searched by name) shouldn't show "not enough data" just for
+            # not yet clearing the RANKED-LIST bar; that bar exists to
+            # keep strangers' one-game flukes off a top-N list, not to
+            # hide a player you already asked about by id.
+            raw_board = build_board(pos, season=bundle["season"], min_games=0, scoring=scoring)
+            if pid not in raw_board.index:
+                results.append({"player_id": pid, "error": "not enough data this season"})
+                continue
+            board = raw_board
         row = board.loc[pid].to_dict()
         opp = opponents.get(pid)
         # Real upcoming week for this player's team, regardless of whether
@@ -331,9 +364,17 @@ def start_sit(player_ids, opponents=None, season=None, scoring=None):
             projected = project_vs(board.loc[[pid]], pos, opp, bundle=bundle, scoring=scoring)
             proj = float(projected["PROJ"].iloc[0])
             matchup_tag = projected["matchup_tag"].iloc[0]
+            # Only project_vs's per-opponent path computes these (see
+            # engine/board.py) — rest_of_season_value already bakes the
+            # real injury factor into PROJ either way, it just doesn't
+            # return the per-row "why" detail alongside a bare number.
+            injury_factor = _clean_num(projected["injury_factor"].iloc[0])
+            injury_sample_n = _clean_num(projected["injury_sample_n"].iloc[0])
         else:
             proj = float(rest_of_season_value(board.loc[[pid]], pos, bundle=bundle, scoring=scoring).iloc[0])
             matchup_tag = None
+            injury_factor = None
+            injury_sample_n = None
         results.append({
             "player_id": pid, "position": pos,
             "player_display_name": row.get("player_display_name"),
@@ -343,6 +384,8 @@ def start_sit(player_ids, opponents=None, season=None, scoring=None):
             "floor": _clean_num(row.get("floor")), "ceiling": _clean_num(row.get("ceiling")),
             "snap_pct": _clean_num(row.get("snap_pct")), "redzone_touches": _clean_num(row.get("redzone_touches")),
             "injury_status": _clean_num(row.get("injury_status")),
+            "injury_body_part": _clean_num(row.get("injury_body_part")),
+            "injury_factor": injury_factor, "injury_sample_n": injury_sample_n,
             # "Gone dark" signal (engine/board.py) — exactly the kind of
             # thing a real Start/Sit call needs to know: comparing two
             # players' PROJ without surfacing that one of them hasn't
@@ -464,8 +507,17 @@ def trade_analyzer(side_a_ids, side_b_ids, season=None, scoring=None, league_ctx
                 continue
             board = get_board(pos)
             if pid not in board.index:
-                players.append({"player_id": pid, "error": "not enough data this season"})
-                continue
+                # This is the exact original real-world case that started
+                # this whole fix: a trade offered right after a fresh
+                # season starts, with real, established starters still
+                # showing "not enough data" purely from the ranked-list
+                # bar, not because there's no real signal at all. Same
+                # min_games=0 fallback as My Team/Start-Sit/Trade picker.
+                raw_board = build_board(pos, season=bundle["season"], min_games=0, scoring=scoring)
+                if pid not in raw_board.index:
+                    players.append({"player_id": pid, "error": "not enough data this season"})
+                    continue
+                board = raw_board
             row = board.loc[pid].to_dict()
             value = float(rest_of_season_value(board.loc[[pid]], pos, bundle=bundle, scoring=scoring).iloc[0])
             total += value
@@ -474,6 +526,8 @@ def trade_analyzer(side_a_ids, side_b_ids, season=None, scoring=None, league_ctx
                 "player_display_name": row.get("player_display_name"),
                 "recent_team": row.get("recent_team"), "headshot_url": row.get("headshot_url"),
                 "SCORE": row.get("SCORE"), "value": round(value, 1),
+                "injury_status": _clean_num(row.get("injury_status")),
+                "injury_body_part": _clean_num(row.get("injury_body_part")),
             })
         return players, round(total, 1)
 
@@ -568,7 +622,8 @@ def _roster_players(raw_ids, bundle, get_board, scoring, crosswalk=None, starter
                 "player_display_name": unscored["player_display_name"],
                 "recent_team": unscored["recent_team"], "headshot_url": unscored.get("headshot_url"),
                 "SCORE": None, "FORM": None, "fpts_per_game": None, "PROJ": 0.0,
-                "injury_status": None, "is_starter": is_starter, "slot": slot,
+                "injury_status": None, "injury_body_part": None, "injury_factor": None, "injury_sample_n": None,
+                "is_starter": is_starter, "slot": slot,
             }
         board = get_board(pos)
         if gsis_id not in board.index:
@@ -586,7 +641,7 @@ def _roster_players(raw_ids, bundle, get_board, scoring, crosswalk=None, starter
                 return None  # genuinely no real games logged this season at all
             board = raw_board
         row = board.loc[gsis_id].to_dict()
-        proj = _opponent_adjusted_proj(board, gsis_id, pos, bundle, scoring, week=week)
+        proj, (injury_factor, injury_sample_n) = _opponent_adjusted_proj_full(board, gsis_id, pos, bundle, scoring, week=week)
         return {
             "player_id": gsis_id, "position": pos,
             "player_display_name": row.get("player_display_name"),
@@ -594,6 +649,8 @@ def _roster_players(raw_ids, bundle, get_board, scoring, crosswalk=None, starter
             "SCORE": row.get("SCORE"), "FORM": row.get("FORM"),
             "fpts_per_game": row.get("fpts_per_game"), "PROJ": proj,
             "injury_status": _clean_num(row.get("injury_status")),
+            "injury_body_part": _clean_num(row.get("injury_body_part")),
+            "injury_factor": injury_factor, "injury_sample_n": injury_sample_n,
             "is_starter": is_starter, "slot": slot,
             # Same "gone dark" signal as start_sit() above — My Team is
             # the surface where this matters most: a started player who
@@ -673,22 +730,24 @@ def _team_total(raw_ids, bundle, get_board, scoring, crosswalk=None, starters=No
 def league_all_player_names(league_id, season=None, scoring=None):
     """Every rostered player across the whole league, name-only — a cheap
     lookup (no valuation) for 'is this headline about someone in my league
-    at all', which is what the League News tab's featured sort needs."""
+    at all', which is what the League News tab's featured sort needs.
+
+    Reads the name straight off the real weekly stats table rather than
+    requiring board membership — a real, if early-season-thin, name
+    shouldn't be gated by build_board's ranked-list min_games/min_volume
+    bar, which exists to keep a one-game fluke off a top-N list, not to
+    decide who's a real enough person to match a headline against."""
     snap = sleeper.league_snapshot(league_id)
     bundle = load_bundle(season)
-    get_board = _board_cache(season, scoring)
+    name_by_pid = bundle["wk"].sort_values("week").groupby("player_id")["player_display_name"].last().to_dict()
     seen = {}
     for team in snap["teams"]:
         for pid in team["player_ids"]:
             if pid in seen:
                 continue
-            pos = _position_of(pid, bundle)
-            if pos is None:
-                continue
-            board = get_board(pos)
-            if pid not in board.index:
-                continue
-            seen[pid] = {"player_id": pid, "player_display_name": board.loc[pid, "player_display_name"]}
+            name = name_by_pid.get(pid)
+            if name:
+                seen[pid] = {"player_id": pid, "player_display_name": name}
     return list(seen.values())
 
 
@@ -746,28 +805,49 @@ def roster_player_list(league_id, roster_id, season=None, scoring=None):
             elif unscored["position"] in role_baseline.RANK_POSITIONS:
                 special_row = _role_rank_row(raw_id, unscored, rank_baselines, is_starter=None, slot=None)
             if special_row:
-                players.append({k: special_row[k] for k in
+                # .get(), not special_row[k]: DEF/K/role-rank rows don't
+                # carry injury_body_part/injury_factor/injury_sample_n at
+                # all (no board row to source them from) — bracket access
+                # here would KeyError on exactly those real rosters, the
+                # same real bug already caught once for weeks_since_played
+                # on this exact class of fallback row.
+                players.append({k: special_row.get(k) for k in
                                  ("player_id", "position", "player_display_name", "recent_team",
-                                  "headshot_url", "SCORE", "PROJ", "injury_status")})
+                                  "headshot_url", "SCORE", "PROJ", "injury_status",
+                                  "injury_body_part", "injury_factor", "injury_sample_n")})
                 continue
             players.append({
                 "player_id": raw_id, "position": unscored["position"],
                 "player_display_name": unscored["player_display_name"],
                 "recent_team": unscored["recent_team"], "headshot_url": unscored.get("headshot_url"),
                 "SCORE": None, "PROJ": 0.0, "injury_status": None,
+                "injury_body_part": None, "injury_factor": None, "injury_sample_n": None,
             })
             continue
         board = get_board(pos)
         if gsis_id not in board.index:
-            continue
+            # Same real early-season gap fixed in _roster_players/
+            # _team_total (see their comments for the full story — an
+            # established starter with a real, if sparse, sample was
+            # silently vanishing before clearing build_board's ranked-list
+            # min_games bar) — this fifth allowlist had the identical
+            # `continue`/`return None` shape and had never gotten the same
+            # fix, so a real starter could vanish from the Trade tab's own
+            # roster picker too.
+            raw_board = build_board(pos, season=bundle["season"], min_games=0, scoring=scoring)
+            if gsis_id not in raw_board.index:
+                continue  # genuinely no real games logged this season at all
+            board = raw_board
         row = board.loc[gsis_id].to_dict()
-        proj = _opponent_adjusted_proj(board, gsis_id, pos, bundle, scoring)
+        proj, (injury_factor, injury_sample_n) = _opponent_adjusted_proj_full(board, gsis_id, pos, bundle, scoring)
         players.append({
             "player_id": gsis_id, "position": pos,
             "player_display_name": row.get("player_display_name"),
             "recent_team": row.get("recent_team"), "headshot_url": row.get("headshot_url"),
             "SCORE": row.get("SCORE"), "PROJ": proj,
             "injury_status": _clean_num(row.get("injury_status")),
+            "injury_body_part": _clean_num(row.get("injury_body_part")),
+            "injury_factor": injury_factor, "injury_sample_n": injury_sample_n,
             # Same "gone dark" signal as start_sit()/_roster_players() —
             # a fourth allowlist that had the same gap (see this app's
             # memory notes on why this needs adding deliberately in each
@@ -1059,6 +1139,7 @@ def roster_player_list_espn(league_id, roster_id, year=None, season=None, scorin
     # bracket access here would KeyError on exactly those real rosters.
     players = [{k: r.get(k) for k in ("player_id", "position", "player_display_name", "recent_team",
                                        "headshot_url", "SCORE", "PROJ", "injury_status",
+                                       "injury_body_part", "injury_factor", "injury_sample_n",
                                        "weeks_since_played", "last_active_week")} for r in rows]
     players.sort(key=lambda p: -(p["PROJ"] or 0))
     return {"roster_id": roster_id, "team_name": team.team_name,
@@ -1345,7 +1426,16 @@ def trade_finder(league_id, my_roster_id, target_roster_id=None, give_player_ids
                 continue
             board = get_board(pos)
             if pid not in board.index:
-                continue
+                # Same real early-season gap as everywhere else in this
+                # file — Trade Finder scans REAL rosters (yours and real
+                # candidates'), not a ranked list of strangers, so an
+                # established starter with a real, if sparse, sample
+                # shouldn't read as "you have nobody at this position"
+                # just for not clearing build_board's ranked-list bar.
+                raw_board = build_board(pos, season=bundle["season"], min_games=0, scoring=scoring)
+                if pid not in raw_board.index:
+                    continue
+                board = raw_board
             row = board.loc[pid].to_dict()
             value = float(rest_of_season_value(board.loc[[pid]], pos, bundle=bundle, scoring=scoring).iloc[0])
             out[pos].append({"player_id": pid, "position": pos, "value": value,
