@@ -88,7 +88,15 @@ SESSION_COOKIE = "eb_session"
 # ------------------------------------------------------------- security ----
 @app.middleware("http")
 async def security_headers(request: Request, call_next):
-    response = await call_next(request)
+    t0 = time.perf_counter()
+    try:
+        response = await call_next(request)
+    except Exception:
+        # log the failed /api/ request too, then re-raise — never swallow
+        if request.url.path.startswith("/api/"):
+            print(f"[req] method={request.method} path={request.url.path} "
+                  f"status=500 ms={int((time.perf_counter() - t0) * 1000)}")
+        raise
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
@@ -110,6 +118,11 @@ async def security_headers(request: Request, call_next):
     # baked-in preload list) worth a deliberate decision, not a default.
     if request.url.scheme == "https":
         response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    # request timing: path only (never the query string — league ids must
+    # not reach logs); /api/ only so /healthz and static files stay quiet
+    if request.url.path.startswith("/api/"):
+        print(f"[req] method={request.method} path={request.url.path} "
+              f"status={response.status_code} ms={int((time.perf_counter() - t0) * 1000)}")
     return response
 
 
