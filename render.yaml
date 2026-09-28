@@ -16,7 +16,10 @@ services:
     name: lineup-lab
     runtime: python
     plan: starter
-    healthCheckPath: /api/health
+    # /healthz, not /api/health: Render hits this on every fresh instance during
+    # a deploy, and /api/health goes to nflverse on a cold process — so an
+    # nflverse outage would fail our deploy. /healthz is pure liveness.
+    healthCheckPath: /healthz
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn server:app --host 0.0.0.0 --port $PORT --proxy-headers --forwarded-allow-ips=*
     envVars:

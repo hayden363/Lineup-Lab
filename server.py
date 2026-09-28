@@ -38,7 +38,7 @@ from urllib.parse import urlparse
 import requests
 from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response
 from fastapi.middleware.gzip import GZipMiddleware
-from fastapi.responses import FileResponse, RedirectResponse
+from fastapi.responses import FileResponse, PlainTextResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -434,6 +434,18 @@ def scoring_from_query(
 @app.get("/favicon.ico", include_in_schema=False)
 def favicon():
     return FileResponse("static/icons/favicon-32.png")
+
+
+@app.get("/healthz", response_class=PlainTextResponse)
+def healthz():
+    """Liveness only: is this process up and serving? Deliberately touches no
+    network, disk cache or database, so it answers instantly and can only fail
+    if the app itself is down. That's what Render's health check and an uptime
+    monitor need. /api/health below is NOT safe for that job — on a cold
+    process resolve_season() downloads nflverse data and raises if nflverse is
+    unreachable, so an upstream outage would read as this app being down and
+    could fail a deploy."""
+    return "ok"
 
 
 @app.get("/api/health")
