@@ -526,6 +526,32 @@ def log_predictions(user_id, players, kind="startsit", scoring=None):
         )
 
 
+# ----------------------------------------------------------- activation ----
+# The one event behind LineUp Lab's activation metric (see
+# sql/activation_rate.sql): a signed-in user got at least one real Trade
+# Finder suggestion for their own connected league. Recorded server-side by
+# /api/trade-finder, never from the browser, so it can't be forged and the
+# ownership/non-empty checks are the same code that produced the result.
+ACTIVATION_EVENTS = {"trade_finder_result_viewed"}
+
+
+def record_activation_event(user_id, event_name, league_id):
+    """First occurrence only per (user, league, event) — the table's UNIQUE
+    constraint plus ON CONFLICT DO NOTHING keeps repeat views from inflating
+    the metric. Epoch-seconds float for occurred_at, matching created_at on
+    every other table here. Raises if the table doesn't exist yet (the
+    migration in migrations/ is applied separately); callers must treat a
+    failure here as non-fatal."""
+    if event_name not in ACTIVATION_EVENTS:
+        raise ValueError(f"unknown activation event: {event_name}")
+    with _conn() as c:
+        c.execute(
+            "INSERT INTO activation_events (user_id, event_name, league_id, occurred_at) "
+            "VALUES (%s, %s, %s, %s) ON CONFLICT (user_id, league_id, event_name) DO NOTHING",
+            (user_id, event_name, str(league_id), time.time()),
+        )
+
+
 def pending_resolution_groups():
     """Distinct (season, week, scoring) combinations with at least one
     still-unresolved prediction — so a caller (see tools.resolve_track_record)

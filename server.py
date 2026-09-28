@@ -966,6 +966,14 @@ def api_trade_finder(target_roster_id: Optional[int] = Query(None),
                                      target_roster_id=target_roster_id, give_player_ids=give, scoring=scoring)
     except Exception as e:
         raise HTTPException(400, str(e))
+    if result.get("suggestions"):
+        # Activation: this user just got a real, non-empty result for their own
+        # league. Best-effort only — analytics must never break the feature, and
+        # the table won't exist until its migration is applied.
+        try:
+            db.record_activation_event(user["id"], "trade_finder_result_viewed", active["league_id"])
+        except Exception as e:
+            print(f"[activation] couldn't record trade_finder_result_viewed: {e}")
     return _clean(result)
 
 
