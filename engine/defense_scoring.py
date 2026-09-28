@@ -89,11 +89,30 @@ def build_defense_weekly(pbp, schedule):
     g = pbp.groupby(["defteam", "week"])
     weekly = pd.DataFrame({"sacks": g["sack"].sum(), "ints": g["interception"].sum()})
 
-    fumble_rec = (pbp[pbp["fumble_recovery_1_team"] == pbp["defteam"]]
-                  .groupby(["defteam", "week"]).size())
+    # nflverse records possession on kicking plays differently from scrimmage
+    # plays, so "the D/ST" isn't always `defteam`:
+    #   * PUNT: posteam = the punting team, so the returner's team is defteam.
+    #     A returner who muffs and has his own team fall on it is NOT a
+    #     takeaway; the PUNTING team recovering a muff is one.
+    #   * KICKOFF: posteam = the RECEIVING team, so a kick-return TD is scored
+    #     by posteam, not defteam.
+    # Treating both like scrimmage plays inverted punt recoveries and dropped
+    # every kick-return TD. Checked against nflverse's official per-player
+    # stats for 2025: of 23 punt recoveries by the receiving team, 0 were
+    # opponent recoveries and 18 were own-fumble recoveries; of 16 by the
+    # punting team, 13 were opponent recoveries; and 7 kick-return TDs were
+    # missing. Kickoff recoveries were already right (the kicking team is
+    # defteam there), so only punts change for recoveries.
+    is_punt = pbp["play_type"] == "punt"
+    is_kickoff = pbp["play_type"] == "kickoff"
+    rec_team = pbp["fumble_recovery_1_team"]
+    takeaway = ((~is_punt) & (rec_team == pbp["defteam"])) | (is_punt & (rec_team == pbp["posteam"]))
+    fr = pbp[takeaway]
+    fumble_rec = fr.groupby([fr["fumble_recovery_1_team"], fr["week"]]).size().rename_axis(["defteam", "week"])
     safeties = pbp[pbp["safety"] == 1].groupby(["defteam", "week"]).size()
-    def_tds = (pbp[(pbp["touchdown"] == 1) & (pbp["td_team"] == pbp["defteam"])]
-               .groupby(["defteam", "week"]).size())
+    scored = pbp[(pbp["touchdown"] == 1)
+                 & ((pbp["td_team"] == pbp["defteam"]) | (is_kickoff & (pbp["td_team"] == pbp["posteam"])))]
+    def_tds = scored.groupby([scored["td_team"], scored["week"]]).size().rename_axis(["defteam", "week"])
     # Approximation, not exact: a blocked kick that's also recovered can
     # double-count against fumble_rec on the rare play where nflverse
     # marks both — an accepted small overcount on a low-weight category
