@@ -1267,7 +1267,7 @@ def _side_verdict(value_delta, fit):
         return "good_value", "Wins on value; roster fit is close to a wash either way."
     if (not wins_value) and lopsided_value and good_fit:
         return "worth_it", "Gives up more value, but fills a real hole — worth it if that need outweighs the raw points."
-    if lopsided_value and not wins_value and not good_fit:
+    if lopsided_value and not wins_value and real_fit and not good_fit:
         return "bad", "Loses on value and doesn't address a real need — hard to recommend."
     if lopsided_value:
         return "bad_value", "Loses on value; roster fit is close to a wash either way."
