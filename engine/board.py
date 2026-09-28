@@ -9,6 +9,7 @@ Pipeline: weekly stats -> base metrics -> SCORE (weighted) -> advanced
 projection vs an opponent defense.
 """
 
+import time
 from typing import TypedDict
 
 import numpy as np
@@ -125,6 +126,17 @@ def _redzone_touches_from(pbp):
     return pd.concat([rushes, targets]).value_counts().to_dict()
 
 
+def _timed(label, fetch):
+    """Run one cold-path fetch and log how long it took, so Render's logs can
+    pin a slow cold start on a specific table instead of the load as a whole.
+    One line per table, grep-able on the [cold-start] prefix."""
+    t0 = time.perf_counter()
+    df = fetch()
+    rows = len(df) if hasattr(df, "__len__") else "?"
+    print(f"[cold-start] table={label} seconds={time.perf_counter() - t0:.2f} rows={rows}")
+    return df
+
+
 def load_bundle(season=None, force=False) -> Bundle:
     """Fetch (and cache) every raw table the board needs for a season.
     force=True also re-resolves the season itself (not just re-fetching
@@ -170,12 +182,14 @@ def load_bundle(season=None, force=False) -> Bundle:
 
     from . import sleeper as sleeper_layer
 
-    wk = data.load_weekly(season, force=force)
-    pbp = data.load_pbp(season, force=force)
-    ngs_pass = data.load_ngs("passing", season, force=force)
-    ngs_rush = data.load_ngs("rushing", season, force=force)
-    ngs_rec = data.load_ngs("receiving", season, force=force)
-    schedule = data.load_schedule(season, force=force)
+    t_start = time.perf_counter()
+    wk = _timed("weekly", lambda: data.load_weekly(season, force=force))
+    pbp = _timed("pbp", lambda: data.load_pbp(season, force=force))
+    ngs_pass = _timed("ngs_passing", lambda: data.load_ngs("passing", season, force=force))
+    ngs_rush = _timed("ngs_rushing", lambda: data.load_ngs("rushing", season, force=force))
+    ngs_rec = _timed("ngs_receiving", lambda: data.load_ngs("receiving", season, force=force))
+    schedule = _timed("schedule", lambda: data.load_schedule(season, force=force))
+    t_core = time.perf_counter()
 
     # Roster status is current, not season-stats-bound — this is what
     # keeps a player who has since retired (but still has real stats
@@ -239,6 +253,11 @@ def load_bundle(season=None, force=False) -> Bundle:
                   defense_league_avg=defense_league_avg, retired_ids=retired_ids,
                   injury_status=injury_status, injury_body_part=injury_body_part,
                   snap_pct=snap_pct, redzone_touches=redzone_touches)
+    t_end = time.perf_counter()
+    # Everything after the core tables (retired/injury/snap enrichments, defense
+    # factors) as one span, so the per-table lines above plus these two add up.
+    print(f"[cold-start] enrichments seconds={t_end - t_core:.2f}")
+    print(f"[cold-start] total seconds={t_end - t_start:.2f} season={season} force={force}")
     _BUNDLE_CACHE[key] = bundle
     if force:
         # Every previously-computed board was built from the raw tables
