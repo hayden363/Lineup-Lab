@@ -403,6 +403,9 @@ def start_sit(player_ids, opponents=None, season=None, scoring=None):
     return {"season": bundle["season"], "players": results}
 
 
+FLEX_ELIGIBLE = ("RB", "WR", "TE")
+
+
 def start_sit_suggestions_from_roster(roster_players, season=None, scoring=None, limit=3):
     """The N most actionable real start/sit calls sitting on your own
     current roster right now — `roster_players` is my_team()'s or
@@ -411,11 +414,19 @@ def start_sit_suggestions_from_roster(roster_players, season=None, scoring=None,
 
     For each real position where you have both a starter and a bench
     option, compares your weakest real starter's PROJ against your
-    strongest real bench alternative AT THE SAME POSITION. Same-position
-    only for now — not FLEX-cross-position-aware (a bench RB is only
-    compared against your starting RB(s), never a FLEX slot a WR/TE
-    could also fill) — a real, disclosed scope limit, not a silently
-    missing case; a genuine lineup optimizer is a bigger, separate build.
+    strongest real bench alternative AT THE SAME POSITION — a same-
+    position swap is always a real, valid move regardless of which
+    specific slot (dedicated or FLEX) the starter happens to occupy.
+
+    Separately, ALSO runs one real FLEX-specific comparison: whoever's
+    actually sitting in a FLEX slot right now vs. the single best real
+    bench option across all of RB/WR/TE (not just the FLEX starter's own
+    position) — a FLEX slot has no same-position constraint, so this is
+    the one real place a genuine cross-position comparison is valid.
+    A dedicated RB/WR/TE slot still never gets compared against a
+    different position's bench player — swapping a dedicated RB slot for
+    a bench WR isn't a real, valid move without a lineup-optimizer-level
+    rebalance this app doesn't do.
 
     Ranked by the real PROJ gap: a positive gap (bench beats starter) is
     a genuine "you might want to swap this" call, sorted most-actionable
@@ -443,6 +454,16 @@ def start_sit_suggestions_from_roster(roster_players, season=None, scoring=None,
         best_bench = max(bench, key=lambda p: p["PROJ"])
         gap = round(best_bench["PROJ"] - weakest_starter["PROJ"], 1)
         candidates.append((pos, weakest_starter, best_bench, gap))
+
+    flex_starters = [p for p in roster_players
+                     if p.get("is_starter") and p.get("slot") == "FLEX" and p.get("PROJ") is not None]
+    flex_bench = [p for p in roster_players
+                  if not p.get("is_starter") and p.get("position") in FLEX_ELIGIBLE and p.get("PROJ") is not None]
+    if flex_starters and flex_bench:
+        weakest_flex = min(flex_starters, key=lambda p: p["PROJ"])
+        best_flex_bench = max(flex_bench, key=lambda p: p["PROJ"])
+        gap = round(best_flex_bench["PROJ"] - weakest_flex["PROJ"], 1)
+        candidates.append(("FLEX", weakest_flex, best_flex_bench, gap))
 
     candidates.sort(key=lambda c: -c[3])
 

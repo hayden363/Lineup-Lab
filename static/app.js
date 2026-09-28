@@ -1667,12 +1667,22 @@ function ssSuggestCardHtml(s) {
     <img ${headshotAttrs(p)} alt="">
     <div><div class="ss-suggest-name">${esc(p.player_display_name)}</div><div class="ss-suggest-proj tabular">${FMT.d1(p.PROJ)} pts</div></div>
   </div>`;
+  // Real bug fixed here: both verdicts used to render with the same
+  // out(struck-through)/in(highlighted) treatment regardless of which
+  // one actually won — so a "Starter confirmed" card still visually
+  // read as "cut your starter for this bench guy," the opposite of its
+  // own text. The tone now follows the real verdict: swap struck-
+  // through/highlights the bench pickup like before; hold instead
+  // highlights the CONFIRMED starter and shows the bench player
+  // neutrally (compared, not cut — nothing here is actually changing).
+  const aTone = swap ? "out" : "confirmed";
+  const bTone = swap ? "in" : "compared";
   return `<div class="ss-suggest-card${swap ? " swap" : ""}" data-starter="${esc(a.player_id)}" data-bench="${esc(b.player_id)}">
     <div class="ss-suggest-pos">${esc(s.position)}</div>
     <div class="ss-suggest-pair">
-      ${miniRow(a, "out")}
+      ${miniRow(a, aTone)}
       <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="ss-suggest-arrow"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-      ${miniRow(b, "in")}
+      ${miniRow(b, bTone)}
     </div>
     ${verdict}
   </div>`;
