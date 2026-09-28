@@ -76,19 +76,20 @@ def run():
             # nothing from week W or later can reach the prediction.
             epa_hist = epa_all[epa_all.index.get_level_values("week") < w]
 
-            form_pts = form_adjustment(hist, pos)
-            form_epa = form_adjustment(hist, pos, weekly_epa=epa_hist)
+            # Plain dicts keyed by player_id: clearer lookups than Series.get,
+            # and they type-check cleanly.
+            form_pts = form_adjustment(hist, pos).to_dict()
+            form_epa = form_adjustment(hist, pos, weekly_epa=epa_hist).to_dict()
             games = hist.groupby("player_id")["fpts_active"]
-            base = games.mean()
-            n_games = games.size()
+            base = games.mean().to_dict()
+            n_games = games.size().to_dict()
 
-            for _, t in target.iterrows():
-                pid = t["player_id"]
+            for pid, actual in zip(target["player_id"], target["fpts_active"]):
                 if n_games.get(pid, 0) < MIN_PRIOR_GAMES:
                     continue
                 b = float(base[pid])
                 rows.append({
-                    "position": pos, "week": w, "actual": float(t["fpts_active"]),
+                    "position": pos, "week": w, "actual": float(actual),
                     "base": b,
                     "form_pts": b * (1 + float(form_pts.get(pid, 0.0)) / 100),
                     "form_epa": b * (1 + float(form_epa.get(pid, 0.0)) / 100),
