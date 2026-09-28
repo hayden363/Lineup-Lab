@@ -288,6 +288,10 @@ SLEEPER_SCORING_MAP = {
     "rec_td": "rec_td",
     "fum_lost": "fumble_lost",
     "rush_2pt": "two_pt",
+    # Individual special-teams TD. Present (6.0) in both real synced leagues.
+    # kr_td/pr_td are left unmapped on purpose: one real league sets them to 0
+    # while st_td is 6, so mapping them too could count one TD twice.
+    "st_td": "return_td",
 }
 
 

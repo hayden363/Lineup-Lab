@@ -19,13 +19,13 @@ import pandas as pd
 PRESETS = {
     "standard": dict(reception=0.0, pass_yard=0.04, pass_td=4, interception=-2,
                       rush_yard=0.1, rush_td=6, rec_yard=0.1, rec_td=6,
-                      fumble_lost=-2, two_pt=2),
+                      fumble_lost=-2, two_pt=2, return_td=6),
     "half_ppr": dict(reception=0.5, pass_yard=0.04, pass_td=4, interception=-2,
                       rush_yard=0.1, rush_td=6, rec_yard=0.1, rec_td=6,
-                      fumble_lost=-2, two_pt=2),
+                      fumble_lost=-2, two_pt=2, return_td=6),
     "ppr": dict(reception=1.0, pass_yard=0.04, pass_td=4, interception=-2,
                 rush_yard=0.1, rush_td=6, rec_yard=0.1, rec_td=6,
-                fumble_lost=-2, two_pt=2),
+                fumble_lost=-2, two_pt=2, return_td=6),
 }
 
 
@@ -41,6 +41,11 @@ class ScoringSettings:
     rec_td: float = 6.0
     fumble_lost: float = -2.0
     two_pt: float = 2.0
+    # Kick/punt return and other special-teams touchdowns credited to an
+    # individual player (nflverse `special_teams_tds`; Sleeper's `st_td`).
+    # Not in the UI's SCORING_FIELDS yet, so it's always 6 unless a league
+    # sync sets it — the value both real synced leagues and nflverse use.
+    return_td: float = 6.0
 
     @classmethod
     def from_preset(cls, name):
@@ -81,6 +86,13 @@ def compute_fantasy_points(wk, settings: ScoringSettings):
         + col("receptions") * settings.reception
         + fumbles_lost * settings.fumble_lost
         + two_pts * settings.two_pt
+        # Special-teams TDs were missing, so custom scoring gave a return TD 0
+        # where nflverse's own PPR column gives 6 — 28 player-weeks of 2025 off
+        # by exactly -6. With this line the PPR preset reproduces
+        # fantasy_points_ppr on every cached row (tests/test_scoring.py).
+        # fumble_recovery_tds is deliberately NOT added: nflverse doesn't count
+        # it, and the rows that have one already match without it.
+        + col("special_teams_tds") * settings.return_td
     )
     return pts.round(2)
 
