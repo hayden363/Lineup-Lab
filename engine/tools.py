@@ -1167,10 +1167,21 @@ def roster_player_list_espn(league_id, roster_id, year=None, season=None, scorin
             "avatar_url": team.logo_url or None, "owner": espn_layer.owner_name(team), "players": players}
 
 
+# Superflex slot labels. Any of QB/RB/WR/TE may legally start there, but in
+# practice managers start a quarterback, so each one counts as a full extra QB
+# need — without this a superflex league reads as needing exactly one QB and
+# every QB trade gets undervalued. Neither label is confirmed by Sleeper's
+# published API docs or by the real leagues cached in data_cache/ (all standard
+# 1-QB): "SUPER_FLEX" is the commonly used Sleeper value and "OP" is ESPN's
+# lineup label. A label outside this set still falls through to ignored, same
+# as before, so a wrong guess here costs nothing.
+SUPERFLEX_SLOTS = {"SUPER_FLEX", "OP"}
+
+
 def _position_needs(roster_positions):
     """Starting-slot requirements per position, with FLEX spread evenly
     across RB/WR/TE (a simplification — real flex value skews RB/WR over
-    TE, but this is a reasonable v1)."""
+    TE, but this is a reasonable v1) and superflex counted as a QB."""
     base = {"QB": 0.0, "RB": 0.0, "WR": 0.0, "TE": 0.0}
     flex = 0
     for slot in roster_positions or []:
@@ -1178,6 +1189,8 @@ def _position_needs(roster_positions):
             base[slot] += 1
         elif slot == "FLEX":
             flex += 1
+        elif slot in SUPERFLEX_SLOTS:
+            base["QB"] += 1
     for pos in ("RB", "WR", "TE"):
         base[pos] += flex / 3
     return base
