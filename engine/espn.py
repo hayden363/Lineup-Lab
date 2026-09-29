@@ -210,6 +210,30 @@ def roster_lineup(team):
     return raw_ids, starters, slot_labels
 
 
+def roster_positions(league):
+    """The league's starting slots as a flat label list — one entry per
+    slot, the same shape Sleeper's league["roster_positions"] has — so
+    engine/tools.py's _position_needs can read an ESPN league too.
+
+    Built from espn_api's settings.position_slot_counts (label -> count,
+    labels from its POSITION_MAP: "QB", "RB/WR", "WR/TE", "RB/WR/TE",
+    "OP", "TQB", "D/ST", ...). Labels pass through unchanged;
+    _position_needs decides what each one means. Bench, IR and the
+    unnamed id-22 slot are dropped because they aren't starting slots.
+
+    Caveat, from espn_api 0.46's own Settings code: it pairs labels with
+    counts by position (zip over POSITION_MAP order), which is right
+    only if ESPN's lineupSlotCounts lists every slot id from 0 upward in
+    order. Nothing here can check that without a real league payload."""
+    counts = getattr(league.settings, "position_slot_counts", None) or {}
+    out = []
+    for label, n in counts.items():
+        if label in BENCH_SLOTS or label == "":
+            continue
+        out.extend([label] * int(n or 0))
+    return out
+
+
 def build_unscored_resolver(league):
     """A resolve_unscored_player-shaped function (see
     sleeper.resolve_unscored_player, and _roster_players' `resolve_unscored`

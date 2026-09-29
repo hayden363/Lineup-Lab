@@ -1177,18 +1177,32 @@ def roster_player_list_espn(league_id, roster_id, year=None, season=None, scorin
 # as before, so a wrong guess here costs nothing.
 SUPERFLEX_SLOTS = {"SUPER_FLEX", "OP"}
 
+# ESPN's flex labels (espn_api POSITION_MAP; see espn.roster_positions).
+# "RB/WR/TE" is an ordinary FLEX. The two-position ones split their one
+# slot evenly between the two positions allowed in it.
+# "TQB" (team QB) is deliberately NOT counted as a QB need: that slot
+# holds a whole team's QB unit, which the roster carries as position
+# "TQB", not "QB" — so counting it would make every TQB league look one
+# quarterback short and push individual-QB trades that can't fill it.
+FLEX_SLOTS = {"FLEX", "RB/WR/TE"}
+HALF_FLEX_SLOTS = {"RB/WR": ("RB", "WR"), "WR/TE": ("WR", "TE")}
+
 
 def _position_needs(roster_positions):
     """Starting-slot requirements per position, with FLEX spread evenly
     across RB/WR/TE (a simplification — real flex value skews RB/WR over
-    TE, but this is a reasonable v1) and superflex counted as a QB."""
+    TE, but this is a reasonable v1), ESPN's two-position flexes split
+    between their two positions, and superflex counted as a QB."""
     base = {"QB": 0.0, "RB": 0.0, "WR": 0.0, "TE": 0.0}
     flex = 0
     for slot in roster_positions or []:
         if slot in base:
             base[slot] += 1
-        elif slot == "FLEX":
+        elif slot in FLEX_SLOTS:
             flex += 1
+        elif slot in HALF_FLEX_SLOTS:
+            for pos in HALF_FLEX_SLOTS[slot]:
+                base[pos] += 0.5
         elif slot in SUPERFLEX_SLOTS:
             base["QB"] += 1
     for pos in ("RB", "WR", "TE"):
