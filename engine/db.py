@@ -30,6 +30,7 @@ from contextlib import contextmanager
 
 import bcrypt
 import psycopg
+from psycopg import sql
 from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
 from psycopg_pool import ConnectionPool
@@ -82,6 +83,16 @@ def _conn():
         with conn.cursor() as c:
             yield c
         conn.commit()
+
+
+def _fetch_row(c):
+    """fetchone() for a query that always yields a row (INSERT ... RETURNING,
+    an aggregate with no GROUP BY, a read-back of a row just written). Fails
+    loudly instead of letting a None get subscripted further down."""
+    row = c.fetchone()
+    if row is None:
+        raise RuntimeError("expected a row from the database but the query returned none")
+    return row
 
 
 def init_db():
@@ -148,7 +159,7 @@ def create_user(username, email, password):
             "INSERT INTO users (username, email, password_hash, created_at) VALUES (%s, %s, %s, %s) RETURNING id",
             (username, email, _hash_password(password), time.time()),
         )
-        user_id = c.fetchone()["id"]
+        user_id = _fetch_row(c)["id"]
         c.execute(
             "INSERT INTO user_settings (user_id, updated_at) VALUES (%s, %s)",
             (user_id, time.time()),
@@ -237,7 +248,7 @@ def find_or_create_oauth_user(provider, provider_id, email, name_hint=None):
             f"VALUES (%s, %s, '', %s, TRUE, %s) RETURNING id",
             (username, email, time.time(), provider_id),
         )
-        user_id = c.fetchone()["id"]
+        user_id = _fetch_row(c)["id"]
         c.execute("INSERT INTO user_settings (user_id, updated_at) VALUES (%s, %s)", (user_id, time.time()))
         c.execute("SELECT * FROM users WHERE id = %s", (user_id,))
         return _public(c.fetchone())
@@ -402,10 +413,13 @@ def update_settings(user_id, updates):
     for k in SECRET_SETTINGS_FIELDS:
         if k in fields:
             fields[k] = crypto.encrypt(fields[k]) if fields[k] else None
-    set_clause = ", ".join(f"{k} = %s" for k in fields)
+    # `fields` keys are already filtered to SETTINGS_FIELDS above; composing
+    # them as identifiers (rather than an f-string) keeps the query typed as
+    # a real SQL object instead of an arbitrary str.
+    set_clause = sql.SQL(", ").join(sql.SQL("{} = %s").format(sql.Identifier(k)) for k in fields)
     with _conn() as c:
         c.execute(
-            f"UPDATE user_settings SET {set_clause}, updated_at = %s WHERE user_id = %s",
+            sql.SQL("UPDATE user_settings SET {}, updated_at = %s WHERE user_id = %s").format(set_clause),
             (*fields.values(), time.time(), user_id),
         )
     return get_settings(user_id)
@@ -439,7 +453,7 @@ def add_connected_team(user_id, platform, league_id, roster_id, team_name, leagu
             "SELECT * FROM connected_teams WHERE user_id=%s AND platform=%s AND league_id=%s AND roster_id=%s",
             (user_id, platform, league_id, roster_id),
         )
-        team = c.fetchone()
+        team = _fetch_row(c)
         # first team a user connects becomes active automatically
         c.execute("SELECT active_team_id FROM user_settings WHERE user_id = %s", (user_id,))
         current_active = c.fetchone()
@@ -618,13 +632,13 @@ def get_track_record(user_id):
             "FROM predictions WHERE user_id = %s AND tier = 'START' AND resolved_at IS NOT NULL",
             (user_id,),
         )
-        resolved = c.fetchone()
+        resolved = _fetch_row(c)
         c.execute(
             "SELECT COUNT(*) AS n FROM predictions "
             "WHERE user_id = %s AND tier = 'START' AND resolved_at IS NULL",
             (user_id,),
         )
-        pending = c.fetchone()["n"]
+        pending = _fetch_row(c)["n"]
         c.execute(
             "SELECT season, week, player_display_name, position, actual_pts, proj_pts, was_correct "
             "FROM predictions WHERE user_id = %s AND tier = 'START' AND resolved_at IS NOT NULL "
