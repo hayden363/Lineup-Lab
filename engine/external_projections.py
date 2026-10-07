@@ -132,6 +132,11 @@ def _fetch_position_projections(position, season, week, scoring):
         print(f"[external_projections] FantasyPros fetch failed for {position} {season} wk{week}: {e}")
         return {}
 
+    # FANTASYPROS_DEBUG=1 is what _selftest tells you to set when nothing
+    # parses: show what really came back so the mapping below can be fixed.
+    if os.environ.get("FANTASYPROS_DEBUG"):
+        print(f"[external_projections] raw payload for {position} {season} wk{week}: {str(payload)[:4000]}")
+
     # the list of player records lives under one of a few likely keys
     # depending on the exact response envelope — try each rather than
     # assuming, and log clearly if none match so this isn't a silent gap.
