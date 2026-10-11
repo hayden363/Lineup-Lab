@@ -1,9 +1,12 @@
 -- activation_events: the event behind LineUp Lab's activation metric.
 --
--- NOT YET APPLIED. Schema lives in Supabase migrations (see engine/db.py
+-- APPLIED to the live Supabase project (kxcereopnltktnxhukbc) on 2026-10-11 as
+-- migration version 20261011164621 "add_activation_events", verbatim from this
+-- file (comments aside). Schema lives in Supabase migrations (see engine/db.py
 -- init_db), and this touches the live database, so it's applied deliberately,
--- not on deploy. The app already tolerates the table being absent:
--- /api/trade-finder treats a failed insert as non-fatal and just logs it.
+-- not on deploy. The app still tolerates the table being absent (a fresh
+-- environment): /api/trade-finder treats a failed insert as non-fatal and just
+-- logs it.
 --
 -- Written to this database's real conventions, verified against the live
 -- schema on 2026-09-28 rather than assumed:
