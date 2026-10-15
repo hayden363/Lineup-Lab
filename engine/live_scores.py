@@ -47,9 +47,9 @@ def _team_info(competitor):
 def _parse_event(event):
     try:
         comp = event["competitions"][0]
-        status = comp.get("status", {})
-        status_type = status.get("type", {})
-        competitors = comp.get("competitors", [])
+        status = comp.get("status") or {}
+        status_type = status.get("type") or {}
+        competitors = comp.get("competitors") or []
         home = next((c for c in competitors if c.get("homeAway") == "home"), None)
         away = next((c for c in competitors if c.get("homeAway") == "away"), None)
         if home is None or away is None:
@@ -69,7 +69,7 @@ def _parse_event(event):
             "status_detail": status_type.get("shortDetail") or status_type.get("detail"),
             "completed": bool(status_type.get("completed")),
         }
-    except (KeyError, IndexError, TypeError):
+    except (KeyError, IndexError, TypeError, AttributeError):
         return None
 
 
