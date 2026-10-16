@@ -139,13 +139,16 @@ def filter_for_players(items, players):
         name = p.get("player_display_name")
         if not name:
             continue
-        lookup.append((p["player_id"], name, _name_variants(name)))
+        # Word boundaries on both sides: a plain substring test let "Mike
+        # Williams" match a headline about "Mike Williamson".
+        patterns = [re.compile(r"(?<!\w)" + re.escape(v) + r"(?!\w)") for v in _name_variants(name)]
+        lookup.append((p["player_id"], name, patterns))
 
     out = []
     for item in items:
-        haystack = f"{item['title']} {item['summary']}".lower()
-        matched = [{"player_id": pid, "name": name} for pid, name, variants in lookup
-                   if any(v in haystack for v in variants)]
+        haystack = f"{item.get('title', '')} {item.get('summary', '')}".lower()
+        matched = [{"player_id": pid, "name": name} for pid, name, patterns in lookup
+                   if any(pat.search(haystack) for pat in patterns)]
         if matched:
             out.append({**item, "matched_players": matched})
     return out
