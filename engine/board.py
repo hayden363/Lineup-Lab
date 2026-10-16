@@ -9,6 +9,7 @@ Pipeline: weekly stats -> base metrics -> SCORE (weighted) -> advanced
 projection vs an opponent defense.
 """
 
+import threading
 import time
 from typing import TypedDict
 
@@ -78,6 +79,14 @@ def _cache_key(season):
 
 
 _BUNDLE_CACHE: dict = {}
+
+# One cold load at a time. Two requests arriving together on a cold
+# process (a page fires /api/meta, /api/myteam and /api/trade/roster at
+# once) each used to run the whole load, holding two copies of every raw
+# table at the same moment. Measured on Render 2026-10-16: two parallel
+# loads pushed the 512 MB instance past its limit and it was OOM-killed
+# mid-request. The second caller now waits and reuses the first's bundle.
+_BUNDLE_LOCK = threading.Lock()
 
 # Every build_board() call, fully computed, keyed by (position, season,
 # scoring) — see build_board()'s docstring for why min_games/min_volume
@@ -179,7 +188,15 @@ def load_bundle(season=None, force=False) -> Bundle:
     key = _cache_key(season)
     if not force and key in _BUNDLE_CACHE:
         return _BUNDLE_CACHE[key]
+    with _BUNDLE_LOCK:
+        # Re-check inside the lock: whoever held it may have just built this.
+        if not force and key in _BUNDLE_CACHE:
+            return _BUNDLE_CACHE[key]
+        return _load_bundle_locked(season, key, force)
 
+
+def _load_bundle_locked(season, key, force) -> Bundle:
+    """load_bundle's cold path. Only ever called with _BUNDLE_LOCK held."""
     from . import sleeper as sleeper_layer
 
     t_start = time.perf_counter()
