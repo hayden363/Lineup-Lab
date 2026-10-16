@@ -253,6 +253,8 @@ def _board_cache(season, scoring):
 def _clean_num(v):
     """NaN isn't valid JSON — normalize pandas' NaN/NaT to None before a
     dict full of these values leaves this module."""
+    if hasattr(v, "item") and type(v).__module__ == "numpy":
+        v = v.item()   # numpy.int64 etc. aren't JSON-serializable
     return None if (v is None or (isinstance(v, float) and (v != v))) else v
 
 

@@ -184,11 +184,16 @@ def _clean(obj: Any) -> Any:
     Deliberately untyped input/output (Any) — it walks arbitrary JSON-shaped
     data (dict/list/float/anything else) and preserves whatever shape it's
     given; a precise type here would just be self-referential noise."""
+    if hasattr(obj, "item") and type(obj).__module__ == "numpy":
+        # A numpy scalar (int64/float64/bool_) from a DataFrame cell: the
+        # JSON encoder can't serialize numpy.int64, so one injured player's
+        # injury_sample_n used to 500 the whole roster response.
+        obj = obj.item()
     if isinstance(obj, float):
         return None if (math.isnan(obj) or math.isinf(obj)) else obj
     if isinstance(obj, dict):
         return {k: _clean(v) for k, v in obj.items()}
-    if isinstance(obj, list):
+    if isinstance(obj, (list, tuple)):
         return [_clean(v) for v in obj]
     return obj
 
