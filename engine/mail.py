@@ -75,18 +75,55 @@ def _send(to_email, subject, text_body, html_body):
     msg.set_content(text_body)
     msg.add_alternative(html_body, subtype="html")
 
+    failures = []
+    for port, implicit_tls in _SMTP_ATTEMPTS:
+        try:
+            _smtp_attempt(port, implicit_tls, msg)
+            return
+        except smtplib.SMTPAuthenticationError as e:
+            # Reached Gmail and it said no — the other port would say the same.
+            raise MailSendError(
+                "Gmail rejected the login — check GMAIL_ADDRESS/GMAIL_APP_PASSWORD in .env "
+                "(must be an App Password, not your normal Gmail password)."
+            ) from e
+        except _SmtpStepError as e:
+            failures.append(str(e))
+    raise MailSendError("Couldn't send email — " + "; ".join(failures))
+
+
+class _SmtpStepError(Exception):
+    pass
+
+
+SMTP_HOST = "smtp.gmail.com"
+# (port, implicit TLS). Render's outbound SMTP rules differ by plan and by port
+# (free plan blocks 25/465/587 outright), and the failure from inside the app
+# looks the same whichever layer drops the connection, so try both Gmail ports
+# and report exactly which step of which one failed instead of one opaque
+# "Connection unexpectedly closed". 10s each so a fully blocked host still
+# answers the user's request in ~20s, not longer.
+_SMTP_ATTEMPTS = ((587, False), (465, True))
+_SMTP_TIMEOUT = 10
+
+
+def _smtp_attempt(port, implicit_tls, msg):
+    assert GMAIL_ADDRESS is not None and GMAIL_APP_PASSWORD is not None
+    step = "connect"
     try:
-        with smtplib.SMTP("smtp.gmail.com", 587, timeout=15) as smtp:
-            smtp.starttls()
+        smtp = (smtplib.SMTP_SSL(SMTP_HOST, port, timeout=_SMTP_TIMEOUT) if implicit_tls
+                else smtplib.SMTP(SMTP_HOST, port, timeout=_SMTP_TIMEOUT))
+        with smtp:
+            if not implicit_tls:
+                step = "starttls"
+                smtp.starttls()
+            step = "login"
             smtp.login(GMAIL_ADDRESS, GMAIL_APP_PASSWORD)
+            step = "send"
             smtp.send_message(msg)
-    except smtplib.SMTPAuthenticationError as e:
-        raise MailSendError(
-            "Gmail rejected the login — check GMAIL_ADDRESS/GMAIL_APP_PASSWORD in .env "
-            "(must be an App Password, not your normal Gmail password)."
-        ) from e
+    except smtplib.SMTPAuthenticationError:
+        raise
     except Exception as e:
-        raise MailSendError(f"Couldn't send email: {e}") from e
+        raise _SmtpStepError(f"port {port} failed at {step}: {type(e).__name__}: {e}") from e
 
 
 # A plain, high-contrast, light template — deliberately simple rather than
