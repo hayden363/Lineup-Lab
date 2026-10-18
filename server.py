@@ -472,16 +472,28 @@ def health():
     return {"status": "ok", "season": season}
 
 
+# nflverse's team codes (note LA, not LAR) — the same 32 this app's data has
+# always produced; see meta() for why this isn't derived from the data anymore.
+NFL_TEAMS = ["ARI", "ATL", "BAL", "BUF", "CAR", "CHI", "CIN", "CLE", "DAL", "DEN", "DET", "GB", "HOU", "IND",
+             "JAX", "KC", "LA", "LAC", "LV", "MIA", "MIN", "NE", "NO", "NYG", "NYJ", "PHI", "PIT", "SEA", "SF",
+             "TB", "TEN", "WAS"]
+
+
 @app.get("/api/meta")
 def meta(user=Depends(current_user)):
     """Season, positions, teams, weight config, scoring presets — everything
-    the frontend needs to build its filters."""
-    bundle = load_bundle()
-    teams = sorted(bundle["wk"]["recent_team"].dropna().unique().tolist())
+    the frontend needs to build its filters.
+
+    Deliberately does NOT call load_bundle(): the frontend awaits this before
+    it draws even the sign-in screen, and load_bundle is the ~25s nflverse
+    fetch, so on a cold start the whole UI sat behind it just to learn the
+    season and 32 team abbreviations. resolve_season() is cached after its
+    first (cheap) probe, and the team list is a constant — nflverse's own
+    codes, e.g. LA not LAR, same 32 this endpoint used to derive from the data."""
     return {
-        "season": bundle["season"],
+        "season": data_layer.resolve_season(),
         "positions": list(POSITIONS),
-        "teams": teams,
+        "teams": NFL_TEAMS,
         "weights": WEIGHTS,
         "advanced_columns": ADVANCED_COLS,
         "scoring_presets": PRESETS,

@@ -144,6 +144,14 @@ function proxyImg(u) {
   let parsed;
   try { parsed = new URL(u, window.location.origin); } catch (e) { return ""; }
   if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return "";
+  // NFL headshot URLs resolve to the full-size original — measured at 3.5MB
+  // for one PNG, shown here at 24-84px, so a 60-row board pulled ~200MB
+  // through a throttled free-tier server. The CDN resizes on request via the
+  // transformation segment of the path; c_limit never upscales. 200px covers
+  // the largest display size (84px) at 2x.
+  if (parsed.hostname === "static.www.nfl.com" || parsed.hostname === "static.nfl.com") {
+    parsed.pathname = parsed.pathname.replace("/image/upload/f_auto,q_auto/", "/image/upload/f_auto,q_auto,w_200,c_limit/");
+  }
   if (IMG_PROXY_HOSTS.has(parsed.hostname)) return esc(`/api/img?url=${encodeURIComponent(parsed.href)}`);
   return esc(parsed.href);
 }
