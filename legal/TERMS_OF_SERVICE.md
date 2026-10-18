@@ -6,7 +6,7 @@ it has not been reviewed by a lawyer and should be before it governs any
 real user's account, especially once the app accepts signups beyond
 personal/household use. Placeholders below are marked `[ ]`.
 
-Last updated: [date] · Effective date: [date] · Governing law: [state/country]
+Last updated: 2026-10-18 · Effective date: 2026-10-18 · Governing law: [state/country]
 
 ## 1. What Lineup Lab is
 
@@ -104,4 +104,4 @@ notice) and what happens to a user who doesn't accept them.
 
 ## 9. Contact
 
-`[ ]` — a real support/legal contact address once one exists.
+`[ ]` — Contact: lineuplabfootball@gmail.com

@@ -8,7 +8,7 @@ and, likely, additional user-rights tooling this draft doesn't cover
 (e.g., a formal data export/deletion request flow beyond account
 deletion). Placeholders below are marked `[ ]`.
 
-Last updated: [date] · Effective date: [date]
+Last updated: 2026-10-18 · Effective date: 2026-10-18
 
 ## What we collect, and why
 
@@ -72,4 +72,4 @@ material changes.
 
 ## Contact
 
-`[ ]` — a real contact address for privacy questions and data requests.
+`[ ]` — Contact: lineuplabfootball@gmail.com

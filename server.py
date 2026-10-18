@@ -1179,5 +1179,29 @@ def _index():
     return FileResponse("static/index.html", media_type="text/html", headers={"Cache-Control": "no-cache"})
 
 
+
+_LEGAL_PAGES = {"terms": "legal/TERMS_OF_SERVICE.md", "privacy": "legal/PRIVACY_POLICY.md"}
+
+
+@app.get("/legal/{page}", include_in_schema=False)
+def _legal(page: str):
+    """Serve the draft Terms / Privacy text as a plain readable page. Text is HTML-escaped, never rendered as markup."""
+    import html
+    path = _LEGAL_PAGES.get(page)
+    if not path:
+        raise HTTPException(status_code=404, detail="Not found")
+    with open(path, encoding="utf-8") as fh:
+        body = html.escape(fh.read())
+    page_html = ("<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\">"
+                 "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">"
+                 "<title>Lineup Lab \u2014 " + page.capitalize() + "</title>"
+                 "<style>body{margin:0;background:#0b1020;color:#e6e9f2;font:15px/1.6 system-ui,sans-serif}"
+                 "main{max-width:760px;margin:0 auto;padding:24px 16px}a{color:#7aa2ff}"
+                 "pre{white-space:pre-wrap;word-wrap:break-word;font:inherit}</style></head><body><main>"
+                 "<p><a href=\"/\">&larr; Back to Lineup Lab</a></p><pre>" + body + "</pre></main></body></html>")
+    from fastapi.responses import HTMLResponse
+    return HTMLResponse(page_html, headers={"Cache-Control": "no-cache"})
+
+
 # ---- static frontend (must be mounted last so /api/* above takes priority) ----
 app.mount("/", StaticFiles(directory="static", html=True), name="static")
