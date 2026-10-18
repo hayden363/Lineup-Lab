@@ -1,12 +1,6 @@
 # Terms of Service — Lineup Lab
 
-**Status: DRAFT.** This was written to accurately describe what the
-application actually does, as a real starting point for a real ToS —
-it has not been reviewed by a lawyer and should be before it governs any
-real user's account, especially once the app accepts signups beyond
-personal/household use. Placeholders below are marked `[ ]`.
-
-Last updated: 2026-10-18 · Effective date: 2026-10-18 · Governing law: [state/country]
+Last updated: 2026-10-18 · Effective date: 2026-10-18 · Governing law: State of Oregon, USA
 
 ## 1. What Lineup Lab is
 
@@ -34,10 +28,11 @@ throughout, not just here.
 
 - You must provide accurate information at signup and are responsible
   for keeping your login credentials confidential.
-- You must be old enough to use fantasy sports products under the laws
-  of your jurisdiction. `[ ]` — pick and state a minimum age.
-- You may delete your account at any time from Settings; see the
-  Privacy Policy for what deletion actually does to your data.
+- You must be at least 13 years old, and old enough to use fantasy sports
+  products under the laws where you live. If you are under the age of
+  majority where you live, you need a parent or guardian's permission.
+- You may delete your account at any time from Settings → Delete account;
+  see the Privacy Policy for what deletion does to your data.
 - We may suspend or terminate an account for abuse of the service
   (e.g., attempting to circumvent rate limits, automated scraping of
   Lineup Lab itself, or credential stuffing against the login endpoint).
@@ -89,19 +84,32 @@ Lineup Lab is provided "as is." Player valuations and projections are
 computed from real historical data using the methodology described in
 the project's own documentation — they are estimates, not guarantees,
 and past statistical performance does not predict future results.
-`[ ]` — standard "AS IS, NO WARRANTIES OF ANY KIND" boilerplate belongs
-here in the final version; keep the plain-English explanation above it.
+To the fullest extent the law allows, Lineup Lab is provided **"AS IS" and
+"AS AVAILABLE," without warranties of any kind**, express or implied,
+including accuracy, fitness for a particular purpose, and
+non-infringement. We don't promise the service will be uninterrupted or
+error-free, or that any projection or recommendation will turn out to be
+right.
 
 ## 7. Limitation of liability
 
-`[ ]` — standard limitation-of-liability clause, scoped by counsel to
-your actual jurisdiction and business structure.
+To the fullest extent the law allows, Lineup Lab and its operator are not
+liable for any indirect, incidental, special, or consequential damages, or
+for any lost league standings, winnings, or prizes, arising from your use
+of the service or from relying on its numbers. Lineup Lab is a free
+service; our total liability for any claim is limited to the greater of
+$50 or the amount you paid us in the past 12 months (which is $0 for a
+free account). Some places don't allow these limits, so they apply only as
+far as your local law permits.
 
 ## 8. Changes to these terms
 
-`[ ]` — how you'll notify users of material changes (e.g., email, in-app
-notice) and what happens to a user who doesn't accept them.
+If we make a material change, we'll post the updated terms here with a new
+"Last updated" date and, for significant changes, notify you in the app or
+by email. If you keep using Lineup Lab after a change takes effect, you
+accept the updated terms. If you don't agree, you can delete your account
+from Settings at any time.
 
 ## 9. Contact
 
-`[ ]` — Contact: lineuplabfootball@gmail.com
+Questions or requests: **lineuplabfootball@gmail.com**

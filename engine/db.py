@@ -135,6 +135,8 @@ def _public(user_row):
     return {
         "id": user_row["id"], "username": user_row["username"], "email": user_row["email"],
         "email_verified": bool(user_row["email_verified"]),
+        # lets the UI skip the password box for OAuth-only accounts (never the hash itself)
+        "has_password": bool(user_row.get("password_hash")),
     }
 
 
@@ -263,6 +265,26 @@ def change_password(user_id, current_password, new_password):
         if not new_password or len(new_password) < 8:
             raise AuthError("New password must be at least 8 characters.")
         c.execute("UPDATE users SET password_hash = %s WHERE id = %s", (_hash_password(new_password), user_id))
+
+
+def delete_account(user_id, password, confirm):
+    """Permanently delete an account and everything hanging off it (Apple App
+    Store Guideline 5.1.1(v) requires in-app deletion). Every table that
+    references users does so ON DELETE CASCADE, so one DELETE removes sessions,
+    settings, connected teams, predictions, tokens and activation events too.
+
+    Re-authenticates first: the typed word "DELETE" always, plus the current
+    password when the account has one (OAuth-only accounts have none)."""
+    if (confirm or "").strip() != "DELETE":
+        raise AuthError('Type DELETE to confirm.')
+    with _conn() as c:
+        c.execute("SELECT * FROM users WHERE id = %s", (user_id,))
+        row = c.fetchone()
+        if not row:
+            raise AuthError("Account not found.")
+        if row["password_hash"] and not _check_password(password or "", row["password_hash"]):
+            raise AuthError("Password is incorrect.")
+        c.execute("DELETE FROM users WHERE id = %s", (user_id,))
 
 
 # ------------------------------------------------------------- sessions ----

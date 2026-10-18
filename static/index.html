@@ -342,6 +342,16 @@
             </div>
           </details>
           <button class="pill" id="settings-signout">Sign Out</button>
+          <details class="settings-details" id="delete-account-details">
+            <summary>Delete account</summary>
+            <div class="form-grid">
+              <div class="hint" style="margin:0">Permanently deletes your account and everything saved to it — connected leagues, settings, and prediction history. This can't be undone.</div>
+              <input type="password" id="del-password" placeholder="Password" autocomplete="current-password">
+              <input type="text" id="del-confirm" placeholder="Type DELETE to confirm" autocapitalize="characters" autocomplete="off">
+              <button class="primary-btn" id="del-submit" style="background:#b3261e">Delete My Account</button>
+              <div class="form-msg" id="del-msg"></div>
+            </div>
+          </details>
         </div>
 
         <div class="settings-block">

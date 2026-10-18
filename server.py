@@ -230,6 +230,11 @@ class LoginRequest(BaseModel):
     password: str
 
 
+class DeleteAccountRequest(BaseModel):
+    password: str = ""
+    confirm: str = ""
+
+
 class ChangePasswordRequest(BaseModel):
     current_password: str
     new_password: str
@@ -363,6 +368,18 @@ def change_password(req: ChangePasswordRequest, user=Depends(require_user)):
         db.change_password(user["id"], req.current_password, req.new_password)
     except db.AuthError as e:
         raise HTTPException(400, str(e))
+    return {"status": "ok"}
+
+
+@app.post("/api/auth/delete-account", dependencies=[Depends(login_rate_limit)])
+def delete_account(req: DeleteAccountRequest, response: Response, user=Depends(require_user)):
+    """Permanent, in-app account deletion (App Store requirement). Re-checks
+    the password (if the account has one) and a typed confirmation."""
+    try:
+        db.delete_account(user["id"], req.password, req.confirm)
+    except db.AuthError as e:
+        raise HTTPException(400, str(e))
+    response.delete_cookie(SESSION_COOKIE)
     return {"status": "ok"}
 
 
@@ -1197,20 +1214,24 @@ _LEGAL_PAGES = {"terms": "legal/TERMS_OF_SERVICE.md", "privacy": "legal/PRIVACY_
 
 @app.get("/legal/{page}", include_in_schema=False)
 def _legal(page: str):
-    """Serve the draft Terms / Privacy text as a plain readable page. Text is HTML-escaped, never rendered as markup."""
-    import html
+    """Serve the Terms / Privacy markdown (repo files we author, not user input) as a readable page."""
+    import markdown
     path = _LEGAL_PAGES.get(page)
     if not path:
         raise HTTPException(status_code=404, detail="Not found")
     with open(path, encoding="utf-8") as fh:
-        body = html.escape(fh.read())
+        body = markdown.markdown(fh.read(), extensions=["tables", "sane_lists"])
     page_html = ("<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\">"
                  "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">"
                  "<title>Lineup Lab \u2014 " + page.capitalize() + "</title>"
-                 "<style>body{margin:0;background:#0b1020;color:#e6e9f2;font:15px/1.6 system-ui,sans-serif}"
-                 "main{max-width:760px;margin:0 auto;padding:24px 16px}a{color:#7aa2ff}"
-                 "pre{white-space:pre-wrap;word-wrap:break-word;font:inherit}</style></head><body><main>"
-                 "<p><a href=\"/\">&larr; Back to Lineup Lab</a></p><pre>" + body + "</pre></main></body></html>")
+                 "<style>body{margin:0;background:#0b1020;color:#e6e9f2;font:16px/1.65 system-ui,-apple-system,sans-serif}"
+                 "main{max-width:760px;margin:0 auto;padding:24px 18px 64px}a{color:#7aa2ff}"
+                 "h1{font-size:28px;margin:8px 0 4px}h2{font-size:20px;margin:32px 0 8px}"
+                 "code{background:#1a2238;padding:1px 5px;border-radius:4px;font-size:.9em}"
+                 "table{border-collapse:collapse;width:100%;font-size:14px;display:block;overflow-x:auto}"
+                 "th,td{border:1px solid #2a3350;padding:8px 10px;text-align:left;vertical-align:top}"
+                 "th{background:#141b30}li{margin:4px 0}</style></head><body><main>"
+                 "<p><a href=\"/\">&larr; Back to Lineup Lab</a></p>" + body + "</main></body></html>")
     from fastapi.responses import HTMLResponse
     return HTMLResponse(page_html, headers={"Cache-Control": "no-cache"})
 

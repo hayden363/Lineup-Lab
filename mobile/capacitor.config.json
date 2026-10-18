@@ -1,0 +1,20 @@
+{
+  "appId": "com.kirbycove.lineuplab",
+  "appName": "Lineup Lab",
+  "webDir": "www",
+  "server": {
+    "url": "https://lineup-lab-awdv.onrender.com",
+    "allowNavigation": ["lineup-lab-awdv.onrender.com"],
+    "errorPath": "offline.html"
+  },
+  "ios": {
+    "backgroundColor": "#0a100d",
+    "contentInset": "never",
+    "preferredContentMode": "mobile",
+    "scheme": "Lineup Lab"
+  },
+  "plugins": {
+    "SplashScreen": { "launchShowDuration": 800, "backgroundColor": "#0a100d", "showSpinner": false },
+    "StatusBar": { "style": "DARK", "backgroundColor": "#0a100d" }
+  }
+}

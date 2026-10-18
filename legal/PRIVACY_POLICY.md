@@ -1,13 +1,5 @@
 # Privacy Policy — Lineup Lab
 
-**Status: DRAFT.** Written to accurately describe what the application
-actually stores and sends today, as a real starting point — not
-reviewed by a lawyer, and not sufficient on its own for GDPR/CCPA
-compliance if you have EU or California users; that needs real counsel
-and, likely, additional user-rights tooling this draft doesn't cover
-(e.g., a formal data export/deletion request flow beyond account
-deletion). Placeholders below are marked `[ ]`.
-
 Last updated: 2026-10-18 · Effective date: 2026-10-18
 
 ## What we collect, and why
@@ -40,36 +32,43 @@ Last updated: 2026-10-18 · Effective date: 2026-10-18
 - **ESPN/CBS RSS** — public news headlines.
 - **Google** — only if you use "Continue with Google" to sign in; we
   receive your name/email/a stable ID from Google, nothing else.
-- **Gmail SMTP** — sends your account-verification and password-reset
-  emails. `[ ]` — once this is a real multi-user product rather than a
-  personal Gmail relay, this should move to a dedicated transactional
-  email provider (SendGrid, Postmark, SES, etc.) with its own DPA, not
-  a personal Gmail account.
+- **Gmail (Google)** — sends your account-verification and password-reset
+  emails from lineuplabfootball@gmail.com. Your email address and the
+  message pass through Google's mail servers to reach you.
+- **Render and Supabase** — host the app and its database (accounts,
+  settings, connected leagues).
 - **Anthropic (Claude API)** — only the specific news headlines already
   matched to a player you're viewing, only when you view that player,
   solely to generate the optional written summary.
 
 ## Your choices
 
-- **Delete your account**: from Settings. `[ ]` — specify exactly what
-  this does today (does it hard-delete the row, or just deactivate?) and
-  make the answer match reality before this goes live for real users —
-  don't promise deletion the code doesn't actually perform.
+- **Delete your account**: Settings → Delete account (in the website and
+  the iPhone app). This permanently deletes your account row and, with it,
+  everything tied to it: sessions, settings, connected leagues and
+  stored ESPN credentials, prediction history, and verification/reset
+  tokens. It happens immediately and can't be undone. Ordinary server
+  logs (which don't contain your password or tokens) age out on the
+  hosting provider's normal schedule.
 - **Disconnect a Sleeper or ESPN team**: from Settings, at any time —
   removes the stored league/credential association.
-- **Turn off AI summaries**: don't set an `ANTHROPIC_API_KEY` (self-hosted
-  today) or, once hosted, `[ ]` add an account-level opt-out toggle.
+- **AI summaries**: they're generated only when you open a player's page,
+  from public news headlines — nothing about you or your account is sent.
+  If you'd rather not use them, simply don't open that section; there's no
+  account-level toggle yet.
 
 ## Children's privacy
 
-`[ ]` — state a minimum age and, if you might ever have users under 13,
-this needs real COPPA-specific review — don't ship without it.
+Lineup Lab is not directed at children under 13, and you must be at least
+13 to create an account. We don't knowingly collect personal information
+from anyone under 13; if you believe a child has given us any, email us
+and we'll delete it.
 
 ## Changes to this policy
 
-`[ ]` — same as the Terms of Service: define how you'll notify users of
-material changes.
+If we change this policy in a material way, we'll update the date above and,
+for significant changes, tell you in the app or by email.
 
 ## Contact
 
-`[ ]` — Contact: lineuplabfootball@gmail.com
+Questions, access or deletion requests: **lineuplabfootball@gmail.com**

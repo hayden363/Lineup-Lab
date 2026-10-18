@@ -2770,6 +2770,22 @@ function authVisualPanelHtml(headline, subcopy) {
 // `onSuccess` is what runs after a real signed-in user comes back — the
 // modal closes and re-renders the current tab; the gate moves on to the
 // league-sync step or reveals the app.
+// True only inside the iOS/Android shell (mobile/ — Capacitor injects window.Capacitor
+// into the remote page). Google blocks its sign-in inside an embedded web view
+// (disallowed_useragent), so the Google button is web-only for now.
+const IS_NATIVE_APP = !!(window.Capacitor && typeof window.Capacitor.isNativePlatform === "function"
+  && window.Capacitor.isNativePlatform());
+
+// Light tap feedback from the native Haptics plugin; a no-op on the web.
+function nativeHaptic(style = "LIGHT") {
+  try { window.Capacitor?.Plugins?.Haptics?.impact({ style }); } catch (_) { /* haptics are cosmetic */ }
+}
+if (IS_NATIVE_APP) {
+  document.addEventListener("click", (e) => {
+    if (e.target instanceof Element && e.target.closest("button, .pill, .tab-btn, [role=tab], a.oauth-btn")) nativeHaptic();
+  }, { passive: true });
+}
+
 function authPanelHtml(mode) {
   return `
     <div class="auth-tabs">
@@ -2777,7 +2793,7 @@ function authPanelHtml(mode) {
       <button class="auth-tab-btn ${mode === "signup" ? "active" : ""}" data-mode="signup">Create Account</button>
     </div>
     <div id="auth-form-area"></div>
-    ${state.meta?.oauth_google ? `
+    ${state.meta?.oauth_google && !IS_NATIVE_APP ? `
       <div class="auth-divider"><span>or</span></div>
       <a class="oauth-btn google" href="/api/auth/google/start">
         <svg viewBox="0 0 18 18" width="18" height="18" aria-hidden="true">
@@ -3162,6 +3178,23 @@ function renderSettingsTab() {
       });
       msg.className = "form-msg success"; msg.textContent = "Password updated.";
       $("#cp-current").value = ""; $("#cp-new").value = "";
+    } catch (e) { msg.className = "form-msg error"; msg.textContent = e.message; }
+  };
+
+  // OAuth-only accounts have no password; the server only asks for one when it exists.
+  $("#del-password").style.display = state.user.has_password === false ? "none" : "";
+  $("#del-submit").onclick = async () => {
+    const msg = $("#del-msg");
+    msg.className = "form-msg"; msg.textContent = "";
+    if (!confirm("Permanently delete your Lineup Lab account? This can't be undone.")) return;
+    try {
+      await api("/api/auth/delete-account", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: $("#del-password").value, confirm: $("#del-confirm").value }),
+      });
+      $("#del-password").value = ""; $("#del-confirm").value = "";
+      await doSignOut();
+      showToast("Your account has been deleted.", "success");
     } catch (e) { msg.className = "form-msg error"; msg.textContent = e.message; }
   };
 

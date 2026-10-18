@@ -13,3 +13,4 @@ PyJWT==2.13.0
 anthropic==0.125.0
 espn-api==0.46.0
 psycopg[binary,pool]==3.2.13
+Markdown==3.7
