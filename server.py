@@ -379,7 +379,7 @@ def forgot_password(req: ForgotPasswordRequest, request: Request):
             mail_layer.send_password_reset_email(user["email"], user["username"], reset_url)
         except (mail_layer.MailNotConfigured, mail_layer.MailSendError) as e:
             print(f"[mail] couldn't send reset email: {e}")
-    return {"status": "ok", "message": "If that email has an account, a reset link is on its way."}
+    return {"status": "ok", "message": "If that email has an account, a reset link is on its way. It can take a minute — check your spam or junk folder if you don't see it."}
 
 
 @app.post("/api/auth/reset-password", dependencies=[Depends(reset_rate_limit)])

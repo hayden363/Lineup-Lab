@@ -35,6 +35,8 @@ the request.
 import os
 import smtplib
 from email.message import EmailMessage
+from email.utils import formatdate, make_msgid
+from urllib.parse import urlsplit
 
 try:
     from dotenv import load_dotenv
@@ -72,6 +74,9 @@ def _send(to_email, subject, text_body, html_body):
     msg["Subject"] = subject
     msg["From"] = f"Lineup Lab <{GMAIL_ADDRESS}>"
     msg["To"] = to_email
+    msg["Date"] = formatdate(localtime=False)
+    msg["Message-ID"] = make_msgid(domain=GMAIL_ADDRESS.rsplit("@", 1)[-1])
+    msg["Auto-Submitted"] = "auto-generated"
     msg.set_content(text_body)
     msg.add_alternative(html_body, subtype="html")
 
@@ -129,31 +134,57 @@ def _smtp_attempt(port, implicit_tls, msg):
 # A plain, high-contrast, light template — deliberately simple rather than
 # on-brand-dark: dark-background HTML renders inconsistently across mail
 # clients (Outlook desktop especially), so transactional email conventions
-# favor a plain white card. Professional and easy to read beats on-brand.
-# The polish below (gradient top bar, weightier type, a glow-halo button)
-# stays inside that constraint — no dark body background, no client-fragile
-# CSS (flexbox/grid/custom fonts) — just a sharper version of the same card.
-def _wrap(title, body_html, footer_note):
+# favor a plain white card. It is table-based with inline styles for the same
+# reason (flexbox/grid/custom fonts are the fragile bits). The logo is the app
+# icon served from the app's own host: mail clients block data: URIs and SVG,
+# so it has to be a normal PNG at an absolute https URL.
+_BRAND_GREEN = "#1f6f52"
+_BRAND_DARK = "#0f3d2e"
+
+
+def _origin(url):
+    """https://host from any absolute URL we're already emailing a link to, so
+    the logo always comes from the same host as the link (prod or a preview)."""
+    p = urlsplit(url)
+    return f"{p.scheme}://{p.netloc}"
+
+
+def _wrap(title, body_html, footer_note, origin):
+    logo = f"{origin}/icons/email-logo.png"
     return f"""\
-<div style="background:#eef2f0;padding:40px 16px;font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;">
-  <div style="max-width:480px;margin:0 auto;background:#ffffff;border-radius:14px;
-              overflow:hidden;border:1px solid #e2e8e4;box-shadow:0 4px 24px rgba(18,32,26,0.06);">
-    <div style="height:5px;background:linear-gradient(90deg,#1f6f52,#5eeead);"></div>
-    <div style="padding:36px 32px 32px;">
-      <div style="display:flex;align-items:center;gap:8px;font-size:15px;font-weight:800;
-                  color:#1f6f52;letter-spacing:0.02em;margin-bottom:24px;">
-        <span style="font-size:18px;">🏈</span>LINEUP LAB
-      </div>
+<div style="background:#eef2f0;padding:32px 12px;font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;margin:0 auto;">
+    <tr><td style="background:{_BRAND_DARK};border-radius:14px 14px 0 0;padding:22px 32px;">
+      <table role="presentation" cellpadding="0" cellspacing="0"><tr>
+        <td style="padding-right:12px;vertical-align:middle;">
+          <img src="{logo}" width="44" height="44" alt="Lineup Lab"
+               style="display:block;border:0;border-radius:10px;">
+        </td>
+        <td style="vertical-align:middle;color:#ffffff;font-size:18px;font-weight:800;letter-spacing:0.04em;">
+          LINEUP LAB
+          <div style="color:#8fd9b8;font-size:11px;font-weight:600;letter-spacing:0.06em;margin-top:2px;">
+            FANTASY FOOTBALL VALUATION
+          </div>
+        </td>
+      </tr></table>
+    </td></tr>
+    <tr><td style="height:4px;background:linear-gradient(90deg,#1f6f52,#5eeead);font-size:0;line-height:0;">&nbsp;</td></tr>
+    <tr><td style="background:#ffffff;border:1px solid #e2e8e4;border-top:0;border-radius:0 0 14px 14px;padding:32px;">
       <h1 style="font-size:21px;margin:0 0 16px;color:#0e1b15;font-weight:800;">{title}</h1>
       {body_html}
-      <p style="color:#8a988f;font-size:12px;margin-top:32px;padding-top:16px;
+      <p style="color:#8a988f;font-size:12px;margin:32px 0 0;padding-top:16px;
                 border-top:1px solid #eef1ef;line-height:1.6;">
         {footer_note}
       </p>
-    </div>
-  </div>
-  <p style="max-width:480px;margin:20px auto 0;text-align:center;color:#a3afa8;font-size:11px;">
-    Lineup Lab — a fantasy football valuation tool.
+      <p style="color:#8a988f;font-size:12px;margin:12px 0 0;line-height:1.6;">
+        <strong style="color:#4a5a52;">Can't find our emails?</strong> Check your spam or junk
+        folder. If this one landed there, mark it <em>Not spam</em> so future emails reach your inbox.
+      </p>
+    </td></tr>
+  </table>
+  <p style="max-width:520px;margin:18px auto 0;text-align:center;color:#a3afa8;font-size:11px;line-height:1.5;">
+    You're getting this because someone used this address on Lineup Lab.<br>
+    <a href="{origin}" style="color:#a3afa8;">{origin.split("://", 1)[-1]}</a>
   </p>
 </div>"""
 
@@ -161,15 +192,15 @@ def _wrap(title, body_html, footer_note):
 def _button(url, label):
     return f"""
     <table role="presentation" cellpadding="0" cellspacing="0" style="margin:26px 0;">
-      <tr><td style="border-radius:9px;background:#1f6f52;box-shadow:0 6px 18px -4px rgba(31,111,82,0.45);">
-        <a href="{url}" style="background:#1f6f52;color:#ffffff;padding:13px 28px;border-radius:9px;
-           text-decoration:none;font-weight:700;font-size:14px;display:inline-block;">
+      <tr><td style="border-radius:9px;background:{_BRAND_GREEN};">
+        <a href="{url}" style="background:{_BRAND_GREEN};color:#ffffff;padding:14px 30px;border-radius:9px;
+           text-decoration:none;font-weight:700;font-size:15px;display:inline-block;">
           {label}
         </a>
       </td></tr>
     </table>
     <p style="color:#8a988f;font-size:12px;word-break:break-all;line-height:1.5;">
-      Or paste this link into your browser:<br>
+      Button not working? Paste this link into your browser:<br>
       <span style="color:#4a5a52;">{url}</span>
     </p>"""
 
@@ -181,7 +212,8 @@ def send_verification_email(to_email, username, verify_url):
         f"Confirm this is your email to finish setting up your Lineup Lab account:\n\n"
         f"{verify_url}\n\n"
         f"This link expires in 24 hours. If you didn't create this account, you can ignore this email — "
-        f"no changes will be made.\n"
+        f"no changes will be made.\n\n"
+        f"Can't find our emails? Check your spam or junk folder, and mark this one 'Not spam'.\n"
     )
     body = f"""
       <p style="color:#3c4a44;font-size:14px;line-height:1.6;">
@@ -194,6 +226,7 @@ def send_verification_email(to_email, username, verify_url):
         "Confirm your email",
         body,
         "This link expires in 24 hours. If you didn't create this account, you can safely ignore this email — no changes will be made.",
+        _origin(verify_url),
     )
     _send(to_email, subject, text, html)
 
@@ -205,7 +238,8 @@ def send_password_reset_email(to_email, username, reset_url):
         f"We received a request to reset your Lineup Lab password. Click the link below to choose a new one:\n\n"
         f"{reset_url}\n\n"
         f"This link expires in 1 hour and can only be used once. If you didn't request this, "
-        f"you can ignore this email — your password won't change.\n"
+        f"you can ignore this email — your password won't change.\n\n"
+        f"Can't find our emails? Check your spam or junk folder, and mark this one 'Not spam'.\n"
     )
     body = f"""
       <p style="color:#3c4a44;font-size:14px;line-height:1.6;">
@@ -217,5 +251,6 @@ def send_password_reset_email(to_email, username, reset_url):
         "Reset your password",
         body,
         "This link expires in 1 hour and works once. If you didn't request this, you can safely ignore this email — your password stays the same.",
+        _origin(reset_url),
     )
     _send(to_email, subject, text, html)

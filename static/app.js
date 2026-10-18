@@ -2922,7 +2922,7 @@ function wireAuthPanel(container, mode, onSuccess) {
           });
           submitBtn.classList.remove("loading");
           await onSuccess(user);
-          showToast("Welcome to Lineup Lab — check your email to verify your account.", "success");
+          showToast("Welcome to Lineup Lab — check your email to verify your account. If it's not in your inbox, look in spam or junk.", "success");
         } catch (e) {
           submitBtn.classList.remove("loading");
           submitBtn.disabled = false;
@@ -2940,7 +2940,7 @@ function wireAuthPanel(container, mode, onSuccess) {
   const renderForgotForm = () => {
     const area = $("#auth-form-area");
     area.innerHTML = `<div class="form-grid">
-      <div class="hint" style="margin:0 0 4px">Enter your account email — if it matches an account, a reset link is sent to it.</div>
+      <div class="hint" style="margin:0 0 4px">Enter your account email — if it matches an account, a reset link is sent to it. The email may land in your spam or junk folder.</div>
       <input type="email" id="forgot-email" placeholder="Email">
       <button class="primary-btn" id="forgot-submit">Send Reset Link</button>
       <button class="link-btn" id="forgot-back" type="button">Back to sign in</button>
@@ -3067,7 +3067,7 @@ function renderVerifyStatus() {
       btn.disabled = true; btn.textContent = "Sending…";
       try {
         await api("/api/auth/resend-verification", { method: "POST" });
-        msg.className = "form-msg success"; msg.textContent = "Verification email sent — check your inbox.";
+        msg.className = "form-msg success"; msg.textContent = "Verification email sent — check your inbox, and your spam or junk folder if it's not there.";
       } catch (e) {
         msg.className = "form-msg error"; msg.textContent = e.message;
       } finally {

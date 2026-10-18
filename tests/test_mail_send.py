@@ -91,5 +91,32 @@ class SendPorts(unittest.TestCase):
         smtp_ssl.assert_not_called()
 
 
+class Template(unittest.TestCase):
+    """The emails carry the logo (from the same host as the link) and tell the
+    reader to check spam — both in the HTML and the plain-text part."""
+
+    def capture(self, fn, *args):
+        sent = {}
+        with mock.patch.object(mail, "_send", side_effect=lambda to, subj, text, html: sent.update(text=text, html=html)), \
+             mock.patch.object(mail, "GMAIL_ADDRESS", "from@example.com"):
+            fn(*args)
+        return sent
+
+    def test_reset_email_has_logo_from_link_host_and_spam_note(self):
+        sent = self.capture(mail.send_password_reset_email, "a@b.com", "sam", "https://app.example.com/?reset_token=x")
+        self.assertIn('src="https://app.example.com/icons/email-logo.png"', sent["html"])
+        self.assertIn("spam", sent["html"].lower())
+        self.assertIn("Not spam", sent["text"])
+
+    def test_verification_email_has_logo_and_spam_note(self):
+        sent = self.capture(mail.send_verification_email, "a@b.com", "sam", "http://localhost:8000/api/auth/verify?token=x")
+        self.assertIn('src="http://localhost:8000/icons/email-logo.png"', sent["html"])
+        self.assertIn("Not spam", sent["text"])
+
+    def test_logo_file_ships_with_the_app(self):
+        import pathlib
+        self.assertTrue((pathlib.Path(__file__).parent.parent / "static/icons/email-logo.png").is_file())
+
+
 if __name__ == "__main__":
     unittest.main()
