@@ -22,6 +22,7 @@ from . import injury_impact
 from . import profile
 from . import consensus
 from . import value as value_layer
+from . import weekly_proj
 from .metrics import METRIC_FNS, WEIGHTS, MIN_GAMES, score_players, form_adjustment
 from .advanced import qb_advanced, rb_advanced, wr_advanced, te_advanced, weekly_epa, ADVANCED_COLS
 from .matchup import matchup_tag
@@ -622,7 +623,7 @@ def player_detail(player_id, season=None, scoring=None):
     row["position"] = position
     row["scoring"] = board.attrs.get("scoring")
 
-    wk_scored, _ = apply_scoring(prow, scoring)
+    wk_scored, settings = apply_scoring(prow, scoring)
     # Real per-week raw counting stats, not just fantasy points — lets the
     # frontend plot week-by-week trends/breakdowns for whichever stats
     # actually apply to this position, not just one aggregate bar chart.
@@ -640,6 +641,15 @@ def player_detail(player_id, season=None, scoring=None):
     if team:
         played = wk_scored[["week", "fpts_active"] + present_cols].rename(columns={"fpts_active": "fpts"})
         row["weekly_status"] = profile.weekly_status(played, bundle["schedule"], team)
+        # Each played week's real pre-game projection (Sleeper), so the weekly
+        # breakdown can show whether he beat it or fell short.
+        try:
+            played_weeks = [r["week"] for r in row["weekly_status"] if r["status"] == "played"]
+            projs = weekly_proj.player_projections(player_id, position, season or data.resolve_season(),
+                                                   played_weeks, settings)
+            weekly_proj.attach(row["weekly_status"], projs)
+        except Exception as e:
+            print(f"[board] weekly projections skipped for {player_id}: {e}")
         row["bye_week"] = profile.bye_weeks(bundle["schedule"]).get(team)
 
     # Plain totals, steadiness, and every Next Gen Stat with its percentile.

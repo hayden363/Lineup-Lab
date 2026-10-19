@@ -142,6 +142,23 @@ NGS_TIPS = {
     "percent_share_of_intended_air_yards": "His share of the team's total targeted air yards. High = the offense throws downfield to him.",
     "catch_percentage": "Share of his targets he catches.",
 }
+# Style stats (higher_is_better None) aren't good or bad, so instead of a grade
+# the card names his style: (word when he's in the bottom third of peers,
+# word when he's in the top third). The middle third reads "Typical".
+NGS_STYLE = {
+    "expected_completion_percentage": ("Harder throws", "Easier throws"),
+    "avg_time_to_throw": ("Quick release", "Holds the ball"),
+    "aggressiveness": ("Plays it safe", "Gunslinger"),
+    "avg_intended_air_yards": ("Short and quick", "Pushes it deep"),
+    "avg_completed_air_yards": ("Short completions", "Deep completions"),
+    "avg_air_yards_differential": ("Deep shots miss", "Hits deep shots"),
+    "avg_time_to_los": ("Hits the hole fast", "Patient runner"),
+    "percent_attempts_gte_eight_defenders": ("Light boxes", "Stacked boxes"),
+    "avg_cushion": ("Pressed at the line", "Given room"),
+    "avg_expected_yac": ("Contested catches", "Catches in space"),
+}
+# Same column, different meaning for a receiver than a passer.
+NGS_STYLE_RECEIVING = {"avg_intended_air_yards": ("Short targets", "Deep threat")}
 NGS_MIN_VOLUME = {"passing": ("attempts", 40), "rushing": ("rush_attempts", 20), "receiving": ("targets", 10)}
 
 
@@ -152,6 +169,11 @@ def _season_rows(ngs):
     if ngs is None or ngs.empty:
         return ngs
     return ngs[ngs["week"] == 0]
+
+
+def _style_words(kind, col):
+    words = (NGS_STYLE_RECEIVING if kind == "receiving" else {}).get(col) or NGS_STYLE.get(col)
+    return list(words) if words else None
 
 
 def ngs_profile(ngs, kind, player_id):
@@ -179,6 +201,7 @@ def ngs_profile(ngs, kind, player_id):
             "key": col, "label": label, "tip": NGS_TIPS.get(col, ""), "value": round(float(mine[col]), 2),
             "percentile": None if pct is None else round(pct),
             "higher_is_better": higher,
+            "style": _style_words(kind, col) if higher is None else None,
             "weekly": [{"week": int(r.week), "value": round(float(v), 2)}
                        for r, v in zip(weekly.itertuples(), weekly[col]) if pd.notna(v)],
         })

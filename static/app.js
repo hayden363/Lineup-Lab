@@ -935,34 +935,57 @@ const WEEKLY_STAT_LABELS = {
   receiving_yards_after_catch: "YAC", target_share: "Target Share",
 };
 
-// Every stat in weekly_log gets the same treatment fpts always had: a
-// dashed line at that stat's own average across the games shown, with
-// any week below it colored red — "did they hit their own number that
-// week", generalized from just fantasy points to whichever stat is picked.
+// Each played week is judged against what he was projected for that week
+// (Sleeper's pre-game projection, rescored under this league's settings):
+// green = beat it, red = fell short, and a white tick marks the projection.
+// Stats Sleeper doesn't project (EPA, air yards, target share...) have no
+// projection to judge against, so they show plain bars with his average.
 function weeklyChartHtml(weeks, statKey) {
   const vals = weeks.map((w) => w[statKey]).filter((v) => v != null);
   if (!vals.length) return '<span class="muted">No data logged for this stat yet.</span>';
+  const projOf = (w) => (w.proj && !w.proj.out && w.proj[statKey] != null ? w.proj[statKey] : null);
+  const projs = weeks.map(projOf).filter((v) => v != null);
+  const hasProj = projs.length > 0;
   const avg = vals.reduce((a, b) => a + b, 0) / vals.length;
-  const maxV = Math.max(1, avg, ...vals.map((v) => Math.max(0, v)));
-  const avgPct = Math.max(0, Math.min(100, (avg / maxV) * 100));
+  const maxV = Math.max(1, avg, ...vals.map((v) => Math.max(0, v)), ...projs);
   const decimals = Number.isInteger(avg) && vals.every((v) => Number.isInteger(v)) ? 0 : 1;
+  let beat = 0, judged = 0, diffSum = 0;
   const bars = weeks.map((w) => {
     const v = w[statKey];
     if (w.status === "bye") return `<div class="bar bar-bye" title="Week ${esc(w.week)}: BYE"><div class="bar-tag">BYE</div><div class="wk-label">${esc(w.week)}</div></div>`;
     if (w.status === "dnp") return `<div class="bar bar-dnp" title="Week ${esc(w.week)}: did not play (team played ${esc(w.opponent)})"><div class="bar-tag">OUT</div><div class="wk-label">${esc(w.week)}</div></div>`;
     if (v == null) return `<div class="bar" style="height:2%;opacity:.3" title="Week ${esc(w.week)}: no data"><div class="wk-label">${esc(w.week)}</div></div>`;
-    const h = Math.max(2, Math.round((Math.max(0, v) / maxV) * 100));
-    const below = v < avg ? " below-avg" : "";
-    // The exact number, visible on the chart itself — not just in the
-    // hover title (useless on mobile, and easy to miss even with a
-    // pointer since nothing on the bar itself hints there's a tooltip).
-    return `<div class="bar${below}" style="height:${h}%" title="Week ${esc(w.week)}: ${v.toFixed(decimals)} (avg ${avg.toFixed(decimals)})">
+    const h = Math.max(2, (Math.max(0, v) / maxV) * 100);
+    const pr = projOf(w);
+    const opp = w.opponent ? ` vs ${w.opponent}` : "";
+    let cls = "bar-none", tick = "", title;
+    if (pr != null) {
+      judged++; diffSum += v - pr;
+      cls = v >= pr ? "bar-beat" : "bar-miss";
+      if (v >= pr) beat++;
+      const tickPct = ((pr / maxV) * 100 / h) * 100;
+      tick = `<i class="proj-tick" style="bottom:${tickPct.toFixed(1)}%"></i>`;
+      const d = v - pr;
+      title = `Week ${w.week}${opp}: ${v.toFixed(decimals)} vs ${pr.toFixed(decimals)} projected (${d >= 0 ? "+" : ""}${d.toFixed(1)})`;
+    } else {
+      title = `Week ${w.week}${opp}: ${v.toFixed(decimals)}${w.proj && w.proj.out ? " (projected not to play)" : hasProj ? " (no projection)" : ""}`;
+    }
+    return `<div class="bar ${cls}" style="height:${h.toFixed(1)}%" title="${esc(title)}">${tick}
       <div class="bar-value">${v.toFixed(decimals)}</div>
       <div class="wk-label">${esc(w.week)}</div>
     </div>`;
   }).join("");
-  const avgLine = avg > 0 ? `<div class="weeklog-avg-line" style="bottom:${avgPct}%" data-label="Avg ${avg.toFixed(decimals)}"></div>` : "";
-  return avgLine + bars;
+  if (!hasProj) {
+    const avgPct = Math.max(0, Math.min(100, (avg / maxV) * 100));
+    const avgLine = avg > 0 ? `<div class="weeklog-avg-line" style="bottom:${avgPct}%" data-label="Avg ${avg.toFixed(decimals)}"></div>` : "";
+    return `<div class="weeklog-note muted small">No weekly projection exists for this stat. The dashed line is his average.</div><div class="weeklog weeklog-plain">${avgLine}${bars}</div>`;
+  }
+  const avgDiff = judged ? diffSum / judged : 0;
+  const verdict = judged
+    ? `<div class="weeklog-verdict"><b>Beat his projection in ${beat} of ${judged} games</b><span class="${avgDiff >= 0 ? "pos" : "neg"}">${avgDiff >= 0 ? "+" : ""}${avgDiff.toFixed(1)} per game vs projected</span></div>`
+    : "";
+  const legend = `<div class="weeklog-legend"><span><i class="lg-beat"></i>Beat projection</span><span><i class="lg-miss"></i>Fell short</span><span><i class="lg-tick"></i>What he was projected</span><span><i class="lg-none"></i>No projection</span></div>`;
+  return `${verdict}<div class="weeklog">${bars}</div>${legend}`;
 }
 
 async function openPlayerModal(playerId, opp) {
@@ -1040,58 +1063,51 @@ function totalsHtml(p) {
   return `<div class="section-label">Season Stats</div><div class="metric-grid stagger-in">${tiles}</div>`;
 }
 
-// Next Gen Stats as a quiet instrument panel: one hairline row per stat with
-// the value up front and a percentile rail (ticks at 25/50/75, a marker where
-// he sits among same-position peers), then a week-by-week trace. The rail's
-// marker slides in when the modal opens.
+// Next Gen Stats as a scouting report. Skill stats get a letter grade from
+// his percentile among same-position peers (A = top 20%, F = bottom 20%),
+// colored green to red. Style stats (how he plays, not how well) get no
+// grade and no good/bad color: just the word for his style.
+const NGS_GRADES = [[80, "A", "g-a"], [60, "B", "g-b"], [40, "C", "g-c"], [20, "D", "g-d"], [0, "F", "g-f"]];
+function ngsGrade(pct) { return NGS_GRADES.find(([min]) => pct >= min); }
+
 function ngsHtml(p) {
   const rows = p.ngs || [];
   if (!rows.length) return "";
-  const ranked = rows.filter((n) => n.percentile != null).sort((a, b) => b.percentile - a.percentile);
-  const lead = ranked[0];
-  const body = rows.map((n, i) => {
-    const pct = n.percentile;
-    const tone = n.higher_is_better == null ? "ctx" : pct >= 67 ? "hi" : pct <= 33 ? "lo" : "mid";
-    const rail = pct == null
-      ? `<div class="ngs-rail ngs-none"></div>`
-      : `<div class="ngs-rail ngs-${tone}"><i class="ngs-bar" data-pct="${pct}"></i><b class="ngs-dot" data-pct="${pct}"></b></div>`;
-    return `<div class="ngs-line" style="--d:${i * 40}ms">
-      <span class="ngs-label">${esc(n.label)}${n.tip ? `<small class="ngs-tip">${esc(n.tip)}</small>` : ""}</span>
-      <span class="ngs-val">${fmtTotal(n.value, 2)}</span>
-      ${rail}
-      <span class="ngs-pct">${pct == null ? "" : pct + "<sup>th</sup>"}</span>
-      <span class="ngs-trace">${ngsSparkHtml(n.weekly)}${ngsRangeHtml(n.weekly)}</span>
+  const pos = esc(p.position);
+  const graded = rows.filter((n) => n.higher_is_better != null && n.percentile != null).sort((a, b) => b.percentile - a.percentile);
+  const style = rows.filter((n) => n.higher_is_better == null && n.percentile != null && n.style);
+  const val = (n) => fmtTotal(n.value, n.value != null && Math.abs(n.value) >= 100 ? 0 : 1);
+  const cards = graded.map((n) => {
+    const [, letter, cls] = ngsGrade(n.percentile);
+    return `<div class="sr-card ${cls}">
+      <div class="sr-grade">${letter}</div>
+      <div class="sr-body">
+        <div class="sr-name">${esc(n.label)}</div>
+        <div class="sr-line"><b>${val(n)}</b> · better than ${n.percentile}% of ${pos}s</div>
+        ${n.tip ? `<div class="sr-tip">${esc(n.tip)}</div>` : ""}
+      </div>
     </div>`;
   }).join("");
-  const head = lead
-    ? `<div class="ngs-lead"><span class="ngs-lead-k">Standout</span><span class="ngs-lead-v">${esc(lead.label)}</span><span class="ngs-lead-p">${lead.percentile}th percentile</span></div>`
+  const styles = style.map((n) => {
+    const [lowWord, highWord] = n.style;
+    const pct = n.percentile;
+    const word = pct >= 67 ? highWord : pct <= 33 ? lowWord : "Typical";
+    const where = pct >= 67 ? `higher than ${pct}% of ${pos}s` : pct <= 33 ? `lower than ${100 - pct}% of ${pos}s` : `middle of the pack`;
+    return `<div class="sr-style" title="${esc(n.tip || "")}">
+      <div class="sr-style-word">${esc(word)}</div>
+      <div class="sr-style-stat">${esc(n.label)}: <b>${val(n)}</b></div>
+      <div class="sr-style-where">${esc(where)}</div>
+    </div>`;
+  }).join("");
+  const strengths = graded.filter((n) => n.percentile >= 80).slice(0, 2).map((n) => esc(n.label));
+  const weak = graded.filter((n) => n.percentile < 40).slice(-2).map((n) => esc(n.label));
+  const summary = graded.length
+    ? `<div class="sr-summary">${strengths.length ? `<span><em class="pos">Strengths</em> ${strengths.join(", ")}</span>` : ""}${weak.length ? `<span><em class="neg">Weak spots</em> ${weak.join(", ")}</span>` : ""}${!strengths.length && !weak.length ? "<span>No clear strengths or weak spots. Solid across the board.</span>" : ""}</div>`
     : "";
-  return `<div class="section-label">Next Gen Stats <span class="muted small">percentile among ${esc(p.position)}s</span></div>
-    <div class="ngs-legend"><span><b>Dot</b> = where he ranks among ${esc(p.position)}s (right = higher)</span><span><b>Line</b> = that stat game by game; the end dot is his latest game</span><span class="ngs-lg"><i class="g"></i>top third <i class="y"></i>middle <i class="r"></i>bottom third <i class="b"></i>style, not good/bad</span></div>
-    <div class="ngs-panel">${head}${body}</div>`;
-}
-
-function ngsRangeHtml(weekly) {
-  if (!weekly || weekly.length < 2) return "";
-  const vals = weekly.map((w) => w.value);
-  return `<span class="ngs-range">W${weekly[0].week}–W${weekly[weekly.length - 1].week} · ${fmtTotal(Math.min(...vals), 1)}–${fmtTotal(Math.max(...vals), 1)}</span>`;
-}
-
-function ngsSparkHtml(weekly) {
-  if (!weekly || weekly.length < 2) return "";
-  const vals = weekly.map((w) => w.value);
-  const lo = Math.min(...vals), hi = Math.max(...vals), span = hi - lo || 1;
-  const xy = weekly.map((w, i) => [(i / (weekly.length - 1)) * 100, 22 - ((w.value - lo) / span) * 20]);
-  const last = xy[xy.length - 1];
-  return `<svg class="ngs-spark" viewBox="0 0 100 24" preserveAspectRatio="none"><polyline points="${xy.map((q) => q.join(",")).join(" ")}"/></svg><em class="ngs-end" style="left:${last[0]}%;top:${(last[1] / 24) * 22}px"></em>`;
-}
-
-function wireNgsBars(container) {
-  // Two frames so the browser paints width:0 before the transition starts.
-  requestAnimationFrame(() => requestAnimationFrame(() => {
-    container.querySelectorAll(".ngs-bar").forEach((f) => { f.style.width = `${f.dataset.pct}%`; });
-    container.querySelectorAll(".ngs-dot").forEach((d) => { d.style.left = `${d.dataset.pct}%`; });
-  }));
+  return `<div class="section-label">Next Gen Stats <span class="muted small">scouting report, graded against other ${pos}s</span></div>
+    ${summary}
+    ${cards ? `<div class="sr-grid">${cards}</div>` : ""}
+    ${styles ? `<div class="sr-sub">Play style <span class="muted small">how he plays, not how well</span></div><div class="sr-styles">${styles}</div>` : ""}`;
 }
 
 // The SCORE/FORM/matchup grid + per-stat gauges + weekly chart — shared
@@ -1134,15 +1150,15 @@ function playerStatsBodyHtml(p) {
       ${matchupLine}
     </div>
     ${valueStripHtml(p)}
-    ${totalsHtml(p)}
-    ${projectionCompareSlotHtml()}
-    ${sections}
-    ${ngsHtml(p)}
     <div class="section-label weeklog-header">
       <span>Weekly Breakdown</span>
       ${statKeys.length > 1 ? `<select class="weeklog-stat-select">${statOptions}</select>` : ""}
     </div>
-    <div class="weeklog">${weeks.length ? weeklyChartHtml(weeks, "fpts") : '<span class="muted">No games logged yet.</span>'}</div>`;
+    <div class="weeklog-wrap">${weeks.length ? weeklyChartHtml(weeks, "fpts") : '<span class="muted">No games logged yet.</span>'}</div>
+    ${totalsHtml(p)}
+    ${projectionCompareSlotHtml()}
+    ${sections}
+    ${ngsHtml(p)}`;
 }
 
 // Wires the stat-picker inside whatever container just received
@@ -1150,9 +1166,8 @@ function playerStatsBodyHtml(p) {
 // modal, or one card's own expand panel for the inline case.
 function wirePlayerStatsBody(container, p) {
   const weeks = weeklyRows(p);
-  wireNgsBars(container);
   container.querySelector(".weeklog-stat-select")?.addEventListener("change", (e) => {
-    container.querySelector(".weeklog").innerHTML = weeklyChartHtml(weeks, e.target.value);
+    container.querySelector(".weeklog-wrap").innerHTML = weeklyChartHtml(weeks, e.target.value);
   });
   loadProjectionCompare(p.player_id, p.matchup_opponent, container);
 }
