@@ -454,6 +454,11 @@ def _attach_decisions(valid, bundle, get_board, scoring, mode):
     from .scoring import ScoringSettings
     pool, _ = waivers.cached_pool(scoring, bundle)
     snaps = waivers.weekly_snaps(bundle["season"])
+    pbp = bundle["pbp"]
+    xfp_wk = waivers.xfp_by_player(pbp, scoring)
+    goal_line = waivers.goal_line_share(pbp)
+    rz = pbp[(pbp["play_type"] == "run") & pbp["rusher_player_id"].notna() & (pbp["yardline_100"].fillna(100) <= 20)]
+    rz_by = rz.groupby(["rusher_player_id", "week"]).size()
     factors = bundle["defense_factors"]
     s = ScoringSettings.from_dict(scoring) if scoring else ScoringSettings.from_preset("ppr")
     wk = bundle["wk"]
@@ -489,7 +494,11 @@ def _attach_decisions(valid, bundle, get_board, scoring, mode):
         td_share = (100 * td_pts / tot) if tot and tot > 0 and len(g) >= 3 else None
         sw = sorted((snaps.get(pid) or {}).items())
         snap_trend = decision.snap_trend([v for _, v in sw])
-        rate, comps = decision.rating(r, usage_pct, ctx, split, mrank)
+        mine_x = xfp_wk[xfp_wk["player_id"] == pid]
+        recent = decision.recent_usage(
+            pid, pos, wk, snaps.get(pid) or {}, dict(zip(mine_x["week"].astype(int), mine_x["xfp"])),
+            {int(w): int(n) for (_, w), n in rz_by[rz_by.index.get_level_values(0) == pid].items()})
+        rate, comps = decision.rating(r, usage_pct, ctx, split, mrank, recent)
         mg, mb = decision.matchup_flags(pos, opp, factors) if opp else ([], [])
         pg, pb = decision.player_flags(r, ctx, split, xfp, td_share, snap_trend)
         def _f(v, nd=1):
@@ -502,6 +511,7 @@ def _attach_decisions(valid, bundle, get_board, scoring, mode):
             "target_share": _f(prow.get("target_share")) if prow is not None else None,
             "hvt_pg": _f(prow.get("hvt_pg")) if prow is not None else None,
             "td_share": _f(td_share, 0), "snap_trend": _f(snap_trend, 0),
+            "recent": recent, "goal_line_share": round(goal_line.get(pid, 0.0) * 100),
         }
         r["rank_value"] = decision.mode_value(r["outcomes"], mode)
     lo = 0.0

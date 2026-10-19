@@ -4300,3 +4300,6 @@ body.sidebar-collapsed .sidebar-top .sidebar-icon-btn { display: none; }
   .ssd-pick { font-size: 19px; }
 }
 @media (max-width: 700px) { .ssh-table td:first-child { white-space: normal; min-width: 110px; } }
+.ssh-sub { display: block; font-size: 10.5px; color: var(--muted-dim); font-weight: 400; }
+.ssh-table td.ssh-win .ssh-sub { color: var(--muted); }
+.ssh-tag { font-family: var(--mono); font-size: 9.5px; color: var(--accent); border: 1px solid var(--border-bright); border-radius: 4px; padding: 0 4px; margin-left: 4px; }

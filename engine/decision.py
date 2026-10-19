@@ -11,7 +11,8 @@ Turns each player's projection into a range of outcomes and a decision:
     percentile and 15% below the 10th, against 10% each if it were perfect,
     and the median split 49/51. P(10+) and P(20+) come from the same curve.
   * Start/Sit Rating (0-100):
-        0.40 role & expected points   (xFP/g, snap share, target share / HVT)
+        0.40 role & expected points   (xFP/g, snap share, target share / HVT;
+                                        +/-15 if his last 4 games' xFP moved vs season)
         0.30 matchup                   (defense vs his position, league-relative)
         0.20 game script & team total  (Vegas implied total, spread fit, his
                                         share of work when leading vs trailing)
@@ -134,6 +135,45 @@ def script_split(pbp, player_id, team, margin=7, weeks=None):
     return out
 
 
+# ------------------------------------------------------------ recent form ----
+RECENT_GAMES = 4
+
+
+def recent_usage(player_id, position, wk, snaps, xfp, rz_carries, n=RECENT_GAMES):
+    """Opportunity over his last `n` games next to his season average:
+    {games, weeks, snap_pct, target_share, hvt_pg, xfp_pg} with each value a
+    {recent, season} pair. Target share is a percent; HVT (red-zone carries +
+    targets) is RBs only; xFP is skipped for QBs (passing isn't modelled)."""
+    g = wk[wk["player_id"] == player_id].sort_values("week")
+    if g.empty:
+        return None
+    weeks = [int(w) for w in g["week"]]
+    last = weeks[-n:]
+
+    def pair(series_by_week, scale=1.0):
+        vals = {w: v for w, v in series_by_week.items() if v is not None and not pd.isna(v)}
+        if not vals:
+            return None
+        rec = [vals[w] for w in last if w in vals]
+        return {"recent": round(float(np.mean(rec)) * scale, 1) if rec else None,
+                "season": round(float(np.mean(list(vals.values()))) * scale, 1)}
+
+    ts = dict(zip(g["week"].astype(int), g["target_share"])) if "target_share" in g.columns else {}
+    out = {"games": len(last), "weeks": last,
+           "snap_pct": pair({w: snaps.get(w) for w in weeks}),
+           "target_share": pair(ts, 100.0) if position != "QB" else None}
+    if position == "RB":
+        tg = dict(zip(g["week"].astype(int), g["targets"].fillna(0)))
+        out["hvt_pg"] = pair({w: tg.get(w, 0) + rz_carries.get(w, 0) for w in weeks})
+    else:
+        out["hvt_pg"] = None
+    if position != "QB" and xfp is not None:
+        out["xfp_pg"] = pair({w: xfp.get(w, 0.0) for w in weeks})
+    else:
+        out["xfp_pg"] = None
+    return out
+
+
 # --------------------------------------------------------------- matchup ----
 def defense_rank(position, opp, factors):
     """1 = easiest matchup for this position among every defense."""
@@ -177,9 +217,20 @@ def _clip(v):
     return float(np.clip(v, 0, 100))
 
 
-def rating(r, usage_pct, ctx, split, mrank):
+def role_shift(recent):
+    """Points (+/-15) for a role growing or shrinking: his last-4-games xFP
+    (or snap share for QBs) vs his season average."""
+    if not recent:
+        return 0.0
+    x = recent.get("xfp_pg") or recent.get("snap_pct")
+    if not x or x.get("recent") is None or not x.get("season"):
+        return 0.0
+    return float(np.clip((x["recent"] - x["season"]) / x["season"] * 50, -15, 15))
+
+
+def rating(r, usage_pct, ctx, split, mrank, recent=None):
     """(rating 0-100, components) for one player row."""
-    role = usage_pct if usage_pct is not None else 50.0
+    role = _clip((usage_pct if usage_pct is not None else 50.0) + role_shift(recent))
     mf = r.get("matchup_factor")
     m_score = _clip(((mf or 1.0) - 0.85) / 0.30 * 100)
     if mrank and mrank[0]:

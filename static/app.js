@@ -1789,13 +1789,20 @@ function ssHeadToHeadHtml(players, color) {
   const dd = (p) => p.decision || {};
   const game = (p) => (p.environment || {}).game || {};
   const sgn = (v) => (v == null ? "—" : `${v > 0 ? "+" : ""}${v}`);
+  // Last-4-games value, with the season average shown underneath.
+  const rec = (p, k) => (dd(p).recent || {})[k]?.recent ?? null;
+  const sea = (p, k, suf) => {
+    const x = (dd(p).recent || {})[k];
+    return x && x.season != null ? `season ${k === "snap_pct" ? Math.round(x.season) : FMT.d1(x.season)}${suf}` : "";
+  };
   const rows = [
     ["Start/Sit rating", (p) => dd(p).rating, (v) => (v == null ? "—" : `${Math.round(v)}/100`), 1],
     ["Projection", (p) => p.PROJ, (v) => FMT.d1(v), 1],
-    ["Snap share (last game)", (p) => dd(p).snap_pct, (v) => (v == null ? "—" : `${v}%`), 1],
-    ["Target share", (p) => dd(p).target_share, (v) => (v == null ? "—" : `${v}%`), 1],
-    ["High-value touches / game", (p) => dd(p).hvt_pg, (v) => (v == null ? "—" : FMT.d1(v)), 1],
-    ["Expected pts / game (xFP)", (p) => dd(p).xfp_pg, (v) => (v == null ? "—" : FMT.d1(v)), 1],
+    ["Snap share", (p) => rec(p, "snap_pct"), (v) => (v == null ? "—" : `${Math.round(v)}%`), 1, (p) => sea(p, "snap_pct", "%")],
+    ["Target share", (p) => rec(p, "target_share"), (v) => (v == null ? "—" : `${FMT.d1(v)}%`), 1, (p) => sea(p, "target_share", "%")],
+    ["High-value touches / game", (p) => rec(p, "hvt_pg"), (v) => (v == null ? "—" : FMT.d1(v)), 1, (p) => sea(p, "hvt_pg", "")],
+    ["Expected pts / game (xFP)", (p) => rec(p, "xfp_pg"), (v) => (v == null ? "—" : FMT.d1(v)), 1, (p) => sea(p, "xfp_pg", "")],
+    ["Goal-line share (inside the 5)", (p) => dd(p).goal_line_share, (v) => (v == null ? "—" : `${v}%`), 1],
     ["Points vs xFP", (p) => dd(p).xfp_diff, (v) => (v == null ? "—" : sgn(Math.round(v * 10) / 10)), 0],
     ["Team implied total", (p) => game(p).implied_total, (v) => (v == null ? "—" : String(v)), 1],
     ["Spread", (p) => game(p).margin, (v) => (v == null ? "—" : v > 0 ? `Fav by ${v}` : v < 0 ? `Dog by ${-v}` : "Pick'em"), 0],
@@ -1804,7 +1811,7 @@ function ssHeadToHeadHtml(players, color) {
     ["Weather at kickoff", (p) => game(p).weather, (v) => (v ? (v.maybe_closed ? "Roof may be closed" : v.index ? `${v.label}: ${v.reasons.join(", ")}` : `${v.temp}°F, ${v.wind} mph`) : "Indoors / n/a"), 0],
   ];
   const head = players.map((p) => `<th style="color:${color(p.player_id)}">${esc(p.player_display_name)}</th>`).join("");
-  const body = rows.map(([label, get, fmt, dir]) => {
+  const body = rows.map(([label, get, fmt, dir, sub]) => {
     const vals = players.map(get);
     let best = -1;
     if (dir !== 0) {
@@ -1815,10 +1822,14 @@ function ssHeadToHeadHtml(players, color) {
         best = nums.indexOf(target);
       }
     }
-    return `<tr><td>${label}</td>${vals.map((v, i) => `<td class="${i === best ? "ssh-win" : ""}">${esc(fmt(v))}</td>`).join("")}</tr>`;
+    const tag = sub ? ` <small class="ssh-tag">last 4</small>` : "";
+    return `<tr><td>${label}${tag}</td>${vals.map((v, i) => {
+      const s2 = sub ? sub(players[i]) : "";
+      return `<td class="${i === best ? "ssh-win" : ""}">${esc(fmt(v))}${s2 ? `<span class="ssh-sub">${esc(s2)}</span>` : ""}</td>`;
+    }).join("")}</tr>`;
   }).join("");
   return `<div class="ssd-panel">
-    <div class="ssd-h">Head to head <span class="muted small">green = the edge on that line</span></div>
+    <div class="ssd-h">Head to head <span class="muted small">green = the edge on that line · usage rows are his last 4 games, season average underneath</span></div>
     <div class="ssh-wrap"><table class="ssh-table"><thead><tr><th></th>${head}</tr></thead><tbody>${body}</tbody></table></div>
     <div class="ssd-foot">Route participation, DVOA and man/zone coverage splits aren't available from any free source, so they aren't shown.</div>
   </div>`;

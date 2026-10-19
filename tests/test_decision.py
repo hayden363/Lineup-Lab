@@ -124,3 +124,19 @@ class ScoringBonusTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class RecentUsageTest(unittest.TestCase):
+    def test_last_four_vs_season_and_role_shift(self):
+        wk = pd.DataFrame([{"player_id": "p", "week": w, "target_share": ts, "targets": t}
+                           for w, ts, t in [(1, .10, 3), (2, .10, 3), (3, .30, 9), (4, .30, 9), (5, .30, 9), (6, .30, 9)]])
+        snaps = {w: 60 + w for w in range(1, 7)}
+        xfp = {1: 4, 2: 4, 3: 12, 4: 12, 5: 12, 6: 12}
+        r = D.recent_usage("p", "RB", wk, snaps, xfp, {3: 2, 4: 2})
+        self.assertEqual(r["weeks"], [3, 4, 5, 6])
+        self.assertEqual(r["target_share"], {"recent": 30.0, "season": 23.3})
+        self.assertEqual(r["hvt_pg"]["recent"], 10.0)
+        self.assertEqual(r["xfp_pg"], {"recent": 12.0, "season": 9.3})
+        self.assertGreater(D.role_shift(r), 0)
+        self.assertEqual(D.role_shift(None), 0.0)
+        self.assertIsNone(D.recent_usage("p", "QB", wk, snaps, xfp, {})["xfp_pg"])
