@@ -249,19 +249,22 @@ class ResetPasswordRequest(BaseModel):
     new_password: str
 
 
-def _send_verification(request: Request, user):
-    """Best-effort: signup/resend never fails because mail isn't set up —
-    the account just stays unverified until it is."""
+def _send_verification(request: Request, user) -> str:
+    """Best-effort: signup never fails because mail isn't set up — the account
+    just stays unverified until it is. Returns "sent", "failed" or
+    "not_configured" so callers can tell the user the truth."""
     if not mail_layer.configured():
         print("[mail] GMAIL_ADDRESS/GMAIL_APP_PASSWORD not set — skipping verification email "
               "(see .env.example)")
-        return
+        return "not_configured"
     token = db.create_verification_token(user["id"])
     verify_url = f"{str(request.base_url).rstrip('/')}/api/auth/verify?token={token}"
     try:
         mail_layer.send_verification_email(user["email"], user["username"], verify_url)
     except (mail_layer.MailNotConfigured, mail_layer.MailSendError) as e:
         print(f"[mail] couldn't send verification email: {e}")
+        return "failed"
+    return "sent"
 
 
 @app.post("/api/auth/signup", dependencies=[Depends(signup_rate_limit)])
@@ -271,8 +274,7 @@ def signup(req: SignupRequest, request: Request, response: Response):
     except db.AuthError as e:
         raise HTTPException(400, str(e))
     _set_session_cookie(request, response, db.create_session(user["id"]))
-    _send_verification(request, user)
-    return user
+    return {**user, "verification_email": _send_verification(request, user)}
 
 
 @app.get("/api/auth/verify", include_in_schema=False)
@@ -290,7 +292,8 @@ def resend_verification(request: Request, user=Depends(require_user)):
         return {"status": "already_verified"}
     if not mail_layer.configured():
         raise HTTPException(400, "Email isn't set up on this server yet — see .env.example.")
-    _send_verification(request, user)
+    if _send_verification(request, user) != "sent":
+        raise HTTPException(503, "We couldn't send the email just now. Please try again in a few minutes.")
     return {"status": "sent"}
 
 
@@ -388,15 +391,18 @@ def forgot_password(req: ForgotPasswordRequest, request: Request):
     """Always returns the same generic response whether or not the email
     exists — otherwise this endpoint would let anyone probe which emails
     have accounts (account enumeration)."""
+    if not mail_layer.configured():
+        # Server-wide condition, so saying so leaks nothing about any one email.
+        raise HTTPException(503, "Password reset email isn't available right now. Please try again later.")
     user = db.get_user_by_email(req.email)
-    if user and mail_layer.configured():
+    if user:
         token = db.create_reset_token(user["id"])
         reset_url = f"{str(request.base_url).rstrip('/')}/?reset_token={token}"
         try:
             mail_layer.send_password_reset_email(user["email"], user["username"], reset_url)
         except (mail_layer.MailNotConfigured, mail_layer.MailSendError) as e:
             print(f"[mail] couldn't send reset email: {e}")
-    return {"status": "ok", "message": "If that email has an account, a reset link is on its way. It can take a minute — check your spam or junk folder if you don't see it."}
+    return {"status": "ok", "message": "If that email has an account, we're sending a reset link. It can take a minute — check your spam or junk folder, and try again if it never shows up."}
 
 
 @app.post("/api/auth/reset-password", dependencies=[Depends(reset_rate_limit)])

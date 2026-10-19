@@ -305,15 +305,9 @@ nflverse data fetch (weekly stats/pbp/NGS/schedule/injuries/snap counts).
 **~62 seconds total**, once, then every request after is ~80ms until it
 goes idle again.
 
-**Workaround in place**: `.github/workflows/keep-alive.yml`, a GitHub
-Actions cron pinging `/api/meta` every 10 minutes — runs on GitHub's own
-infrastructure (unlimited free minutes, this repo is public), not tied to
-any machine or app being open, so it actually holds up unattended. This
-is a stopgap, not a scaling fix: it only stops one free instance from
-sleeping. **The real, permanent fix is upgrading the Render service to
-Starter (or higher)** — spin-down goes away entirely; do that instead of
-relying on the ping once cost isn't the constraint, then delete the
-workflow file.
+**Resolved**: the service is on the Starter plan, so spin-down no longer
+happens. The old GitHub Actions keep-alive ping was removed (its median gap
+was ~4.5 hours, so it never actually kept the free plan warm).
 
 **What actually scaling to a real playerbase needs, beyond the plan
 upgrade** (none of this is built — real decisions for when it's needed,

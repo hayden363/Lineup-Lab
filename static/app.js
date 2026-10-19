@@ -2938,7 +2938,10 @@ function wireAuthPanel(container, mode, onSuccess) {
           });
           submitBtn.classList.remove("loading");
           await onSuccess(user);
-          showToast("Welcome to Lineup Lab — check your email to verify your account. If it's not in your inbox, look in spam or junk.", "success");
+          showToast(user.verification_email === "sent"
+            ? "Welcome to Lineup Lab — check your email to verify your account. If it's not in your inbox, look in spam or junk."
+            : "Welcome to Lineup Lab! We couldn't send your verification email just now — you can resend it from your account settings.",
+            user.verification_email === "sent" ? "success" : "error");
         } catch (e) {
           submitBtn.classList.remove("loading");
           submitBtn.disabled = false;
