@@ -2246,7 +2246,7 @@ function initTrade() {
 // (Sleeper add/drop velocity, handcuffs, a usage deep dive).
 let wvTimer = null;
 
-const WV_PARTS = [["urgency", "Need"], ["gain", "Lineup gain"], ["usage", "Usage"], ["schedule", "Schedule"]];
+const WV_PARTS = [["urgency", "Need"], ["gain", "Gain"], ["usage", "Usage"], ["schedule", "Schedule"]];
 const WV_BADGE = {
   trap: ["wv-trap", "Waiver trap"],
   breakout: ["wv-breakout", "Breakout signal"],
@@ -2273,24 +2273,24 @@ function wvCount(n) {
 
 function wvStatusHtml(st, week) {
   if (!st) {
-    return `<div class="wv-stat"><span class="wv-k">Week</span><span class="wv-v">${esc(week)}</span></div>
-      <div class="wv-stat wv-stat-wide"><span class="wv-k">Your league</span><span class="wv-v small">Sign in and connect a Sleeper league in Settings for Smart Match, FAAB and waiver order.</span></div>`;
+    return `<div class="wv-stat"><span class="wv-k">Waivers for</span><span class="wv-v">Week ${esc(week)}</span></div>
+      <div class="wv-stat wv-stat-wide"><span class="wv-k">Your league</span><span class="wv-v small">Sign in and connect a Sleeper league in Settings to see your FAAB, waiver order and picks matched to your roster.</span></div>`;
   }
   const faab = st.is_faab
-    ? `<div class="wv-stat"><span class="wv-k">FAAB left</span><span class="wv-v">$${fmtTotal(st.faab_remaining)} <small>${fmtTotal(st.faab_remaining_pct, 0)}% of $${fmtTotal(st.faab_budget)}</small></span></div>`
-    : `<div class="wv-stat"><span class="wv-k">Format</span><span class="wv-v">${esc(st.waiver_type)}</span></div>`;
+    ? `<div class="wv-stat"><span class="wv-k">FAAB left</span><span class="wv-v">$${fmtTotal(st.faab_remaining)}<span class="wv-sub">${fmtTotal(st.faab_remaining_pct, 0)}% of $${fmtTotal(st.faab_budget)}</span></span></div>`
+    : `<div class="wv-stat"><span class="wv-k">Format</span><span class="wv-v">${esc(st.waiver_type)}<span class="wv-sub">No FAAB budget</span></span></div>`;
   const prio = st.priority != null
-    ? `<div class="wv-stat"><span class="wv-k">Waiver priority</span><span class="wv-v">#${esc(st.priority)} <small>of ${esc(st.teams)}</small></span></div>` : "";
+    ? `<div class="wv-stat"><span class="wv-k">Waiver priority</span><span class="wv-v">#${esc(st.priority)}<span class="wv-sub">of ${esc(st.teams)} teams</span></span></div>` : "";
   const run = st.next_run
-    ? `<div class="wv-stat"><span class="wv-k">Waivers run</span><span class="wv-v"><span id="wv-countdown" data-at="${esc(st.next_run)}"></span> <small>${esc(st.next_run_label)}</small></span></div>` : "";
-  return `${faab}${prio}${run}<div class="wv-stat"><span class="wv-k">For</span><span class="wv-v">Week ${esc(week)}</span></div>`;
+    ? `<div class="wv-stat"><span class="wv-k">Next run</span><span class="wv-v"><span class="wv-live" id="wv-countdown" data-at="${esc(st.next_run)}"></span><span class="wv-sub">${esc(st.next_run_label)}</span></span></div>` : "";
+  return `${faab}${prio}${run}<div class="wv-stat"><span class="wv-k">Waivers for</span><span class="wv-v">Week ${esc(week)}<span class="wv-sub">Byes and injuries checked 3 weeks out</span></span></div>`;
 }
 
 function wvTick() {
   const elc = document.getElementById("wv-countdown");
   if (!elc) { clearInterval(wvTimer); wvTimer = null; return; }
   const ms = new Date(elc.dataset.at) - new Date();
-  if (ms <= 0) { elc.textContent = "processing now"; return; }
+  if (ms <= 0) { elc.textContent = "Processing"; return; }
   const d = Math.floor(ms / 864e5), h = Math.floor(ms / 36e5) % 24, m = Math.floor(ms / 6e4) % 60;
   elc.textContent = d ? `${d}d ${h}h ${m}m` : `${h}h ${m}m`;
 }
@@ -2298,72 +2298,89 @@ function wvTick() {
 function wvNeedsHtml(needs) {
   if (!needs) return "";
   const hot = Object.entries(needs).filter(([, n]) => n.multiplier > 1).sort((a, b) => b[1].multiplier - a[1].multiplier);
-  if (!hot.length) return `<div class="wv-need-none">No urgent holes. Your starters hold up through the next 3 weeks, so these are pure upgrades.</div>`;
-  return hot.map(([pos, n]) => `<div class="wv-need ${n.multiplier >= 1.4 ? "hot" : ""}">
-      <b>${esc(pos)}</b><span class="wv-need-x">${n.multiplier.toFixed(2)}x need</span>
-      <span class="wv-need-why">${n.reasons.map(esc).join(" · ")}</span>
+  if (!hot.length) return `<div class="wv-need-none">No urgent holes for the next 3 weeks, so these are pure upgrades.</div>`;
+  return hot.map(([pos, n]) => `<div class="wv-need ${n.multiplier >= 1.4 ? "hot" : ""}" title="${esc(n.multiplier.toFixed(2))}x need">
+      <b>${esc(pos)} need</b><span>${n.reasons.map(esc).join(" · ")}</span>
     </div>`).join("");
 }
 
 function wvBidsHtml(bids) {
   if (!bids) return "";
   return `<div class="wv-bids">${bids.map((b) => `<div class="wv-bid${b.recommended ? " rec" : ""}" title="${esc(b.why)}">
-      <span class="wv-bid-l">${esc(b.label)}${b.recommended ? " · suggested" : ""}</span>
+      <span class="wv-bid-l">${esc(b.label)}${b.recommended ? " ✓" : ""}</span>
       <span class="wv-bid-v">$${b.dollars[0]}–$${b.dollars[1]}</span>
-      <span class="wv-bid-p">${b.pct[0]}–${b.pct[1]}%</span>
+      <span>${b.pct[0]}–${b.pct[1]}% of budget</span>
     </div>`).join("")}</div>`;
 }
 
 function wvSmartCardHtml(s, i) {
-  const parts = WV_PARTS.map(([k, label]) => `<span class="wv-part"><i style="width:${Math.round(s.wps_parts[k])}%"></i><em>${label}</em><b>${Math.round(s.wps_parts[k])}</b></span>`).join("");
+  const parts = WV_PARTS.map(([k, label]) => {
+    const v = Math.round(s.wps_parts[k]);
+    return `<span class="wv-part"><em>${label}<b>${v}</b></em><s><i style="width:${v}%"></i></s></span>`;
+  }).join("");
   const drop = s.drop
-    ? `<div class="wv-drop"><span class="wv-k">Drop</span> <b>${esc(s.drop.name)}</b> <span class="muted">${esc(s.drop.position)} · ${esc(s.drop.team || "")} · ${FMT.d1(s.drop.ros)} pts/wk</span></div>`
-    : `<div class="wv-drop"><span class="wv-k">Drop</span> <span class="muted">nobody, you have an open roster spot</span></div>`;
+    ? `<span class="wv-chip-drop"><i>−</i>${esc(s.drop.name)} <span class="muted">${esc(s.drop.position)} · ${FMT.d1(s.drop.ros)}/wk</span></span>`
+    : `<span class="wv-chip-drop"><i>○</i><span class="muted">Open roster spot</span></span>`;
   const why = s.need_reasons && s.need_reasons.length ? `<div class="wv-why">${esc(s.need_reasons[0])}</div>` : "";
+  const g = s.gain_ros;
   return `<div class="wv-card" data-i="${i}">
+    <span class="wv-rank">#${i + 1}</span>
     <div class="wv-card-top">
       <img ${headshotAttrs(wvPlayer(s))} alt="">
       <div class="wv-card-id">
-        <div class="wv-name" data-pid="${esc(s.player_id)}">${esc(s.name)}${statusFlagsHtml(s)} ${wvBadgeHtml(s)}</div>
-        <div class="muted small">${esc(s.position)} · ${esc(s.team)} · ${FMT.d1(s.ros)} pts/wk rest of season · next 4: ${esc(s.schedule.grade)}</div>
+        <div class="wv-name" data-pid="${esc(s.player_id)}">${esc(s.name)}${statusFlagsHtml(s)}</div>
+        <div class="wv-meta"><span class="pos-chip pos-${esc(s.position)}">${esc(s.position)}</span>${esc(s.team)} · next 4 <span class="wv-grade g-${esc(s.schedule.grade.toLowerCase())}">${esc(s.schedule.grade)}</span>${wvBadgeHtml(s)}</div>
       </div>
-      <div class="wv-wps" title="Waiver Priority Score: 35% need + 35% lineup gain + 20% usage + 10% schedule"><b>${Math.round(s.wps)}</b><span>WPS</span></div>
+      <div class="wv-ring" style="--p:${Math.round(s.wps)}" title="Waiver Priority Score: 35% need + 35% lineup gain + 20% usage + 10% schedule"><b>${Math.round(s.wps)}</b><span>WPS</span></div>
     </div>
-    ${drop}
-    <div class="wv-delta"><b class="${s.gain_ros >= 0 ? "pos" : "neg"}">${wvSigned(s.gain_ros)} pts/wk</b> to your starting lineup, rest of season <span class="muted">· ${wvSigned(s.gain_next3)} over the next 3 weeks (byes and injuries counted)</span></div>
+    <div class="wv-gain">
+      <span class="wv-gain-n ${g >= 0 ? "pos" : "neg"}">${wvSigned(g)}<small>/wk</small></span>
+      <span class="wv-gain-t">to your starting lineup<br><b>${wvSigned(s.gain_next3)}</b> over the next 3 weeks</span>
+    </div>
+    <div class="wv-swaprow"><span class="wv-k">Drop</span>${drop}</div>
     ${why}
     <div class="wv-parts">${parts}</div>
     ${wvBidsHtml(s.bids)}
-    <button class="wv-compare" data-i="${i}">Compare the swap</button>
+    <div class="wv-card-foot"><button class="wv-compare" data-i="${i}">Compare the swap →</button></div>
   </div>`;
+}
+
+function wvPlayerCellHtml(p, extras) {
+  const isTop = p.rank === 1;
+  const q = wvPlayer(p);
+  return `<div class="player-cell wv-pcell${isTop ? " player-cell-top" : ""}">
+      <img ${headshotAttrs(q)} alt="">
+      <div><div class="player-name">${isTop ? '<span class="top-crown" title="Top of this list">👑</span>' : ""}${esc(p.name)}${statusFlagsHtml(p)}${extras || ""}</div>
+      <div class="player-team">${esc(p.team || "")} · <span class="pos-chip pos-${esc(p.position)}">${esc(p.position)}</span></div></div>
+    </div>`;
 }
 
 function wvMoversHtml(movers, hasLeague) {
   if (!movers.length) return `<div class="empty">Sleeper's trending feed is unavailable right now.</div>`;
   const rows = movers.map((m) => {
-    const vel = m.velocity == null ? `<span class="muted">new today</span>`
-      : m.velocity >= 1.5 ? `<span class="pos">${m.velocity}x yesterday's pace</span>`
-      : m.velocity < 0.8 ? `<span class="muted">cooling (${m.velocity}x)</span>` : `<span class="muted">steady (${m.velocity}x)</span>`;
+    const vel = m.velocity == null ? `<span class="wv-velo hot">new today</span>`
+      : m.velocity >= 1.5 ? `<span class="wv-velo hot">${m.velocity}x yesterday</span>`
+      : m.velocity < 0.8 ? `<span class="wv-velo cool">${m.velocity}x yesterday</span>` : `<span class="wv-velo">${m.velocity}x yesterday</span>`;
     const avail = m.available == null ? "" : m.available ? `<span class="wv-chip ok">Available</span>` : `<span class="wv-chip">Rostered</span>`;
     return `<tr data-pid="${esc(m.player_id)}">
-      <td>${playerCellHtml(wvPlayer(m))} ${wvBadgeHtml(m)}</td>
-      <td class="tabular"><b class="${m.net_24h >= 0 ? "pos" : "neg"}">${wvSigned(m.net_24h, 0).replace(/(\d+)$/, (d) => wvCount(Number(d)))}</b></td>
+      <td>${wvPlayerCellHtml(m, wvBadgeHtml(m))}</td>
+      <td class="tabular"><span class="wv-net">${m.net_24h >= 0 ? "+" : "−"}${wvCount(Math.abs(m.net_24h))}</span></td>
       <td class="tabular muted">+${wvCount(m.adds_24h)} / ${m.drops_24h == null ? "—" : "−" + wvCount(m.drops_24h)}</td>
       <td>${vel}</td><td>${avail}</td></tr>`;
   }).join("");
-  return `<div class="hint">Sleeper's platform-wide adds minus drops over the last 24 hours, and how today's adds compare to the 24 hours before. "—" means too few drops to make Sleeper's top-200 list.${hasLeague ? "" : " Connect a league to see who's available in yours."}</div>
-    <div class="board-wrap"><table class="wv-table"><thead><tr><th>Player</th><th>Net 24h</th><th>Adds / drops</th><th>Velocity</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  return `<div class="hint">Sleeper-wide adds minus drops in the last 24 hours, and today's adds vs the day before. "—" = too few drops to make Sleeper's top-200 list.${hasLeague ? "" : " Connect a league to see who's available in yours."}</div>
+    <div class="board-wrap"><table class="wv-table"><thead><tr><th>Player</th><th>Net 24h</th><th>Adds / drops</th><th>Pace</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`;
 }
 
 function wvCuffsHtml(cuffs, hasLeague) {
   if (!cuffs.length) return `<div class="empty">No depth chart data right now.</div>`;
   const rows = cuffs.map((c) => `<tr data-pid="${esc(c.backup_id)}">
-      <td><b>${esc(c.backup)}</b> <span class="muted small">${esc(c.team)}</span></td>
+      <td><span class="player-name">${esc(c.backup)}</span> <span class="muted small">${esc(c.team)} RB2</span></td>
       <td>${esc(c.starter)}${c.starter_status ? ` <span class="wv-chip warn">${esc(c.starter_status)}</span>` : ""}</td>
       <td class="tabular"><b>${FMT.d1(c.index)}</b> <span class="muted small">pts/wk</span></td>
       <td class="tabular">${c.backup_snap_pct == null ? "—" : fmtTotal(c.backup_snap_pct, 0) + "%"}</td>
       <td>${hasLeague ? (c.available ? `<span class="wv-chip ok">Available</span>` : `<span class="wv-chip">Rostered</span>`) : ""}</td></tr>`).join("");
-  return `<div class="hint">Each team's RB2 from the current depth chart, ranked by what the starter's job is worth (his rest-of-season points per week). Backups whose starter is banged up right now come first.</div>
+  return `<div class="hint">Each team's RB2 from the current depth chart, ranked by what the starter's job is worth. Backups whose starter is hurt right now come first.</div>
     <div class="board-wrap"><table class="wv-table"><thead><tr><th>Backup</th><th>Behind</th><th>Job is worth</th><th>Backup snap %</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`;
 }
 
@@ -2407,12 +2424,12 @@ function wvDeepRender() {
       return (x > y ? 1 : x < y ? -1 : 0) * sort.dir;
     });
   } else if (sort.dir === 1) rows.reverse();
-  $("#wv-head").innerHTML = cols.map(([k, label]) => `<th data-k="${k}" class="${k === sort.key ? "sorted" : ""}" ${WV_TIPS[k] ? `title="${esc(WV_TIPS[k])}"` : ""}>${label}${WV_TIPS[k] && adv ? " ⓘ" : ""}</th>`).join("");
+  $("#wv-head").innerHTML = cols.map(([k, label]) => `<th data-k="${k}" class="${k === sort.key ? `sorted${sort.dir === 1 ? " asc" : ""}` : ""}" ${WV_TIPS[k] ? `title="${esc(WV_TIPS[k])}"` : ""}>${label}${WV_TIPS[k] && adv ? " ⓘ" : ""}</th>`).join("");
   const n = (v, dec = 1, suf = "") => (v == null ? `<span class="muted">—</span>` : `${Number(v).toFixed(dec)}${suf}`);
   const cell = (p, k) => {
     switch (k) {
       case "rank": return `<td class="rank-cell">${p.rank}</td>`;
-      case "name": return `<td>${playerCellHtml(wvPlayer(p))}${wvTrendHtml(p)} ${wvBadgeHtml(p)}</td>`;
+      case "name": return `<td>${wvPlayerCellHtml(p, wvTrendHtml(p) + wvBadgeHtml(p))}</td>`;
       case "SCORE": return `<td>${p.SCORE == null ? "—" : scoreCell(p.SCORE)}</td>`;
       case "FORM": return `<td>${formCell(p.FORM)}</td>`;
       case "fpts_pg": return `<td class="tabular">${n(p.fpts_pg)}</td>`;
@@ -2427,6 +2444,11 @@ function wvDeepRender() {
       default: return "<td></td>";
     }
   };
+  const total = rows.length;
+  if (!state.wvListAll) rows = rows.slice(0, 25);
+  const more = $("#wv-list-more");
+  more.style.display = total > 25 ? "" : "none";
+  more.textContent = state.wvListAll ? "Show top 25" : `Show all ${total} players`;
   $("#waivers-body").innerHTML = rows.map((p) => `<tr data-pid="${esc(p.player_id)}" class="${p.rank === 1 ? "board-row-top" : ""}">${cols.map(([k]) => cell(p, k)).join("")}</tr>`).join("")
     || `<tr><td colspan="${cols.length}" class="empty">No available players at this position.</td></tr>`;
   wvWireRows($("#waivers-body"));
@@ -2517,8 +2539,8 @@ async function loadWaivers(pos) {
     $("#wv-cuffs").innerHTML = wvCuffsHtml(d.handcuffs, d.has_league);
     $("#wv-gaps").textContent = `Not shown: ${d.not_available.join("; ")}. xFP is our own model and FAAB bids are our suggestion, not a market consensus.`;
     $("#waivers-hint").textContent = d.has_league
-      ? "Excluding everyone rostered in your league. 🔥 = adds on Sleeper in the last 48h. Tick Usage stats for snap share, targets and expected points."
-      : "Not excluding any rostered players. Sign in and connect your Sleeper league in Settings to see who's actually available.";
+      ? "Ranked by SCORE, excluding everyone rostered in your league. 🔥 = adds on Sleeper in the last 48h."
+      : "Ranked by SCORE. Connect your Sleeper league in Settings to hide players who are already rostered.";
     wvDeepRender();
     ["#wv-movers", "#wv-cuffs"].forEach((sel) => wvWireRows($(sel)));
   } catch (e) {
@@ -2538,6 +2560,10 @@ function initWaiverControls() {
     wvDeepRender();
   });
   try { $("#wv-advanced").checked = localStorage.getItem("wvAdvanced") === "1"; } catch (e) { /* storage off */ }
+  $("#wv-list-more").addEventListener("click", () => {
+    state.wvListAll = !state.wvListAll;
+    wvDeepRender();
+  });
   $("#wv-smart-more").addEventListener("click", () => {
     state.wvShowAll = !state.wvShowAll;
     wvSmartRender();

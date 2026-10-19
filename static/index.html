@@ -290,27 +290,37 @@
       <div id="wv-status" class="wv-status"></div>
       <div id="wv-note" class="hint"></div>
 
-      <div class="section-label">Best fits for your roster <span class="muted small">free agents scored against your team</span></div>
+      <div class="wv-head">
+        <span class="wv-head-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/></svg></span>
+        <div><h2>Best fits for your roster</h2><p>Free agents scored against your team, each with the player you'd drop.</p></div>
+      </div>
       <div id="wv-needs" class="wv-needs"></div>
       <div id="wv-smart" class="wv-smart"></div>
       <button id="wv-smart-more" class="wv-more" style="display:none"></button>
 
-      <div class="section-label">Available players</div>
-      <div class="controls wv-controls">
-        <div class="pill-group" id="waivers-pos-pills"></div>
-        <label class="wv-toggle"><input type="checkbox" id="wv-advanced"> Usage stats</label>
+      <div class="wv-head">
+        <span class="wv-head-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 6h11M9 12h11M9 18h11"/><path d="M4 6h.01M4 12h.01M4 18h.01" stroke-width="3"/></svg></span>
+        <div><h2>Available players</h2><p id="waivers-hint">Ranked by SCORE.</p></div>
       </div>
-      <div class="hint" id="waivers-hint"></div>
+      <div class="wv-controls">
+        <div class="pill-group" id="waivers-pos-pills"></div>
+        <label class="wv-toggle"><input type="checkbox" id="wv-advanced"><span class="wv-switch"></span>Usage stats</label>
+      </div>
       <div class="board-wrap">
         <table id="waivers-table" class="wv-table">
           <thead><tr id="wv-head"></tr></thead>
           <tbody id="waivers-body"></tbody>
         </table>
       </div>
+      <button id="wv-list-more" class="wv-more" style="display:none"></button>
 
-      <div class="wv-tabs" role="tablist">
-        <button class="wv-tab active" data-wv="movers">Market Movers</button>
-        <button class="wv-tab" data-wv="cuffs">Handcuff Index</button>
+      <div class="wv-head">
+        <span class="wv-head-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg></span>
+        <div><h2>Trends</h2><p>What the rest of Sleeper is doing, and who's one injury from a starting job.</p></div>
+        <div class="wv-head-right pill-group" role="tablist">
+          <button class="pill wv-tab active" data-wv="movers">Market Movers</button>
+          <button class="pill wv-tab" data-wv="cuffs">Handcuffs</button>
+        </div>
       </div>
       <div id="wv-movers" class="wv-feed"></div>
       <div id="wv-cuffs" class="wv-feed" style="display:none"></div>
