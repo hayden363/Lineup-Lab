@@ -367,6 +367,13 @@ def _build_board_uncached(position, season, min_volume, scoring):
     fpts_by_player = wk.groupby("player_id")["fpts_active"]
     board["floor"] = fpts_by_player.quantile(0.25).reindex(board.index).clip(lower=0)
     board["ceiling"] = fpts_by_player.quantile(0.75).reindex(board.index)
+    # One monster game can drag the average above the 75th percentile (or one
+    # dud below the 25th). The percentiles are still the honest spread, but a
+    # range that doesn't contain the player's own average reads as a bug, so
+    # widen the band to include it.
+    avg = board["fpts_per_game"]
+    board["floor"] = board["floor"].where(board["floor"] <= avg, avg)
+    board["ceiling"] = board["ceiling"].where(board["ceiling"] >= avg, avg)
 
     # "Gone dark" signal: a player can stop appearing in the weekly data
     # (release, benching, an injury that never got a live Sleeper
@@ -497,21 +504,21 @@ def _injury_sample_col(board, position):
     return board.apply(_n, axis=1)
 
 
-# Starter-pool size per position for the shrinkage prior (top N by per-game
-# scoring among players with a real sample).
-SHRINK_POOL = {"QB": 12, "RB": 24, "WR": 24, "TE": 12}
 SHRINK_GAMES = 3.0   # prior counts as this many games of evidence
 SHRINK_MIN_SAMPLE = 3
 
 
 def shrunk_rate(board, position):
-    """Per-game scoring pulled toward the position's starter average by how
-    few games he has played: (n*rate + k*prior) / (n + k), k = 3 games. A
-    5-game 30-point streak projects forward as roughly 23, not 31, while a
-    full season barely moves. Players with a full sample are essentially
-    unchanged (n=16: 84% own rate)."""
+    """Per-game scoring pulled toward the average of every player at the
+    position who has a real sample (3+ games), by how few games he has played:
+    (n*rate + k*prior) / (n + k), k = 3 games. A 5-game 30-point streak
+    projects forward as roughly 23, a one-game 12-point scrub comes back
+    toward 10 rather than up to starter level, and a full season barely
+    moves. The prior is deliberately the broad average, not the starter
+    average: shrinking toward starters would inflate every thin-sample
+    backup."""
     rate = board["fpts_per_game"]
-    pool = board[board["games"] >= SHRINK_MIN_SAMPLE]["fpts_per_game"].nlargest(SHRINK_POOL[position])
+    pool = board[board["games"] >= SHRINK_MIN_SAMPLE]["fpts_per_game"]
     if pool.empty:
         return rate
     prior = float(pool.mean())

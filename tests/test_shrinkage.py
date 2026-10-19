@@ -23,6 +23,14 @@ class ShrinkTests(unittest.TestCase):
         c = B.shrunk_rate(mk([(12, 30.0)] + [(8, 15.0)] * 30), "RB").iloc[0]
         self.assertGreater(c, a)
 
+    def test_thin_sample_scrub_not_lifted_to_starter_level(self):
+        # 30 backups averaging 6, plus a one-game scrub at 12: he must not
+        # come back ABOVE his own 12 toward a starter-heavy prior.
+        rows = [(8, 6.0)] * 30 + [(8, 20.0)] * 6 + [(1, 12.0)]
+        b = mk(rows)
+        r = B.shrunk_rate(b, "RB")
+        self.assertLess(r.iloc[-1], 12.0)
+
     def test_projection_uses_rate_column(self):
         b = pd.DataFrame({"fpts_per_game": [30.0], "rate": [20.0]})
         self.assertEqual(B._rate(b).iloc[0], 20.0)
