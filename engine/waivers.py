@@ -365,6 +365,24 @@ def depth_by_team():
     return out
 
 
+_POOL_CACHE = {}
+POOL_TTL = 10 * 60
+
+
+def cached_pool(scoring, bundle):
+    """player_pool + usage_score, reused for 10 minutes per (season, scoring)."""
+    import time
+    key = (bundle["season"], None if scoring is None else tuple(sorted(dict(scoring).items())))
+    hit = _POOL_CACHE.get(key)
+    if hit and time.time() - hit[0] < POOL_TTL:
+        return hit[1], hit[2]
+    pool, logs = player_pool(scoring, bundle)
+    pool["usage_score"] = usage_scores(pool)
+    _POOL_CACHE.clear()
+    _POOL_CACHE[key] = (time.time(), pool, logs)
+    return pool, logs
+
+
 def player_pool(scoring, bundle):
     """Every QB/RB/WR/TE with a game this season, with ROS value and usage."""
     frames = []
@@ -442,8 +460,8 @@ def build(league_id=None, my_roster_id=None, scoring=None, now=None, limit=10):
     schedule = bundle["schedule"]
     week = target_week(schedule)
     byes = profile.bye_weeks(schedule)
-    pool, logs = player_pool(scoring, bundle)
-    pool["usage_score"] = usage_scores(pool)
+    pool, logs = cached_pool(scoring, bundle)
+    pool = pool.copy()
     snaps = weekly_snaps(bundle["season"])
     depth = depth_by_team()
 

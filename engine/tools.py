@@ -8,7 +8,10 @@ matchup-aware board is the single source of truth for every decision
 surface in the app.
 """
 
-from . import context, data, db, locks, trade_reasons, defense_scoring, kicker_scoring, role_baseline, sleeper
+import numpy as np
+import pandas as pd
+
+from . import context, data, db, decision, locks, trade_reasons, defense_scoring, kicker_scoring, role_baseline, sleeper, waivers
 from .board import (POSITIONS, build_board, load_bundle, rest_of_season_value,
                      project_vs)
 from .scoring import apply_scoring
@@ -357,12 +360,13 @@ def start_sit(player_ids, opponents=None, season=None, scoring=None, mode="balan
                 continue
             board = raw_board
         row = board.loc[pid].to_dict()
-        opp = opponents.get(pid)
         # Real upcoming week for this player's team, regardless of whether
         # an explicit opponent override was passed — this is what
         # log_predictions/resolve_predictions grade the eventual call
         # against, so it has to be an actual schedule week, not a guess.
-        _, wk_no = data.next_opponent(bundle["schedule"], row.get("recent_team"))
+        # With no override, the projection is against that real next opponent.
+        next_opp, wk_no = data.next_opponent(bundle["schedule"], row.get("recent_team"))
+        opp = opponents.get(pid) or next_opp
         if opp:
             projected = project_vs(board.loc[[pid]], pos, opp, bundle=bundle, scoring=scoring)
             proj = float(projected["PROJ"].iloc[0])
@@ -419,6 +423,11 @@ def start_sit(player_ids, opponents=None, season=None, scoring=None, mode="balan
     for r in valid:
         r["rank_value"] = context.rank_value(r["PROJ"], r["floor"], r["ceiling"], mode)
         r["reasons"] = context.build_reasons(r)
+    chart = None
+    try:
+        chart = _attach_decisions(valid, bundle, get_board, scoring, mode)
+    except Exception as e:
+        print(f"[startsit] decision layer skipped: {e}")
     _apply_recommendation_tiers(valid)
     summary = None
     if valid:
@@ -426,7 +435,80 @@ def start_sit(player_ids, opponents=None, season=None, scoring=None, mode="balan
         for r in results:
             r["recommended"] = ("error" not in r) and (r["player_id"] == best["player_id"])
         summary = context.comparison_reason(best, [r for r in valid if r is not best], mode)
-    return {"season": bundle["season"], "mode": mode, "summary": summary, "players": results}
+    call = None
+    if chart and len(valid) >= 2:
+        call = decision.verdict(valid, mode)
+        if call:
+            for r in results:
+                r["recommended"] = ("error" not in r) and (r["player_id"] == call["pick"])
+    for r in valid:
+        r.get("outcomes", {}).pop("_samples", None)
+    return {"season": bundle["season"], "mode": mode, "summary": summary, "players": results,
+            "decision": call, "chart": chart}
+
+
+def _attach_decisions(valid, bundle, get_board, scoring, mode):
+    """Outcome range, rating and flags on each start_sit row (engine/decision.py).
+    Re-ranks rows by the chosen win condition. Returns the shared chart axis
+    and each player's density curve."""
+    from .scoring import ScoringSettings
+    pool, _ = waivers.cached_pool(scoring, bundle)
+    snaps = waivers.weekly_snaps(bundle["season"])
+    factors = bundle["defense_factors"]
+    s = ScoringSettings.from_dict(scoring) if scoring else ScoringSettings.from_preset("ppr")
+    wk = bundle["wk"]
+    for r in valid:
+        pid, pos = r["player_id"], r["position"]
+        b = get_board(pos)
+        q = b[(b["games"] >= 3) & (b["fpts_per_game"] >= 5)]["cv"].dropna()
+        pos_cv = float(q.median()) if len(q) else 0.55
+        row = b.loc[pid] if pid in b.index else None
+        games = int(row["games"]) if row is not None else 0
+        cv = decision.shrunk_cv(None if row is None else row.get("cv"), games, pos_cv)
+        seed = int("".join(ch for ch in pid if ch.isdigit()) or 0) % (2 ** 32)
+        r["outcomes"] = decision.outcomes(r["PROJ"], cv, seed)
+        if r.get("injury_status") in decision.WONT_PLAY:
+            r["outcomes"] = decision.ruled_out()
+        ctx = (r.get("environment") or {}).get("game")
+        opp = r.get("opponent") or (ctx or {}).get("opponent")
+        split = decision.script_split(bundle["pbp"], pid, r.get("recent_team"),
+                                      weeks=set(wk.loc[wk["player_id"] == pid, "week"].astype(int)))
+        mrank = decision.defense_rank(pos, opp, factors) if opp else (None, None)
+        prow = pool.loc[pid] if pid in pool.index else None
+        usage_pct = float(prow["usage_score"]) if prow is not None else None
+        xfp = None
+        if prow is not None and pd.notna(prow.get("xfp_pg")):
+            xfp = {"xfp_pg": float(prow["xfp_pg"]), "diff": float(prow["xfp_diff"])}
+        g = wk[wk["player_id"] == pid]
+        td_pts = ((g["rushing_tds"].fillna(0) * s.rush_td + g["receiving_tds"].fillna(0) * s.rec_td).sum()
+                  + (g["passing_tds"].fillna(0) * s.pass_td).sum())
+        tot = g["fantasy_points_ppr"].sum() if scoring is None else None
+        if tot is None:
+            from .scoring import compute_fantasy_points
+            tot = compute_fantasy_points(g, s).sum() if len(g) else 0
+        td_share = (100 * td_pts / tot) if tot and tot > 0 and len(g) >= 3 else None
+        sw = sorted((snaps.get(pid) or {}).items())
+        snap_trend = decision.snap_trend([v for _, v in sw])
+        rate, comps = decision.rating(r, usage_pct, ctx, split, mrank)
+        mg, mb = decision.matchup_flags(pos, opp, factors) if opp else ([], [])
+        pg, pb = decision.player_flags(r, ctx, split, xfp, td_share, snap_trend)
+        def _f(v, nd=1):
+            return None if v is None or pd.isna(v) else round(float(v), nd)
+        r["decision"] = {
+            "rating": rate, "components": comps, "flags_good": mg + pg, "flags_bad": mb + pb,
+            "script_split": split, "defense_rank": mrank[0], "defense_count": mrank[1], "opponent": opp,
+            "xfp_pg": xfp["xfp_pg"] if xfp else None, "xfp_diff": xfp["diff"] if xfp else None,
+            "snap_pct": _f(prow.get("snap_pct") * 100 if prow is not None and pd.notna(prow.get("snap_pct")) and prow.get("snap_pct") <= 1 else (prow.get("snap_pct") if prow is not None else None), 0),
+            "target_share": _f(prow.get("target_share")) if prow is not None else None,
+            "hvt_pg": _f(prow.get("hvt_pg")) if prow is not None else None,
+            "td_share": _f(td_share, 0), "snap_trend": _f(snap_trend, 0),
+        }
+        r["rank_value"] = decision.mode_value(r["outcomes"], mode)
+    lo = 0.0
+    hi = max(30.0, max(float(np.percentile(r["outcomes"]["_samples"], 97)) for r in valid))
+    for r in valid:
+        r["outcomes"]["curve"] = decision.curve(r["outcomes"]["_samples"], lo, hi)
+    return {"lo": lo, "hi": round(hi, 1), "bins": 40}
 
 
 FLEX_ELIGIBLE = ("RB", "WR", "TE")

@@ -1710,6 +1710,161 @@ async function toggleSSExpand(card, playerId, opp) {
   }
 }
 
+// ------------------------------------------------- start/sit decision ----
+// The decision layer from /api/startsit (engine/decision.py): verdict by win
+// condition, range-of-outcomes chart, head-to-head table and flags.
+const SS_COLORS = ["#34d399", "#a78bfa", "#fbbf24", "#22d3ee"];
+const SS_MODE_TEXT = { floor: "protecting a lead", balanced: "a normal week", ceiling: "chasing points" };
+
+function ssDecisionHtml(data, players) {
+  const d = data.decision;
+  if (!d || players.length < 2 || !players.every((p) => p.outcomes)) {
+    return data.summary ? `<div class="ss-summary">${esc(data.summary)}</div>` : "";
+  }
+  const color = (pid) => SS_COLORS[players.findIndex((p) => p.player_id === pid) % SS_COLORS.length];
+  const odds = players.map((p) => `<div class="ssd-odds-row">
+      <span class="ssd-dot" style="background:${color(p.player_id)}"></span>
+      <span class="ssd-odds-name">${esc(p.player_display_name)}</span>
+      <span class="ssd-odds-v"><b>${p.outcomes.p_10plus}%</b> 10+</span>
+      <span class="ssd-odds-v"><b>${p.outcomes.p_20plus}%</b> 20+</span>
+    </div>`).join("");
+  return `<div class="ssd-card">
+    <div class="ssd-top">
+      <div>
+        <div class="ssd-k">The call · ${esc(SS_MODE_TEXT[d.mode] || d.mode)}</div>
+        <div class="ssd-pick">Start <span style="color:${color(d.pick)}">${esc(d.pick_name)}</span> <span class="ssd-over">over ${esc(d.over_name)}</span></div>
+        <div class="ssd-line">${esc(d.line)}</div>
+      </div>
+      <div class="ssd-conf ssd-conf-${esc(d.confidence.toLowerCase().replace(/\s+/g, "-"))}">
+        <b>${esc(d.confidence)}</b>
+        <span>${esc(d.edge || `${d.win_pct}% to outscore ${d.over_name}`)}</span>
+      </div>
+    </div>
+    <div class="ssd-tags"><span class="ssd-tag">${esc(d.archetype)}</span></div>
+    <div class="ssd-odds"><div class="ssd-k">Win condition odds</div>${odds}</div>
+  </div>
+  ${ssRangeChartHtml(data.chart, players, color)}
+  ${ssHeadToHeadHtml(players, color)}
+  ${ssFlagsHtml(players, color)}
+  ${state.meta?.ai_writeups ? `<div class="ssd-ai"><button type="button" class="wv-compare" id="ssd-ai-btn">Write me the full breakdown →</button><div id="ssd-ai-out"></div></div>` : ""}`;
+}
+
+function ssRangeChartHtml(chart, players, color) {
+  if (!chart) return "";
+  const W = 640, H = 170, padL = 8, padR = 8, top = 12, base = 132;
+  const x = (v) => padL + ((v - chart.lo) / (chart.hi - chart.lo)) * (W - padL - padR);
+  const bw = (W - padL - padR) / chart.bins;
+  const live = players.filter((p) => !p.outcomes.out);
+  const paths = live.map((p) => {
+    const c = color(p.player_id);
+    const pts = p.outcomes.curve.map((h, i) => `${(padL + bw * (i + 0.5)).toFixed(1)},${(base - h * (base - top)).toFixed(1)}`);
+    const d = `M${padL},${base} L${pts.join(" L")} L${W - padR},${base} Z`;
+    const mk = [["p10", 0.55], ["p50", 1], ["p90", 0.55]].map(([k, op]) =>
+      `<line x1="${x(p.outcomes[k]).toFixed(1)}" x2="${x(p.outcomes[k]).toFixed(1)}" y1="${base}" y2="${base + 8}" stroke="${c}" stroke-width="${k === "p50" ? 3 : 2}" opacity="${op}"/>`).join("");
+    return `<path d="${d}" fill="${c}" fill-opacity="0.16" stroke="${c}" stroke-width="2" stroke-linejoin="round"/>${mk}`;
+  }).join("");
+  const step = chart.hi > 40 ? 10 : 5;
+  const ticks = [];
+  for (let v = 0; v <= chart.hi; v += step) {
+    ticks.push(`<line x1="${x(v)}" x2="${x(v)}" y1="${top}" y2="${base}" stroke="rgba(255,255,255,.05)"/><text x="${x(v)}" y="${base + 24}" text-anchor="middle">${v}</text>`);
+  }
+  const rows = players.map((p) => `<div class="ssr-row">
+      <span class="ssd-dot" style="background:${color(p.player_id)}"></span>
+      <span class="ssr-name">${esc(p.player_display_name)}</span>
+      ${p.outcomes.out ? `<span class="muted">Ruled out: 0 points</span>` : `
+      <span class="ssr-v"><em>Floor</em><b>${FMT.d1(p.outcomes.p10)}</b></span>
+      <span class="ssr-v"><em>Median</em><b>${FMT.d1(p.outcomes.p50)}</b></span>
+      <span class="ssr-v"><em>Ceiling</em><b>${FMT.d1(p.outcomes.p90)}</b></span>`}
+    </div>`).join("");
+  return `<div class="ssd-panel">
+    <div class="ssd-h">Range of outcomes <span class="muted small">fantasy points this week</span></div>
+    <div class="ssd-explain">Each shape is every way his week could go: the taller it is at a score, the more likely that score. The ticks under each shape mark his <b>floor</b> (1 bad week in 10 is lower), <b>median</b> (half his weeks beat it) and <b>ceiling</b> (1 big week in 10 is higher).</div>
+    <svg class="ssr-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">${ticks.join("")}${paths}<line x1="${padL}" x2="${W - padR}" y1="${base}" y2="${base}" stroke="rgba(255,255,255,.18)"/></svg>
+    <div class="ssr-legend">${rows}</div>
+    <div class="ssd-foot">Built from each player's projection and how much his scoring swings week to week. Checked on 662 player-games this season: 13% landed above the ceiling and 15% below the floor (10% each would be perfect).</div>
+  </div>`;
+}
+
+function ssHeadToHeadHtml(players, color) {
+  const dd = (p) => p.decision || {};
+  const game = (p) => (p.environment || {}).game || {};
+  const sgn = (v) => (v == null ? "—" : `${v > 0 ? "+" : ""}${v}`);
+  const rows = [
+    ["Start/Sit rating", (p) => dd(p).rating, (v) => (v == null ? "—" : `${Math.round(v)}/100`), 1],
+    ["Projection", (p) => p.PROJ, (v) => FMT.d1(v), 1],
+    ["Snap share (last game)", (p) => dd(p).snap_pct, (v) => (v == null ? "—" : `${v}%`), 1],
+    ["Target share", (p) => dd(p).target_share, (v) => (v == null ? "—" : `${v}%`), 1],
+    ["High-value touches / game", (p) => dd(p).hvt_pg, (v) => (v == null ? "—" : FMT.d1(v)), 1],
+    ["Expected pts / game (xFP)", (p) => dd(p).xfp_pg, (v) => (v == null ? "—" : FMT.d1(v)), 1],
+    ["Points vs xFP", (p) => dd(p).xfp_diff, (v) => (v == null ? "—" : sgn(Math.round(v * 10) / 10)), 0],
+    ["Team implied total", (p) => game(p).implied_total, (v) => (v == null ? "—" : String(v)), 1],
+    ["Spread", (p) => game(p).margin, (v) => (v == null ? "—" : v > 0 ? `Fav by ${v}` : v < 0 ? `Dog by ${-v}` : "Pick'em"), 0],
+    ["Defense vs his position", (p) => dd(p).defense_rank, (v) => (v == null ? "—" : `${v}${v === 1 ? "st" : v === 2 ? "nd" : v === 3 ? "rd" : "th"} easiest`), -1],
+    ["Work share leading / trailing", (p) => dd(p).script_split, (v) => (v ? `${v.leading}% / ${v.trailing}%` : "—"), 0],
+    ["Weather at kickoff", (p) => game(p).weather, (v) => (v ? (v.maybe_closed ? "Roof may be closed" : v.index ? `${v.label}: ${v.reasons.join(", ")}` : `${v.temp}°F, ${v.wind} mph`) : "Indoors / n/a"), 0],
+  ];
+  const head = players.map((p) => `<th style="color:${color(p.player_id)}">${esc(p.player_display_name)}</th>`).join("");
+  const body = rows.map(([label, get, fmt, dir]) => {
+    const vals = players.map(get);
+    let best = -1;
+    if (dir !== 0) {
+      const nums = vals.map((v) => (typeof v === "number" ? v : null));
+      const ok = nums.filter((v) => v != null);
+      if (ok.length >= 2 && new Set(ok).size > 1) {
+        const target = dir > 0 ? Math.max(...ok) : Math.min(...ok);
+        best = nums.indexOf(target);
+      }
+    }
+    return `<tr><td>${label}</td>${vals.map((v, i) => `<td class="${i === best ? "ssh-win" : ""}">${esc(fmt(v))}</td>`).join("")}</tr>`;
+  }).join("");
+  return `<div class="ssd-panel">
+    <div class="ssd-h">Head to head <span class="muted small">green = the edge on that line</span></div>
+    <div class="ssh-wrap"><table class="ssh-table"><thead><tr><th></th>${head}</tr></thead><tbody>${body}</tbody></table></div>
+    <div class="ssd-foot">Route participation, DVOA and man/zone coverage splits aren't available from any free source, so they aren't shown.</div>
+  </div>`;
+}
+
+function ssFlagsHtml(players, color) {
+  const cols = players.map((p) => {
+    const d = p.decision || {};
+    const c = d.components || {};
+    const parts = [["role", "Role & xFP", 40], ["matchup", "Matchup", 30], ["script", "Script & total", 20], ["recent", "Form & health", 10]]
+      .map(([k, label, w]) => `<div class="ssf-part"><em>${label} <small>${w}%</small></em><s><i style="width:${Math.round(c[k] || 0)}%;background:${color(p.player_id)}"></i></s><b>${Math.round(c[k] || 0)}</b></div>`).join("");
+    const good = (d.flags_good || []).map((f) => `<li class="ok">${esc(f)}</li>`).join("");
+    const bad = (d.flags_bad || []).map((f) => `<li class="warn">${esc(f)}</li>`).join("");
+    return `<div class="ssf-col">
+      <div class="ssf-name"><span class="ssd-dot" style="background:${color(p.player_id)}"></span>${esc(p.player_display_name)}<span class="ssf-rating">${Math.round(d.rating || 0)}</span></div>
+      <div class="ssf-parts">${parts}</div>
+      <ul class="ssf-list">${good}${bad}${!good && !bad ? `<li class="muted">Nothing unusual about this matchup.</li>` : ""}</ul>
+    </div>`;
+  }).join("");
+  return `<div class="ssd-panel">
+    <div class="ssd-h">Advantages and warnings <span class="muted small">rating = 40% role + 30% matchup + 20% script + 10% form</span></div>
+    <div class="ssf-grid" style="--n:${Math.min(players.length, 4)}">${cols}</div>
+  </div>`;
+}
+
+async function ssLoadWriteUp(body) {
+  const out = $("#ssd-ai-out");
+  const btn = $("#ssd-ai-btn");
+  btn.disabled = true;
+  out.innerHTML = `<div class="loading small">Writing the breakdown…</div>`;
+  try {
+    const r = await api("/api/startsit/analysis", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    out.innerHTML = `<div class="ssd-panel ssd-writeup">
+      ${(r.diagnostics || []).map((x) => `<div class="ssw-block"><div class="ssd-k">${esc(x.player)}</div><p>${esc(x.case)}</p></div>`).join("")}
+      <div class="ssw-block"><div class="ssd-k">Floor case</div><p>${esc(r.floor_case || "")}</p></div>
+      <div class="ssw-block"><div class="ssd-k">Ceiling case</div><p>${esc(r.ceiling_case || "")}</p></div>
+      <div class="ssw-block ssw-final"><div class="ssd-k">Final call</div><p>${esc(r.final_call || "")}</p></div>
+      <div class="ssd-foot">Written by Claude from the numbers above only.</div>
+    </div>`;
+    btn.style.display = "none";
+  } catch (e) {
+    out.innerHTML = `<div class="empty">${esc(e.message)}</div>`;
+    btn.disabled = false;
+  }
+}
+
 async function runStartSit() {
   const opponents = {};
   state.startsit.forEach((p) => { if (p.opp) opponents[p.player_id] = p.opp; });
@@ -1752,7 +1907,7 @@ async function runStartSit() {
 
     results.innerHTML = `
       ${errors}
-      ${data.summary ? `<div class="ss-summary">${esc(data.summary)}</div>` : ""}
+      ${ssDecisionHtml(data, valid)}
       <div class="ss-hero-row${isHeadToHead ? " head-to-head" : ""}">${heroCards}${swapBtn}</div>
       ${valid.length >= 2 ? ssBreakdownPanelHtml(valid) : ""}
       ${top ? ssNarrativeHtml(top, valid.find((x) => x.player_id !== top.player_id), valid) : ""}
@@ -1766,6 +1921,7 @@ async function runStartSit() {
       // inside those instead of just the intended expand/collapse.
       card.querySelector(".ss-expand-toggle").addEventListener("click", () => toggleSSExpand(card, card.dataset.pid, p?.opponent));
     });
+    $("#ssd-ai-btn")?.addEventListener("click", () => ssLoadWriteUp(body));
     const breakdown = results.querySelector(".ss-breakdown");
     if (breakdown) wireSSBreakdownTabs(breakdown);
     $("#ss-swap-btn")?.addEventListener("click", (e) => {
@@ -1951,6 +2107,8 @@ function initStartSit() {
 // changing a label.
 function initSSScoringToggle() {
   const bar = $("#ss-scoring-toggle");
+  const leagueBtn = $("#ss-scoring-league");
+  if (leagueBtn) leagueBtn.style.display = activeTeam() ? "" : "none";
   const sync = () => {
     bar.querySelectorAll("button").forEach((b) => b.classList.toggle("active", (state.scoring || "") === b.dataset.scoring));
   };
@@ -3954,7 +4112,7 @@ function renderTeamsList() {
 
 function renderScoringPills() {
   const group = $("#set-scoring-pills");
-  const options = [["", "PPR"], ["half_ppr", "Half PPR"], ["standard", "Standard"]];
+  const options = [["", "PPR"], ["half_ppr", "Half PPR"], ["standard", "Standard"], ["te_premium", "TE Premium"]];
   if (activeTeam()) options.push(["league", "My League"]);
   group.innerHTML = "";
   options.forEach(([val, label]) => {
@@ -3965,7 +4123,7 @@ function renderScoringPills() {
       group.querySelectorAll(".pill").forEach((p) => p.classList.remove("active"));
       b.classList.add("active");
       $("#scoring-select").value = val;
-      if (val === "" || val === "half_ppr" || val === "standard") {
+      if (val !== "league") {
         await api("/api/settings", {
           method: "POST", headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ scoring_preset: val }),

@@ -301,6 +301,11 @@ SLEEPER_SCORING_MAP = {
     # kr_td/pr_td are left unmapped on purpose: one real league sets them to 0
     # while st_td is 6, so mapping them too could count one TD twice.
     "st_td": "return_td",
+    "bonus_rec_te": "te_reception",
+    "pass_fd": "pass_fd", "rush_fd": "rush_fd", "rec_fd": "rec_fd",
+    "bonus_pass_yd_300": "bonus_pass_300", "bonus_pass_yd_400": "bonus_pass_400",
+    "bonus_rush_yd_100": "bonus_rush_100", "bonus_rush_yd_200": "bonus_rush_200",
+    "bonus_rec_yd_100": "bonus_rec_100", "bonus_rec_yd_200": "bonus_rec_200",
 }
 
 

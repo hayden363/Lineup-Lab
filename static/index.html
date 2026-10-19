@@ -138,6 +138,7 @@
           <option value="">Scoring: PPR</option>
           <option value="half_ppr">Scoring: Half PPR</option>
           <option value="standard">Scoring: Standard</option>
+          <option value="te_premium">Scoring: TE Premium</option>
           <option value="league" id="scoring-league-opt" style="display:none">Scoring: My League</option>
         </select>
         <input class="search-box" type="text" id="search" placeholder="Search players…" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
@@ -210,12 +211,14 @@
         <div class="ss-toolbar">
           <div class="ss-toolbar-brand">
             <span class="ss-toolbar-mark">⚡</span>
-            <div><div class="ss-toolbar-title">AI Start/Sit Engine</div><div class="ss-toolbar-sub">Real 2025-season output, recomputed live per format below.</div></div>
+            <div><div class="ss-toolbar-title">AI Start/Sit Engine</div><div class="ss-toolbar-sub">This season's data, Vegas lines and game-day weather, rescored for your format.</div></div>
           </div>
           <div class="ss-scoring-toggle" id="ss-scoring-toggle">
             <button type="button" data-scoring="">Full PPR</button>
             <button type="button" data-scoring="half_ppr">Half PPR</button>
             <button type="button" data-scoring="standard">Standard</button>
+            <button type="button" data-scoring="te_premium" title="Full PPR plus 0.5 per tight-end catch">TE Premium</button>
+            <button type="button" data-scoring="league" id="ss-scoring-league" style="display:none" title="Your synced league's exact scoring, including any bonuses">My League</button>
           </div>
         </div>
         <div class="startsit-layout">
@@ -224,9 +227,9 @@
             <div id="startsit-roster-picker" class="shop-roster-picker startsit-picker-grid"></div>
             <div class="ss-slot-row" id="startsit-chips"></div>
             <div class="ss-mode" id="ss-mode" role="group" aria-label="What to optimize for">
-              <button type="button" class="ss-mode-btn active" data-mode="balanced">Balanced</button>
-              <button type="button" class="ss-mode-btn" data-mode="safe">Safe floor</button>
-              <button type="button" class="ss-mode-btn" data-mode="upside">Upside</button>
+              <button type="button" class="ss-mode-btn" data-mode="safe" title="You're the favorite this week: minimize the chance of a dud">Protect a lead</button>
+              <button type="button" class="ss-mode-btn active" data-mode="balanced" title="Best typical outcome">Balanced</button>
+              <button type="button" class="ss-mode-btn" data-mode="upside" title="You're the underdog: maximize the chance of a big week">Chasing points</button>
             </div>
             <button class="primary-btn" id="startsit-compare" disabled>Compare</button>
           </div>

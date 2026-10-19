@@ -51,6 +51,7 @@ from engine import lineup as lineup_layer
 from engine import live_scores as live_scores_layer
 from engine import locks
 from engine import waivers as waivers_layer
+from engine import startsit_ai
 from engine import mail as mail_layer
 from engine import news as news_layer
 from engine import oauth as oauth_layer
@@ -464,11 +465,20 @@ def scoring_from_query(
     rush_yard: Optional[float] = None, rush_td: Optional[float] = None,
     rec_yard: Optional[float] = None, rec_td: Optional[float] = None,
     fumble_lost: Optional[float] = None, two_pt: Optional[float] = None,
+    return_td: Optional[float] = None, te_reception: Optional[float] = None,
+    pass_fd: Optional[float] = None, rush_fd: Optional[float] = None, rec_fd: Optional[float] = None,
+    bonus_pass_300: Optional[float] = None, bonus_pass_400: Optional[float] = None,
+    bonus_rush_100: Optional[float] = None, bonus_rush_200: Optional[float] = None,
+    bonus_rec_100: Optional[float] = None, bonus_rec_200: Optional[float] = None,
 ):
     overrides = {k: v for k, v in dict(
         reception=reception, pass_yard=pass_yard, pass_td=pass_td, interception=interception,
         rush_yard=rush_yard, rush_td=rush_td, rec_yard=rec_yard, rec_td=rec_td,
-        fumble_lost=fumble_lost, two_pt=two_pt,
+        fumble_lost=fumble_lost, two_pt=two_pt, return_td=return_td, te_reception=te_reception,
+        pass_fd=pass_fd, rush_fd=rush_fd, rec_fd=rec_fd,
+        bonus_pass_300=bonus_pass_300, bonus_pass_400=bonus_pass_400,
+        bonus_rush_100=bonus_rush_100, bonus_rush_200=bonus_rush_200,
+        bonus_rec_100=bonus_rec_100, bonus_rec_200=bonus_rec_200,
     ).items() if v is not None}
     if scoring is None and not overrides:
         return None  # fast path: nflverse's precomputed full-PPR column
@@ -530,6 +540,7 @@ def meta(user=Depends(current_user)):
         "mail_configured": mail_layer.configured(),
         "oauth_google": oauth_layer.google_configured(),
         "oauth_apple": oauth_layer.apple_configured(),
+        "ai_writeups": startsit_ai.configured(),
     }
 
 
@@ -728,6 +739,22 @@ def api_startsit(req: StartSitRequest, user=Depends(current_user)):
             print(f"[track-record] failed to log start/sit predictions: {e}")
 
     return _clean(result)
+
+
+@app.post("/api/startsit/analysis")
+def api_startsit_analysis(req: StartSitRequest, user=Depends(require_user)):
+    """Claude's written breakdown of the same comparison /api/startsit makes
+    (engine/startsit_ai.py). Signed-in only, since it costs an API call."""
+    if not startsit_ai.configured():
+        raise HTTPException(503, "AI write-ups aren't turned on for this server")
+    if len(req.player_ids) < 2:
+        raise HTTPException(400, "need at least 2 players to compare")
+    scoring = _effective_scoring(req.scoring, user)
+    result = tools.start_sit(req.player_ids, opponents=req.opponents, scoring=scoring, mode=req.mode)
+    out = startsit_ai.write_up(result)
+    if out is None:
+        raise HTTPException(502, "couldn't get a write-up right now; try again in a minute")
+    return _clean(out)
 
 
 @app.get("/api/startsit/suggestions")

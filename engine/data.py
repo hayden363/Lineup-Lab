@@ -189,6 +189,9 @@ PBP_KEEP_COLUMNS = [
     "play_type", "yards_gained", "air_yards", "yards_after_catch",
     "complete_pass", "sack", "qb_hit", "epa", "posteam", "defteam",
     "week", "pass", "qb_dropback", "interception", "pass_touchdown",
+    # Start/Sit game-script split: each player's share of his team's work
+    # when leading vs trailing (engine/decision.py).
+    "score_differential",
     "rush_touchdown", "touchdown", "yardline_100", "goal_to_go",
     # defense/special-teams fantasy scoring (engine/defense_scoring.py):
     # real takeaways, defensive/return TDs, safeties, blocked kicks.

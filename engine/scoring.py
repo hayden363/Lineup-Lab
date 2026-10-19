@@ -26,6 +26,10 @@ PRESETS = {
     "ppr": dict(reception=1.0, pass_yard=0.04, pass_td=4, interception=-2,
                 rush_yard=0.1, rush_td=6, rec_yard=0.1, rec_td=6,
                 fumble_lost=-2, two_pt=2, return_td=6),
+    # Full PPR plus half a point per tight-end catch (the common TE premium).
+    "te_premium": dict(reception=1.0, te_reception=0.5, pass_yard=0.04, pass_td=4, interception=-2,
+                       rush_yard=0.1, rush_td=6, rec_yard=0.1, rec_td=6,
+                       fumble_lost=-2, two_pt=2, return_td=6),
 }
 
 
@@ -46,6 +50,20 @@ class ScoringSettings:
     # Not in the UI's SCORING_FIELDS yet, so it's always 6 unless a league
     # sync sets it — the value both real synced leagues and nflverse use.
     return_td: float = 6.0
+    # League bonuses, all off (0) unless a league or preset turns them on.
+    # te_reception is TE premium: added on top of `reception` for tight ends.
+    te_reception: float = 0.0
+    pass_fd: float = 0.0
+    rush_fd: float = 0.0
+    rec_fd: float = 0.0
+    # Yardage milestones: points for a game at or past the line. Each line
+    # met pays its own bonus (a 210-yard rushing day earns both 100 and 200).
+    bonus_pass_300: float = 0.0
+    bonus_pass_400: float = 0.0
+    bonus_rush_100: float = 0.0
+    bonus_rush_200: float = 0.0
+    bonus_rec_100: float = 0.0
+    bonus_rec_200: float = 0.0
 
     @classmethod
     def from_preset(cls, name):
@@ -94,6 +112,15 @@ def compute_fantasy_points(wk, settings: ScoringSettings):
         # it, and the rows that have one already match without it.
         + col("special_teams_tds") * settings.return_td
     )
+    if settings.te_reception and "position" in wk.columns:
+        pts = pts + col("receptions") * (wk["position"] == "TE") * settings.te_reception
+    pts = (pts + col("passing_first_downs") * settings.pass_fd + col("rushing_first_downs") * settings.rush_fd
+           + col("receiving_first_downs") * settings.rec_fd)
+    for stat, line, val in (("passing_yards", 300, settings.bonus_pass_300), ("passing_yards", 400, settings.bonus_pass_400),
+                            ("rushing_yards", 100, settings.bonus_rush_100), ("rushing_yards", 200, settings.bonus_rush_200),
+                            ("receiving_yards", 100, settings.bonus_rec_100), ("receiving_yards", 200, settings.bonus_rec_200)):
+        if val:
+            pts = pts + (col(stat) >= line) * val
     return pts.round(2)
 
 

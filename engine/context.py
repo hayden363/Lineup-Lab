@@ -17,15 +17,17 @@ number can be recomputed by hand.
 Honest limits, so nobody mistakes them for features:
   * The schedule feed carries lines only for the nearest games, so games a few
     weeks out come back without them and get no adjustment.
-  * Wind and temperature are not published before kickoff; only the roof is
-    known. The weather rule below is wired for when they appear and is a no-op
-    until then.
+  * Weather for upcoming outdoor games is a forecast at kickoff (engine/
+    weather.py, Open-Meteo, about 15 days out); played games use the
+    schedule's recorded wind and temperature.
   * No shadow-coverage, route-participation or practice-report data exists in
     the free feeds, so none is modelled or implied.
 """
 
 import numpy as np
 import pandas as pd
+
+from . import weather
 
 LEAGUE_AVG_TEAM_TOTAL = 22.5
 ENV_MIN, ENV_MAX = 0.90, 1.10
@@ -36,7 +38,7 @@ def _num(v):
     return None if v is None or (isinstance(v, float) and np.isnan(v)) or pd.isna(v) else float(v)
 
 
-def game_context(schedule, team, week):
+def game_context(schedule, team, week, with_weather=True):
     """The market view of `team`'s game in `week`, or None if no such game.
     margin > 0 means the team is the favourite by that many points. Lines come
     back None when the feed doesn't have them yet (see module docstring)."""
@@ -52,11 +54,19 @@ def game_context(schedule, team, week):
     total = _num(g.get("total_line"))
     margin = None if spread is None else (spread if home else -spread)
     implied = None if (total is None or margin is None) else round((total + margin) / 2, 1)
+    roof = g.get("roof") if isinstance(g.get("roof"), str) else None
+    wind, temp = _num(g.get("wind")), _num(g.get("temp"))
+    wx = None
+    if wind is None and with_weather:
+        wx = weather.kickoff_forecast(g.get("stadium_id"), roof, g.get("gameday"), g.get("gametime"))
+    elif wind is not None or temp is not None:
+        idx, label, why = weather.degradation(wind, None, None, temp)
+        wx = {"temp": temp, "wind": wind, "index": idx, "label": label, "reasons": why, "maybe_closed": False}
     return {
         "week": int(week), "opponent": g["away_team"] if home else g["home_team"], "home": bool(home),
         "game_total": total, "margin": margin, "implied_total": implied,
-        "roof": g.get("roof") if isinstance(g.get("roof"), str) else None,
-        "wind": _num(g.get("wind")), "temp": _num(g.get("temp")),
+        "roof": roof, "weather": wx,
+        "wind": wx["wind"] if wx else wind, "temp": wx["temp"] if wx else temp,
         "gameday": g.get("gameday"), "gametime": g.get("gametime"),
     }
 
@@ -95,14 +105,15 @@ def environment_factor(position, ctx, target_share=None):
         elif margin >= 4 and position == "RB":
             f *= 1 + shift
             notes.append(f"Favoured by {margin:g}: run-heavy script")
-    wind = ctx.get("wind")
-    if wind is not None and position in PASS_CATCHERS:
-        if wind >= 20:
+    wx = ctx.get("weather")
+    if wx and not wx.get("maybe_closed") and position in PASS_CATCHERS:
+        why = ", ".join(wx.get("reasons") or [])
+        if wx["index"] >= 50:
             f *= 0.95
-            notes.append(f"Wind {wind:g} mph caps the passing game")
-        elif wind >= 15:
+            notes.append(f"Bad passing weather ({why})")
+        elif wx["index"] >= 25:
             f *= 0.98
-            notes.append(f"Wind {wind:g} mph")
+            notes.append(f"Some weather drag ({why})")
     if ctx.get("roof") in ("dome", "closed"):
         notes.append("Indoors")
     return round(min(ENV_MAX, max(ENV_MIN, f)), 3), notes
