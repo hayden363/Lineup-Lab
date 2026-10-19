@@ -46,7 +46,10 @@ from engine import data as data_layer
 from engine import db
 from engine import espn as espn_layer
 from engine import external_projections as external_projections_layer
+from engine import league_trades as league_trades_layer
+from engine import lineup as lineup_layer
 from engine import live_scores as live_scores_layer
+from engine import locks
 from engine import mail as mail_layer
 from engine import news as news_layer
 from engine import oauth as oauth_layer
@@ -966,9 +969,8 @@ def api_teams_remove(team_id: int, user=Depends(require_user)):
     return {"teams": db.list_connected_teams(user["id"])}
 
 
-@app.get("/api/myteam")
-def api_my_team(week: Optional[int] = Query(None, ge=1, le=25),
-                 scoring: Optional[dict] = Depends(scoring_from_query), user=Depends(require_user)):
+def _load_my_team(user, week, scoring):
+    """my_team()/my_team_espn() for the user's active connected league."""
     active = db.get_active_team(user["id"])
     if not active:
         raise HTTPException(400, "connect a league in Settings first")
@@ -982,7 +984,99 @@ def api_my_team(week: Optional[int] = Query(None, ge=1, le=25),
             result = tools.my_team(active["league_id"], int(active["roster_id"]), scoring=scoring, week=week)
     except Exception as e:
         raise HTTPException(400, str(e))
+    return active, result
+
+
+@app.get("/api/myteam")
+def api_my_team(week: Optional[int] = Query(None, ge=1, le=25),
+                 scoring: Optional[dict] = Depends(scoring_from_query), user=Depends(require_user)):
+    _, result = _load_my_team(user, week, scoring)
     return _clean(result)
+
+
+# ------------------------------------------------------------- weekly lineup ----
+def _lineup_inputs(result):
+    """(slots, starter_ids, players_by_id) from a my_team() result."""
+    roster = result["my_team"]["players"]
+    starters = [p for p in roster if p.get("is_starter")]
+    slots = [p.get("slot") or p.get("position") for p in starters]
+    players = {p["player_id"]: {"name": p.get("player_display_name"), "position": p.get("position"),
+                                "team": p.get("recent_team"), "PROJ": p.get("PROJ") or 0.0,
+                                "injury_status": p.get("injury_status")} for p in roster}
+    return slots, [p["player_id"] for p in starters], players
+
+
+def _lineup_response(result, lineup_result):
+    return {"week": result["nfl_week"], "league_name": result.get("league_name"), **lineup_result}
+
+
+@app.get("/api/lineup")
+def api_lineup(week: Optional[int] = Query(None, ge=1, le=25),
+               scoring: Optional[dict] = Depends(scoring_from_query), user=Depends(require_user)):
+    """This week's lineup with each slot's kickoff time, lock and bye state,
+    plus the bench so the page can offer swaps."""
+    _, result = _load_my_team(user, week, scoring)
+    slots, starter_ids, players = _lineup_inputs(result)
+    schedule = load_bundle()["schedule"]
+    wk = result["nfl_week"]
+    lineup = lineup_layer.build_lineup(slots, starter_ids, players, schedule, wk)
+    bench = []
+    for p in result["my_team"]["players"]:
+        if p.get("is_starter"):
+            continue
+        st = locks.lock_status(schedule, p.get("recent_team"), wk)
+        bench.append({"player_id": p["player_id"], "name": p.get("player_display_name"), "position": p.get("position"),
+                      "team": p.get("recent_team"), "PROJ": p.get("PROJ") or 0.0, "headshot_url": p.get("headshot_url"), **st})
+    return _clean({"week": wk, "league_name": result.get("league_name"), "lineup": lineup, "bench": bench,
+                   "total_proj": round(sum(r["PROJ"] for r in lineup), 1)})
+
+
+class LineupCheck(BaseModel):
+    week: Optional[int] = None
+    proposed: List[Optional[str]]
+    scoring: Optional[dict] = None
+
+
+@app.post("/api/lineup/check")
+def api_lineup_check(req: LineupCheck, user=Depends(require_user)):
+    """Validate a lineup you built here against the real kickoff locks."""
+    _, result = _load_my_team(user, req.week, req.scoring)
+    slots, starter_ids, players = _lineup_inputs(result)
+    schedule = load_bundle()["schedule"]
+    return _clean(_lineup_response(result, lineup_layer.validate(slots, req.proposed, starter_ids, players,
+                                                                 schedule, result["nfl_week"])))
+
+
+@app.get("/api/lineup/best")
+def api_lineup_best(week: Optional[int] = Query(None, ge=1, le=25),
+                    scoring: Optional[dict] = Depends(scoring_from_query), user=Depends(require_user)):
+    """The highest-projected legal lineup: locked slots stay, byes project 0."""
+    _, result = _load_my_team(user, week, scoring)
+    slots, starter_ids, players = _lineup_inputs(result)
+    schedule = load_bundle()["schedule"]
+    return _clean(_lineup_response(result, lineup_layer.best_lineup(slots, starter_ids, players, schedule,
+                                                                    result["nfl_week"])))
+
+
+@app.get("/api/league/trades")
+def api_league_trades(seen: str = Query("", description="comma-separated trade ids already seen"),
+                      user=Depends(require_user)):
+    """Completed trades in the user's Sleeper league, newest first, with the
+    ones not in `seen` flagged new."""
+    active = db.get_active_team(user["id"])
+    if not active:
+        raise HTTPException(400, "connect a league in Settings first")
+    if active.get("platform") == "espn":
+        raise HTTPException(400, "trade detection is Sleeper-only for now")
+    try:
+        live = sleeper_layer.get_nfl_state().get("week") or 1
+        trades = league_trades_layer.league_trades(active["league_id"], range(1, max(1, int(live)) + 1))
+    except Exception as e:
+        raise HTTPException(400, str(e))
+    new_ids = {t["id"] for t in league_trades_layer.new_trades(trades, [x for x in seen.split(",") if x])}
+    for t in trades:
+        t["is_new"] = t["id"] in new_ids
+    return _clean({"trades": trades})
 
 
 # --------------------------------------------------------------------- draft ----

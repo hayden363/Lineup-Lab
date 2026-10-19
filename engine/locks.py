@@ -45,9 +45,20 @@ def is_locked(schedule, team, week, now=None):
     return (now or datetime.now(ET)) >= ko
 
 
+def plays_in_league(schedule, team):
+    """False for a player with no NFL team (retired, free agent, or an id that
+    isn't a team abbreviation) — he isn't on a bye, he just doesn't play."""
+    if not isinstance(team, str) or not team:
+        return False
+    return bool(((schedule["home_team"] == team) | (schedule["away_team"] == team)).any())
+
+
 def lock_status(schedule, team, week, now=None):
-    """{kickoff (ISO), locked, bye} for one player's slot."""
+    """{kickoff (ISO), locked, bye, inactive} for one player's slot. `bye` is
+    a real bye week for a real NFL team; `inactive` is a player with no team."""
     ko = kickoff(schedule, team, week)
+    active = plays_in_league(schedule, team)
     return {"kickoff": ko.isoformat() if ko else None,
             "locked": bool(ko and (now or datetime.now(ET)) >= ko),
-            "bye": ko is None}
+            "bye": ko is None and active,
+            "inactive": not active}

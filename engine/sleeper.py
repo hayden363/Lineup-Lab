@@ -97,6 +97,15 @@ def get_rosters(league_id, force=False):
     return _cached_get(f"{SLEEPER_BASE}/league/{league_id}/rosters", f"rosters_{league_id}", JSON_TTL, force)
 
 
+TRADE_TTL = 120   # trades should show up within a couple of minutes
+
+
+def get_transactions(league_id, week, force=False):
+    """Every transaction (trade, waiver, free agent) in one week/round."""
+    return _cached_get(f"{SLEEPER_BASE}/league/{league_id}/transactions/{week}",
+                       f"tx_{league_id}_{week}", TRADE_TTL, force)
+
+
 def get_users(league_id, force=False):
     return _cached_get(f"{SLEEPER_BASE}/league/{league_id}/users", f"users_{league_id}", JSON_TTL, force)
 
