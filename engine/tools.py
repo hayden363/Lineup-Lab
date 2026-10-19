@@ -11,7 +11,8 @@ surface in the app.
 import numpy as np
 import pandas as pd
 
-from . import context, data, db, decision, locks, trade_reasons, defense_scoring, kicker_scoring, role_baseline, sleeper, waivers
+from . import lineup as lineup_layer
+from . import context, data, db, decision, trade_engine, locks, trade_reasons, defense_scoring, kicker_scoring, role_baseline, sleeper, waivers
 from .board import (POSITIONS, build_board, load_bundle, rest_of_season_value,
                      project_vs)
 from .scoring import apply_scoring
@@ -1556,160 +1557,82 @@ def draft_board(draft_id, my_roster_id=None, season=None, scoring=None, best_ava
 
 
 def trade_finder(league_id, my_roster_id, target_roster_id=None, give_player_ids=None,
-                  season=None, scoring=None, max_suggestions=5):
-    """Scan (one or every) other roster for a realistic trade.
+                  season=None, scoring=None, max_suggestions=6):
+    """Trades both managers would plausibly accept (engine/trade_engine.py):
+    fair by market value (expert consensus + our numbers on a trade-chart
+    curve, with packages discounted the way people trade), your lineup gains,
+    theirs doesn't get worse, ranked by mutual benefit.
 
-    Two modes:
-      - Need-driven (default, `give_player_ids` omitted): the system picks
-        what you'd give from your deepest position to fill your weakest
-        need — scans for opportunities you haven't thought to look for.
-      - Player-driven (`give_player_ids` set): you pick which of your own
-        player(s) to shop; the system searches every other roster for the
-        best realistic return for that specific player or package.
-
-    Both modes are built on the same rest-of-season values as the Trade
-    Analyzer, not a separate guess, and reject anything too lopsided to be
-    a realistic offer (>35% value gap)."""
+    Need-driven by default; with `give_player_ids`, every suggestion includes
+    those players (1-2 of yours), and returns can be 1 or 2 of theirs."""
     snap = sleeper.league_snapshot(league_id)
     if scoring is None:
         scoring = snap["scoring"]
     team_by_roster = {t["roster_id"]: t for t in snap["teams"]}
-    my_team = team_by_roster.get(my_roster_id)
-    if my_team is None:
+    if my_roster_id not in team_by_roster:
         raise ValueError(f"roster_id {my_roster_id} not found in league {league_id}")
-
     league = sleeper.get_league(league_id)
-    needs = _position_needs(league.get("roster_positions") or [])
-
+    roster_positions = league.get("roster_positions") or []
+    needs = _position_needs(roster_positions)
     bundle = load_bundle(season)
-    get_board = _board_cache(season, scoring)
-
-    def roster_by_position(player_ids):
-        out = {"QB": [], "RB": [], "WR": [], "TE": []}
-        for pid in player_ids:
-            pos = _position_of(pid, bundle)
-            if pos not in out:
-                continue
-            board = get_board(pos)
-            if pid not in board.index:
-                # Same real early-season gap as everywhere else in this
-                # file — Trade Finder scans REAL rosters (yours and real
-                # candidates'), not a ranked list of strangers, so an
-                # established starter with a real, if sparse, sample
-                # shouldn't read as "you have nobody at this position"
-                # just for not clearing build_board's ranked-list bar.
-                raw_board = build_board(pos, season=bundle["season"], min_games=0, scoring=scoring)
-                if pid not in raw_board.index:
-                    continue
-                board = raw_board
-            row = board.loc[pid].to_dict()
-            value = float(rest_of_season_value(board.loc[[pid]], pos, bundle=bundle, scoring=scoring).iloc[0])
-            out[pos].append({"player_id": pid, "position": pos, "value": value,
-                              "name": row.get("player_display_name"), "form": _clean_num(row.get("FORM")),
-                              "injury_status": _clean_num(row.get("injury_status")),
-                              "bye": locks.bye_week(bundle["schedule"], row.get("recent_team")),
-                              "player_display_name": row.get("player_display_name"),
-                              "recent_team": row.get("recent_team"), "headshot_url": row.get("headshot_url")})
-        return out
-
-    my_by_pos = roster_by_position(my_team["player_ids"])
-    my_filled = {pos: len(players) for pos, players in my_by_pos.items()}
-    my_weak_positions = sorted(needs.keys(), key=lambda p: my_filled.get(p, 0) - needs.get(p, 0))
-    # my best surplus: positions where I'm deepest relative to need (what I can afford to trade from)
-    my_strong_positions = sorted(needs.keys(), key=lambda p: my_filled.get(p, 0) - needs.get(p, 0), reverse=True)
-
-    targets = [target_roster_id] if target_roster_id else [r for r in team_by_roster if r != my_roster_id]
-    suggestions = []
-
+    pool, _ = waivers.cached_pool(scoring, bundle)
+    raw = sleeper.get_rosters(league_id)
+    cw = sleeper.id_crosswalk()
+    rostered = {cw.get(str(x)) for r in raw for x in (r.get("players") or [])} - {None}
+    shape = trade_engine.league_shape(roster_positions, len(raw))
+    values = trade_engine.trade_values(pool, shape, rostered)
+    rosters = trade_engine.build_rosters(league_id, pool, values, cw)
+    if my_roster_id not in rosters:
+        raise ValueError("couldn't read your roster from Sleeper")
+    mine_ids = {p["player_id"] for p in rosters[my_roster_id]["players"]}
     if give_player_ids:
-        # Player-driven: you chose what to shop, we search every other roster for the best return.
-        my_players_flat = {p["player_id"]: p for players in my_by_pos.values() for p in players}
-        missing = [pid for pid in give_player_ids if pid not in my_players_flat]
+        missing = [pid for pid in give_player_ids if pid not in mine_ids]
         if missing:
             raise ValueError(f"Player(s) not on your roster or not scoreable this season: {', '.join(missing)}")
-        give_players = [my_players_flat[pid] for pid in give_player_ids]
-        if not give_players:
-            raise ValueError("No valid players selected to shop.")
-        give_value = sum(p["value"] for p in give_players)
+        if len(give_player_ids) > 2:
+            raise ValueError("Pick one or two players to shop at a time.")
+    slots = [s for s in roster_positions if s in lineup_layer.ELIGIBLE and s not in ("K", "DEF")]
+    for t in rosters.values():
+        for p in t["players"]:
+            p["bye"] = locks.bye_week(bundle["schedule"], p.get("recent_team"))
+            p["form"] = None
+    suggestions = trade_engine.find_trades(
+        rosters, my_roster_id, slots, None, values, give_ids=list(give_player_ids or []) or None,
+        target_ids={target_roster_id} if target_roster_id else None, max_suggestions=max_suggestions)
 
-        for opp_id in targets:
-            opp_team = team_by_roster.get(opp_id)
-            if not opp_team:
-                continue
-            opp_by_pos = roster_by_position(opp_team["player_ids"])
-            opp_candidates = []
-            for pos, players in opp_by_pos.items():
-                for candidate in players:
-                    diff = abs(candidate["value"] - give_value)
-                    if diff > max(candidate["value"], give_value, 1) * 0.35:
-                        continue  # too lopsided to be realistic
-                    opp_candidates.append({
-                        "opponent_roster_id": opp_id, "opponent_team_name": opp_team["team_name"],
-                        "you_give": give_players, "you_get": [candidate],
-                        "value_diff": round(candidate["value"] - give_value, 1),
-                        "fills_need": pos if pos in my_weak_positions else None,
-                    })
-            opp_candidates.sort(key=lambda s: (s["fills_need"] is None, -s["value_diff"]))
-            suggestions.extend(opp_candidates[:2])  # best couple of fits per team, not every match
-
-        suggestions.sort(key=lambda s: (s["fills_need"] is None, -s["value_diff"]))
-    else:
-        # Need-driven: the original "scan for opportunities" behavior.
-        for opp_id in targets:
-            opp_team = team_by_roster.get(opp_id)
-            if not opp_team:
-                continue
-            opp_by_pos = roster_by_position(opp_team["player_ids"])
-            # they give: their best player at one of my weak positions
-            # I give: my best surplus player at one of their weak positions, similar value
-            for weak_pos in my_weak_positions:
-                gets = sorted(opp_by_pos.get(weak_pos, []), key=lambda p: -p["value"])
-                if not gets:
-                    continue
-                get_player = gets[0]
-                for give_pos in my_strong_positions:
-                    if give_pos == weak_pos and len(my_by_pos.get(give_pos, [])) <= int(needs.get(give_pos, 1)):
-                        continue  # don't suggest trading from a position I also need
-                    gives = sorted(my_by_pos.get(give_pos, []), key=lambda p: abs(p["value"] - get_player["value"]))
-                    if not gives:
-                        continue
-                    give_player = gives[0]
-                    diff = abs(give_player["value"] - get_player["value"])
-                    if diff > max(get_player["value"], give_player["value"]) * 0.35:
-                        continue  # too lopsided to be realistic
-                    suggestions.append({
-                        "opponent_roster_id": opp_id, "opponent_team_name": opp_team["team_name"],
-                        "you_give": [give_player], "you_get": [get_player],
-                        "value_diff": round(get_player["value"] - give_player["value"], 1),
-                        "fills_need": weak_pos,
-                    })
-                    break  # one suggestion per (opponent, weak position)
-
-        suggestions.sort(key=lambda s: -s["value_diff"])
-
-    suggestions = suggestions[:max_suggestions]
     records = {}
     try:
-        for r in sleeper.get_rosters(league_id):
+        for r in raw:
             st = r.get("settings") or {}
             records[r.get("roster_id")] = (int(st.get("wins") or 0), int(st.get("losses") or 0))
     except Exception:
         records = {}
-    have_cache = {}
 
-    def have(rid, by_pos=None):
-        if rid not in have_cache:
-            have_cache[rid] = {pos: len(pl) for pos, pl in (by_pos or roster_by_position(team_by_roster[rid]["player_ids"])).items()}
-        return have_cache[rid]
+    def have(rid):
+        c = {"QB": 0, "RB": 0, "WR": 0, "TE": 0}
+        for p in rosters[rid]["players"]:
+            c[p["position"]] = c.get(p["position"], 0) + 1
+        return c
 
+    clean = lambda ps: [{k: v for k, v in p.items()} for p in ps]
+    out = []
     for sug in suggestions:
         opp = sug["opponent_roster_id"]
         rec_me, rec_them = records.get(my_roster_id), records.get(opp)
-        sug["reasons"] = trade_reasons.build_reasons(
-            sug["you_give"], sug["you_get"], needs, have(my_roster_id, my_by_pos), needs, have(opp),
-            rec_me if rec_me and sum(rec_me) else None, rec_them if rec_them and sum(rec_them) else None,
-            sug["opponent_team_name"])
-    return {"season": bundle["season"], "my_roster_id": my_roster_id, "suggestions": suggestions}
+        best_in = max(sug["you_get"], key=lambda p: p["trade"])
+        item = {
+            "opponent_roster_id": opp, "opponent_team_name": sug["opponent_team_name"],
+            "you_give": clean(sug["you_give"]), "you_get": clean(sug["you_get"]),
+            "value_diff": sug["my_gain"], "my_gain": sug["my_gain"], "their_gain": sug["their_gain"],
+            "acceptance": sug["acceptance"], "market_give": sug["market_give"], "market_get": sug["market_get"],
+            "market_ratio": sug["market_ratio"], "fills_need": best_in["position"],
+            "you_drop": [p["name"] for p in sug["my_drop"]], "they_drop": [p["name"] for p in sug["their_drop"]],
+        }
+        item["reasons"] = sug["reasons"]
+        if rec_me and rec_them and sum(rec_me) and sum(rec_them):
+            item["reasons"]["them"].append(f"They're {rec_them[0]}-{rec_them[1]}; you're {rec_me[0]}-{rec_me[1]}")
+        out.append(item)
+    return {"season": bundle["season"], "my_roster_id": my_roster_id, "suggestions": out}
 
 
 def waiver_wire(positions=None, rostered_ids=None, season=None, scoring=None, limit=15, trending=True):

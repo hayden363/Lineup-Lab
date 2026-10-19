@@ -4303,3 +4303,7 @@ body.sidebar-collapsed .sidebar-top .sidebar-icon-btn { display: none; }
 .ssh-sub { display: block; font-size: 10.5px; color: var(--muted-dim); font-weight: 400; }
 .ssh-table td.ssh-win .ssh-sub { color: var(--muted); }
 .ssh-tag { font-family: var(--mono); font-size: 9.5px; color: var(--accent); border: 1px solid var(--border-bright); border-radius: 4px; padding: 0 4px; margin-left: 4px; }
+.ts-gains { font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.ts-gains b { font-family: var(--mono); }
+.ts-gains .pos { color: var(--pos); } .ts-gains .neg { color: var(--neg); }
+.tf-how { margin: 4px 0 12px; }

@@ -3192,8 +3192,10 @@ async function loadTradeFinder(giveIds) {
   const shopping = giveIds && giveIds.length;
   clearBtn.style.display = shopping ? "" : "none";
 
-  if (!shopping) {
-    results.innerHTML = `<div class="hint">Pick one or more of your own players above, then hit "Find trades for selected" — we'll scan the whole league for realistic returns.</div>`;
+  if (!shopping && !giveIds?.scan) {
+    results.innerHTML = `<div class="hint">Pick one or two of your own players above and hit "Find trades for selected", or let us scan every roster for the best deals for your team.</div>
+      <button class="primary-btn" id="tf-scan-btn">Find my best trades</button>`;
+    $("#tf-scan-btn").addEventListener("click", () => loadTradeFinder(Object.assign([], { scan: true })));
     return;
   }
 
@@ -3211,7 +3213,7 @@ async function loadTradeFinder(giveIds) {
     // stripping one leading "&" is well-formed either way.
     const data = await api(`/api/trade-finder?${(scoringQS() + giveQS).replace(/^&/, "")}`);
     if (!data.suggestions.length) {
-      results.innerHTML = `<div class="empty tf-empty">No realistic offers found for that player right now — try a different pick, or check back as values update.</div>`;
+      results.innerHTML = `<div class="empty tf-empty">No trade for that pick passes all three checks right now (fair on the trade chart, better lineup for you, no worse for them). Try a different player or pair.</div>`;
       return;
     }
     renderTradeFinderResults(results, data.suggestions);
@@ -3220,29 +3222,31 @@ async function loadTradeFinder(giveIds) {
   }
 }
 
+function tradeAcceptTier(s) {
+  return s.acceptance === "Likely"
+    ? { css: "tier-great", label: "Likely accepted", icon: "🤝" }
+    : { css: "tier-fair", label: "Worth an offer", icon: "⚖️" };
+}
+
 function renderTradeFinderResults(results, suggestions) {
   const best = suggestions[0];
-  const bestGiveValue = best.you_give.reduce((sum, p) => sum + p.value, 0);
-  const bestPct = bestGiveValue > 0 ? (best.value_diff / bestGiveValue) * 100 : 0;
-  const bestTier = tradeFinderTier(bestPct);
-
+  const likely = suggestions.filter((s) => s.acceptance === "Likely").length;
   let html = `<div class="tf-summary">
     <span class="tf-summary-count" data-target="${suggestions.length}"></span>
     <span class="tf-summary-lbl">realistic trade${suggestions.length === 1 ? "" : "s"} found</span>
-    <span class="tf-summary-best">best is <b>${esc(bestTier.label)}</b> vs ${esc(best.opponent_team_name)}</span>
-  </div>`;
+    <span class="tf-summary-best">${likely} likely to be accepted · top pick vs ${esc(best.opponent_team_name)}</span>
+  </div>
+  <div class="hint tf-how">Each one is fair by trade-chart value (expert consensus + our projections, with a 2-for-1 discounted the way people trade), improves your starting lineup, and doesn't make theirs worse.</div>`;
 
   html += suggestions.map((s, i) => {
-    const giveValue = s.you_give.reduce((sum, p) => sum + p.value, 0);
-    const pctDiff = giveValue > 0 ? (s.value_diff / giveValue) * 100 : 0;
-    const tier = tradeFinderTier(pctDiff);
+    const tier = tradeAcceptTier(s);
     const accent = s.fills_need ? posAccentClass(s.fills_need) : "";
     return `
       <div class="trade-suggestion ${tier.css}${accent ? ` ${accent}` : ""}${i === 0 ? " best-value" : ""}" style="animation-delay:${i * 70}ms">
         <div class="ts-opp">
-          <span>vs ${esc(s.opponent_team_name)}${s.fills_need ? ` · fills your ${esc(s.fills_need)} need` : ""}</span>
+          <span>vs ${esc(s.opponent_team_name)}</span>
           <span class="trade-tier-badge ${tier.css}"><span class="tvc-icon">${tier.icon}</span>${esc(tier.label)}</span>
-          ${i === 0 ? `<span class="badge-recommended">BEST VALUE</span>` : ""}
+          ${i === 0 ? `<span class="badge-recommended">TOP PICK</span>` : ""}
         </div>
         <div class="ts-swap">
           <div class="ts-side">${playerChipsHtml(s.you_give)}</div>
@@ -3251,7 +3255,7 @@ function renderTradeFinderResults(results, suggestions) {
         </div>
         ${tradeReasonsHtml(s)}
         <div class="ts-footer">
-          <span class="ts-diff ${s.value_diff >= 0 ? "pos" : "neg"}" data-target="${s.value_diff}"></span>
+          <span class="ts-gains"><b class="pos">${s.my_gain >= 0 ? "+" : ""}${FMT.d1(s.my_gain)}</b> pts/wk for you · <b class="${s.their_gain >= 0 ? "pos" : "neg"}">${s.their_gain >= 0 ? "+" : ""}${FMT.d1(s.their_gain)}</b> for them · chart ${Math.round(s.market_give)} for ${Math.round(s.market_get)}</span>
           <button class="pill" data-give='${esc(JSON.stringify(s.you_give))}' data-get='${esc(JSON.stringify(s.you_get))}'>Load into builder</button>
         </div>
       </div>
@@ -3262,16 +3266,6 @@ function renderTradeFinderResults(results, suggestions) {
 
   const countEl = results.querySelector(".tf-summary-count[data-target]");
   if (countEl) countUp(countEl, Number(countEl.dataset.target), { decimals: 0, duration: 500 });
-  results.querySelectorAll(".ts-diff[data-target]").forEach((node) => {
-    countUp(node, Number(node.dataset.target), { signed: true, duration: 650 });
-  });
-  // countUp() overwrites textContent without the trailing unit — append it
-  // once the animation settles rather than fighting the rAF loop for it.
-  setTimeout(() => {
-    results.querySelectorAll(".ts-diff[data-target]").forEach((node) => {
-      node.textContent += " pts";
-    });
-  }, 680);
 
   results.querySelectorAll("button[data-give]").forEach((b) => {
     b.addEventListener("click", () => {
@@ -3320,7 +3314,10 @@ async function renderShopPicker() {
     chip.addEventListener("click", () => {
       const pid = chip.dataset.pid;
       if (state.shopSelected.has(pid)) state.shopSelected.delete(pid);
-      else state.shopSelected.add(pid);
+      else {
+        if (state.shopSelected.size >= 2) { showToast("Shop one or two players at a time."); return; }
+        state.shopSelected.add(pid);
+      }
       chip.classList.toggle("selected");
       $("#shop-find-btn").disabled = state.shopSelected.size === 0;
     });
