@@ -429,6 +429,7 @@ def build_board(position, season=None, min_games=2, min_volume=None, scoring=Non
     board = _BOARD_CACHE.get(key)
     if board is None:
         board = _build_board_uncached(position, season, min_volume, scoring)
+        board["rate"] = shrunk_rate(board, position)
         _BOARD_CACHE[key] = board
     filtered = board[board["games"] >= min_games]
     # .attrs propagation through boolean-mask indexing isn't guaranteed on
@@ -496,6 +497,32 @@ def _injury_sample_col(board, position):
     return board.apply(_n, axis=1)
 
 
+# Starter-pool size per position for the shrinkage prior (top N by per-game
+# scoring among players with a real sample).
+SHRINK_POOL = {"QB": 12, "RB": 24, "WR": 24, "TE": 12}
+SHRINK_GAMES = 3.0   # prior counts as this many games of evidence
+SHRINK_MIN_SAMPLE = 3
+
+
+def shrunk_rate(board, position):
+    """Per-game scoring pulled toward the position's starter average by how
+    few games he has played: (n*rate + k*prior) / (n + k), k = 3 games. A
+    5-game 30-point streak projects forward as roughly 23, not 31, while a
+    full season barely moves. Players with a full sample are essentially
+    unchanged (n=16: 84% own rate)."""
+    rate = board["fpts_per_game"]
+    pool = board[board["games"] >= SHRINK_MIN_SAMPLE]["fpts_per_game"].nlargest(SHRINK_POOL[position])
+    if pool.empty:
+        return rate
+    prior = float(pool.mean())
+    n = board["games"].astype(float)
+    return (n * rate + SHRINK_GAMES * prior) / (n + SHRINK_GAMES)
+
+
+def _rate(board):
+    return board["rate"] if "rate" in board.columns else board["fpts_per_game"]
+
+
 def project_vs(board, position, opp, bundle=None, season=None, scoring=None):
     """Add a PROJ column: fpts_per_game adjusted for FORM, the real,
     per-stat-category matchup factor vs this specific opponent defense,
@@ -513,7 +540,7 @@ def project_vs(board, position, opp, bundle=None, season=None, scoring=None):
     board["matchup_tag"] = matchup_tag(factor)
     board["injury_factor"] = injury_mult
     board["injury_sample_n"] = injury_n
-    board["PROJ"] = (board["fpts_per_game"] * form_mult * factor * injury_mult).round(1)
+    board["PROJ"] = (_rate(board) * form_mult * factor * injury_mult).round(1)
     board.attrs["matchup_breakdown"] = breakdown
     return board
 
@@ -528,7 +555,7 @@ def rest_of_season_value(board, position, bundle=None, season=None, scoring=None
     avg_factor = defense_layer.league_average_composite(position, bundle["defense_factors"])
     form_mult = 1 + board["FORM"] / 100.0
     injury_mult = _injury_multiplier_col(board, position)
-    return (board["fpts_per_game"] * form_mult * avg_factor * injury_mult).round(1)
+    return (_rate(board) * form_mult * avg_factor * injury_mult).round(1)
 
 
 def overall_board(scoring=None, league=None, season=None, ecr=None):
