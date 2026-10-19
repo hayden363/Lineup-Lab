@@ -240,3 +240,14 @@ def stat_line(row, position):
         if n("rushing_yards"):
             parts.append(f"{n('rushing_yards')} rush yds")
     return ", ".join(parts)
+
+
+def upcoming_week(schedule):
+    """The next regular-season week with an unplayed game (what 'this week'
+    means for BYE tags and lineups), or None once the season is over."""
+    s = schedule
+    if "game_type" in s.columns:
+        s = s[s["game_type"] == "REG"]
+    if "home_score" in s.columns:
+        s = s[s["home_score"].isna()]
+    return int(s["week"].min()) if len(s) else None

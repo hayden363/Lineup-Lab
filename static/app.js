@@ -281,7 +281,7 @@ DETAIL_METRICS.TE = DETAIL_METRICS.WR;
 // -------------------------------------------------------------- state -----
 const state = {
   tab: "board",
-  pos: "QB",
+  pos: "ALL",
   opp: "",
   search: "",
   meta: null,
@@ -481,6 +481,15 @@ function initPosPills() {
   });
   waiverPills.appendChild(allBtn);
 
+  const boardAll = el("button", "pill" + (state.pos === "ALL" ? " active" : ""), "All");
+  boardAll.addEventListener("click", () => {
+    state.pos = "ALL";
+    boardPills.querySelectorAll(".pill").forEach((p) => p.classList.remove("active"));
+    boardAll.classList.add("active");
+    loadBoard();
+  });
+  boardPills.appendChild(boardAll);
+
   POSITIONS.forEach((pos) => {
     const b1 = el("button", "pill" + (pos === state.pos ? " active" : ""), pos);
     b1.addEventListener("click", () => {
@@ -557,6 +566,26 @@ function formCell(form) {
   return `<span class="${cls}">${sign}${FMT.d1(form)}%</span>`;
 }
 
+// "BYE" when the player's team is off in the week this board is about.
+function byeTagHtml(p) {
+  if (p.bye_week == null || state.boardWeek == null) return "";
+  if (Number(p.bye_week) === Number(state.boardWeek)) return ' <span class="bye-tag" title="Team is on a bye this week">BYE</span>';
+  return "";
+}
+
+function tierPillHtml(tier) {
+  return tier == null ? "—" : `<span class="tier-pill tier-${Math.min(tier, 8)}">T${esc(tier)}</span>`;
+}
+
+// How far the experts disagree with us: positive = they rank him higher.
+function ecrGapHtml(p) {
+  if (p.ecr == null) return '<span class="muted">—</span>';
+  const gap = p.ecr_gap;
+  const cls = gap > 8 ? "form-pos" : gap < -8 ? "form-neg" : "";
+  const arrow = gap > 8 ? "▲" : gap < -8 ? "▼" : "";
+  return `${Math.round(p.ecr)} <span class="${cls}" title="Expert consensus rank vs. our rank">${arrow}</span>`;
+}
+
 function playerCellHtml(p) {
   // The Big Board table is the app's highest-traffic scanning surface —
   // real injury/gone-dark signals belong here too, not just once you've
@@ -573,7 +602,7 @@ function playerCellHtml(p) {
   const isTop = p.rank === 1;
   return `<div class="player-cell${isTop ? " player-cell-top" : ""}">
       <img ${headshotAttrs(p)} alt="">
-      <div><div class="player-name">${isTop ? '<span class="top-crown" title="Top of this board">👑</span>' : ""}${esc(p.player_display_name) || "—"}${statusFlagsHtml(p)}</div><div class="player-team">${esc(p.recent_team)}</div></div>
+      <div><div class="player-name">${isTop ? '<span class="top-crown" title="Top of this board">👑</span>' : ""}${esc(p.player_display_name) || "—"}${statusFlagsHtml(p)}${byeTagHtml(p)}</div><div class="player-team">${esc(p.recent_team)}${p.position && state.pos === "ALL" ? ` · <span class="pos-chip pos-${esc(p.position)}">${esc(p.position)}</span>` : ""}</div>${p.stat_line ? `<div class="stat-line">${esc(p.stat_line)}</div>` : ""}</div>
     </div>`;
 }
 
@@ -794,6 +823,58 @@ function initCompareTray() {
   });
 }
 
+// One list for every position, ranked by value over replacement (VOR) —
+// see engine/value.py. PROJ is points per game; VOR is how many of those
+// points beat the free replacement at his position.
+function renderOverallBoard(data) {
+  $("#board-head").innerHTML = `<th></th><th>Player</th><th>Tier</th><th>PROJ</th><th>VOR</th><th class="hide-mobile">Experts</th><th class="hide-mobile">Boom%</th><th class="hide-mobile">Steady</th>`;
+  const body = $("#board-body");
+  body.innerHTML = "";
+  const q = state.search.trim().toLowerCase();
+  const rr = data.replacement_ranks || {};
+  data.players
+    .filter((p) => !q || (p.player_display_name || "").toLowerCase().includes(q) || (p.recent_team || "").toLowerCase().includes(q))
+    .forEach((p, i) => {
+      p.rank = p.overall_rank;
+      const tr = el("tr");
+      tr.style.setProperty("--i", Math.min(i, 24));
+      if (p.rank === 1) tr.classList.add("board-row-top");
+      const selected = state.compareSelected.has(p.player_id);
+      const steady = p.cv == null ? "—" : p.cv <= 0.3 ? "Steady" : p.cv <= 0.5 ? "Mixed" : "Boom/bust";
+      tr.innerHTML = `<td class="rank-cell">${esc(p.rank)}</td>
+        <td><div class="board-player-row">
+          <button type="button" class="cmp-check${selected ? " selected" : ""}" data-pid="${esc(p.player_id)}" aria-pressed="${selected}" title="${selected ? "Remove from compare" : "Add to compare"}"><span class="check">${selected ? "✓" : ""}</span></button>
+          ${playerCellHtml(p)}
+        </div></td>
+        <td>${tierPillHtml(p.tier)}</td>
+        <td>${FMT.d1(p.PROJ)}</td>
+        <td><span class="vor-cell" title="Points per game above a free replacement ${esc(p.position)}">+${FMT.d1(p.VOR)}</span></td>
+        <td class="hide-mobile">${ecrGapHtml(p)}</td>
+        <td class="hide-mobile">${p.boom_rate == null ? "—" : Math.round(p.boom_rate) + "%"}</td>
+        <td class="hide-mobile">${steady}</td>`;
+      tr.querySelector(".cmp-check").addEventListener("click", (e) => {
+        e.stopPropagation();
+        toggleCompare(p, e.currentTarget);
+      });
+      tr.addEventListener("click", (e) => { rippleAt(tr, e); openPlayerModal(p.player_id, state.opp); });
+      body.appendChild(tr);
+    });
+  $("#board-hint").textContent =
+    `Ranked by VOR — points per game above a free replacement at the same position (replacement ≈ QB${rr.QB}, RB${rr.RB}, WR${rr.WR}, TE${rr.TE} in a ${data.league?.teams || 12}-team league), nudged 30% toward the expert consensus. That's why an elite tight end can outrank a good quarterback.`;
+}
+
+// A short expanding circle where you clicked — pure CSS animation, removed when done.
+function rippleAt(node, e) {
+  const r = node.getBoundingClientRect();
+  const dot = document.createElement("span");
+  dot.className = "click-ripple";
+  dot.style.left = `${(e.clientX || r.left + r.width / 2) - r.left}px`;
+  dot.style.top = `${(e.clientY || r.top + r.height / 2) - r.top}px`;
+  node.classList.add("has-ripple");
+  node.appendChild(dot);
+  setTimeout(() => dot.remove(), 650);
+}
+
 async function loadBoard() {
   const loading = $("#board-loading");
   loading.style.display = "";
@@ -802,6 +883,14 @@ async function loadBoard() {
   try {
     const url = `/api/board?pos=${state.pos}${state.opp ? `&opp=${state.opp}` : ""}${scoringQS()}`;
     const data = await api(url);
+    state.boardWeek = data.week;
+    if (state.pos === "ALL") {
+      renderOverallBoard(data);
+      loading.style.display = "none";
+      $("#board-table").style.display = "";
+      animateScoreBars();
+      return;
+    }
     const cols = TABLE_COLS[state.pos] || [];
     renderBoardHead(cols, !!state.opp);
     renderBoardRows(data.players, cols, !!state.opp);
@@ -861,6 +950,8 @@ function weeklyChartHtml(weeks, statKey) {
   const decimals = Number.isInteger(avg) && vals.every((v) => Number.isInteger(v)) ? 0 : 1;
   const bars = weeks.map((w) => {
     const v = w[statKey];
+    if (w.status === "bye") return `<div class="bar bar-bye" title="Week ${esc(w.week)}: BYE"><div class="bar-tag">BYE</div><div class="wk-label">${esc(w.week)}</div></div>`;
+    if (w.status === "dnp") return `<div class="bar bar-dnp" title="Week ${esc(w.week)}: did not play (team played ${esc(w.opponent)})"><div class="bar-tag">OUT</div><div class="wk-label">${esc(w.week)}</div></div>`;
     if (v == null) return `<div class="bar" style="height:2%;opacity:.3" title="Week ${esc(w.week)}: no data"><div class="wk-label">${esc(w.week)}</div></div>`;
     const h = Math.max(2, Math.round((Math.max(0, v) / maxV) * 100));
     const below = v < avg ? " below-avg" : "";
@@ -919,6 +1010,85 @@ async function openPlayerModal(playerId, opp) {
   loadPlayerNews(playerId, root);
 }
 
+// The week-by-week rows for the chart: every week up to the last one that
+// has happened, with BYE and missed (did-not-play) weeks kept in so a gap is
+// obvious instead of silently skipped. Falls back to the plain played list.
+function weeklyRows(p) {
+  const all = p.weekly_status;
+  if (!all || !all.length) return p.weekly_log || [];
+  const lastReal = Math.max(0, ...all.filter((w) => w.status === "played" || w.status === "dnp").map((w) => w.week));
+  const through = Math.max(lastReal, Number(state.boardWeek) || 0, 1);
+  return all.filter((w) => w.week <= through && (w.status !== "upcoming" || w.week < through));
+}
+
+function fmtTotal(v, dec) { return v == null ? "—" : Number(v).toLocaleString(undefined, { maximumFractionDigits: dec || 0 }); }
+
+const TOTAL_LABELS = {
+  attempts: "Pass Att", completions: "Comp", passing_yards: "Pass Yds", passing_tds: "Pass TD", interceptions: "INT",
+  sacks: "Sacked", carries: "Carries", rushing_yards: "Rush Yds", rushing_tds: "Rush TD", targets: "Targets",
+  receptions: "Rec", receiving_yards: "Rec Yds", receiving_tds: "Rec TD", fumbles_lost: "Fumbles Lost",
+};
+
+function valueStripHtml(p) {
+  if (p.bye_week == null) return "";
+  return `<div class="value-strip"><span class="bye-chip">BYE week ${esc(p.bye_week)}</span></div>`;
+}
+
+function totalsHtml(p) {
+  const t = p.totals;
+  if (!t) return "";
+  const keys = Object.keys(TOTAL_LABELS).filter((k) => t[k] != null && (t[k] !== 0 || ["interceptions", "fumbles_lost"].includes(k)));
+  const tiles = keys.map((k) => `<div class="metric-tile"><div class="label">${TOTAL_LABELS[k]}</div><div class="value">${fmtTotal(t[k])}</div></div>`).join("");
+  return `<div class="section-label">Season Stats</div><div class="metric-grid stagger-in">${tiles}</div>`;
+}
+
+function consistencyHtml(p) {
+  const c = p.consistency;
+  if (!c || !c.games) return "";
+  const steady = c.cv == null ? "—" : c.cv <= 0.3 ? "Steady" : c.cv <= 0.5 ? "Mixed" : "Boom / bust";
+  const tiles = [
+    ["Consistency", steady, c.cv == null ? "" : `swing ${(c.cv * 100).toFixed(0)}% of his average`],
+    ["Big-week rate", `${Math.round(c.boom_rate)}%`, "top finishes at his position"],
+    ["Dud rate", `${Math.round(c.bust_rate)}%`, "games below a startable finish"],
+    ["Best / worst", `${FMT.d1(c.best)} / ${FMT.d1(c.worst)}`, "fantasy points in a game"],
+  ].map(([l, v, sub]) => `<div class="metric-tile"><div class="label">${l}</div><div class="value">${v}</div>${sub ? `<div class="tile-sub">${sub}</div>` : ""}</div>`).join("");
+  return `<div class="section-label">Consistency</div><div class="metric-grid stagger-in">${tiles}</div>`;
+}
+
+// Every Next Gen Stat as a percentile bar against same-position peers. The
+// bar grows in from zero when it enters the modal; the sparkline underneath
+// is that stat week by week.
+function ngsHtml(p) {
+  const rows = p.ngs || [];
+  if (!rows.length) return "";
+  const body = rows.map((n, i) => {
+    const pct = n.percentile;
+    const tone = n.higher_is_better == null ? "ctx" : pct >= 67 ? "hi" : pct <= 33 ? "lo" : "mid";
+    const spark = ngsSparkHtml(n.weekly);
+    return `<div class="ngs-row" style="--d:${i * 55}ms">
+      <div class="ngs-top"><span class="ngs-label">${esc(n.label)}</span><span class="ngs-val">${fmtTotal(n.value, 2)}${pct == null ? "" : ` <span class="ngs-pct">${pct}th</span>`}</span></div>
+      <div class="ngs-track"><div class="ngs-fill ngs-${tone}" data-pct="${pct == null ? 0 : pct}"></div></div>
+      ${spark}
+    </div>`;
+  }).join("");
+  return `<div class="section-label">Next Gen Stats <span class="muted small">percentile among ${esc(p.position)}s</span></div><div class="ngs-grid">${body}</div>`;
+}
+
+function ngsSparkHtml(weekly) {
+  if (!weekly || weekly.length < 2) return "";
+  const vals = weekly.map((w) => w.value);
+  const lo = Math.min(...vals), hi = Math.max(...vals), span = hi - lo || 1;
+  const pts = weekly.map((w, i) => `${(i / (weekly.length - 1)) * 100},${22 - ((w.value - lo) / span) * 20}`).join(" ");
+  return `<svg class="ngs-spark" viewBox="0 0 100 24" preserveAspectRatio="none"><polyline points="${pts}"/></svg>`;
+}
+
+function wireNgsBars(container) {
+  // Two frames so the browser paints width:0 before the transition starts.
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    container.querySelectorAll(".ngs-fill").forEach((f) => { f.style.width = `${f.dataset.pct}%`; });
+  }));
+}
+
 // The SCORE/FORM/matchup grid + per-stat gauges + weekly chart — shared
 // between the full player modal and the inline expand-in-place panel on
 // a Start/Sit card (see startSitCardHtml/toggleSSExpand below), so both
@@ -945,8 +1115,8 @@ function playerStatsBodyHtml(p) {
     return `<div class="section-label">${esc(label)}</div><div class="metric-grid">${tiles}</div>`;
   }).join("");
 
-  const weeks = p.weekly_log || [];
-  const statKeys = ["fpts", ...Object.keys(weeks[0] || {}).filter((k) => !["week", "opponent_team", "fpts"].includes(k))];
+  const weeks = weeklyRows(p);
+  const statKeys = ["fpts", ...Object.keys((p.weekly_log || [])[0] || {}).filter((k) => !["week", "opponent_team", "fpts"].includes(k))];
   const statOptions = statKeys.map((k) => `<option value="${esc(k)}">${esc(WEEKLY_STAT_LABELS[k] || k)}</option>`).join("");
   const matchupLine = p.matchup_factor != null
     ? `<div class="metric-tile"><div class="label">Matchup vs ${esc(p.matchup_opponent)}</div><div class="value">${p.matchup_factor.toFixed(2)}x</div></div>` : "";
@@ -958,8 +1128,12 @@ function playerStatsBodyHtml(p) {
       <div class="metric-tile"><div class="label">FPTS/G</div><div class="value">${FMT.d1(p.fpts_per_game)}</div></div>
       ${matchupLine}
     </div>
+    ${valueStripHtml(p)}
+    ${totalsHtml(p)}
     ${projectionCompareSlotHtml()}
+    ${consistencyHtml(p)}
     ${sections}
+    ${ngsHtml(p)}
     <div class="section-label weeklog-header">
       <span>Weekly Breakdown</span>
       ${statKeys.length > 1 ? `<select class="weeklog-stat-select">${statOptions}</select>` : ""}
@@ -971,7 +1145,8 @@ function playerStatsBodyHtml(p) {
 // playerStatsBodyHtml() — `container` is the modal root for the full
 // modal, or one card's own expand panel for the inline case.
 function wirePlayerStatsBody(container, p) {
-  const weeks = p.weekly_log || [];
+  const weeks = weeklyRows(p);
+  wireNgsBars(container);
   container.querySelector(".weeklog-stat-select")?.addEventListener("change", (e) => {
     container.querySelector(".weeklog").innerHTML = weeklyChartHtml(weeks, e.target.value);
   });

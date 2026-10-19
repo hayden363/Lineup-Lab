@@ -3905,3 +3905,92 @@ body.sidebar-collapsed .sidebar-top .sidebar-icon-btn { display: none; }
   border-radius: 999px;
   border: 1px solid var(--border);
 }
+
+
+/* =====================================================================
+   Cross-position board, player profile, Next Gen Stats, click flair
+   ===================================================================== */
+.stat-line { color: var(--muted-dim); font-size: 11px; margin-top: 2px; font-variant-numeric: tabular-nums; }
+.bye-tag, .bye-chip {
+  display: inline-block; margin-left: 6px; padding: 1px 6px; border-radius: 999px;
+  font-size: 10px; font-weight: 800; letter-spacing: .06em;
+  color: var(--avg); background: rgba(251,191,36,.12); border: 1px solid rgba(251,191,36,.35);
+}
+.bye-chip { margin: 0; padding: 3px 10px; font-size: 11px; }
+.value-strip { margin: 8px 0 4px; }
+
+.pos-chip { font-size: 10px; font-weight: 800; letter-spacing: .05em; padding: 0 5px; border-radius: 4px; }
+.pos-QB { color: #f472b6; background: rgba(244,114,182,.12); }
+.pos-RB { color: var(--accent); background: rgba(52,211,153,.12); }
+.pos-WR { color: var(--info); background: rgba(34,211,238,.12); }
+.pos-TE { color: var(--violet); background: rgba(167,139,250,.12); }
+
+.tier-pill { display: inline-block; min-width: 28px; text-align: center; padding: 2px 7px; border-radius: 6px;
+  font-size: 11px; font-weight: 800; background: rgba(255,255,255,.06); color: var(--muted); }
+.tier-1 { color: #052e1b; background: var(--accent); }
+.tier-2 { color: #052e1b; background: #6ee7b7; }
+.tier-3 { color: var(--accent); background: rgba(52,211,153,.18); }
+.tier-4 { color: var(--info); background: rgba(34,211,238,.16); }
+.tier-5, .tier-6 { color: var(--avg); background: rgba(251,191,36,.14); }
+.vor-cell { color: var(--accent); font-weight: 700; font-variant-numeric: tabular-nums; }
+
+/* Rows slide in one after another, then lift slightly on hover. */
+#board-body tr { animation: rowIn 380ms var(--ease, ease-out) both; animation-delay: calc(var(--i, 0) * 22ms); }
+@keyframes rowIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+#board-body tr:hover { transform: translateX(3px); transition: transform 160ms ease; }
+
+/* Click ripple */
+.has-ripple { position: relative; overflow: hidden; }
+.click-ripple {
+  position: absolute; width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%;
+  background: var(--accent-glow); pointer-events: none; animation: ripple 620ms ease-out forwards;
+}
+@keyframes ripple { to { transform: scale(26); opacity: 0; } }
+.pill:active { transform: scale(.93); }
+.pill.active { animation: pillPop 320ms cubic-bezier(.34,1.56,.64,1); }
+@keyframes pillPop { 0% { transform: scale(.88); } 100% { transform: scale(1); } }
+
+/* Modal tiles pop in with a stagger. */
+.stagger-in .metric-tile { animation: tileIn 420ms cubic-bezier(.34,1.56,.64,1) both; }
+.stagger-in .metric-tile:nth-child(1) { animation-delay: 0ms; }
+.stagger-in .metric-tile:nth-child(2) { animation-delay: 45ms; }
+.stagger-in .metric-tile:nth-child(3) { animation-delay: 90ms; }
+.stagger-in .metric-tile:nth-child(4) { animation-delay: 135ms; }
+.stagger-in .metric-tile:nth-child(5) { animation-delay: 180ms; }
+.stagger-in .metric-tile:nth-child(n+6) { animation-delay: 225ms; }
+@keyframes tileIn { from { opacity: 0; transform: translateY(10px) scale(.94); } to { opacity: 1; transform: none; } }
+.tile-sub { color: var(--muted-dim); font-size: 10px; margin-top: 2px; }
+
+/* Next Gen Stats percentile bars */
+.ngs-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px 14px; }
+.ngs-row { background: var(--panel-2); border: 1px solid var(--border); border-radius: 10px; padding: 9px 11px;
+  animation: tileIn 420ms cubic-bezier(.34,1.56,.64,1) both; animation-delay: var(--d, 0ms); }
+.ngs-top { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; }
+.ngs-label { color: var(--muted); }
+.ngs-val { font-weight: 800; font-variant-numeric: tabular-nums; }
+.ngs-track { position: relative; height: 8px; margin: 7px 0 3px; border-radius: 99px; background: rgba(255,255,255,.07); }
+.ngs-fill { height: 100%; width: 0; border-radius: 99px; transition: width 900ms cubic-bezier(.22,1,.36,1); }
+.ngs-hi { background: linear-gradient(90deg, var(--accent-dim), var(--accent)); box-shadow: 0 0 10px var(--accent-glow); }
+.ngs-mid { background: linear-gradient(90deg, #b45309, var(--avg)); }
+.ngs-lo { background: linear-gradient(90deg, #be123c, var(--neg)); }
+.ngs-ctx { background: linear-gradient(90deg, #0e7490, var(--info)); }
+.ngs-pct { font-size: 10px; font-weight: 700; color: var(--muted); margin-left: 4px; }
+.ngs-spark { width: 100%; height: 22px; display: block; }
+.ngs-spark polyline { fill: none; stroke: var(--info); stroke-width: 1.6; vector-effect: non-scaling-stroke;
+  stroke-dasharray: 220; stroke-dashoffset: 220; animation: sparkDraw 1100ms ease-out forwards; }
+@keyframes sparkDraw { to { stroke-dashoffset: 0; } }
+
+/* BYE / missed weeks in the weekly chart */
+.weeklog .bar.bar-bye, .weeklog .bar.bar-dnp { height: 34%; background: transparent; border: 1px dashed rgba(255,255,255,.22); }
+.weeklog .bar.bar-bye { border-color: rgba(251,191,36,.55); }
+.weeklog .bar.bar-dnp { border-color: rgba(251,113,133,.6); }
+.bar-tag { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%) rotate(-90deg);
+  font-size: 9px; font-weight: 800; letter-spacing: .08em; white-space: nowrap; color: var(--muted); }
+.bar-bye .bar-tag { color: var(--avg); }
+.bar-dnp .bar-tag { color: var(--neg); }
+
+@media (prefers-reduced-motion: reduce) {
+  #board-body tr, .stagger-in .metric-tile, .ngs-row, .ngs-spark polyline, .click-ripple, .pill.active { animation: none; }
+  .ngs-spark polyline { stroke-dashoffset: 0; }
+  .ngs-fill { transition: none; }
+}

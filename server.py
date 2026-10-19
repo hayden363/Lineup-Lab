@@ -54,6 +54,7 @@ from engine import refresh_scheduler
 from engine import sleeper as sleeper_layer
 from engine import tools
 from engine.advanced import ADVANCED_COLS
+from engine.profile import upcoming_week
 from engine.board import (POSITIONS, build_board, overall_board, load_bundle, matchup_multiplier,
                            player_detail, project_vs, search_players)
 from engine.metrics import WEIGHTS
@@ -543,7 +544,9 @@ def _overall_board_response(limit, teams, superflex, scoring):
     cols = [c for c in _OVERALL_COLUMNS if c in board.columns]
     out = board.head(limit)[cols].reset_index()
     records = _clean(out.to_dict(orient="records"))
-    return {"season": load_bundle()["season"], "position": "ALL", "count": len(records),
+    bundle = load_bundle()
+    return {"season": bundle["season"], "week": upcoming_week(bundle["schedule"]),
+            "position": "ALL", "count": len(records),
             "league": league, "replacement_ranks": board.attrs.get("replacement_ranks"),
             "players": records}
 
@@ -577,7 +580,8 @@ def api_board(
     board = board.head(limit).reset_index()
     board.insert(0, "rank", range(1, len(board) + 1))
     records = _clean(board.to_dict(orient="records"))
-    return {"season": bundle["season"], "position": pos, "opponent": opp, "count": len(records),
+    return {"season": bundle["season"], "week": upcoming_week(bundle["schedule"]),
+            "position": pos, "opponent": opp, "count": len(records),
             "matchup_breakdown": breakdown, "players": records}
 
 
