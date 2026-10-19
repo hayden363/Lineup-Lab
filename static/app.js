@@ -1056,18 +1056,25 @@ function ngsHtml(p) {
       ? `<div class="ngs-rail ngs-none"></div>`
       : `<div class="ngs-rail ngs-${tone}"><i class="ngs-bar" data-pct="${pct}"></i><b class="ngs-dot" data-pct="${pct}"></b></div>`;
     return `<div class="ngs-line" style="--d:${i * 40}ms">
-      <span class="ngs-label">${esc(n.label)}</span>
+      <span class="ngs-label">${esc(n.label)}${n.tip ? `<small class="ngs-tip">${esc(n.tip)}</small>` : ""}</span>
       <span class="ngs-val">${fmtTotal(n.value, 2)}</span>
       ${rail}
       <span class="ngs-pct">${pct == null ? "" : pct + "<sup>th</sup>"}</span>
-      <span class="ngs-trace">${ngsSparkHtml(n.weekly)}</span>
+      <span class="ngs-trace">${ngsSparkHtml(n.weekly)}${ngsRangeHtml(n.weekly)}</span>
     </div>`;
   }).join("");
   const head = lead
     ? `<div class="ngs-lead"><span class="ngs-lead-k">Standout</span><span class="ngs-lead-v">${esc(lead.label)}</span><span class="ngs-lead-p">${lead.percentile}th percentile</span></div>`
     : "";
   return `<div class="section-label">Next Gen Stats <span class="muted small">percentile among ${esc(p.position)}s</span></div>
+    <div class="ngs-legend"><span><b>Dot</b> = where he ranks among ${esc(p.position)}s (right = higher)</span><span><b>Line</b> = that stat game by game; the end dot is his latest game</span><span class="ngs-lg"><i class="g"></i>top third <i class="y"></i>middle <i class="r"></i>bottom third <i class="b"></i>style, not good/bad</span></div>
     <div class="ngs-panel">${head}${body}</div>`;
+}
+
+function ngsRangeHtml(weekly) {
+  if (!weekly || weekly.length < 2) return "";
+  const vals = weekly.map((w) => w.value);
+  return `<span class="ngs-range">W${weekly[0].week}–W${weekly[weekly.length - 1].week} · ${fmtTotal(Math.min(...vals), 1)}–${fmtTotal(Math.max(...vals), 1)}</span>`;
 }
 
 function ngsSparkHtml(weekly) {
@@ -1076,7 +1083,7 @@ function ngsSparkHtml(weekly) {
   const lo = Math.min(...vals), hi = Math.max(...vals), span = hi - lo || 1;
   const xy = weekly.map((w, i) => [(i / (weekly.length - 1)) * 100, 22 - ((w.value - lo) / span) * 20]);
   const last = xy[xy.length - 1];
-  return `<svg class="ngs-spark" viewBox="0 0 100 24" preserveAspectRatio="none"><polyline points="${xy.map((q) => q.join(",")).join(" ")}"/></svg><em class="ngs-end" style="left:${last[0]}%;top:${(last[1] / 24) * 100}%"></em>`;
+  return `<svg class="ngs-spark" viewBox="0 0 100 24" preserveAspectRatio="none"><polyline points="${xy.map((q) => q.join(",")).join(" ")}"/></svg><em class="ngs-end" style="left:${last[0]}%;top:${(last[1] / 24) * 22}px"></em>`;
 }
 
 function wireNgsBars(container) {

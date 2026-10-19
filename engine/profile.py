@@ -115,6 +115,33 @@ NGS_SPECS = {
         ("catch_percentage", "Catch %", True),
     ],
 }
+
+# Plain-English meaning of each stat, shown under its name on the card.
+NGS_TIPS = {
+    "completion_percentage_above_expectation": "Completion rate beyond what the throws' difficulty predicts. Higher = more accurate than the average QB on the same throws.",
+    "expected_completion_percentage": "How often an average QB would complete his throws, based on distance, coverage and pressure. A difficulty gauge, not a skill score.",
+    "avg_time_to_throw": "Seconds from snap to release. Low = quick release; high = holds the ball or throws deep.",
+    "aggressiveness": "Share of throws into tight windows (defender within 1 yard). High = gunslinger.",
+    "avg_intended_air_yards": "How far downfield his throws are aimed on average. A style measure, not good or bad.",
+    "avg_completed_air_yards": "How far downfield his completed passes travel before the catch.",
+    "avg_air_yards_differential": "Completed minus intended air yards. Near zero or positive = completes deep throws; very negative = deep throws fall incomplete.",
+    "avg_air_yards_to_sticks": "Air yards relative to the first-down marker. Positive = throws past the sticks; negative = throws short of them.",
+    "max_completed_air_distance": "The longest completed pass he has thrown this season, measured in the air.",
+    "passer_rating": "Standard NFL passer rating (max 158.3).",
+    "rush_yards_over_expected_per_att": "Yards per carry beyond what the blocking and box predict. Higher = creating yards on his own.",
+    "rush_pct_over_expected": "Share of carries that beat the expected gain.",
+    "efficiency": "Distance traveled per yard gained. Lower = runs straight ahead; higher = dancing behind the line.",
+    "avg_time_to_los": "Seconds from handoff to reaching the line of scrimmage. Low = decisive; high = patient.",
+    "percent_attempts_gte_eight_defenders": "Share of carries into a box of 8+ defenders. High = defenses are loading up to stop him.",
+    "avg_rush_yards": "Average yards per carry.",
+    "avg_separation": "Yards of space from the nearest defender at the catch. More = easier to get open.",
+    "avg_cushion": "Yards of room defenders give him at the snap. Large = respected less; small = pressed.",
+    "avg_yac_above_expectation": "Yards after the catch beyond what the situation predicts. Higher = makes defenders miss.",
+    "avg_yac": "Average yards gained after the catch per reception.",
+    "avg_expected_yac": "Yards after the catch an average receiver would get on his catches.",
+    "percent_share_of_intended_air_yards": "His share of the team's total targeted air yards. High = the offense throws downfield to him.",
+    "catch_percentage": "Share of his targets he catches.",
+}
 NGS_MIN_VOLUME = {"passing": ("attempts", 40), "rushing": ("rush_attempts", 20), "receiving": ("targets", 10)}
 
 
@@ -149,7 +176,7 @@ def ngs_profile(ngs, kind, player_id):
             if higher is False:
                 pct = 100 - pct
         out.append({
-            "key": col, "label": label, "value": round(float(mine[col]), 2),
+            "key": col, "label": label, "tip": NGS_TIPS.get(col, ""), "value": round(float(mine[col]), 2),
             "percentile": None if pct is None else round(pct),
             "higher_is_better": higher,
             "weekly": [{"week": int(r.week), "value": round(float(v), 2)}
