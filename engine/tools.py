@@ -12,6 +12,7 @@ import numpy as np
 import pandas as pd
 
 from . import lineup as lineup_layer
+from . import profile
 from . import context, data, db, decision, trade_engine, locks, trade_reasons, defense_scoring, kicker_scoring, role_baseline, sleeper, waivers
 from .board import (POSITIONS, build_board, load_bundle, rest_of_season_value,
                      project_vs)
@@ -1556,24 +1557,14 @@ def draft_board(draft_id, my_roster_id=None, season=None, scoring=None, best_ava
     }
 
 
-def trade_finder(league_id, my_roster_id, target_roster_id=None, give_player_ids=None,
-                  season=None, scoring=None, max_suggestions=6):
-    """Trades both managers would plausibly accept (engine/trade_engine.py):
-    fair by market value (expert consensus + our numbers on a trade-chart
-    curve, with packages discounted the way people trade), your lineup gains,
-    theirs doesn't get worse, ranked by mutual benefit.
-
-    Need-driven by default; with `give_player_ids`, every suggestion includes
-    those players (1-2 of yours), and returns can be 1 or 2 of theirs."""
+def _trade_setup(league_id, scoring=None, season=None):
+    """Everything the trade engine needs for one Sleeper league: valued
+    rosters (with records, weaknesses, usage, byes) and the league context."""
     snap = sleeper.league_snapshot(league_id)
     if scoring is None:
         scoring = snap["scoring"]
-    team_by_roster = {t["roster_id"]: t for t in snap["teams"]}
-    if my_roster_id not in team_by_roster:
-        raise ValueError(f"roster_id {my_roster_id} not found in league {league_id}")
     league = sleeper.get_league(league_id)
     roster_positions = league.get("roster_positions") or []
-    needs = _position_needs(roster_positions)
     bundle = load_bundle(season)
     pool, _ = waivers.cached_pool(scoring, bundle)
     raw = sleeper.get_rosters(league_id)
@@ -1581,9 +1572,34 @@ def trade_finder(league_id, my_roster_id, target_roster_id=None, give_player_ids
     rostered = {cw.get(str(x)) for r in raw for x in (r.get("players") or [])} - {None}
     shape = trade_engine.league_shape(roster_positions, len(raw))
     values = trade_engine.trade_values(pool, shape, rostered)
-    rosters = trade_engine.build_rosters(league_id, pool, values, cw)
+
+    def _f(v, scale=1.0):
+        return None if v is None or pd.isna(v) else round(float(v) * scale, 1)
+    usage = {pid: {"xfp_pg": _f(r.get("xfp_pg")), "target_share": _f(r.get("target_share")), "hvt_pg": _f(r.get("hvt_pg"))}
+             for pid, r in pool.iterrows()}
+    byes = profile.bye_weeks(bundle["schedule"])
+    rosters = trade_engine.build_rosters(league_id, pool, values, cw, usage=usage, byes=byes)
+    slots = [s for s in roster_positions if s in lineup_layer.ELIGIBLE and s not in ("K", "DEF")]
+    trade_engine.annotate(rosters, slots)
+    ctx = {"slots": slots, "profile": trade_engine.depth_profile(shape), "teams": shape["teams"],
+           "starters": shape["starters"]}
+    return bundle, rosters, ctx
+
+
+def _public_player(p):
+    return {k: p.get(k) for k in ("player_id", "name", "player_display_name", "position", "recent_team",
+                                  "headshot_url", "value", "trade", "tier", "injury_status", "bye")}
+
+
+def trade_finder(league_id, my_roster_id, target_roster_id=None, give_player_ids=None,
+                  season=None, scoring=None, max_suggestions=6):
+    """Trades that pass every gate in engine/trade_engine.py (tier break,
+    both starting lineups, roster fit, records, fairness index), ranked by
+    mutual benefit. Need-driven by default; with `give_player_ids` (one or
+    two of yours) every suggestion includes them."""
+    bundle, rosters, ctx = _trade_setup(league_id, scoring, season)
     if my_roster_id not in rosters:
-        raise ValueError("couldn't read your roster from Sleeper")
+        raise ValueError(f"roster_id {my_roster_id} not found in league {league_id}")
     mine_ids = {p["player_id"] for p in rosters[my_roster_id]["players"]}
     if give_player_ids:
         missing = [pid for pid in give_player_ids if pid not in mine_ids]
@@ -1591,48 +1607,40 @@ def trade_finder(league_id, my_roster_id, target_roster_id=None, give_player_ids
             raise ValueError(f"Player(s) not on your roster or not scoreable this season: {', '.join(missing)}")
         if len(give_player_ids) > 2:
             raise ValueError("Pick one or two players to shop at a time.")
-    slots = [s for s in roster_positions if s in lineup_layer.ELIGIBLE and s not in ("K", "DEF")]
-    for t in rosters.values():
-        for p in t["players"]:
-            p["bye"] = locks.bye_week(bundle["schedule"], p.get("recent_team"))
-            p["form"] = None
-    suggestions = trade_engine.find_trades(
-        rosters, my_roster_id, slots, None, values, give_ids=list(give_player_ids or []) or None,
-        target_ids={target_roster_id} if target_roster_id else None, max_suggestions=max_suggestions)
-
-    records = {}
-    try:
-        for r in raw:
-            st = r.get("settings") or {}
-            records[r.get("roster_id")] = (int(st.get("wins") or 0), int(st.get("losses") or 0))
-    except Exception:
-        records = {}
-
-    def have(rid):
-        c = {"QB": 0, "RB": 0, "WR": 0, "TE": 0}
-        for p in rosters[rid]["players"]:
-            c[p["position"]] = c.get(p["position"], 0) + 1
-        return c
-
-    clean = lambda ps: [{k: v for k, v in p.items()} for p in ps]
+    found = trade_engine.find_trades(rosters, my_roster_id, ctx, give_ids=list(give_player_ids or []) or None,
+                                     target_ids={target_roster_id} if target_roster_id else None,
+                                     max_suggestions=max_suggestions)
     out = []
-    for sug in suggestions:
-        opp = sug["opponent_roster_id"]
-        rec_me, rec_them = records.get(my_roster_id), records.get(opp)
-        best_in = max(sug["you_get"], key=lambda p: p["trade"])
-        item = {
-            "opponent_roster_id": opp, "opponent_team_name": sug["opponent_team_name"],
-            "you_give": clean(sug["you_give"]), "you_get": clean(sug["you_get"]),
-            "value_diff": sug["my_gain"], "my_gain": sug["my_gain"], "their_gain": sug["their_gain"],
-            "acceptance": sug["acceptance"], "market_give": sug["market_give"], "market_get": sug["market_get"],
-            "market_ratio": sug["market_ratio"], "fills_need": best_in["position"],
-            "you_drop": [p["name"] for p in sug["my_drop"]], "they_drop": [p["name"] for p in sug["their_drop"]],
-        }
-        item["reasons"] = sug["reasons"]
-        if rec_me and rec_them and sum(rec_me) and sum(rec_them):
-            item["reasons"]["them"].append(f"They're {rec_them[0]}-{rec_them[1]}; you're {rec_me[0]}-{rec_me[1]}")
-        out.append(item)
+    for f in found:
+        a = f["analysis"]
+        out.append({
+            "opponent_roster_id": f["opponent_roster_id"], "opponent_team_name": f["opponent_team_name"],
+            "you_give": [_public_player(p) for p in f["you_give"]], "you_get": [_public_player(p) for p in f["you_get"]],
+            "value_diff": a["_my_dsl"], "my_gain": a["_my_dsl"], "their_gain": a["_opp_dsl"],
+            "fills_need": max(f["you_get"], key=lambda p: p["trade"])["position"],
+            "analysis": {k: v for k, v in a.items() if not k.startswith("_")},
+        })
     return {"season": bundle["season"], "my_roster_id": my_roster_id, "suggestions": out}
+
+
+def evaluate_trade(league_id, my_roster_id, opponent_roster_id, give_ids, get_ids, scoring=None, season=None):
+    """The full trade-engine verdict for a trade you built by hand."""
+    _, rosters, ctx = _trade_setup(league_id, scoring, season)
+    me, opp = rosters.get(my_roster_id), rosters.get(opponent_roster_id)
+    if not me or not opp:
+        raise ValueError("couldn't read one of the rosters from Sleeper")
+    by_me = {p["player_id"]: p for p in me["players"]}
+    by_opp = {p["player_id"]: p for p in opp["players"]}
+    give = [by_me[i] for i in give_ids if i in by_me]
+    get = [by_opp[i] for i in get_ids if i in by_opp]
+    skipped = [i for i in give_ids if i not in by_me] + [i for i in get_ids if i not in by_opp]
+    if not give or not get:
+        return None
+    a = trade_engine.assess(give, get, me, opp, ctx, full=True)
+    out = {k: v for k, v in a.items() if not k.startswith("_")}
+    if skipped:
+        out["note"] = "Kickers, defenses and players we can't value yet were left out of this verdict."
+    return out
 
 
 def waiver_wire(positions=None, rostered_ids=None, season=None, scoring=None, limit=15, trending=True):

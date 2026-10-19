@@ -833,6 +833,15 @@ def api_trade(req: TradeRequest, user=Depends(current_user)):
     scoring = _effective_scoring(req.scoring, user)
     league_ctx = _trade_league_ctx(user, req.opponent_roster_id, scoring)
     result = tools.trade_analyzer(req.side_a, req.side_b, scoring=scoring, league_ctx=league_ctx)
+    # The full trade-engine verdict (gates, fairness index, acceptance odds,
+    # negotiation scripts) when both rosters are real Sleeper rosters.
+    if league_ctx:
+        try:
+            active = db.get_active_team(user["id"])
+            result["evaluation"] = tools.evaluate_trade(active["league_id"], int(active["roster_id"]),
+                                                        req.opponent_roster_id, req.side_a, req.side_b, scoring=scoring)
+        except Exception as e:
+            print(f"[trade] engine verdict skipped: {e}")
     return _clean(result)
 
 

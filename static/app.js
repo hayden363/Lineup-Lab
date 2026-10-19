@@ -2253,6 +2253,84 @@ function tradePlayerCardHtml(p, delayMs) {
   </div>`;
 }
 
+// ------------------------------------------------------ trade verdicts ----
+// The trade engine's verdict (engine/trade_engine.py), shared by the Trade
+// Analyzer and every Trade Finder card.
+const TV_STATUS = {
+  APPROVED: ["tv-ok", "Realistic"],
+  MODIFICATION_REQUIRED: ["tv-warn", "Needs a tweak"],
+  VETOED: ["tv-bad", "Dead on arrival"],
+};
+const TV_GATES = [
+  ["tier_break_passed", "Tier break", "A tier-1 player can't be bought with lesser pieces."],
+  ["lineup_delta_passed", "Both lineups improve", "They gain 1.5+ starting PPG and you gain 0.5+."],
+  ["fairness_passed", "Fairness index", "Within 95-105 is even; 85-94 only with a big need on their side; 106-115 only to land a tier-1 player."],
+  ["roster_fit_passed", "Roster fit", "Extra players are covered by cutting bench players, never starters."],
+  ["incentive_passed", "Their incentives", "Contenders don't sell studs for depth; only struggling teams sell a tier-1 player for two pieces."],
+];
+const TV_SCRIPTS = [
+  ["casual_manager", "Casual manager"], ["quantitative_analyst", "Numbers person"],
+  ["skeptical_manager", "Skeptic"], ["desperate_manager", "Desperate team"],
+];
+
+function tvFairnessScale(fi) {
+  const lo = 70, hi = 130;
+  const pos = Math.max(0, Math.min(100, ((fi - lo) / (hi - lo)) * 100));
+  const zone = (a, b, cls) => `<i class="${cls}" style="left:${((a - lo) / (hi - lo)) * 100}%;width:${((b - a) / (hi - lo)) * 100}%"></i>`;
+  return `<div class="tv-fi">
+    <div class="tv-fi-bar">${zone(85, 95, "z-near")}${zone(95, 105, "z-fair")}${zone(105, 115, "z-near")}<b style="left:${pos}%"></b></div>
+    <div class="tv-fi-labels"><span>you underpay</span><span>even</span><span>you overpay</span></div>
+  </div>`;
+}
+
+function tradeVerdictHtml(ev, compact) {
+  if (!ev) return "";
+  const v = ev.verdict, q = ev.quantitative_breakdown, d = ev.team_impact_diagnostics;
+  const [cls, label] = TV_STATUS[v.status] || ["", v.status];
+  const gates = TV_GATES.map(([k, name, tip]) => `<span class="tv-gate ${ev.gate_audit[k] ? "pass" : "fail"}" title="${esc(tip)}">${ev.gate_audit[k] ? "✓" : "✕"} ${name}</span>`).join("");
+  const model = (q.acceptance_model || []).map((m) => `<li><span>${esc(m.factor)}</span><b class="${m.points >= 0 ? "pos" : "neg"}">${m.points > 0 && m !== q.acceptance_model[0] ? "+" : ""}${m.points}</b></li>`).join("");
+  const scripts = TV_SCRIPTS.map(([k, name]) => ev.negotiation_scripts?.[k] ? `<div class="tv-script">
+      <div class="tv-script-h"><span>${name}</span><button type="button" class="tv-copy" data-copy="${esc(ev.negotiation_scripts[k])}">Copy</button></div>
+      <p>${esc(ev.negotiation_scripts[k])}</p></div>` : "").join("");
+  const drops = [q.opponent_drop_candidate && `They'd drop ${esc(q.opponent_drop_candidate.name)} (value ${FMT.d1(q.opponent_drop_candidate.value_lost)})`,
+    q.user_drop_candidate && `You'd drop ${esc(q.user_drop_candidate.name)} (value ${FMT.d1(q.user_drop_candidate.value_lost)})`].filter(Boolean);
+  const head = `<div class="tv-head">
+      <div class="tv-grade ${cls}">${esc(v.fairness_grade)}</div>
+      <div class="tv-head-main">
+        <div><span class="tv-status ${cls}">${label}</span><span class="tv-prob"><b>${v.acceptance_probability_pct}%</b> chance they accept</span></div>
+        <div class="tv-summary">${esc(v.summary_reason)}</div>
+      </div>
+    </div>
+    <div class="tv-nums">
+      <div><span class="tv-k">Your starting lineup</span><b class="${q.user_starting_delta_ppg.startsWith("-") ? "neg" : "pos"}">${esc(q.user_starting_delta_ppg)}</b><small>PPG</small></div>
+      <div><span class="tv-k">Their starting lineup</span><b class="${q.opponent_starting_delta_ppg.startsWith("-") ? "neg" : "pos"}">${esc(q.opponent_starting_delta_ppg)}</b><small>PPG</small></div>
+      <div class="tv-fi-cell"><span class="tv-k">Fairness index</span><b>${Math.round(q.fairness_index)}</b>${tvFairnessScale(q.fairness_index)}</div>
+    </div>
+    <div class="tv-gates">${gates}</div>`;
+  const body = `
+    <div class="tv-cols">
+      <div><div class="tv-k">For you</div><p>${esc(d.user_roster_pros)}</p><p class="muted">${esc(d.user_roster_cons)}</p></div>
+      <div><div class="tv-k">${v.status === "APPROVED" ? "Why they'd accept" : "Their side"}</div><p>${esc(d.opponent_rationale)}</p></div>
+    </div>
+    <div class="tv-cols">
+      <div><div class="tv-k">Package math</div><p class="tv-mono">You give ${FMT.d1(q.you_give_effective_value)} · you get ${FMT.d1(q.you_get_effective_value)} (effective chart value)<br>Raw gap ${esc(q.raw_value_gap)} · package-adjusted ${esc(q.package_adjusted_gap)}${drops.length ? `<br>${drops.join("<br>")}` : ""}</p></div>
+      <div><div class="tv-k">Acceptance estimate</div><ul class="tv-model">${model}</ul><div class="tv-foot">A transparent estimate from these factors, not a measured rate.</div></div>
+    </div>
+    ${scripts ? `<div class="tv-k">Send it: pick the message that fits them</div><div class="tv-scripts">${scripts}</div>` : ""}
+    ${ev.note ? `<div class="tv-foot">${esc(ev.note)}</div>` : ""}`;
+  return compact
+    ? `<div class="tv tv-compact">${head}<details class="tv-more"><summary>Full breakdown and messages</summary>${body}</details></div>`
+    : `<div class="tv">${head}${body}</div>`;
+}
+
+function wireTradeVerdict(root) {
+  root.querySelectorAll(".tv-copy").forEach((b) => b.addEventListener("click", async () => {
+    try { await navigator.clipboard.writeText(b.dataset.copy); b.textContent = "Copied"; }
+    catch (e) { b.textContent = "Copy failed"; }
+    setTimeout(() => { b.textContent = "Copy"; }, 1500);
+  }));
+}
+
 function renderTradeAnalysis(data) {
   const results = $("#trade-results");
   const rec = data.recommendation;
@@ -2260,7 +2338,8 @@ function renderTradeAnalysis(data) {
   const bTouched = new Set(data.side_b.players.filter((p) => p.position).map((p) => p.position));
 
   let html = `<div class="trade-analysis">
-    <div class="trade-hero">
+    ${data.evaluation ? tradeVerdictHtml(data.evaluation, false) : ""}
+    <div class="trade-hero"${data.evaluation ? ' style="display:none"' : ""}>
       <div class="trade-hero-value-row">
         <div class="thv-side">
           <div class="thv-label">Side A gives up</div>
@@ -2290,6 +2369,7 @@ function renderTradeAnalysis(data) {
   </div></div>`;
 
   results.innerHTML = html;
+  wireTradeVerdict(results);
 
   // Kick off the count-up + bar-fill animations now that the nodes exist.
   results.querySelectorAll(".thv-num[data-target]").forEach((node) => countUp(node, Number(node.dataset.target)));
@@ -3222,54 +3302,35 @@ async function loadTradeFinder(giveIds) {
   }
 }
 
-function tradeAcceptTier(s) {
-  return s.acceptance === "Likely"
-    ? { css: "tier-great", label: "Likely accepted", icon: "🤝" }
-    : { css: "tier-fair", label: "Worth an offer", icon: "⚖️" };
-}
-
 function renderTradeFinderResults(results, suggestions) {
-  const best = suggestions[0];
-  const likely = suggestions.filter((s) => s.acceptance === "Likely").length;
-  let html = `<div class="tf-summary">
-    <span class="tf-summary-count" data-target="${suggestions.length}"></span>
-    <span class="tf-summary-lbl">realistic trade${suggestions.length === 1 ? "" : "s"} found</span>
-    <span class="tf-summary-best">${likely} likely to be accepted · top pick vs ${esc(best.opponent_team_name)}</span>
-  </div>
-  <div class="hint tf-how">Each one is fair by trade-chart value (expert consensus + our projections, with a 2-for-1 discounted the way people trade), improves your starting lineup, and doesn't make theirs worse.</div>`;
-
-  html += suggestions.map((s, i) => {
-    const tier = tradeAcceptTier(s);
-    const accent = s.fills_need ? posAccentClass(s.fills_need) : "";
-    return `
-      <div class="trade-suggestion ${tier.css}${accent ? ` ${accent}` : ""}${i === 0 ? " best-value" : ""}" style="animation-delay:${i * 70}ms">
-        <div class="ts-opp">
-          <span>vs ${esc(s.opponent_team_name)}</span>
-          <span class="trade-tier-badge ${tier.css}"><span class="tvc-icon">${tier.icon}</span>${esc(tier.label)}</span>
-          ${i === 0 ? `<span class="badge-recommended">TOP PICK</span>` : ""}
-        </div>
+  const realistic = suggestions.filter((s) => s.analysis?.verdict?.status === "APPROVED").length;
+  let html = realistic
+    ? `<div class="tf-summary">
+        <span class="tf-summary-count" data-target="${realistic}"></span>
+        <span class="tf-summary-lbl">realistic trade${realistic === 1 ? "" : "s"}</span>
+        <span class="tf-summary-best">every one passes all five checks below</span>
+      </div>`
+    : `<div class="tf-summary"><span class="tf-summary-lbl">No trade passes every check right now. These are the closest; each says what to change.</span></div>`;
+  html += suggestions.map((s, i) => `
+      <div class="trade-suggestion${i === 0 && realistic ? " best-value" : ""}" style="animation-delay:${i * 70}ms">
+        <div class="ts-opp"><span>vs ${esc(s.opponent_team_name)}</span>${i === 0 && realistic ? `<span class="badge-recommended">TOP PICK</span>` : ""}</div>
         <div class="ts-swap">
           <div class="ts-side">${playerChipsHtml(s.you_give)}</div>
           <div class="ts-swap-icon">⇄</div>
           <div class="ts-side">${playerChipsHtml(s.you_get)}</div>
         </div>
-        ${tradeReasonsHtml(s)}
+        ${tradeVerdictHtml(s.analysis, true)}
         <div class="ts-footer">
-          <span class="ts-gains"><b class="pos">${s.my_gain >= 0 ? "+" : ""}${FMT.d1(s.my_gain)}</b> pts/wk for you · <b class="${s.their_gain >= 0 ? "pos" : "neg"}">${s.their_gain >= 0 ? "+" : ""}${FMT.d1(s.their_gain)}</b> for them · chart ${Math.round(s.market_give)} for ${Math.round(s.market_get)}</span>
+          <span></span>
           <button class="pill" data-give='${esc(JSON.stringify(s.you_give))}' data-get='${esc(JSON.stringify(s.you_get))}'>Load into builder</button>
         </div>
-      </div>
-    `;
-  }).join("");
-
+      </div>`).join("");
   results.innerHTML = html;
-
+  wireTradeVerdict(results);
   const countEl = results.querySelector(".tf-summary-count[data-target]");
   if (countEl) countUp(countEl, Number(countEl.dataset.target), { decimals: 0, duration: 500 });
-
   results.querySelectorAll("button[data-give]").forEach((b) => {
     b.addEventListener("click", () => {
-      // dataset getters already HTML-decode attribute entities, so these are plain JSON strings
       state.tradeA = JSON.parse(b.dataset.give);
       state.tradeB = JSON.parse(b.dataset.get);
       renderTradeChips("a"); renderTradeChips("b");
