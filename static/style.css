@@ -4132,3 +4132,9 @@ body.sidebar-collapsed .sidebar-top .sidebar-icon-btn { display: none; }
 .wv-compare { align-self: flex-start; background: none; border: 1px solid var(--border-bright); color: var(--accent); font: inherit; font-size: 12.5px; font-weight: 600; padding: 6px 14px; border-radius: 999px; cursor: pointer; transition: background .15s; }
 .wv-compare:hover { background: rgba(52,211,153,.1); }
 .wv-games { display: block; margin-top: 2px; font-size: 11px; }
+.wv-controls { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.wv-toggle { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); cursor: pointer; user-select: none; }
+.wv-toggle input { accent-color: var(--accent); width: 15px; height: 15px; }
+.wv-more { display: block; margin: -8px 0 18px; background: none; border: 0; color: var(--accent); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; padding: 4px 0; }
+.wv-more:hover { text-decoration: underline; }
+#tab-waivers .wv-tabs { margin-top: 18px; }

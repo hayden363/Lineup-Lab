@@ -285,14 +285,28 @@
     <section id="tab-waivers" style="display:none">
       <div class="page-header">
         <h1>Waivers</h1>
-        <p>Who fills the hole on your roster, and who's the best talent out there before the box score catches up.</p>
+        <p>Top available players by position, synced to who's actually rostered in your league, with picks matched to your roster.</p>
       </div>
       <div id="wv-status" class="wv-status"></div>
       <div id="wv-note" class="hint"></div>
 
-      <div class="section-label">Smart Match <span class="muted small">free agents scored against your roster</span></div>
+      <div class="section-label">Best fits for your roster <span class="muted small">free agents scored against your team</span></div>
       <div id="wv-needs" class="wv-needs"></div>
       <div id="wv-smart" class="wv-smart"></div>
+      <button id="wv-smart-more" class="wv-more" style="display:none"></button>
+
+      <div class="section-label">Available players</div>
+      <div class="controls wv-controls">
+        <div class="pill-group" id="waivers-pos-pills"></div>
+        <label class="wv-toggle"><input type="checkbox" id="wv-advanced"> Usage stats</label>
+      </div>
+      <div class="hint" id="waivers-hint"></div>
+      <div class="board-wrap">
+        <table id="waivers-table" class="wv-table">
+          <thead><tr id="wv-head"></tr></thead>
+          <tbody id="waivers-body"></tbody>
+        </table>
+      </div>
 
       <div class="wv-tabs" role="tablist">
         <button class="wv-tab active" data-wv="movers">Market Movers</button>
@@ -300,17 +314,6 @@
       </div>
       <div id="wv-movers" class="wv-feed"></div>
       <div id="wv-cuffs" class="wv-feed" style="display:none"></div>
-
-      <div class="section-label">Deep Dive <span class="muted small">usage behind the points, top 20 available per position</span></div>
-      <div class="controls">
-        <div class="pill-group" id="waivers-pos-pills"></div>
-      </div>
-      <div class="board-wrap">
-        <table id="waivers-table" class="wv-table">
-          <thead><tr id="wv-head"></tr></thead>
-          <tbody id="waivers-body"></tbody>
-        </table>
-      </div>
       <div id="wv-gaps" class="hint"></div>
     </section>
 
