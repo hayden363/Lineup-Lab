@@ -4025,3 +4025,26 @@ body.sidebar-collapsed .sidebar-top .sidebar-icon-btn { display: none; }
 .ngs-lg i:first-child { margin-left: 0; }
 .ngs-lg .g { background: var(--accent); } .ngs-lg .y { background: var(--avg); } .ngs-lg .r { background: var(--neg); } .ngs-lg .b { background: var(--info); }
 .ngs-line { grid-template-columns: minmax(130px, 1.6fr) 52px minmax(70px, 1.4fr) 32px minmax(78px, .9fr); }
+
+/* Weekly lineup + league trades */
+.lu-panel, .tr-card { border: 1px solid var(--border); border-radius: 14px; padding: 8px 14px; margin-bottom: 10px; background: linear-gradient(180deg, rgba(255,255,255,.03), transparent); }
+.lu-row { display: grid; grid-template-columns: 70px 1fr 48px auto; gap: 10px; align-items: center; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,.06); }
+.lu-row.is-changed { background: rgba(80,200,140,.06); }
+.lu-slot { font-size: 11px; letter-spacing: .08em; color: var(--muted); }
+.lu-pick { background: var(--panel-2); color: inherit; border: 1px solid var(--border); border-radius: 8px; padding: 6px 8px; font: inherit; font-size: 13px; min-width: 0; }
+.lu-pick:disabled { opacity: .6; }
+.lu-proj { text-align: right; font-weight: 700; }
+.lk { font-size: 10.5px; padding: 2px 8px; border-radius: 99px; border: 1px solid var(--border); white-space: nowrap; }
+.lk-locked { color: var(--neg); border-color: currentColor; } .lk-bye { color: var(--avg); border-color: currentColor; }
+.lk-open { color: var(--accent); border-color: currentColor; } .lk-none { color: var(--muted); }
+.lu-foot { display: flex; justify-content: space-between; align-items: center; padding: 10px 0 4px; flex-wrap: wrap; gap: 8px; }
+.lu-actions { display: flex; gap: 6px; }
+.lu-msgs { list-style: none; margin: 6px 0; padding: 0; font-size: 12.5px; display: grid; gap: 4px; }
+.lu-msgs .bad { color: var(--neg); } .lu-msgs .warn { color: var(--avg); }
+.lu-ok { color: var(--accent); font-size: 13px; margin: 6px 0; }
+.tr-card.is-new { border-color: var(--accent); }
+.tr-head { font-size: 12px; color: var(--muted); padding: 4px 0; }
+.tr-sides { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; padding-bottom: 6px; }
+.tr-team { font-weight: 700; font-size: 13px; margin-bottom: 4px; }
+.tr-item { font-size: 13px; padding: 2px 0; } .tr-item.pick { opacity: .75; font-style: italic; }
+@media (max-width: 560px) { .lu-row { grid-template-columns: 54px 1fr 40px; } .lu-row .lk { grid-column: 2 / -1; justify-self: start; } .tr-sides { grid-template-columns: 1fr; } }
