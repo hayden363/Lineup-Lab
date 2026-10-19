@@ -54,7 +54,7 @@ from engine import refresh_scheduler
 from engine import sleeper as sleeper_layer
 from engine import tools
 from engine.advanced import ADVANCED_COLS
-from engine.board import (POSITIONS, build_board, load_bundle, matchup_multiplier,
+from engine.board import (POSITIONS, build_board, overall_board, load_bundle, matchup_multiplier,
                            player_detail, project_vs, search_players)
 from engine.metrics import WEIGHTS
 from engine.scoring import PRESETS
@@ -528,18 +528,42 @@ def meta(user=Depends(current_user)):
     }
 
 
+_OVERALL_COLUMNS = [
+    "player_display_name", "position", "recent_team", "headshot_url", "overall_rank", "tier", "pos_rank",
+    "PROJ", "VOR", "VALUE", "replacement_proj", "ecr", "ecr_sd", "ecr_gap", "SCORE", "FORM", "games",
+    "fpts_per_game", "floor", "ceiling", "cv", "boom_rate", "bust_rate", "bye_week", "stat_line",
+    "injury_status", "injury_body_part", "weeks_since_played",
+]
+
+
+def _overall_board_response(limit, teams, superflex, scoring):
+    """One list for all four positions, ranked by value over replacement."""
+    league = {"teams": teams, "slots": {"SUPERFLEX": 1 if superflex else 0}}
+    board = overall_board(scoring=scoring, league=league)
+    cols = [c for c in _OVERALL_COLUMNS if c in board.columns]
+    out = board.head(limit)[cols].reset_index()
+    records = _clean(out.to_dict(orient="records"))
+    return {"season": load_bundle()["season"], "position": "ALL", "count": len(records),
+            "league": league, "replacement_ranks": board.attrs.get("replacement_ranks"),
+            "players": records}
+
+
 @app.get("/api/board")
 def api_board(
-    pos: str = Query(..., description="QB, RB, WR, or TE"),
+    pos: str = Query(..., description="QB, RB, WR, TE, or ALL for one cross-position list"),
     opp: Optional[str] = Query(None, description="opponent defense abbr, e.g. WAS"),
     min_games: int = Query(2, ge=0),
     limit: int = Query(60, ge=1, le=300),
+    teams: int = Query(12, ge=4, le=32, description="league size, for pos=ALL replacement level"),
+    superflex: bool = Query(False, description="pos=ALL: a second QB slot, which raises QB value"),
     scoring: Optional[dict] = Depends(scoring_from_query),
     user=Depends(current_user),
 ):
     pos = pos.upper()
+    if pos == "ALL":
+        return _overall_board_response(limit, teams, superflex, _effective_scoring(scoring, user))
     if pos not in POSITIONS:
-        raise HTTPException(400, f"pos must be one of {POSITIONS}")
+        raise HTTPException(400, f"pos must be one of {POSITIONS} or ALL")
     scoring = _effective_scoring(scoring, user)
 
     bundle = load_bundle()

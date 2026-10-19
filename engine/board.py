@@ -19,6 +19,9 @@ import pandas as pd
 from . import data
 from . import defense as defense_layer
 from . import injury_impact
+from . import profile
+from . import consensus
+from . import value as value_layer
 from .metrics import METRIC_FNS, WEIGHTS, MIN_GAMES, score_players, form_adjustment
 from .advanced import qb_advanced, rb_advanced, wr_advanced, te_advanced, weekly_epa, ADVANCED_COLS
 from .matchup import matchup_tag
@@ -339,6 +342,16 @@ def _build_board_uncached(position, season, min_volume, scoring):
 
     board.index.name = "player_id"
 
+    # Plain box-score totals (shown under every player) and the week-to-week
+    # steadiness profile. Totals' `games` is dropped: the board already has it.
+    totals = profile.season_totals(wk, position)
+    totals = totals.drop(columns=[c for c in totals.columns if c in board.columns])
+    board = board.join(totals).join(
+        profile.consistency(wk, position)[["std", "cv", "boom_rate", "bust_rate", "top_finishes"]],
+        rsuffix="_wk")
+    board["stat_line"] = [profile.stat_line(r, position) for r in board.to_dict(orient="records")]
+    board["bye_week"] = board["recent_team"].map(profile.bye_weeks(bundle["schedule"]))
+
     # Real availability/opportunity signals (see _availability_signals) —
     # merged on, not recomputed per position.
     board["injury_status"] = board.index.to_series().map(bundle.get("injury_status", {}))
@@ -518,6 +531,27 @@ def rest_of_season_value(board, position, bundle=None, season=None, scoring=None
     return (board["fpts_per_game"] * form_mult * avg_factor * injury_mult).round(1)
 
 
+def overall_board(scoring=None, league=None, season=None, ecr=None):
+    """Every QB/RB/WR/TE ranked on ONE list by value over replacement, blended
+    with the expert consensus rank (see engine/value.py). `league` is
+    {teams, slots} (engine/value.DEFAULT_LEAGUE shape) or None for a 12-team
+    1QB/2RB/2WR/1TE/1FLEX league. Not cached: it only stitches together the
+    four cached position boards."""
+    season = season or data.resolve_season()
+    bundle = load_bundle(season)
+    frames = {}
+    for pos in POSITIONS:
+        b = build_board(pos, season, min_games=1, scoring=scoring).copy()
+        b["PROJ"] = rest_of_season_value(b, pos, bundle=bundle)
+        frames[pos] = b
+    if ecr is None:
+        ecr = consensus.overall_lookup()
+    out = value_layer.compute_value(frames, ecr=ecr, league=league)
+    out.attrs["scoring"] = frames["QB"].attrs.get("scoring")
+    out.attrs["replacement_ranks"] = value_layer.replacement_ranks(league)
+    return out
+
+
 def search_players(query, season=None, limit=20):
     """Lightweight name/team search across all positions — used by the
     start/sit and trade pickers so they aren't locked to one position tab.
@@ -565,6 +599,23 @@ def player_detail(player_id, season=None, scoring=None):
                   .rename(columns={"fpts_active": "fpts"})
                   .to_dict(orient="records"))
     row["weekly_log"] = weekly_log
+
+    # Every week of the schedule tagged played / BYE / missed / upcoming, with
+    # the stat columns for weeks he played.
+    team = row.get("recent_team")
+    if team:
+        played = wk_scored[["week", "fpts_active"] + present_cols].rename(columns={"fpts_active": "fpts"})
+        row["weekly_status"] = profile.weekly_status(played, bundle["schedule"], team)
+        row["bye_week"] = profile.bye_weeks(bundle["schedule"]).get(team)
+
+    # Plain totals, steadiness, and every Next Gen Stat with its percentile.
+    row["totals"] = {k: (None if pd.isna(v) else float(v))
+                     for k, v in profile.season_totals(wk_scored, position).loc[player_id].items()}
+    cons = profile.consistency(wk_scored, position)
+    if player_id in cons.index:
+        row["consistency"] = {k: (None if pd.isna(v) else float(v)) for k, v in cons.loc[player_id].items()}
+    kind = NGS_KIND[position]
+    row["ngs"] = profile.ngs_profile(_ngs_for(position, bundle), kind, player_id)
 
     team = row.get("recent_team")
     if team:

@@ -18,6 +18,16 @@ import numpy as np
 import pandas as pd
 
 
+def _season_ngs(ngs):
+    """NGS ships a season-aggregate row per player (week == 0) alongside the
+    weekly rows. Averaging all of them counts the aggregate as an extra week
+    and weights a one-target game the same as a ten-target one, so season
+    numbers use the aggregate row when the table has it."""
+    if "week" in ngs.columns and (ngs["week"] == 0).any():
+        return ngs[ngs["week"] == 0]
+    return ngs
+
+
 def qb_advanced(pbp, ngs_passing):
     passes = pbp[pbp["play_type"] == "pass"].copy()
     passes["pressured"] = ((passes["sack"] == 1) | (passes["qb_hit"] == 1)).astype(int)
@@ -37,7 +47,7 @@ def qb_advanced(pbp, ngs_passing):
     })
     pbp_out["comp_pct_pressure"] = g.apply(comp_when_pressured)
 
-    ngs = ngs_passing.groupby("player_gsis_id").agg(
+    ngs = _season_ngs(ngs_passing).groupby("player_gsis_id").agg(
         avg_time_to_throw=("avg_time_to_throw", "mean"),
         aggressiveness=("aggressiveness", "mean"),
         cpoe=("completion_percentage_above_expectation", "mean"),
@@ -54,7 +64,7 @@ def rb_advanced(pbp, ngs_rushing):
         "epa_per_touch": g["epa"].mean(),
     })
 
-    ngs = ngs_rushing.groupby("player_gsis_id").agg(
+    ngs = _season_ngs(ngs_rushing).groupby("player_gsis_id").agg(
         rush_yards_over_expected_per_att=("rush_yards_over_expected_per_att", "mean"),
         rush_efficiency=("efficiency", "mean"),
         pct_stacked_box=("percent_attempts_gte_eight_defenders", "mean"),
@@ -71,7 +81,7 @@ def _receiver_advanced(pbp, ngs_receiving, position_hint=None):
         "epa_per_target": g["epa"].mean(),
     })
 
-    ngs = ngs_receiving.groupby("player_gsis_id").agg(
+    ngs = _season_ngs(ngs_receiving).groupby("player_gsis_id").agg(
         avg_separation=("avg_separation", "mean"),
         avg_cushion=("avg_cushion", "mean"),
         yac_above_expectation=("avg_yac_above_expectation", "mean"),
