@@ -50,6 +50,7 @@ from engine import league_trades as league_trades_layer
 from engine import lineup as lineup_layer
 from engine import live_scores as live_scores_layer
 from engine import locks
+from engine import waivers as waivers_layer
 from engine import mail as mail_layer
 from engine import news as news_layer
 from engine import oauth as oauth_layer
@@ -847,6 +848,32 @@ def api_waivers(
 
     result = tools.waiver_wire(positions=positions, rostered_ids=rostered_ids or set(), scoring=scoring, limit=limit)
     result["league"] = league_info
+    return _clean(result)
+
+
+@app.get("/api/waivers/engine")
+def api_waiver_engine(scoring: Optional[dict] = Depends(scoring_from_query), user=Depends(current_user)):
+    """Smart Match (needs your connected Sleeper team) plus the discovery
+    feeds (market movers, deep dive, handcuffs) for everyone."""
+    scoring = _effective_scoring(scoring, user)
+    league_id = roster_id = None
+    note = None
+    if user:
+        active = db.get_active_team(user["id"])
+        if active and active.get("platform") != "espn":
+            league_id, roster_id = active["league_id"], int(active["roster_id"])
+            if scoring is None:
+                try:
+                    scoring = sleeper_layer.league_snapshot(league_id)["scoring"]
+                except Exception as e:
+                    print(f"[waivers] couldn't load league scoring: {e}")
+        elif active:
+            note = "Smart Match needs a Sleeper league for now; ESPN leagues get the discovery feeds only."
+    try:
+        result = waivers_layer.build(league_id, roster_id, scoring=scoring)
+    except Exception as e:
+        raise HTTPException(500, f"waiver engine failed: {e}")
+    result["note"] = note
     return _clean(result)
 
 

@@ -282,6 +282,23 @@ def load_snap_counts(season=None, force=False):
     return _disk_cached("snaps", season, fetch, force=force)
 
 
+def load_depth_charts(season=None, force=False):
+    """Newest nflverse depth chart per team, offense skill spots only
+    (QB/RB/WR/TE). The release file holds a snapshot for every day of the
+    season; only the latest per team is kept, so the cached table is small."""
+    season = season or resolve_season()
+
+    def fetch():
+        url = f"https://github.com/nflverse/nflverse-data/releases/download/depth_charts/depth_charts_{season}.parquet"
+        df = pd.read_parquet(url, columns=["dt", "team", "player_name", "gsis_id", "pos_abb", "pos_rank"])
+        df = df[df["pos_abb"].isin(["QB", "RB", "WR", "TE"])]
+        df = df[df["dt"] == df.groupby("team")["dt"].transform("max")].reset_index(drop=True)
+        print(f"[data] fetched depth charts {season}: {len(df)} rows")
+        return df
+
+    return _disk_cached("depth_charts", season, fetch, force=force)
+
+
 def load_pfr_crosswalk(force=False):
     """gsis_id <-> pfr_id, needed only because snap counts are keyed by
     pfr_id while everything else in this app uses gsis_id."""
