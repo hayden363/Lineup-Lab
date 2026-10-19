@@ -62,3 +62,17 @@ def lock_status(schedule, team, week, now=None):
             "locked": bool(ko and (now or datetime.now(ET)) >= ko),
             "bye": ko is None and active,
             "inactive": not active}
+
+
+def bye_week(schedule, team):
+    """The regular-season week `team` doesn't play, or None if it can't be
+    determined (unknown team, or no single gap)."""
+    s = schedule
+    if "game_type" in s.columns:
+        s = s[s["game_type"] == "REG"]
+    games = s[(s["home_team"] == team) | (s["away_team"] == team)]
+    if games.empty:
+        return None
+    played = set(int(w) for w in games["week"])
+    gaps = [w for w in range(min(played), max(played) + 1) if w not in played]
+    return gaps[0] if len(gaps) == 1 else None

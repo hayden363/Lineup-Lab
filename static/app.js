@@ -2689,6 +2689,13 @@ function playerChipsHtml(players) {
 // you're giving up, not a fixed points cutoff, since "give" value scale
 // varies a lot by player tier. Reuses the exact tier CSS/icons the Trade
 // Analyzer already defines (.trade-tier-badge.tier-*) for visual parity.
+function tradeReasonsHtml(s) {
+  const r = s.reasons;
+  if (!r || (!r.you.length && !r.them.length)) return "";
+  const list = (title, items) => items.length ? `<div class="tr-why"><div class="tr-why-t">${esc(title)}</div><ul>${items.map((x) => `<li>${esc(x)}</li>`).join("")}</ul></div>` : "";
+  return `<div class="tr-reasons">${list("Why you'd do it", r.you)}${list(`Why ${s.opponent_team_name} might`, r.them)}</div>`;
+}
+
 function tradeFinderTier(pctDiff) {
   if (pctDiff >= 15) return { css: "tier-great", label: "Great Value", icon: "🔥" };
   if (pctDiff >= 5) return { css: "tier-good", label: "Good Value", icon: "📈" };
@@ -2765,6 +2772,7 @@ function renderTradeFinderResults(results, suggestions) {
           <div class="ts-swap-icon">⇄</div>
           <div class="ts-side">${playerChipsHtml(s.you_get)}</div>
         </div>
+        ${tradeReasonsHtml(s)}
         <div class="ts-footer">
           <span class="ts-diff ${s.value_diff >= 0 ? "pos" : "neg"}" data-target="${s.value_diff}"></span>
           <button class="pill" data-give='${esc(JSON.stringify(s.you_give))}' data-get='${esc(JSON.stringify(s.you_get))}'>Load into builder</button>

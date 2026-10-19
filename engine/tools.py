@@ -8,7 +8,7 @@ matchup-aware board is the single source of truth for every decision
 surface in the app.
 """
 
-from . import context, data, db, defense_scoring, kicker_scoring, role_baseline, sleeper
+from . import context, data, db, locks, trade_reasons, defense_scoring, kicker_scoring, role_baseline, sleeper
 from .board import (POSITIONS, build_board, load_bundle, rest_of_season_value,
                      project_vs)
 from .scoring import apply_scoring
@@ -1513,6 +1513,9 @@ def trade_finder(league_id, my_roster_id, target_roster_id=None, give_player_ids
             row = board.loc[pid].to_dict()
             value = float(rest_of_season_value(board.loc[[pid]], pos, bundle=bundle, scoring=scoring).iloc[0])
             out[pos].append({"player_id": pid, "position": pos, "value": value,
+                              "name": row.get("player_display_name"), "form": _clean_num(row.get("FORM")),
+                              "injury_status": _clean_num(row.get("injury_status")),
+                              "bye": locks.bye_week(bundle["schedule"], row.get("recent_team")),
                               "player_display_name": row.get("player_display_name"),
                               "recent_team": row.get("recent_team"), "headshot_url": row.get("headshot_url")})
         return out
@@ -1592,7 +1595,29 @@ def trade_finder(league_id, my_roster_id, target_roster_id=None, give_player_ids
 
         suggestions.sort(key=lambda s: -s["value_diff"])
 
-    return {"season": bundle["season"], "my_roster_id": my_roster_id, "suggestions": suggestions[:max_suggestions]}
+    suggestions = suggestions[:max_suggestions]
+    records = {}
+    try:
+        for r in sleeper.get_rosters(league_id):
+            st = r.get("settings") or {}
+            records[r.get("roster_id")] = (int(st.get("wins") or 0), int(st.get("losses") or 0))
+    except Exception:
+        records = {}
+    have_cache = {}
+
+    def have(rid, by_pos=None):
+        if rid not in have_cache:
+            have_cache[rid] = {pos: len(pl) for pos, pl in (by_pos or roster_by_position(team_by_roster[rid]["player_ids"])).items()}
+        return have_cache[rid]
+
+    for sug in suggestions:
+        opp = sug["opponent_roster_id"]
+        rec_me, rec_them = records.get(my_roster_id), records.get(opp)
+        sug["reasons"] = trade_reasons.build_reasons(
+            sug["you_give"], sug["you_get"], needs, have(my_roster_id, my_by_pos), needs, have(opp),
+            rec_me if rec_me and sum(rec_me) else None, rec_them if rec_them and sum(rec_them) else None,
+            sug["opponent_team_name"])
+    return {"season": bundle["season"], "my_roster_id": my_roster_id, "suggestions": suggestions}
 
 
 def waiver_wire(positions=None, rostered_ids=None, season=None, scoring=None, limit=15, trending=True):

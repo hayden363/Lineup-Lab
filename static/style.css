@@ -4048,3 +4048,9 @@ body.sidebar-collapsed .sidebar-top .sidebar-icon-btn { display: none; }
 .tr-team { font-weight: 700; font-size: 13px; margin-bottom: 4px; }
 .tr-item { font-size: 13px; padding: 2px 0; } .tr-item.pick { opacity: .75; font-style: italic; }
 @media (max-width: 560px) { .lu-row { grid-template-columns: 54px 1fr 40px; } .lu-row .lk { grid-column: 2 / -1; justify-self: start; } .tr-sides { grid-template-columns: 1fr; } }
+
+.tr-reasons { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; padding: 8px 0 4px; border-top: 1px solid rgba(255,255,255,.06); margin-top: 8px; }
+.tr-why-t { font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+.tr-why ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: 12.5px; opacity: .9; }
+.tr-why li::before { content: "›"; color: var(--accent); margin-right: 6px; }
+@media (max-width: 560px) { .tr-reasons { grid-template-columns: 1fr; } }
