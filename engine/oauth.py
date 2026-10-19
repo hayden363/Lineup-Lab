@@ -141,6 +141,13 @@ def google_exchange_code(code, redirect_uri):
     if not id_token:
         raise OAuthError("Google didn't return an ID token.")
     claims = _verify_id_token(id_token, GOOGLE_JWKS_URL, GOOGLE_CLIENT_ID, GOOGLE_ISSUERS)
+    # db.find_or_create_oauth_user links this Google identity to any existing
+    # account with the same email, and creates new accounts pre-verified. Both
+    # are only safe if Google itself has verified the address; otherwise
+    # someone could register a Google account under another person's email
+    # and sign straight into that person's Lineup Lab account.
+    if claims.get("email_verified") is not True and str(claims.get("email_verified")).lower() != "true":
+        raise OAuthError("Google hasn't verified this account's email address yet.")
     return {"provider_id": claims["sub"], "email": claims.get("email"), "name": claims.get("name")}
 
 

@@ -197,21 +197,17 @@
         <p>Pick 2–4 players from your own roster, optionally set who they play this week, then compare.</p>
       </div>
       <div id="startsit-gate" class="gate-card" style="display:none">
-        <div class="gate-icon">⇄</div>
+        <div class="gate-icon" aria-hidden="true">⇄</div>
         <div class="gate-title">Sync your league to compare your own players</div>
         <div class="gate-sub">Sign in, then connect Sleeper and pick your roster in Settings.</div>
         <button class="primary-btn" id="startsit-gate-btn">Go to Settings</button>
       </div>
       <div id="startsit-body" style="display:none">
         <div id="track-record-strip" class="track-record-strip" style="display:none"></div>
-        <div id="ss-suggestions" style="display:none">
-          <div class="section-label">Top Recommendations — your real closest calls this week</div>
-          <div id="ss-suggestions-list" class="ss-suggest-grid"></div>
-        </div>
         <div class="ss-toolbar">
           <div class="ss-toolbar-brand">
-            <span class="ss-toolbar-mark">⚡</span>
-            <div><div class="ss-toolbar-title">AI Start/Sit Engine</div><div class="ss-toolbar-sub">This season's data, Vegas lines and game-day weather, rescored for your format.</div></div>
+            <span class="ss-toolbar-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4v13M7 17l-3-3M7 17l3-3M17 20V7M17 7l3 3M17 7l-3 3"/></svg></span>
+            <div><div class="ss-toolbar-title">Start/Sit Engine</div><div class="ss-toolbar-sub">This season's data, Vegas lines and game-day weather, rescored for your format.</div></div>
           </div>
           <div class="ss-scoring-toggle" id="ss-scoring-toggle">
             <button type="button" data-scoring="">Full PPR</button>
@@ -221,21 +217,36 @@
             <button type="button" data-scoring="league" id="ss-scoring-league" style="display:none" title="Your synced league's exact scoring, including any bonuses">My League</button>
           </div>
         </div>
+        <div id="ss-suggestions" style="display:none">
+          <div class="sec-head first">
+            <span class="sec-head-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.6 5.6 6 .7-4.5 4.1 1.2 6L12 16.4 6.7 19.4l1.2-6L3.4 9.3l6-.7z"/></svg></span>
+            <div><h2>Closest calls on your roster</h2><p>Your weakest starter vs your best bench option at each spot. Tap one to run the full comparison.</p></div>
+          </div>
+          <div id="ss-suggestions-list" class="ss-suggest-grid"></div>
+        </div>
         <div class="startsit-layout">
           <div class="startsit-left">
-            <div class="section-label">Your Roster — pick 2–4</div>
+            <div class="sec-head">
+              <span class="sec-head-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19c.6-3 2.8-4.6 5.5-4.6s4.9 1.6 5.5 4.6"/><path d="M16 5.5a3 3 0 0 1 0 5.6M18 14.6c1.4.6 2.3 2 2.6 4.4"/></svg></span>
+              <div><h2>Pick 2–4 of your players</h2><p>Optionally set who each one plays, choose what you're playing for, then compare.</p></div>
+            </div>
             <div id="startsit-roster-picker" class="shop-roster-picker startsit-picker-grid"></div>
             <div class="ss-slot-row" id="startsit-chips"></div>
-            <div class="ss-mode" id="ss-mode" role="group" aria-label="What to optimize for">
-              <button type="button" class="ss-mode-btn" data-mode="safe" title="You're the favorite this week: minimize the chance of a dud">Protect a lead</button>
-              <button type="button" class="ss-mode-btn active" data-mode="balanced" title="Best typical outcome">Balanced</button>
-              <button type="button" class="ss-mode-btn" data-mode="upside" title="You're the underdog: maximize the chance of a big week">Chasing points</button>
+            <div class="startsit-actions">
+              <div class="ss-mode" id="ss-mode" role="group" aria-label="What to optimize for">
+                <button type="button" class="ss-mode-btn" data-mode="safe" title="You're the favorite this week: minimize the chance of a dud">Protect a lead</button>
+                <button type="button" class="ss-mode-btn active" data-mode="balanced" title="Best typical outcome">Balanced</button>
+                <button type="button" class="ss-mode-btn" data-mode="upside" title="You're the underdog: maximize the chance of a big week">Chasing points</button>
+              </div>
+              <button class="primary-btn" id="startsit-compare" disabled>Compare</button>
             </div>
-            <button class="primary-btn" id="startsit-compare" disabled>Compare</button>
           </div>
           <div class="startsit-right">
-            <div class="section-label">Findings</div>
-            <div id="startsit-results"><div class="empty">Pick your players on the left, then hit Compare.</div></div>
+            <div class="sec-head">
+              <span class="sec-head-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V5M4 19h16"/><path d="M8 15l3.5-4 3 2.5L19 8"/></svg></span>
+              <div><h2>The verdict</h2><p>Who to start, the range of outcomes, and the numbers behind the call.</p></div>
+            </div>
+            <div id="startsit-results"><div class="empty">Pick your players above, then hit Compare.</div></div>
           </div>
         </div>
       </div>
@@ -248,8 +259,8 @@
       </div>
       <div id="trade-finder-block" style="display:none">
         <div class="tf-hero">
-          <div class="settings-block-title">Trade Finder <span class="opt-badge">scans your whole league</span></div>
-          <div class="hint" style="margin:0">Pick one or more of your own players to shop — we'll scan every other roster for the best realistic return.</div>
+          <h2>Trade Finder <span class="opt-badge">scans your whole league</span></h2>
+          <div class="hint">Pick one or two of your own players to shop, and every other roster gets scanned for the best realistic return.</div>
         </div>
         <div id="shop-roster-picker" class="shop-roster-picker"></div>
         <div class="shop-actions">
@@ -265,6 +276,10 @@
         <button class="primary-btn" id="trade-analyzer-gate-btn">Go to Settings</button>
       </div>
       <div id="trade-analyzer-body" style="display:none">
+        <div class="sec-head">
+          <span class="sec-head-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 3l3 3-3 3M16 6H4M11 21l-3-3 3-3M8 18h12"/></svg></span>
+          <div><h2>Build a trade</h2><p>Tap players on either roster to add them to that side, then analyze.</p></div>
+        </div>
         <div class="trade-columns">
           <div class="trade-side">
             <h3>Your Roster</h3>
@@ -335,7 +350,7 @@
         <h1>News</h1>
         <p id="news-hint">Real NFL headlines from ESPN &amp; CBS Sports RSS feeds.</p>
       </div>
-      <div class="auth-tabs news-scope-tabs" id="news-scope-tabs">
+      <div class="auth-tabs news-scope-tabs" id="news-scope-tabs" role="group" aria-label="Which headlines">
         <button class="auth-tab-btn active" data-scope="team">My Team</button>
         <button class="auth-tab-btn" data-scope="league">League</button>
         <button class="auth-tab-btn" data-scope="opponent">Opponent</button>

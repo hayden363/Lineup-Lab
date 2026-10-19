@@ -242,7 +242,7 @@ def lineup_total(slots, players):
 
 
 def scoring_slots(roster_positions):
-    return [s for s in roster_positions or [] if s in lineup_layer.ELIGIBLE and s not in ("K", "DEF")]
+    return [s for s in roster_positions or [] if s in lineup_layer.ELIGIBLE and s not in ("K", "DEF", "D/ST")]
 
 
 def week_value(p, week, byes):

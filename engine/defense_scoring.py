@@ -45,7 +45,17 @@ SLEEPER_DEF_SCORING_MAP = {
 # roster slot's id actually is) and nflverse's (what pbp/schedule use):
 # the Rams. Every other code lines up exactly — see engine/tools.py's
 # defense lookup for where this gets applied.
-SLEEPER_TO_NFLVERSE_TEAM = {"LAR": "LA"}
+#
+# ESPN (engine/espn.py, espn_api's PRO_TEAM_MAP) also says LAR, and is the
+# only source that says WSH for Washington. Same map for both, so an ESPN
+# Washington D/ST resolves to a real defense instead of "no NFL team".
+SLEEPER_TO_NFLVERSE_TEAM = {"LAR": "LA", "WSH": "WAS"}
+
+
+def to_nflverse_team(code):
+    """A Sleeper/ESPN team code in nflverse's spelling (LAR -> LA, WSH -> WAS);
+    anything else, including None, passes through unchanged."""
+    return SLEEPER_TO_NFLVERSE_TEAM.get(code, code)
 
 
 def def_scoring_from_sleeper(scoring_settings):

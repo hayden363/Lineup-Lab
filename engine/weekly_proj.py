@@ -32,26 +32,37 @@ STAT_MAP = {
 }
 
 
-def points(stats, settings):
-    """Fantasy points for a projected Sleeper stat line under our settings."""
+def points(stats, settings, position=None):
+    """Fantasy points for a projected Sleeper stat line under our settings.
+
+    Includes the league extras the actual weekly points already include
+    (engine/scoring.compute_fantasy_points): first downs, and TE premium when
+    `position` is "TE". Without them a TE-premium or first-down league's
+    player card judged every actual score against a projection that was
+    missing part of the scoring, so players "beat" it far too often.
+    Yardage milestone bonuses stay out: a projected stat line is an average,
+    and an average of 95 yards says nothing about how often 100 is reached."""
     s = settings if isinstance(settings, ScoringSettings) else ScoringSettings.from_dict(settings or {})
     g = lambda k: float(stats.get(k) or 0.0)
     pts = (g("pass_yd") * s.pass_yard + g("pass_td") * s.pass_td + g("pass_int") * s.interception
            + g("rush_yd") * s.rush_yard + g("rush_td") * s.rush_td
            + g("rec_yd") * s.rec_yard + g("rec_td") * s.rec_td + g("rec") * s.reception
            + g("fum_lost") * s.fumble_lost
-           + (g("pass_2pt") + g("rush_2pt") + g("rec_2pt")) * s.two_pt)
+           + (g("pass_2pt") + g("rush_2pt") + g("rec_2pt")) * s.two_pt
+           + g("pass_fd") * s.pass_fd + g("rush_fd") * s.rush_fd + g("rec_fd") * s.rec_fd)
+    if position == "TE":
+        pts += g("rec") * s.te_reception
     return round(pts, 1)
 
 
-def projected_line(stats, settings):
+def projected_line(stats, settings, position=None):
     """{fpts, completions, ...} in our column names; only stats Sleeper projects.
     A player projected not to play (gp 0, or no points at all) comes back as
     {"out": True} — beating a zero says nothing about how he played."""
-    if float(stats.get("gp", 1) or 0) == 0 or points(stats, settings) <= 0.5:
+    if float(stats.get("gp", 1) or 0) == 0 or points(stats, settings, position) <= 0.5:
         return {"out": True}
     out = {ours: round(float(stats[k]), 1) for k, ours in STAT_MAP.items() if stats.get(k) is not None}
-    out["fpts"] = points(stats, settings)
+    out["fpts"] = points(stats, settings, position)
     return out
 
 
@@ -83,7 +94,7 @@ def player_projections(gsis_id, position, season, weeks, settings=None):
 
     with ThreadPoolExecutor(max_workers=6) as pool:
         found = dict(pool.map(one, weeks))
-    return {w: projected_line(st, settings) for w, st in found.items() if st}
+    return {w: projected_line(st, settings, position) for w, st in found.items() if st}
 
 
 def attach(weekly_rows, projections):

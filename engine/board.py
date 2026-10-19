@@ -110,8 +110,12 @@ def _scoring_cache_key(scoring):
 
 
 def _snap_pct_from(snaps, crosswalk):
-    """Real per-player offense-snap-share, from already-fetched snap-count
-    + id-crosswalk tables — pure computation, no I/O."""
+    """Real per-player offense-snap share from his MOST RECENT game (not a
+    season average), as a 0-1 fraction straight from nflverse's
+    offense_pct — from already-fetched snap-count + id-crosswalk tables,
+    pure computation, no I/O. Start/Sit's AI facts label it
+    snap_pct_last_game for that reason; engine/waivers.weekly_snaps has the
+    per-week series (0-100) when a trend is needed."""
     snap_pct = {}
     pfr_to_gsis = dict(zip(crosswalk["pfr_id"], crosswalk["gsis_id"]))
     if len(snaps):
@@ -185,9 +189,9 @@ def load_bundle(season=None, force=False) -> Bundle:
     injury report — this app's stat season can genuinely lag a full real
     season behind (see README), and a designation from that old season
     would be actively wrong, not just stale-but-harmless, for a player
-    whose situation has since changed. Snap share and red-zone touches
-    stay season-level on purpose (there's no live equivalent) — they're
-    real season context, not claimed to be "as of this week.\""""
+    whose situation has since changed. Red-zone touches are a season total;
+    snap share is the player's most recent game in the stat season (see
+    _snap_pct_from) — neither is claimed to be "as of this week.\""""
     season = season or data.resolve_season(force=force)
     key = _cache_key(season)
     if not force and key in _BUNDLE_CACHE:
@@ -424,17 +428,24 @@ def build_board(position, season=None, min_games=2, min_volume=None, scoring=Non
     these per refresh cycle, and rebuilding one from raw tables is the
     single most expensive thing this app does (metrics + advanced NGS/pbp
     merge + FORM's per-player recency math + floor/ceiling, all over the
-    full season). min_games/min_volume deliberately aren't part of the
-    cache key: neither affects the cost of any of that — they're a filter
-    applied afterward, so a `min_games=0` and a `min_games=3` request for
-    the same position/scoring share one cached computation instead of
-    paying for it twice."""
+    full season). min_games deliberately isn't part of the cache key: it's
+    a filter applied afterward, so a `min_games=0` and a `min_games=3`
+    request for the same position/scoring share one cached computation
+    instead of paying for it twice. A non-default min_volume is applied
+    inside the build, so that call bypasses the cache entirely."""
     position = position.upper()
     if position not in POSITIONS:
         raise ValueError(f"position must be one of {POSITIONS}")
     season = season or data.resolve_season()
     key = (position, season, _scoring_cache_key(scoring))
-    board = _BOARD_CACHE.get(key)
+    if min_volume is not None:
+        # min_volume IS applied inside the uncached build (unlike min_games),
+        # so a custom bar must never be read from or written to the shared
+        # cache — it would silently change every later default-bar caller.
+        board = _build_board_uncached(position, season, min_volume, scoring)
+        board["rate"] = shrunk_rate(board, position)
+    else:
+        board = _BOARD_CACHE.get(key)
     if board is None:
         board = _build_board_uncached(position, season, min_volume, scoring)
         board["rate"] = shrunk_rate(board, position)
@@ -615,7 +626,12 @@ def player_detail(player_id, season=None, scoring=None):
     position = prow.iloc[-1]["position"]
     if position not in POSITIONS:
         return None
-    board = build_board(position, season, scoring=scoring)
+    # min_games=0, not the ranked-list default of 2: this is one player asked
+    # for by id (his card, his news, his projection compare), the same case
+    # My Team/Start-Sit/Trade already fall back for. With the default, every
+    # card 404'd in week 1 (nobody has 2 games yet) and any 1-game player
+    # clicked from a roster later on. The volume bar still applies.
+    board = build_board(position, season, min_games=0, scoring=scoring)
     if player_id not in board.index:
         return None
     row = board.loc[player_id].to_dict()

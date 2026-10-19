@@ -523,7 +523,10 @@ def _attach_decisions(valid, bundle, get_board, scoring, mode):
     return {"lo": lo, "hi": round(hi, 1), "bins": 40}
 
 
-FLEX_ELIGIBLE = ("RB", "WR", "TE")
+# Every lineup-slot label that takes more than one of RB/WR/TE and no QB
+# (superflex is a different question): FLEX, WRRB_FLEX, REC_FLEX, RB/WR/TE...
+FLEX_SLOT_LABELS = frozenset(s for s, allowed in lineup_layer.ELIGIBLE.items()
+                             if len(allowed) > 1 and "QB" not in allowed)
 
 
 def start_sit_suggestions_from_roster(roster_players, season=None, scoring=None, limit=3):
@@ -575,15 +578,21 @@ def start_sit_suggestions_from_roster(roster_players, season=None, scoring=None,
         gap = round(best_bench["PROJ"] - weakest_starter["PROJ"], 1)
         candidates.append((pos, weakest_starter, best_bench, gap))
 
+    # Any RB/WR/TE flex label, not just Sleeper's "FLEX": Sleeper also has
+    # WRRB_FLEX/REC_FLEX and an ESPN team's flex slot arrives as "RB/WR/TE"
+    # (or "RB/WR", "WR/TE"), which this used to skip entirely. The bench
+    # option must be legal in that starter's own slot.
     flex_starters = [p for p in roster_players
-                     if p.get("is_starter") and p.get("slot") == "FLEX" and p.get("PROJ") is not None]
-    flex_bench = [p for p in roster_players
-                  if not p.get("is_starter") and p.get("position") in FLEX_ELIGIBLE and p.get("PROJ") is not None]
-    if flex_starters and flex_bench:
+                     if p.get("is_starter") and p.get("slot") in FLEX_SLOT_LABELS and p.get("PROJ") is not None]
+    if flex_starters:
         weakest_flex = min(flex_starters, key=lambda p: p["PROJ"])
-        best_flex_bench = max(flex_bench, key=lambda p: p["PROJ"])
-        gap = round(best_flex_bench["PROJ"] - weakest_flex["PROJ"], 1)
-        candidates.append(("FLEX", weakest_flex, best_flex_bench, gap))
+        flex_bench = [p for p in roster_players
+                      if not p.get("is_starter") and p.get("PROJ") is not None
+                      and lineup_layer.eligible(weakest_flex["slot"], p.get("position"))]
+        if flex_bench:
+            best_flex_bench = max(flex_bench, key=lambda p: p["PROJ"])
+            gap = round(best_flex_bench["PROJ"] - weakest_flex["PROJ"], 1)
+            candidates.append(("FLEX", weakest_flex, best_flex_bench, gap))
 
     candidates.sort(key=lambda c: -c[3])
 
@@ -1579,7 +1588,7 @@ def _trade_setup(league_id, scoring=None, season=None):
              for pid, r in pool.iterrows()}
     byes = profile.bye_weeks(bundle["schedule"])
     rosters = trade_engine.build_rosters(league_id, pool, values, cw, usage=usage, byes=byes)
-    slots = [s for s in roster_positions if s in lineup_layer.ELIGIBLE and s not in ("K", "DEF")]
+    slots = [s for s in roster_positions if s in lineup_layer.ELIGIBLE and s not in ("K", "DEF", "D/ST")]
     trade_engine.annotate(rosters, slots)
     ctx = {"slots": slots, "profile": trade_engine.depth_profile(shape), "teams": shape["teams"],
            "starters": shape["starters"]}

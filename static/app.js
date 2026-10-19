@@ -106,6 +106,23 @@ if (!prefersReducedMotion) {
   });
 }
 
+// Keyboard support in one place: Enter/Space activates any clickable
+// non-<button> (.kbd-click rows/cards, which also get tabindex="0" where
+// they're built), and Escape closes whatever floats on top — a dropdown
+// first, then the player/compare/swap modal, then the auth modal.
+document.addEventListener("keydown", (e) => {
+  if ((e.key === "Enter" || e.key === " ") && e.target instanceof Element && e.target.matches(".kbd-click")) {
+    e.preventDefault();
+    e.target.click();
+    return;
+  }
+  if (e.key !== "Escape") return;
+  const dd = document.querySelector(".notif-dropdown, .account-dropdown");
+  if (dd) { dd.remove(); return; }
+  if ($("#modal-root").innerHTML.trim()) { closeModal(); return; }
+  if ($("#auth-modal-root").innerHTML.trim()) closeAuthModal();
+});
+
 // Which generated Picsart accent art (see static/img/accent-*.png) sits
 // behind the player detail modal's header, per position group.
 function posAccentClass(pos) {
@@ -367,12 +384,16 @@ function switchTab(tab) {
   document.querySelectorAll(".nav-item[data-tab]").forEach((b) => b.classList.toggle("active", b.dataset.tab === tab));
   positionNavIndicator(tab);
   state.tab = tab;
+  renderCompareTray();
   TAB_IDS.forEach((t) => { $(`#tab-${t}`).style.display = t === tab ? "" : "none"; });
   const activeSection = $(`#tab-${tab}`);
   activeSection.classList.remove("tab-fade-in");
   void activeSection.offsetWidth; // force reflow so the animation replays every switch
   activeSection.classList.add("tab-fade-in");
   if (tab !== "draft") stopDraftPolling();
+  // The board used to load only after a pill/scoring/search change, so the
+  // first visit to Big Board sat on "Loading real NFL data…" forever.
+  if (tab === "board" && !state.boardLoaded) loadBoard();
   if (tab === "waivers") loadWaivers();
   if (tab === "myteam") { loadMyTeam(); loadLiveScores(); }
   if (tab === "draft") loadDraftTab();
@@ -438,7 +459,7 @@ function renderSidebarTeams() {
     return;
   }
   list.innerHTML = state.teams.map((t) => `
-    <div class="sidebar-team-row${t.active ? " active" : ""}" data-team-id="${esc(t.id)}" title="${esc(t.team_name)}">
+    <div class="sidebar-team-row kbd-click${t.active ? " active" : ""}" data-team-id="${esc(t.id)}" title="${esc(t.team_name)}" role="button" tabindex="0">
       ${t.avatar_url ? `<img src="${proxyImg(t.avatar_url)}" data-fb-emoji="🏈" alt="">` : `<span class="team-emoji">🏈</span>`}
       <span class="st-name">${esc(t.team_name)}</span>
     </div>`).join("");
@@ -515,6 +536,10 @@ function initScoringSelect() {
   const sel = $("#scoring-select");
   sel.value = state.scoring;
   refreshScoringLeagueOption();
+  // proceedPastGate() calls this after every sign-in; without the guard a
+  // sign-out/sign-in cycle stacked a second listener (two board loads per change).
+  if (sel.dataset.wired) return;
+  sel.dataset.wired = "1";
   sel.addEventListener("change", () => {
     state.scoring = sel.value;
     saveScoring();
@@ -624,12 +649,13 @@ function renderBoardRows(players, cols, showProj) {
   players
     .filter((p) => !q || (p.player_display_name || "").toLowerCase().includes(q) || (p.recent_team || "").toLowerCase().includes(q))
     .forEach((p) => {
-      const tr = el("tr");
+      const tr = el("tr", "kbd-click");
+      tr.tabIndex = 0;
       if (p.rank === 1) tr.classList.add("board-row-top");
       const selected = state.compareSelected.has(p.player_id);
       let html = `<td class="rank-cell">${esc(p.rank)}</td>`;
       html += `<td><div class="board-player-row">
-          <button type="button" class="cmp-check${selected ? " selected" : ""}" data-pid="${esc(p.player_id)}" aria-pressed="${selected}" title="${selected ? "Remove from compare" : "Add to compare"}"><span class="check">${selected ? "✓" : ""}</span></button>
+          <button type="button" class="cmp-check${selected ? " selected" : ""}" data-pid="${esc(p.player_id)}" aria-pressed="${selected}" aria-label="Compare ${esc(p.player_display_name)}" title="${selected ? "Remove from compare" : "Add to compare"}"><span class="check">${selected ? "✓" : ""}</span></button>
           ${playerCellHtml(p)}
         </div></td>`;
       html += `<td>${scoreCell(p.SCORE)}</td>`;
@@ -682,13 +708,14 @@ function renderCompareTray() {
   const chips = $("#compare-tray-chips");
   const openBtn = $("#compare-open-btn");
   const n = state.compareSelected.size;
-  if (!n) { tray.style.display = "none"; return; }
+  // The tray belongs to the Big Board; it used to float over every other tab.
+  if (!n || state.tab !== "board") { tray.style.display = "none"; return; }
   tray.style.display = "";
   chips.innerHTML = [...state.compareSelected.values()].map((p) => `
     <div class="cmp-chip">
       <img ${headshotAttrs(p)} alt="">
       <span>${esc(p.player_display_name)}</span>
-      <button type="button" class="chip-x" data-pid="${esc(p.player_id)}">✕</button>
+      <button type="button" class="chip-x" data-pid="${esc(p.player_id)}" aria-label="Remove ${esc(p.player_display_name)}">✕</button>
     </div>`).join("");
   chips.querySelectorAll(".chip-x").forEach((b) => {
     b.addEventListener("click", () => {
@@ -755,7 +782,7 @@ function cmpCardHtml(p, players, isTopOverall, delayMs) {
   rows += cmpRowHtml("Floor", p, "floor", { decimals: 1, maxVal: maxOf("ceiling"), isBest: floorBest.has(p.player_id) });
   rows += cmpRowHtml("Ceiling", p, "ceiling", { decimals: 1, maxVal: maxOf("ceiling"), isBest: ceilBest.has(p.player_id) });
 
-  return `<div class="cmp-card ${posAccentClass(p.position)}${isTopOverall ? " cmp-top" : ""}" data-pid="${esc(p.player_id)}" style="animation-delay:${delayMs}ms">
+  return `<div class="cmp-card kbd-click ${posAccentClass(p.position)}${isTopOverall ? " cmp-top" : ""}" data-pid="${esc(p.player_id)}" role="button" tabindex="0" style="animation-delay:${delayMs}ms">
     ${isTopOverall ? `<span class="badge-recommended cmp-top-badge">TOP OVERALL</span>` : ""}
     <img ${headshotAttrs(p)} alt="">
     <div class="cmp-name">${esc(p.player_display_name)}${statusFlagsHtml(p)}</div>
@@ -783,7 +810,7 @@ function openCompareModal() {
   root.innerHTML = `<div class="modal-backdrop"><div class="modal cmp-modal">
     <div class="modal-header">
       <div><h2>Compare Players</h2><div class="muted">Best real number in each category is highlighted.</div></div>
-      <button class="modal-close">✕</button>
+      <button class="modal-close" aria-label="Close">✕</button>
     </div>
     <div class="cmp-grid">${players.map((p, i) => cmpCardHtml(p, players, p.player_id === topId, i * 80)).join("")}</div>
   </div></div>`;
@@ -837,13 +864,14 @@ function renderOverallBoard(data) {
     .filter((p) => !q || (p.player_display_name || "").toLowerCase().includes(q) || (p.recent_team || "").toLowerCase().includes(q))
     .forEach((p, i) => {
       p.rank = p.overall_rank;
-      const tr = el("tr");
+      const tr = el("tr", "kbd-click");
+      tr.tabIndex = 0;
       tr.style.setProperty("--i", Math.min(i, 24));
       if (p.rank === 1) tr.classList.add("board-row-top");
       const selected = state.compareSelected.has(p.player_id);
       tr.innerHTML = `<td class="rank-cell">${esc(p.rank)}</td>
         <td><div class="board-player-row">
-          <button type="button" class="cmp-check${selected ? " selected" : ""}" data-pid="${esc(p.player_id)}" aria-pressed="${selected}" title="${selected ? "Remove from compare" : "Add to compare"}"><span class="check">${selected ? "✓" : ""}</span></button>
+          <button type="button" class="cmp-check${selected ? " selected" : ""}" data-pid="${esc(p.player_id)}" aria-pressed="${selected}" aria-label="Compare ${esc(p.player_display_name)}" title="${selected ? "Remove from compare" : "Add to compare"}"><span class="check">${selected ? "✓" : ""}</span></button>
           ${playerCellHtml(p)}
         </div></td>
         <td>${tierPillHtml(p.tier)}</td>
@@ -882,6 +910,7 @@ async function loadBoard() {
     const url = `/api/board?pos=${state.pos}${state.opp ? `&opp=${state.opp}` : ""}${scoringQS()}`;
     const data = await api(url);
     state.boardWeek = data.week;
+    state.boardLoaded = true;
     if (state.pos === "ALL") {
       renderOverallBoard(data);
       loading.style.display = "none";
@@ -984,7 +1013,7 @@ function weeklyChartHtml(weeks, statKey) {
   const verdict = judged
     ? `<div class="weeklog-verdict"><b>Beat his projection in ${beat} of ${judged} games</b><span class="${avgDiff >= 0 ? "pos" : "neg"}">${avgDiff >= 0 ? "+" : ""}${avgDiff.toFixed(1)} per game vs projected</span></div>`
     : "";
-  const legend = `<div class="weeklog-legend"><span><i class="lg-beat"></i>Beat projection</span><span><i class="lg-miss"></i>Fell short</span><span><i class="lg-tick"></i>What he was projected</span><span><i class="lg-none"></i>No projection</span></div>`;
+  const legend = `<div class="weeklog-legend"><span><i class="lg-beat"></i>Beat projection</span><span><i class="lg-miss"></i>Fell short</span><span><i class="lg-tick"></i>What he was projected</span><span><i class="lg-none"></i>No projection</span><span>Week number under each bar</span></div>`;
   return `${verdict}<div class="weeklog">${bars}</div>${legend}`;
 }
 
@@ -996,14 +1025,20 @@ async function openPlayerModal(playerId, opp) {
     if (e.target.classList.contains("modal-backdrop")) closeModal();
   });
 
+  // If the loading modal is closed (Escape/backdrop) or replaced by another
+  // player before the fetch lands, don't pop it back open.
+  const req = String(Date.now() + Math.random());
+  root.dataset.req = req;
+  const stillWanted = () => root.dataset.req === req && root.innerHTML.trim() !== "";
   let p;
   try {
     const oppQS = opp ? `&opp=${opp}` : "";
     p = await api(`/api/player/${playerId}?${scoringQS().replace(/^&/, "")}${oppQS}`);
   } catch (e) {
-    root.querySelector(".modal").innerHTML = `<div class="empty">Couldn't load player.</div>`;
+    if (stillWanted()) root.querySelector(".modal").innerHTML = `<div class="empty">Couldn't load player.</div>`;
     return;
   }
+  if (!stillWanted()) return;
 
   root.innerHTML = `<div class="modal-backdrop"><div class="modal ${posAccentClass(p.position)}">
     <div class="modal-header">
@@ -1012,7 +1047,7 @@ async function openPlayerModal(playerId, opp) {
         <h2>${esc(p.player_display_name)}${statusFlagsHtml(p)}</h2>
         <div class="muted">${esc(p.position)} · ${esc(p.recent_team)} ${p.next_opponent ? "· Next: vs " + esc(p.next_opponent) + " (Wk " + esc(p.next_week) + ")" : ""}</div>
       </div>
-      <button class="modal-close">✕</button>
+      <button class="modal-close" aria-label="Close">✕</button>
     </div>
     ${playerStatsBodyHtml(p)}
     <div class="section-label">Latest News</div>
@@ -1336,7 +1371,7 @@ function renderStartSitChips() {
   state.startsit.forEach((p, i) => {
     const slot = el("div", "ss-slot");
     slot.style.animationDelay = `${i * 70}ms`;
-    slot.innerHTML = `<button class="ss-slot-x" aria-label="Remove">✕</button>
+    slot.innerHTML = `<button class="ss-slot-x" aria-label="Remove ${esc(p.player_display_name)}">✕</button>
       <img ${headshotAttrs(p)} alt="">
       <div class="ss-slot-name">${esc(p.player_display_name)}${statusFlagsHtml(p)}</div>
       <div class="ss-slot-meta">${esc(p.position)} · ${esc(p.recent_team)}</div>
@@ -1469,7 +1504,7 @@ function rangeBarHtml(p, scaleMin, scaleMax) {
       <div class="ss-range-fill" style="left:${left}%;width:${width}%"></div>
       <div class="ss-range-marker" style="left:${markerLeft}%" title="Projected: ${FMT.d1(p.PROJ)}"></div>
     </div>
-    <div class="ss-range-labels"><span>Floor ${FMT.d1(floor)}</span><span>Ceiling ${FMT.d1(ceiling)}</span></div>`;
+    <div class="ss-range-labels" title="25th and 75th percentile of his real game log; the dot is his projection"><span>Low week ${FMT.d1(floor)}</span><span>High week ${FMT.d1(ceiling)}</span></div>`;
 }
 
 // The hero card — one per compared player. The per-card "WHY" text this
@@ -1485,7 +1520,7 @@ function reasonsHtml(p) {
   return `<ul class="ss-reasons">${p.reasons.slice(0, 4).map((r) => `<li>${esc(r)}</li>`).join("")}</ul>`;
 }
 
-function startSitCardHtml(p, scaleMin, scaleMax, i, recommended) {
+function startSitCardHtml(p, scaleMin, scaleMax, i, recommended, hideRing) {
   const tierClass = "tier-" + (p.tier || "borderline").toLowerCase();
   return `<div class="ss-card ss-hero ${tierClass}${recommended ? " recommended" : ""} ${posAccentClass(p.position)}" data-pid="${esc(p.player_id)}" style="animation-delay:${i * 60}ms">
     ${recommended ? `<div class="ss-rec-badge">Start Recommendation</div>` : ""}
@@ -1495,7 +1530,7 @@ function startSitCardHtml(p, scaleMin, scaleMax, i, recommended) {
         <div class="ss-name">${esc(p.player_display_name)}${statusFlagsHtml(p)}</div>
         <div class="ss-meta">${esc(p.position)} · ${esc(p.recent_team)}${p.opponent ? " · vs " + esc(p.opponent) + " (" + esc(p.matchup_tag) + ")" : " · rest-of-season blend"}</div>
       </div>
-      ${confidenceRingHtml(p, tierClass)}
+      ${hideRing ? "" : confidenceRingHtml(p, tierClass)}
     </div>
     <div class="ss-proj-row">
       <div class="ss-proj-num">${FMT.d1(p.PROJ)}<span class="ss-proj-lbl">proj pts</span></div>
@@ -1519,7 +1554,10 @@ function startSitCardHtml(p, scaleMin, scaleMax, i, recommended) {
 // each row is a small multi-bar chart, one segment per player on a
 // shared scale, not a fixed two-sided "vs" layout that would break past
 // 2 players.
-const SS_TAB_COLORS = ["var(--accent)", "var(--neg)", "var(--info)", "var(--violet)"];
+// Same per-player identity colors as the decision layer above it (SS_COLORS),
+// so player 2 is the same color in every Start/Sit chart. This used to be
+// accent/neg — painting the second player red, i.e. "bad", for no reason.
+const SS_TAB_COLORS = ["#22d3ee", "#a78bfa", "#f472b6", "#e4e4e7"];
 
 function ssMultiBarRowHtml(label, sub, players, valueFn, displayFn, maxOverride) {
   const values = players.map(valueFn);
@@ -1592,8 +1630,8 @@ function ssBreakdownPanelHtml(players) {
 
   const overview =
     ssMultiBarRowHtml("Projected Points", "", players, (p) => p.PROJ, (v) => FMT.d1(v), maxProj) +
-    ssMultiBarRowHtml("Floor", "25th pct., real game log", players, (p) => (p.floor != null ? p.floor : p.PROJ), (v) => FMT.d1(v), maxProj) +
-    ssMultiBarRowHtml("Ceiling", "75th pct., real game log", players, (p) => (p.ceiling != null ? p.ceiling : p.PROJ), (v) => FMT.d1(v), maxProj);
+    ssMultiBarRowHtml("Low week", "25th percentile of his real game log", players, (p) => (p.floor != null ? p.floor : p.PROJ), (v) => FMT.d1(v), maxProj) +
+    ssMultiBarRowHtml("High week", "75th percentile of his real game log", players, (p) => (p.ceiling != null ? p.ceiling : p.PROJ), (v) => FMT.d1(v), maxProj);
 
   const volume =
     ssMultiBarRowHtml("Snap Share", "", players, (p) => (p.snap_pct || 0) * 100, (v) => Math.round(v) + "%", 100) +
@@ -1610,7 +1648,7 @@ function ssBreakdownPanelHtml(players) {
       ${players.map((p) => ssDivergeRowHtml(p)).join("")}
     </div>
     <div class="ss-metric-block">
-      <div class="ss-metric-head"><span class="ss-metric-label">Availability</span><span class="ss-metric-sub">weeks since a real logged game — this app's real signal in place of weather, which it has no real data source for</span></div>
+      <div class="ss-metric-head"><span class="ss-metric-label">Availability</span><span class="ss-metric-sub">weeks since his last logged game (weather is in the head-to-head table above)</span></div>
       ${players.map((p) => {
         const dark = p.weeks_since_played != null && p.weeks_since_played >= 3;
         return `<div class="ss-mb-row">
@@ -1621,7 +1659,7 @@ function ssBreakdownPanelHtml(players) {
     </div>`;
 
   return `<div class="ss-breakdown">
-    <div class="ss-breakdown-head"><span class="ss-breakdown-title">Deep Analytical Breakdown</span></div>
+    <div class="ss-breakdown-head"><span class="ss-breakdown-title">Side-by-side stats</span> <span class="muted small">each bar is one player, on a shared scale</span></div>
     <div class="ss-tabbar">${tabBtns}</div>
     <div class="ss-tab-body" data-ss-tab-body="overview">${overview}</div>
     <div class="ss-tab-body" data-ss-tab-body="volume" hidden>${volume}</div>
@@ -1681,7 +1719,7 @@ function ssNarrativeHtml(top, rival, players) {
     bullets.push(`Usage is close between them (snap share within ${Math.abs(snapGap)} points, red-zone touches within ${Math.abs(rzGap)}) — the call comes down to the numbers above, not a lopsided role.`);
   }
   return `<div class="ss-narrative">
-    <div class="ss-narrative-head"><span>⚡</span><span class="ss-narrative-title">AI Recommendation Summary</span></div>
+    <div class="ss-narrative-head"><span class="ss-narrative-title">Why this call</span><span class="muted small">written from the numbers above, no AI</span></div>
     <ul>${bullets.map((b) => `<li><span class="ss-dot"></span><span>${b}</span></li>`).join("")}</ul>
   </div>`;
 }
@@ -1713,7 +1751,10 @@ async function toggleSSExpand(card, playerId, opp) {
 // ------------------------------------------------- start/sit decision ----
 // The decision layer from /api/startsit (engine/decision.py): verdict by win
 // condition, range-of-outcomes chart, head-to-head table and flags.
-const SS_COLORS = ["#34d399", "#a78bfa", "#fbbf24", "#22d3ee"];
+// Identity colors for the players being compared. Deliberately no green,
+// red or amber: those mean beat/missed/caution everywhere else in the app,
+// so a player's own color never reads as a judgment of him.
+const SS_COLORS = SS_TAB_COLORS;
 const SS_MODE_TEXT = { floor: "protecting a lead", balanced: "a normal week", ceiling: "chasing points" };
 
 function ssDecisionHtml(data, players) {
@@ -1743,8 +1784,10 @@ function ssDecisionHtml(data, players) {
     <div class="ssd-tags"><span class="ssd-tag">${esc(d.archetype)}</span></div>
     <div class="ssd-odds"><div class="ssd-k">Win condition odds</div>${odds}</div>
   </div>
-  ${ssRangeChartHtml(data.chart, players, color)}
-  ${ssHeadToHeadHtml(players, color)}
+  <div class="ssd-grid">
+    ${ssRangeChartHtml(data.chart, players, color)}
+    ${ssHeadToHeadHtml(players, color)}
+  </div>
   ${ssFlagsHtml(players, color)}
   ${state.meta?.ai_writeups ? `<div class="ssd-ai"><button type="button" class="wv-compare" id="ssd-ai-btn">Write me the full breakdown →</button><div id="ssd-ai-out"></div></div>` : ""}`;
 }
@@ -1779,7 +1822,7 @@ function ssRangeChartHtml(chart, players, color) {
   return `<div class="ssd-panel">
     <div class="ssd-h">Range of outcomes <span class="muted small">fantasy points this week</span></div>
     <div class="ssd-explain">Each shape is every way his week could go: the taller it is at a score, the more likely that score. The ticks under each shape mark his <b>floor</b> (1 bad week in 10 is lower), <b>median</b> (half his weeks beat it) and <b>ceiling</b> (1 big week in 10 is higher).</div>
-    <svg class="ssr-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">${ticks.join("")}${paths}<line x1="${padL}" x2="${W - padR}" y1="${base}" y2="${base}" stroke="rgba(255,255,255,.18)"/></svg>
+    <svg class="ssr-svg" viewBox="0 0 ${W} ${H}" role="img" aria-label="Range of outcomes chart, fantasy points on the horizontal axis">${ticks.join("")}${paths}<line x1="${padL}" x2="${W - padR}" y1="${base}" y2="${base}" stroke="rgba(255,255,255,.18)"/></svg>
     <div class="ssr-legend">${rows}</div>
     <div class="ssd-foot">Built from each player's projection and how much his scoring swings week to week. Checked on 662 player-games this season: 13% landed above the ceiling and 15% below the floor (10% each would be perfect).</div>
   </div>`;
@@ -1899,7 +1942,11 @@ async function runStartSit() {
     const scaleMin = Math.min(0, ...valid.map((p) => (p.floor != null ? p.floor : p.PROJ)));
     const scaleMax = Math.max(1, ...valid.map((p) => (p.ceiling != null ? p.ceiling : p.PROJ)));
 
-    const top = valid[0];
+    // When the decision layer is present its pick is THE recommendation:
+    // the hero badge, the "why" bullets and the verdict card must agree (they
+    // could disagree before — the hero used the lens-ranked first player).
+    const decided = data.decision && valid.find((p) => p.player_id === data.decision.pick);
+    const top = decided || valid[0];
     const errors = sorted.filter((p) => p.error)
       .map((p) => `<div class="result-card"><span>${esc(p.player_id)}: ${esc(p.error)}</span></div>`).join("");
 
@@ -1908,7 +1955,9 @@ async function runStartSit() {
     // swap with. Reorders display only; selection/data are untouched.
     const isHeadToHead = valid.length === 2;
     const heroOrder = isHeadToHead && state.ssSwapped ? [valid[1], valid[0]] : valid;
-    const heroCards = heroOrder.map((p, i) => startSitCardHtml(p, scaleMin, scaleMax, i, p.player_id === top?.player_id)).join("");
+    // With a decision card on screen its confidence is the one that counts;
+    // the hero ring is a different number and only confused the read.
+    const heroCards = heroOrder.map((p, i) => startSitCardHtml(p, scaleMin, scaleMax, i, p.player_id === top?.player_id, !!decided)).join("");
     const swapBtn = isHeadToHead
       ? `<button type="button" class="ss-swap-btn" id="ss-swap-btn" title="Swap sides">
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -1916,12 +1965,13 @@ async function runStartSit() {
           </svg>
         </button>` : "";
 
+    const extra = `${valid.length >= 2 ? ssBreakdownPanelHtml(valid) : ""}
+      ${top ? ssNarrativeHtml(top, valid.find((x) => x.player_id !== top.player_id), valid) : ""}`;
     results.innerHTML = `
       ${errors}
       ${ssDecisionHtml(data, valid)}
       <div class="ss-hero-row${isHeadToHead ? " head-to-head" : ""}">${heroCards}${swapBtn}</div>
-      ${valid.length >= 2 ? ssBreakdownPanelHtml(valid) : ""}
-      ${top ? ssNarrativeHtml(top, valid.find((x) => x.player_id !== top.player_id), valid) : ""}
+      ${decided ? `<details class="ss-legacy"><summary>More side-by-side stats</summary>${extra}</details>` : extra}
     `;
 
     results.querySelectorAll(".ss-card").forEach((card) => {
@@ -2053,7 +2103,7 @@ function ssSuggestCardHtml(s) {
   // neutrally (compared, not cut — nothing here is actually changing).
   const aTone = swap ? "out" : "confirmed";
   const bTone = swap ? "in" : "compared";
-  return `<div class="ss-suggest-card${swap ? " swap" : ""}" data-starter="${esc(a.player_id)}" data-bench="${esc(b.player_id)}">
+  return `<div class="ss-suggest-card kbd-click${swap ? " swap" : ""}" role="button" tabindex="0" data-starter="${esc(a.player_id)}" data-bench="${esc(b.player_id)}">
     <div class="ss-suggest-pos">${esc(s.position)}</div>
     <div class="ss-suggest-pair">
       ${miniRow(a, aTone)}
@@ -2088,11 +2138,13 @@ async function loadSuggestionIntoCompare(starterId, benchId) {
     api(`/api/player/${starterId}`), api(`/api/player/${benchId}`),
   ]).catch(() => [null, null]);
   if (!starter || !bench) return;
-  state.startsit = [
-    { player_id: starter.player_id, player_display_name: starter.player_display_name, position: starter.position },
-    { player_id: bench.player_id, player_display_name: bench.player_display_name, position: bench.position },
-  ];
+  const pick = (p) => ({ player_id: p.player_id, player_display_name: p.player_display_name, position: p.position,
+    recent_team: p.recent_team, headshot_url: p.headshot_url, injury_status: p.injury_status, opp: "" });
+  state.startsit = [pick(starter), pick(bench)];
   renderStartSitChips();
+  // keep the roster picker's selected chips in step with the slots
+  document.querySelectorAll("#startsit-roster-picker .shop-chip").forEach((c) =>
+    c.classList.toggle("selected", state.startsit.some((x) => x.player_id === c.dataset.pid)));
   $(".ss-toolbar")?.scrollIntoView({ behavior: "smooth", block: "start" });
   runStartSit();
 }
@@ -2146,7 +2198,7 @@ function renderTradeChips(side) {
   state[listKey].forEach((p) => {
     const chip = el("div", "chip");
     chip.innerHTML = `<img ${headshotAttrs(p)} alt="">
-      <span>${esc(p.player_display_name)}</span><button class="chip-x">✕</button>`;
+      <span>${esc(p.player_display_name)}</span><button class="chip-x" aria-label="Remove ${esc(p.player_display_name)}">✕</button>`;
     chip.querySelector(".chip-x").addEventListener("click", () => {
       state[listKey] = state[listKey].filter((x) => x.player_id !== p.player_id);
       renderTradeChips(side);
@@ -2175,6 +2227,7 @@ const TRADE_TIER_META = {
 function countUp(node, target, { decimals = 1, signed = false, duration = 800 } = {}) {
   const start = performance.now();
   const sign = signed && target > 0 ? "+" : "";
+  if (prefersReducedMotion) { node.textContent = (target < 0 ? "" : sign) + target.toFixed(decimals); return; }
   function frame(now) {
     const t = Math.min(1, (now - start) / duration);
     const eased = 1 - Math.pow(1 - t, 3);
@@ -2240,6 +2293,7 @@ function tradeSideCardHtml(sideKey, rec, teamName, touchedPositions, delayMs) {
     <div class="tvc-reason">${esc(rec.reason)}</div>
     <div class="tvc-needs-label">Roster needs right now</div>
     <div class="tvc-needs">${needBarsHtml(rec.needs, touchedPositions)}</div>
+    <div class="need-legend"><span><i class="need-high"></i>Real need</span><span><i class="need-mid"></i>Filled</span><span><i class="need-low"></i>Already deep</span><span class="muted">outlined = in this trade</span></div>
   </div>`;
 }
 
@@ -2400,7 +2454,7 @@ async function runTrade() {
 // other team in the league (switchable) on the other — click a player on
 // either side to add them to that side's trade package.
 function tradeRosterRowHtml(p, selected) {
-  return `<div class="trade-roster-row${selected ? " selected" : ""}" data-pid="${esc(p.player_id)}">
+  return `<div class="trade-roster-row kbd-click${selected ? " selected" : ""}" data-pid="${esc(p.player_id)}" role="button" tabindex="0" aria-pressed="${selected}">
     <img ${headshotAttrs(p)} alt="">
     <div>
       <div class="name">${esc(p.player_display_name)}${statusFlagsHtml(p)}</div>
@@ -2427,6 +2481,7 @@ function renderTradeRosterList(containerSel, players, side) {
         state[listKey].push(p);
       }
       row.classList.toggle("selected");
+      row.setAttribute("aria-pressed", String(row.classList.contains("selected")));
       row.querySelector(".check").textContent = row.classList.contains("selected") ? "✓" : "";
       renderTradeChips(side);
     });
@@ -2480,7 +2535,8 @@ async function loadTradeAnalyzer() {
       loadTradeSide("b", select.value);
     };
   } catch (e) {
-    body.innerHTML = `<div class="empty">${esc(e.message)}</div>`;
+    $("#trade-a-roster").innerHTML = `<div class="empty">${esc(e.message)}</div>`;
+    $("#trade-b-roster").innerHTML = "";
   }
 }
 
@@ -2577,7 +2633,7 @@ function wvSmartCardHtml(s, i) {
     <div class="wv-card-top">
       <img ${headshotAttrs(wvPlayer(s))} alt="">
       <div class="wv-card-id">
-        <div class="wv-name" data-pid="${esc(s.player_id)}">${esc(s.name)}${statusFlagsHtml(s)}</div>
+        <div class="wv-name kbd-click" data-pid="${esc(s.player_id)}" role="button" tabindex="0">${esc(s.name)}${statusFlagsHtml(s)}</div>
         <div class="wv-meta"><span class="pos-chip pos-${esc(s.position)}">${esc(s.position)}</span>${esc(s.team)} · next 4 <span class="wv-grade g-${esc(s.schedule.grade.toLowerCase())}">${esc(s.schedule.grade)}</span>${wvBadgeHtml(s)}</div>
       </div>
       <div class="wv-ring" style="--p:${Math.round(s.wps)}" title="Waiver Priority Score: 35% need + 35% lineup gain + 20% usage + 10% schedule"><b>${Math.round(s.wps)}</b><span>WPS</span></div>
@@ -2611,7 +2667,7 @@ function wvMoversHtml(movers, hasLeague) {
       : m.velocity >= 1.5 ? `<span class="wv-velo hot">${m.velocity}x yesterday</span>`
       : m.velocity < 0.8 ? `<span class="wv-velo cool">${m.velocity}x yesterday</span>` : `<span class="wv-velo">${m.velocity}x yesterday</span>`;
     const avail = m.available == null ? "" : m.available ? `<span class="wv-chip ok">Available</span>` : `<span class="wv-chip">Rostered</span>`;
-    return `<tr data-pid="${esc(m.player_id)}">
+    return `<tr data-pid="${esc(m.player_id)}" tabindex="0" class="kbd-click">
       <td>${wvPlayerCellHtml(m, wvBadgeHtml(m))}</td>
       <td class="tabular"><span class="wv-net">${m.net_24h >= 0 ? "+" : "−"}${wvCount(Math.abs(m.net_24h))}</span></td>
       <td class="tabular muted">+${wvCount(m.adds_24h)} / ${m.drops_24h == null ? "—" : "−" + wvCount(m.drops_24h)}</td>
@@ -2623,7 +2679,7 @@ function wvMoversHtml(movers, hasLeague) {
 
 function wvCuffsHtml(cuffs, hasLeague) {
   if (!cuffs.length) return `<div class="empty">No depth chart data right now.</div>`;
-  const rows = cuffs.map((c) => `<tr data-pid="${esc(c.backup_id)}">
+  const rows = cuffs.map((c) => `<tr data-pid="${esc(c.backup_id)}" tabindex="0" class="kbd-click">
       <td><span class="player-name">${esc(c.backup)}</span> <span class="muted small">${esc(c.team)} RB2</span></td>
       <td>${esc(c.starter)}${c.starter_status ? ` <span class="wv-chip warn">${esc(c.starter_status)}</span>` : ""}</td>
       <td class="tabular"><b>${FMT.d1(c.index)}</b> <span class="muted small">pts/wk</span></td>
@@ -2698,7 +2754,7 @@ function wvDeepRender() {
   const more = $("#wv-list-more");
   more.style.display = total > 25 ? "" : "none";
   more.textContent = state.wvListAll ? "Show top 25" : `Show all ${total} players`;
-  $("#waivers-body").innerHTML = rows.map((p) => `<tr data-pid="${esc(p.player_id)}" class="${p.rank === 1 ? "board-row-top" : ""}">${cols.map(([k]) => cell(p, k)).join("")}</tr>`).join("")
+  $("#waivers-body").innerHTML = rows.map((p) => `<tr data-pid="${esc(p.player_id)}" tabindex="0" class="kbd-click${p.rank === 1 ? " board-row-top" : ""}">${cols.map(([k]) => cell(p, k)).join("")}</tr>`).join("")
     || `<tr><td colspan="${cols.length}" class="empty">No available players at this position.</td></tr>`;
   wvWireRows($("#waivers-body"));
   animateScoreBars();
@@ -2725,7 +2781,7 @@ function wvSwapModal(s) {
   const band = (k, label) => `<div class="sw-band"><span class="wv-k">${label}</span><b>${FMT.d1(sw.before[k])} → ${FMT.d1(sw.after[k])}</b><span class="${sw.after[k] - sw.before[k] >= 0 ? "pos" : "neg"}">${wvSigned(sw.after[k] - sw.before[k])}</span></div>`;
   const root = $("#modal-root");
   root.innerHTML = `<div class="modal-backdrop"><div class="modal wv-swap">
-    <div class="modal-header"><div><h2>Swap check</h2><div class="muted">Add ${esc(s.name)}${d ? `, drop ${esc(d.name)}` : " into your open spot"}</div></div><button class="modal-close">✕</button></div>
+    <div class="modal-header"><div><h2>Swap check</h2><div class="muted">Add ${esc(s.name)}${d ? `, drop ${esc(d.name)}` : " into your open spot"}</div></div><button class="modal-close" aria-label="Close">✕</button></div>
     <div class="sw-head"><span class="a">Add: ${esc(a?.name || s.name)}</span><span></span><span class="b">${d ? `Drop: ${esc(d.name)}` : "Open spot"}</span></div>
     ${d ? rows : `<div class="muted">You have an open roster spot, so nobody leaves.</div>`}
     <div class="section-label">Your starting lineup, per week</div>
@@ -2826,6 +2882,22 @@ function initWaiverControls() {
   });
 }
 
+// ------------------------------------------------------ section header ----
+// The one section-header pattern every tab uses (icon tile + h2 + a line of
+// description), first designed for Waivers. Static headers live in
+// index.html with the same markup; this builds the ones rendered from JS.
+const SEC_ICONS = {
+  matchups: '<path d="M4 6h16M4 12h16M4 18h16"/><circle cx="8" cy="6" r="1.4" fill="currentColor"/><circle cx="16" cy="12" r="1.4" fill="currentColor"/><circle cx="10" cy="18" r="1.4" fill="currentColor"/>',
+  lineup: '<rect x="4" y="3.5" width="16" height="17" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/>',
+  trades: '<path d="M13 3l3 3-3 3M16 6H4M11 21l-3-3 3-3M8 18h12"/>',
+};
+function secHeadHtml(icon, title, sub, right) {
+  return `<div class="sec-head">
+    <span class="sec-head-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${SEC_ICONS[icon] || ""}</svg></span>
+    <div><h2>${title}</h2>${sub ? `<p>${sub}</p>` : ""}</div>${right ? `<div class="sec-head-right">${right}</div>` : ""}
+  </div>`;
+}
+
 // ------------------------------------------------------------- my team ----
 // Real starting lineup (real slot labels — QB/RB/RB/WR/WR/TE/FLEX/FLEX/
 // DEF/K, whatever this league actually runs) first, bench after — a bench
@@ -2835,7 +2907,7 @@ function rosterRowHtml(p, isBench) {
   // DEF/K have no SCORE — this app's stat engine only covers QB/RB/WR/TE
   // (see README) — so there's no player-detail view to open for them.
   const unscored = p.SCORE == null;
-  return `<div class="myteam-roster-row${isBench ? " bench" : ""}${unscored ? " unscored" : ""}" data-pid="${esc(p.player_id)}" ${unscored ? 'data-unscored="1"' : ""}>
+  return `<div class="myteam-roster-row${isBench ? " bench" : ""}${unscored ? " unscored" : " kbd-click"}" data-pid="${esc(p.player_id)}" ${unscored ? 'data-unscored="1"' : 'role="button" tabindex="0"'}>
     <img ${headshotAttrs(p)} alt="">
     <span class="pos-badge">${esc(p.slot || p.position)}</span>
     <span>${esc(p.player_display_name)}${statusFlagsHtml(p)}</span>
@@ -2854,7 +2926,7 @@ function teamCardHtml(team, kind) {
   const avatar = team.avatar_url
     ? `<img class="mt-avatar" src="${proxyImg(team.avatar_url)}" data-fb-emoji="🏈" alt="">`
     : `<span class="team-emoji">🏈</span>`;
-  return `<div class="myteam-card lift-hover${kind === "opponent" ? " opponent" : ""}">
+  return `<div class="myteam-card${kind === "opponent" ? " opponent" : ""}">
       <div class="mt-label">${kind === "mine" ? "MY TEAM" : "OPPONENT"}</div>
       <div class="mt-name-row">${avatar}<div class="mt-name">${esc(team.team_name)}</div></div>
       <div class="mt-total-lbl">PROJECTED (STARTERS)</div>
@@ -2869,9 +2941,11 @@ function matchupCenterHtml(mine, opp) {
   if (!opp) return `<div class="matchup-vs-center"><div class="matchup-vs-badge">VS</div></div>`;
   const diff = (mine.total_proj || 0) - (opp.total_proj || 0);
   const favoredName = diff >= 0 ? mine.team_name : opp.team_name;
+  // Green only when YOU are projected ahead; an opponent edge is shown
+  // plainly (it's not "good"), never in the app's success color.
   const favor = Math.abs(diff) < 0.1
     ? `<span style="color:var(--muted)">Dead even</span>`
-    : `${esc(favoredName)} +${FMT.d1(Math.abs(diff))}`;
+    : `<span class="matchup-favor-lbl">Projected edge</span><span class="${diff >= 0 ? "" : "is-opp"}">${esc(favoredName)} +${FMT.d1(Math.abs(diff))}</span>`;
   return `<div class="matchup-vs-center">
     <div class="matchup-vs-badge">VS</div>
     <div class="matchup-favor">${favor}</div>
@@ -2885,7 +2959,8 @@ function matchupBarHtml(mine, opp) {
   const sum = mv + ov;
   const minePct = sum > 0 ? (mv / sum) * 100 : 50;
   return `<div class="matchup-bar-wrap">
-    <div class="matchup-bar">
+    <div class="matchup-bar-labels"><span class="mine">${esc(mine.team_name)} · ${minePct.toFixed(0)}%</span><span class="matchup-bar-cap">share of combined projected points</span><span>${(100 - minePct).toFixed(0)}% · ${esc(opp.team_name)}</span></div>
+    <div class="matchup-bar" role="img" aria-label="${esc(mine.team_name)} ${minePct.toFixed(0)} percent of combined projected points">
       <div class="matchup-bar-fill mine" style="width:${minePct.toFixed(1)}%"></div>
       <div class="matchup-bar-fill theirs" style="width:${(100 - minePct).toFixed(1)}%"></div>
     </div>
@@ -2903,7 +2978,7 @@ function leagueMatchupsHtml(matchups, myRosterId) {
       </div>`).join(`<span class="lm-vs">vs</span>`);
     return `<div class="lm-row">${sides}</div>`;
   }).join("");
-  return `<div class="section-label">League Matchups This Week</div><div class="league-matchups">${rows}</div>`;
+  return `${secHeadHtml("matchups", "League matchups this week", "Every head-to-head in your league, projected from each team's starters.")}<div class="league-matchups">${rows}</div>`;
 }
 
 function renderMyTeamWeekSelector(data) {
@@ -2995,13 +3070,13 @@ function lockBadgeHtml(r) {
 async function loadLineupPanel(week) {
   const host = $("#lineup-panel");
   if (!host) return;
-  host.innerHTML = `<div class="section-label">Week lineup</div><div class="loading">Loading lineup…</div>`;
+  host.innerHTML = `${secHeadHtml("lineup", "Set your lineup", "")}<div class="loading">Loading lineup…</div>`;
   try {
     const data = await api(`/api/lineup?week=${week}${scoringQS()}`);
     state.lineup = { week: data.week, slots: data.lineup, bench: data.bench, original: data.lineup.map((r) => r.player_id), proposed: data.lineup.map((r) => r.player_id) };
     renderLineupPanel();
   } catch (e) {
-    host.innerHTML = `<div class="section-label">Week lineup</div><div class="empty">${esc(e.message)}</div>`;
+    host.innerHTML = `${secHeadHtml("lineup", "Set your lineup", "")}<div class="empty">${esc(e.message)}</div>`;
   }
 }
 
@@ -3035,7 +3110,7 @@ function renderLineupPanel(check) {
   }).join("");
   const total = L.proposed.reduce((t, pid) => { const p = pool[pid]; return t + (p && !p.bye && !p.inactive ? (p.PROJ || 0) : 0); }, 0);
   const msgs = check ? [...check.errors.map((e) => `<li class="bad">${esc(e)}</li>`), ...check.warnings.map((w) => `<li class="warn">${esc(w)}</li>`)].join("") : "";
-  host.innerHTML = `<div class="section-label">Week ${esc(L.week)} lineup <span class="muted small">slots lock at each player's own kickoff</span></div>
+  host.innerHTML = `${secHeadHtml("lineup", `Week ${esc(L.week)} lineup`, "Each slot locks at that player's own kickoff. Build it here, then set it in Sleeper.")}
     <div class="lu-panel">${rows}
       <div class="lu-foot"><span>Projected <b class="tabular">${FMT.d1(total)}</b></span>
         <span class="lu-actions"><button class="pill" id="lu-best">Best lineup</button><button class="pill" id="lu-reset">Reset</button><button class="pill active" id="lu-check">Check</button></span></div>
@@ -3069,13 +3144,14 @@ async function loadTradesPanel() {
   try { seen = JSON.parse(localStorage.getItem("seenTrades") || "[]"); } catch (e) { /* storage unavailable */ }
   try {
     const { trades } = await api(`/api/league/trades?seen=${encodeURIComponent(seen.join(","))}`);
-    if (!trades.length) { host.innerHTML = `<div class="section-label">League trades</div><div class="empty">No trades in your league yet.</div>`; return; }
+    const head = secHeadHtml("trades", "League trades", "Every completed trade in your league, newest first.");
+    if (!trades.length) { host.innerHTML = `${head}<div class="hint">No trades in your league yet.</div>`; return; }
     const side = (s) => `<div class="tr-side"><div class="tr-team">${esc(s.team)} <span class="muted small">gets</span></div>${s.receives.map((x) => `<div class="tr-item ${x.kind}">${esc(x.name)}</div>`).join("") || `<div class="muted small">nothing</div>`}</div>`;
-    host.innerHTML = `<div class="section-label">League trades <span class="muted small">newest first</span></div>` +
+    host.innerHTML = head +
       trades.slice(0, 10).map((t) => `<div class="tr-card${t.is_new ? " is-new" : ""}"><div class="tr-head">Week ${esc(t.week ?? "—")}${t.is_new ? ` <span class="lk lk-open">NEW</span>` : ""}</div><div class="tr-sides">${t.sides.map(side).join("")}</div></div>`).join("");
     try { localStorage.setItem("seenTrades", JSON.stringify(trades.map((t) => t.id))); } catch (e) { /* storage unavailable */ }
   } catch (e) {
-    host.innerHTML = `<div class="section-label">League trades</div><div class="empty">${esc(e.message)}</div>`;
+    host.innerHTML = `${secHeadHtml("trades", "League trades", "")}<div class="hint">${esc(e.message)}</div>`;
   }
 }
 
@@ -3851,7 +3927,7 @@ function openAuthModal(mode) {
 function openResetPasswordModal(token) {
   const root = $("#auth-modal-root");
   root.innerHTML = `<div class="modal-backdrop auth-modal"><div class="modal">
-    <div class="modal-header"><h2>Reset Password</h2><button class="modal-close">✕</button></div>
+    <div class="modal-header"><h2>Reset Password</h2><button class="modal-close" aria-label="Close">✕</button></div>
     <div class="form-grid">
       <input type="password" id="reset-new-password" placeholder="New password (8+ characters)">
       <button class="primary-btn" id="reset-submit">Set New Password</button>
@@ -3944,7 +4020,7 @@ function renderVerifyStatus() {
 function showToast(text, kind) {
   const root = $("#toast-root");
   const t = el("div", `toast ${kind}`);
-  t.innerHTML = `<span>${esc(text)}</span><button>✕</button>`;
+  t.innerHTML = `<span>${esc(text)}</span><button type="button" aria-label="Dismiss">✕</button>`;
 
   const AUTO_DISMISS_MS = 5000;
   let timer;
@@ -4089,7 +4165,7 @@ function renderTeamsList() {
           <div class="team-card-league">${esc(t.league_name || t.league_id)}</div>
         </div>
         ${t.active ? `<span class="tag soft">ACTIVE</span>` : `<button class="pill" data-activate="${esc(t.id)}">Switch</button>`}
-        <button class="chip-x" data-remove="${esc(t.id)}" title="Remove">✕</button>
+        <button class="chip-x" data-remove="${esc(t.id)}" title="Remove" aria-label="Remove ${esc(t.team_name)}">✕</button>
       </div>`).join("");
 
     list.querySelectorAll("button[data-activate]").forEach((b) => b.addEventListener("click", async () => {
@@ -4272,6 +4348,7 @@ function renderGateAuth(mode) {
   $("#gate-subcopy").textContent = "No mock projections, no paid grading service — every number here comes from real NFL stats, real Next Gen Stats, and your real Sleeper league.";
   const panel = $("#gate-panel");
   panel.innerHTML = `<div class="gate-form-wrap">
+    <div class="gate-mobile-brand"><img src="/icons/icon-192.png" alt=""><span>Lineup Lab</span></div>
     <div class="modal-header"><h2>Welcome</h2></div>
     ${authPanelHtml(mode)}
   </div>`;
@@ -4303,6 +4380,7 @@ function renderGateConnectLeague() {
   $("#gate-subcopy").textContent = "Paste your Sleeper league's URL (or just its ID) and pick which team is yours — My Team, Waivers, Trade, and News all follow it from here.";
   const panel = $("#gate-panel");
   panel.innerHTML = `<div class="gate-form-wrap">
+    <div class="gate-mobile-brand"><img src="/icons/icon-192.png" alt=""><span>Lineup Lab</span></div>
     <div class="modal-header"><h2>Connect Your League</h2></div>
     <div class="form-grid">
       <input type="text" id="gate-connect-input" placeholder="Paste Sleeper league URL or ID" autocomplete="off">

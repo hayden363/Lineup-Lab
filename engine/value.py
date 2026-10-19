@@ -107,7 +107,15 @@ def compute_value(frames, ecr=None, league=None, ecr_weight=ECR_WEIGHT):
     info = [ecr.get(k) for k in keys]
     allp["ecr"] = [i["ecr"] if i else np.nan for i in info]
     allp["ecr_sd"] = [i["ecr_sd"] if i else np.nan for i in info]
-    allp["bye_week"] = [i["bye_week"] if i else np.nan for i in info]
+    # The board's own bye week comes from the real NFL schedule; ECR's is only
+    # a fallback. Overwriting it used to blank every bye whenever the ECR
+    # file was unreachable, and for anyone ECR didn't list.
+    ecr_bye = np.array([i["bye_week"] if i and i["bye_week"] is not None else np.nan for i in info], dtype=float)
+    if "bye_week" in allp.columns:
+        sched_bye = pd.to_numeric(allp["bye_week"], errors="coerce").to_numpy(dtype=float)
+        allp["bye_week"] = np.where(np.isnan(sched_bye), ecr_bye, sched_bye)
+    else:
+        allp["bye_week"] = ecr_bye
     filled = allp["ecr"].fillna(ECR_MISSING_RANK)
     allp["blend"] = (1 - ecr_weight) * allp["our_rank"] + ecr_weight * filled \
         if ecr else allp["our_rank"]

@@ -659,7 +659,9 @@ def api_player_projection_compare(player_id: str, opp: Optional[str] = Query(Non
         # A specific requested opponent (e.g. viewing this player's card
         # from a Start/Sit matchup) — same math as the no-opp case below,
         # just against that exact defense instead of their real schedule.
-        board = build_board(detail["position"], scoring=scoring)
+        # min_games=0 for the same reason player_detail uses it: one player
+        # asked for by id, not a ranked list.
+        board = build_board(detail["position"], min_games=0, scoring=scoring)
         our_proj = None
         if player_id in board.index:
             projected = project_vs(board.loc[[player_id]], detail["position"], opp.upper(),
@@ -716,10 +718,23 @@ class StartSitRequest(BaseModel):
     mode: str = "balanced"   # balanced | safe | upside
 
 
-@app.post("/api/startsit")
-def api_startsit(req: StartSitRequest, user=Depends(current_user)):
+# The compare UI holds at most 4 players. Each one costs a full decision-layer
+# pass (outcome sampling, script split, usage over pbp), and this endpoint is
+# open to signed-out users, so an unbounded list was a cheap way to pin the
+# single small instance.
+MAX_STARTSIT_PLAYERS = 6
+
+
+def _check_startsit_size(req: StartSitRequest):
     if len(req.player_ids) < 2:
         raise HTTPException(400, "need at least 2 players to compare")
+    if len(req.player_ids) > MAX_STARTSIT_PLAYERS:
+        raise HTTPException(400, f"compare at most {MAX_STARTSIT_PLAYERS} players at a time")
+
+
+@app.post("/api/startsit")
+def api_startsit(req: StartSitRequest, user=Depends(current_user)):
+    _check_startsit_size(req)
     scoring = _effective_scoring(req.scoring, user)
     result = tools.start_sit(req.player_ids, opponents=req.opponents, scoring=scoring, mode=req.mode)
 
@@ -747,8 +762,7 @@ def api_startsit_analysis(req: StartSitRequest, user=Depends(require_user)):
     (engine/startsit_ai.py). Signed-in only, since it costs an API call."""
     if not startsit_ai.configured():
         raise HTTPException(503, "AI write-ups aren't turned on for this server")
-    if len(req.player_ids) < 2:
-        raise HTTPException(400, "need at least 2 players to compare")
+    _check_startsit_size(req)
     scoring = _effective_scoring(req.scoring, user)
     result = tools.start_sit(req.player_ids, opponents=req.opponents, scoring=scoring, mode=req.mode)
     out = startsit_ai.write_up(result)
@@ -1292,7 +1306,14 @@ def api_news(scope: str = Query("team", pattern="^(team|opponent|league)$"), use
     if not active:
         return {"scope": scope, "items": [], "requires_team": True}
     try:
-        team = tools.my_team(active["league_id"], int(active["roster_id"]))
+        # Same platform split as _load_my_team: an ESPN team's league id
+        # means nothing to Sleeper, so the Sleeper-only my_team() 400'd the
+        # Team and Opponent news tabs for every ESPN-connected user.
+        if active.get("platform") == "espn":
+            espn_s2, swid = db.get_espn_secrets(user["id"])
+            team = tools.my_team_espn(active["league_id"], int(active["roster_id"]), espn_s2=espn_s2, swid=swid)
+        else:
+            team = tools.my_team(active["league_id"], int(active["roster_id"]))
     except Exception as e:
         raise HTTPException(400, str(e))
 

@@ -624,11 +624,33 @@ def resolve_predictions(season, week, actual_fpts_by_player):
 
         now = time.time()
         resolved = 0
+        # Callers only grade a week that's already over (see
+        # tools.resolve_track_record). Once that week's stats exist at all, a
+        # player with no row in them didn't play — he never will have one, so
+        # waiting on him kept his row (and, for a pair, the whole group)
+        # "pending" forever and re-queried every scheduler tick. Those rows
+        # are closed as void: resolved, with actual_pts and was_correct left
+        # NULL so they count as neither right nor wrong. An empty stats dict
+        # means the week's stats aren't published yet, so nothing is voided.
+        stats_published = bool(actual_fpts_by_player)
+
+        def void(rows):
+            for r in rows:
+                c.execute(
+                    "UPDATE predictions SET resolved_at = %s, actual_pts = NULL, was_correct = NULL WHERE id = %s",
+                    (now, r["id"]),
+                )
+            return len(rows)
+
         for group_rows in by_group.values():
             scored = [(r, actual_fpts_by_player[r["player_id"]])
                       for r in group_rows if r["player_id"] in actual_fpts_by_player]
+            unscored = [r for r in group_rows if r["player_id"] not in actual_fpts_by_player]
             if len(scored) < 2:
-                continue  # not enough of this group actually has real stats yet to call a winner
+                # not enough of this group has real stats to call a winner
+                if stats_published:
+                    resolved += void(group_rows)
+                continue
             group_best = max(pts for _, pts in scored)
             for r, pts in scored:
                 was_correct = (r["tier"] == "START") and pts >= group_best - 1e-9
@@ -637,6 +659,7 @@ def resolve_predictions(season, week, actual_fpts_by_player):
                     (now, pts, was_correct, r["id"]),
                 )
                 resolved += 1
+            resolved += void(unscored)
         return resolved
 
 
@@ -650,8 +673,12 @@ def get_track_record(user_id):
     (and more flattering) sample than what's actually been called."""
     with _conn() as c:
         c.execute(
+            # was_correct IS NOT NULL leaves out void calls (the player didn't
+            # play that week — see resolve_predictions), which are neither
+            # right nor wrong.
             "SELECT COUNT(*) AS n, COUNT(*) FILTER (WHERE was_correct) AS correct "
-            "FROM predictions WHERE user_id = %s AND tier = 'START' AND resolved_at IS NOT NULL",
+            "FROM predictions WHERE user_id = %s AND tier = 'START' AND resolved_at IS NOT NULL "
+            "AND was_correct IS NOT NULL",
             (user_id,),
         )
         resolved = _fetch_row(c)
@@ -664,7 +691,7 @@ def get_track_record(user_id):
         c.execute(
             "SELECT season, week, player_display_name, position, actual_pts, proj_pts, was_correct "
             "FROM predictions WHERE user_id = %s AND tier = 'START' AND resolved_at IS NOT NULL "
-            "ORDER BY resolved_at DESC LIMIT 10",
+            "AND was_correct IS NOT NULL ORDER BY resolved_at DESC LIMIT 10",
             (user_id,),
         )
         recent = c.fetchall()

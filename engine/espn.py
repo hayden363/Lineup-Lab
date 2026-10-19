@@ -33,6 +33,7 @@ import time
 import pandas as pd
 
 from .data import CACHE_DIR
+from .defense_scoring import to_nflverse_team
 
 _LEAGUE_ID_RE = re.compile(r"(?:leagueId=)?(\d{5,})")
 
@@ -273,7 +274,9 @@ def build_unscored_resolver(league):
             by_id[raw_id] = {
                 "position": "DEF" if p.position == "D/ST" else p.position,
                 "player_display_name": p.name,
-                "recent_team": p.proTeam,
+                # nflverse spelling (WSH -> WAS, LAR -> LA) so the schedule,
+                # locks and team baselines recognise the team.
+                "recent_team": to_nflverse_team(p.proTeam),
                 "headshot_url": headshot_url,
                 "depth_chart_order": None,
             }

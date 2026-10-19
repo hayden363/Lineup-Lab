@@ -438,7 +438,16 @@ def resolve_unscored_player(sleeper_id, force=False):
     else:
         name = p.get("full_name") or f"{p.get('first_name', '')} {p.get('last_name', '')}".strip() or sleeper_id
         headshot = f"https://sleepercdn.com/content/nfl/players/thumb/{sleeper_id}.jpg"
-    return {"position": pos, "player_display_name": name, "recent_team": p.get("team") or sleeper_id,
+    # nflverse's team code (LAR -> LA), the spelling every priced player's
+    # recent_team already uses and the one the schedule, kicker baseline and
+    # role baseline are keyed by — with Sleeper's "LAR" a Rams kicker or
+    # rookie read as "no NFL team" on the lineup page and lost his
+    # team-based PROJ. A D/ST's own id IS its team code; anyone else with no
+    # current team (a free agent) gets None rather than his numeric Sleeper
+    # id dressed up as a team.
+    from .defense_scoring import to_nflverse_team
+    team = p.get("team") or (sleeper_id if pos == "DEF" else None)
+    return {"position": pos, "player_display_name": name, "recent_team": to_nflverse_team(team),
             "headshot_url": headshot,
             # Live current depth-chart slot (e.g. RB1/RB2) — Sleeper's own,
             # refreshed on the same cadence as everything else in
