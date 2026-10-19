@@ -8,7 +8,7 @@ matchup-aware board is the single source of truth for every decision
 surface in the app.
 """
 
-from . import data, db, defense_scoring, kicker_scoring, role_baseline, sleeper
+from . import context, data, db, defense_scoring, kicker_scoring, role_baseline, sleeper
 from .board import (POSITIONS, build_board, load_bundle, rest_of_season_value,
                      project_vs)
 from .scoring import apply_scoring
@@ -283,7 +283,8 @@ def _apply_recommendation_tiers(valid):
     field beats a model every time)."""
     if not valid:
         return
-    ranked = sorted(valid, key=lambda r: r["PROJ"] or 0, reverse=True)
+    rv = lambda r: r.get("rank_value", r["PROJ"]) or 0  # the lens (safe/upside) picks the order
+    ranked = sorted(valid, key=rv, reverse=True)
     top = ranked[0]
     second = ranked[1] if len(ranked) > 1 else None
 
@@ -293,8 +294,8 @@ def _apply_recommendation_tiers(valid):
         if reference is None:
             r["tier"], r["confidence"] = "START", 60
             continue
-        top_val = max((top["PROJ"] or 0), 0.1)
-        gap_pct = (r["PROJ"] - reference["PROJ"]) / top_val if not is_top else 0.0
+        top_val = max(rv(top), 0.1)
+        gap_pct = (rv(r) - rv(reference)) / top_val if not is_top else 0.0
 
         if r.get("injury_status") == "Out":
             tier = "SIT"
@@ -320,7 +321,7 @@ def _apply_recommendation_tiers(valid):
         r["confidence"] = confidence
 
 
-def start_sit(player_ids, opponents=None, season=None, scoring=None):
+def start_sit(player_ids, opponents=None, season=None, scoring=None, mode="balanced"):
     """Compare 2+ players. `opponents`: optional {player_id: opp_abbr} for
     matchup-adjusted projections; players without one use a rest-of-season
     blended projection instead.
@@ -366,6 +367,7 @@ def start_sit(player_ids, opponents=None, season=None, scoring=None):
             projected = project_vs(board.loc[[pid]], pos, opp, bundle=bundle, scoring=scoring)
             proj = float(projected["PROJ"].iloc[0])
             matchup_tag = projected["matchup_tag"].iloc[0]
+            matchup_factor = _clean_num(projected["matchup_factor"].iloc[0])
             # Only project_vs's per-opponent path computes these (see
             # engine/board.py) — rest_of_season_value already bakes the
             # real injury factor into PROJ either way, it just doesn't
@@ -375,15 +377,30 @@ def start_sit(player_ids, opponents=None, season=None, scoring=None):
         else:
             proj = float(rest_of_season_value(board.loc[[pid]], pos, bundle=bundle, scoring=scoring).iloc[0])
             matchup_tag = None
+            matchup_factor = None
             injury_factor = None
             injury_sample_n = None
+        # Game environment + usage trend (engine/context.py): a capped
+        # multiplier from the betting-market view of this game, applied to
+        # the projection and its floor/ceiling alike.
+        ctx = context.game_context(bundle["schedule"], row.get("recent_team"), wk_no) if wk_no else None
+        env_f, env_notes = context.environment_factor(pos, ctx, _clean_num(row.get("target_share")))
+        base_proj = proj
+        proj = proj * env_f
+        floor_v, ceil_v = _clean_num(row.get("floor")), _clean_num(row.get("ceiling"))
+        floor_v = floor_v * env_f if floor_v is not None else None
+        ceil_v = ceil_v * env_f if ceil_v is not None else None
+        usage = context.usage_trend(bundle["wk"], pid, pos)
+        spread = (ceil_v - floor_v) if (floor_v is not None and ceil_v is not None) else None
         results.append({
+            "base_proj": base_proj, "environment": {"factor": env_f, "notes": env_notes, "game": ctx},
+            "usage": usage, "cv": (spread / proj if spread is not None and proj else None),
             "player_id": pid, "position": pos,
             "player_display_name": row.get("player_display_name"),
             "recent_team": row.get("recent_team"), "headshot_url": row.get("headshot_url"),
             "SCORE": row.get("SCORE"), "FORM": row.get("FORM"), "fpts_per_game": row.get("fpts_per_game"),
-            "opponent": opp, "matchup_tag": matchup_tag, "PROJ": proj, "week": wk_no,
-            "floor": _clean_num(row.get("floor")), "ceiling": _clean_num(row.get("ceiling")),
+            "opponent": opp, "matchup_tag": matchup_tag, "matchup_factor": matchup_factor, "PROJ": proj, "week": wk_no,
+            "floor": floor_v, "ceiling": ceil_v,
             "snap_pct": _clean_num(row.get("snap_pct")), "redzone_touches": _clean_num(row.get("redzone_touches")),
             "injury_status": _clean_num(row.get("injury_status")),
             "injury_body_part": _clean_num(row.get("injury_body_part")),
@@ -396,13 +413,20 @@ def start_sit(player_ids, opponents=None, season=None, scoring=None):
             "last_active_week": _clean_num(row.get("last_active_week")),
         })
 
+    if mode not in ("balanced", "safe", "upside"):
+        mode = "balanced"
     valid = [r for r in results if "error" not in r]
+    for r in valid:
+        r["rank_value"] = context.rank_value(r["PROJ"], r["floor"], r["ceiling"], mode)
+        r["reasons"] = context.build_reasons(r)
     _apply_recommendation_tiers(valid)
+    summary = None
     if valid:
-        best = max(valid, key=lambda r: r["PROJ"])
+        best = max(valid, key=lambda r: r["rank_value"])
         for r in results:
             r["recommended"] = ("error" not in r) and (r["player_id"] == best["player_id"])
-    return {"season": bundle["season"], "players": results}
+        summary = context.comparison_reason(best, [r for r in valid if r is not best], mode)
+    return {"season": bundle["season"], "mode": mode, "summary": summary, "players": results}
 
 
 FLEX_ELIGIBLE = ("RB", "WR", "TE")

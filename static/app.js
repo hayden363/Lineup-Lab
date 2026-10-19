@@ -291,6 +291,7 @@ const state = {
   leagueScoringDict: null,   // cached scoring dict of the active team's league
   scoring: localStorage.getItem("eb_scoring") || "",   // "" | "half_ppr" | "standard" | "league"
   startsit: [],
+  ssMode: "balanced",        // Start/Sit lens: balanced | safe | upside
   ssSwapped: false,          // Start/Sit head-to-head display order (2-player case only)
   tradeA: [],
   tradeB: [],
@@ -827,7 +828,7 @@ function initCompareTray() {
 // see engine/value.py. PROJ is points per game; VOR is how many of those
 // points beat the free replacement at his position.
 function renderOverallBoard(data) {
-  $("#board-head").innerHTML = `<th></th><th>Player</th><th>Tier</th><th>PROJ</th><th>VOR</th><th class="hide-mobile">Experts</th><th class="hide-mobile">Boom%</th><th class="hide-mobile">Steady</th>`;
+  $("#board-head").innerHTML = `<th></th><th>Player</th><th>Tier</th><th>PROJ</th><th>VOR</th><th class="hide-mobile">Experts</th>`;
   const body = $("#board-body");
   body.innerHTML = "";
   const q = state.search.trim().toLowerCase();
@@ -840,7 +841,6 @@ function renderOverallBoard(data) {
       tr.style.setProperty("--i", Math.min(i, 24));
       if (p.rank === 1) tr.classList.add("board-row-top");
       const selected = state.compareSelected.has(p.player_id);
-      const steady = p.cv == null ? "—" : p.cv <= 0.3 ? "Steady" : p.cv <= 0.5 ? "Mixed" : "Boom/bust";
       tr.innerHTML = `<td class="rank-cell">${esc(p.rank)}</td>
         <td><div class="board-player-row">
           <button type="button" class="cmp-check${selected ? " selected" : ""}" data-pid="${esc(p.player_id)}" aria-pressed="${selected}" title="${selected ? "Remove from compare" : "Add to compare"}"><span class="check">${selected ? "✓" : ""}</span></button>
@@ -849,9 +849,7 @@ function renderOverallBoard(data) {
         <td>${tierPillHtml(p.tier)}</td>
         <td>${FMT.d1(p.PROJ)}</td>
         <td><span class="vor-cell" title="Points per game above a free replacement ${esc(p.position)}">+${FMT.d1(p.VOR)}</span></td>
-        <td class="hide-mobile">${ecrGapHtml(p)}</td>
-        <td class="hide-mobile">${p.boom_rate == null ? "—" : Math.round(p.boom_rate) + "%"}</td>
-        <td class="hide-mobile">${steady}</td>`;
+        <td class="hide-mobile">${ecrGapHtml(p)}</td>`;
       tr.querySelector(".cmp-check").addEventListener("click", (e) => {
         e.stopPropagation();
         toggleCompare(p, e.currentTarget);
@@ -1042,50 +1040,50 @@ function totalsHtml(p) {
   return `<div class="section-label">Season Stats</div><div class="metric-grid stagger-in">${tiles}</div>`;
 }
 
-function consistencyHtml(p) {
-  const c = p.consistency;
-  if (!c || !c.games) return "";
-  const steady = c.cv == null ? "—" : c.cv <= 0.3 ? "Steady" : c.cv <= 0.5 ? "Mixed" : "Boom / bust";
-  const tiles = [
-    ["Consistency", steady, c.cv == null ? "" : `swing ${(c.cv * 100).toFixed(0)}% of his average`],
-    ["Big-week rate", `${Math.round(c.boom_rate)}%`, "top finishes at his position"],
-    ["Dud rate", `${Math.round(c.bust_rate)}%`, "games below a startable finish"],
-    ["Best / worst", `${FMT.d1(c.best)} / ${FMT.d1(c.worst)}`, "fantasy points in a game"],
-  ].map(([l, v, sub]) => `<div class="metric-tile"><div class="label">${l}</div><div class="value">${v}</div>${sub ? `<div class="tile-sub">${sub}</div>` : ""}</div>`).join("");
-  return `<div class="section-label">Consistency</div><div class="metric-grid stagger-in">${tiles}</div>`;
-}
-
-// Every Next Gen Stat as a percentile bar against same-position peers. The
-// bar grows in from zero when it enters the modal; the sparkline underneath
-// is that stat week by week.
+// Next Gen Stats as a quiet instrument panel: one hairline row per stat with
+// the value up front and a percentile rail (ticks at 25/50/75, a marker where
+// he sits among same-position peers), then a week-by-week trace. The rail's
+// marker slides in when the modal opens.
 function ngsHtml(p) {
   const rows = p.ngs || [];
   if (!rows.length) return "";
+  const ranked = rows.filter((n) => n.percentile != null).sort((a, b) => b.percentile - a.percentile);
+  const lead = ranked[0];
   const body = rows.map((n, i) => {
     const pct = n.percentile;
     const tone = n.higher_is_better == null ? "ctx" : pct >= 67 ? "hi" : pct <= 33 ? "lo" : "mid";
-    const spark = ngsSparkHtml(n.weekly);
-    return `<div class="ngs-row" style="--d:${i * 55}ms">
-      <div class="ngs-top"><span class="ngs-label">${esc(n.label)}</span><span class="ngs-val">${fmtTotal(n.value, 2)}${pct == null ? "" : ` <span class="ngs-pct">${pct}th</span>`}</span></div>
-      <div class="ngs-track"><div class="ngs-fill ngs-${tone}" data-pct="${pct == null ? 0 : pct}"></div></div>
-      ${spark}
+    const rail = pct == null
+      ? `<div class="ngs-rail ngs-none"></div>`
+      : `<div class="ngs-rail ngs-${tone}"><i class="ngs-bar" data-pct="${pct}"></i><b class="ngs-dot" data-pct="${pct}"></b></div>`;
+    return `<div class="ngs-line" style="--d:${i * 40}ms">
+      <span class="ngs-label">${esc(n.label)}</span>
+      <span class="ngs-val">${fmtTotal(n.value, 2)}</span>
+      ${rail}
+      <span class="ngs-pct">${pct == null ? "" : pct + "<sup>th</sup>"}</span>
+      <span class="ngs-trace">${ngsSparkHtml(n.weekly)}</span>
     </div>`;
   }).join("");
-  return `<div class="section-label">Next Gen Stats <span class="muted small">percentile among ${esc(p.position)}s</span></div><div class="ngs-grid">${body}</div>`;
+  const head = lead
+    ? `<div class="ngs-lead"><span class="ngs-lead-k">Standout</span><span class="ngs-lead-v">${esc(lead.label)}</span><span class="ngs-lead-p">${lead.percentile}th percentile</span></div>`
+    : "";
+  return `<div class="section-label">Next Gen Stats <span class="muted small">percentile among ${esc(p.position)}s</span></div>
+    <div class="ngs-panel">${head}${body}</div>`;
 }
 
 function ngsSparkHtml(weekly) {
   if (!weekly || weekly.length < 2) return "";
   const vals = weekly.map((w) => w.value);
   const lo = Math.min(...vals), hi = Math.max(...vals), span = hi - lo || 1;
-  const pts = weekly.map((w, i) => `${(i / (weekly.length - 1)) * 100},${22 - ((w.value - lo) / span) * 20}`).join(" ");
-  return `<svg class="ngs-spark" viewBox="0 0 100 24" preserveAspectRatio="none"><polyline points="${pts}"/></svg>`;
+  const xy = weekly.map((w, i) => [(i / (weekly.length - 1)) * 100, 22 - ((w.value - lo) / span) * 20]);
+  const last = xy[xy.length - 1];
+  return `<svg class="ngs-spark" viewBox="0 0 100 24" preserveAspectRatio="none"><polyline points="${xy.map((q) => q.join(",")).join(" ")}"/></svg><em class="ngs-end" style="left:${last[0]}%;top:${(last[1] / 24) * 100}%"></em>`;
 }
 
 function wireNgsBars(container) {
   // Two frames so the browser paints width:0 before the transition starts.
   requestAnimationFrame(() => requestAnimationFrame(() => {
-    container.querySelectorAll(".ngs-fill").forEach((f) => { f.style.width = `${f.dataset.pct}%`; });
+    container.querySelectorAll(".ngs-bar").forEach((f) => { f.style.width = `${f.dataset.pct}%`; });
+    container.querySelectorAll(".ngs-dot").forEach((d) => { d.style.left = `${d.dataset.pct}%`; });
   }));
 }
 
@@ -1131,7 +1129,6 @@ function playerStatsBodyHtml(p) {
     ${valueStripHtml(p)}
     ${totalsHtml(p)}
     ${projectionCompareSlotHtml()}
-    ${consistencyHtml(p)}
     ${sections}
     ${ngsHtml(p)}
     <div class="section-label weeklog-header">
@@ -1461,6 +1458,11 @@ function rangeBarHtml(p, scaleMin, scaleMax) {
 // — a comparison can have more than one real START-tier player) gets
 // the pulsing glow: a real, ongoing animation, not a one-shot pop, so
 // it keeps reading as "this one" while you're looking at the group.
+function reasonsHtml(p) {
+  if (!p.reasons || !p.reasons.length) return "";
+  return `<ul class="ss-reasons">${p.reasons.slice(0, 4).map((r) => `<li>${esc(r)}</li>`).join("")}</ul>`;
+}
+
 function startSitCardHtml(p, scaleMin, scaleMax, i, recommended) {
   const tierClass = "tier-" + (p.tier || "borderline").toLowerCase();
   return `<div class="ss-card ss-hero ${tierClass}${recommended ? " recommended" : ""} ${posAccentClass(p.position)}" data-pid="${esc(p.player_id)}" style="animation-delay:${i * 60}ms">
@@ -1478,6 +1480,7 @@ function startSitCardHtml(p, scaleMin, scaleMax, i, recommended) {
       <div class="ss-tier-badge ${tierClass}">${esc(p.tier || "—")}</div>
     </div>
     ${rangeBarHtml(p, scaleMin, scaleMax)}
+    ${reasonsHtml(p)}
     <div class="ss-stat-chips">${statChipsHtml(p)}</div>
     <button class="ss-expand-toggle" type="button" aria-expanded="false">
       <span>Full player breakdown</span>
@@ -1688,7 +1691,7 @@ async function toggleSSExpand(card, playerId, opp) {
 async function runStartSit() {
   const opponents = {};
   state.startsit.forEach((p) => { if (p.opp) opponents[p.player_id] = p.opp; });
-  const body = { player_ids: state.startsit.map((p) => p.player_id), opponents, scoring: scoringDict() };
+  const body = { player_ids: state.startsit.map((p) => p.player_id), opponents, scoring: scoringDict(), mode: state.ssMode };
 
   // "locking in" flash on the slot cards themselves before the results
   // land — the animation the compare click is supposed to trigger.
@@ -1703,7 +1706,7 @@ async function runStartSit() {
   results.innerHTML = `<div class="loading">Comparing…</div>`;
   try {
     const data = await api("/api/startsit", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-    const sorted = data.players.slice().sort((a, b) => (b.PROJ || -999) - (a.PROJ || -999));
+    const sorted = data.players.slice().sort((a, b) => (b.rank_value ?? b.PROJ ?? -999) - (a.rank_value ?? a.PROJ ?? -999));
     const valid = sorted.filter((p) => !p.error);
     const scaleMin = Math.min(0, ...valid.map((p) => (p.floor != null ? p.floor : p.PROJ)));
     const scaleMax = Math.max(1, ...valid.map((p) => (p.ceiling != null ? p.ceiling : p.PROJ)));
@@ -1727,6 +1730,7 @@ async function runStartSit() {
 
     results.innerHTML = `
       ${errors}
+      ${data.summary ? `<div class="ss-summary">${esc(data.summary)}</div>` : ""}
       <div class="ss-hero-row${isHeadToHead ? " head-to-head" : ""}">${heroCards}${swapBtn}</div>
       ${valid.length >= 2 ? ssBreakdownPanelHtml(valid) : ""}
       ${top ? ssNarrativeHtml(top, valid.find((x) => x.player_id !== top.player_id), valid) : ""}
@@ -1908,6 +1912,11 @@ $("#startsit-gate-btn")?.addEventListener("click", () => switchTab("settings"));
 
 function initStartSit() {
   $("#startsit-compare").addEventListener("click", runStartSit);
+  document.querySelectorAll("#ss-mode .ss-mode-btn").forEach((b) => b.addEventListener("click", () => {
+    state.ssMode = b.dataset.mode;
+    document.querySelectorAll("#ss-mode .ss-mode-btn").forEach((x) => x.classList.toggle("active", x === b));
+    if (state.startsit.length >= 2 && $("#startsit-results .ss-card")) runStartSit();
+  }));
   initSSScoringToggle();
 }
 

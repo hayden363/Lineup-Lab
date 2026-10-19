@@ -698,6 +698,7 @@ class StartSitRequest(BaseModel):
     player_ids: List[str]
     opponents: Optional[Dict[str, str]] = None   # {player_id: opp_abbr}
     scoring: Optional[dict] = None
+    mode: str = "balanced"   # balanced | safe | upside
 
 
 @app.post("/api/startsit")
@@ -705,7 +706,7 @@ def api_startsit(req: StartSitRequest, user=Depends(current_user)):
     if len(req.player_ids) < 2:
         raise HTTPException(400, "need at least 2 players to compare")
     scoring = _effective_scoring(req.scoring, user)
-    result = tools.start_sit(req.player_ids, opponents=req.opponents, scoring=scoring)
+    result = tools.start_sit(req.player_ids, opponents=req.opponents, scoring=scoring, mode=req.mode)
 
     # Track record: only for a signed-in user (nothing to attach an
     # anonymous comparison to), and only players this actually has a real
