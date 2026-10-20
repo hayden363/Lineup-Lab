@@ -34,7 +34,7 @@ from zoneinfo import ZoneInfo
 import numpy as np
 import pandas as pd
 
-from . import data, lineup as lineup_layer, profile, sleeper
+from . import data, lineup as lineup_layer, optimizer, profile, sleeper
 from .board import POSITIONS, build_board, load_bundle, matchup_multiplier, rest_of_season_value
 from .scoring import ScoringSettings, apply_scoring
 
@@ -228,17 +228,9 @@ def schedule_outlook(position, team, week, bundle, n=4):
 
 # ---------------------------------------------------------------- lineups ----
 def lineup_total(slots, players):
-    """Best starting-lineup sum over QB/RB/WR/TE/flex slots. `players`:
-    list of {player_id, position, value}. Most restrictive slot fills first."""
-    order = sorted(slots, key=lambda s: len(lineup_layer.ELIGIBLE.get(s, {s})))
-    used, total = set(), 0.0
-    for slot in order:
-        pool = [p for p in players if p["player_id"] not in used and lineup_layer.eligible(slot, p["position"])]
-        if pool:
-            best = max(pool, key=lambda p: p["value"])
-            used.add(best["player_id"])
-            total += best["value"]
-    return total
+    """Best starting-lineup sum over QB/RB/WR/TE/flex slots (exact, see
+    engine/optimizer.py). `players`: list of {player_id, position, value}."""
+    return optimizer.best_assignment(slots, players, lineup_layer.eligible)[0]
 
 
 def scoring_slots(roster_positions):

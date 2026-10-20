@@ -83,6 +83,18 @@ class LineupTests(unittest.TestCase):
         self.assertEqual(r["lineup"][3]["player_id"], "rb2")      # beats bye TE for FLEX
         self.assertTrue(r["ok"], r["errors"])
 
+    def test_best_lineup_is_exact_with_overlapping_flex_slots(self):
+        # A greedy fill gives WAS's WR to the WR/RB flex (and leaves the WR/TE
+        # flex with only the bye-week TE); the best split is RB there, WR here.
+        players = {
+            "wr": {"name": "W", "position": "WR", "team": "WAS", "PROJ": 10},
+            "rb": {"name": "R", "position": "RB", "team": "SF", "PROJ": 9},
+            "te": {"name": "T", "position": "TE", "team": "KC", "PROJ": 1},
+        }
+        r = L.best_lineup(["WRRB_FLEX", "REC_FLEX"], [], players, sched(), 7, at("2026-10-21 12:00"))
+        self.assertEqual([row["player_id"] for row in r["lineup"]], ["rb", "wr"])
+        self.assertEqual(r["total_proj"], 19.0)
+
 
 if __name__ == "__main__":
     unittest.main()

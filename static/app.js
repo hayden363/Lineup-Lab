@@ -1225,7 +1225,7 @@ function projectionCompareSlotHtml() {
   return `<div class="pc-slot"><div class="loading small">Checking real consensus…</div></div>`;
 }
 
-function projectionCompareHtml(ourProj, consensus, week) {
+function projectionCompareHtml(ourProj, consensus, week, blend) {
   const wkTag = week ? `<span class="pc-wk">WK ${esc(week)}</span>` : "";
   if (!consensus.configured) {
     return `<div class="pc-card pc-empty">
@@ -1257,6 +1257,7 @@ function projectionCompareHtml(ourProj, consensus, week) {
       <div class="pc-track"><span class="pc-fill pc-fill-theirs" data-pct="${theirPct}"></span></div>
     </div>
     <div class="pc-badge ${ahead ? "pc-up" : "pc-down"}">${ahead ? "▲" : "▼"} ${Math.abs(delta).toFixed(1)} PTS ${ahead ? "AHEAD OF" : "BEHIND"} CONSENSUS</div>
+    ${blend && blend.blended != null ? `<div class="pc-blend small" title="Judgment-call weights, not fitted to data: our model keeps more weight early in the week, the experts more as kickoff nears">Blended ${FMT.d1(blend.blended)} pts · ${Math.round(blend.alpha * 100)}% Lineup Lab / ${Math.round((1 - blend.alpha) * 100)}% experts</div>` : ""}
     <div class="muted small pc-source-note">${esc(consensus.detail)}</div>
   </div>`;
 }
@@ -1268,7 +1269,7 @@ async function loadProjectionCompare(playerId, opp, container) {
     const oppQS = opp ? `&opp=${opp}` : "";
     const data = await api(`/api/player/${playerId}/projection-compare?${(scoringQS() + oppQS).replace(/^&/, "")}`);
     if (!document.body.contains(slot)) return; // modal closed/replaced before this resolved
-    slot.outerHTML = projectionCompareHtml(data.our_proj, data.consensus, data.consensus?.week);
+    slot.outerHTML = projectionCompareHtml(data.our_proj, data.consensus, data.consensus?.week, data.blend);
     // Trigger the entrance transitions one frame after insert (same
     // technique as the Trade Analyzer's need-bar-fill: render at the
     // 0-state first so the browser registers it, then flip to the real
@@ -3171,6 +3172,10 @@ function needBadge(mult) {
   return "";
 }
 
+function runBadge(mult) {
+  return mult > 1 ? `<span class="need-badge run" title="This position is going off the board fast (4+ of the last 8 picks)">RUN</span>` : "";
+}
+
 function renderDraftBoard(d) {
   const content = $("#draft-content");
   const onClockName = d.on_the_clock_roster_id != null ? (draftTeamNames[d.on_the_clock_roster_id] || `Roster #${d.on_the_clock_roster_id}`) : "—";
@@ -3227,7 +3232,7 @@ function renderDraftBoard(d) {
         <span class="rank-cell">${i + 1}</span>
         <img ${headshotAttrs(p)} alt="">
         <span class="pos-badge">${esc(p.position)}</span>
-        <span>${esc(p.player_display_name)}${needBadge(p.need_multiplier)}</span>
+        <span>${esc(p.player_display_name)}${needBadge(p.need_multiplier)}${runBadge(p.run_multiplier)}</span>
         <span class="proj-num">${FMT.d1(p.ADJ_SCORE)}</span>
       </div>`).join("");
     html += `<div class="draft-columns">

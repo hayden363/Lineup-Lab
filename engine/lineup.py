@@ -15,7 +15,7 @@ Sleeper's public API is read-only: this validates and projects the lineup you
 build here; it can't push it to Sleeper.
 """
 
-from . import locks
+from . import locks, optimizer
 
 ELIGIBLE = {
     "QB": {"QB"}, "RB": {"RB"}, "WR": {"WR"}, "TE": {"TE"},
@@ -108,9 +108,9 @@ def _name(players, pid):
 
 
 def best_lineup(slots, previous_ids, players, schedule, week, now=None):
-    """Greedy best legal lineup: locked slots keep their occupant, then each
-    remaining slot (most restrictive first) takes the highest-PROJ eligible
-    player not already used and not already started. Players on a bye project
+    """Best legal lineup: locked slots keep their occupant, then the remaining
+    slots are filled to maximise total PROJ over players not already used and
+    not already started (exact, engine/optimizer.py). Players on a bye project
     to 0. Returns the same shape as validate()."""
     prev = list(previous_ids) + [None] * (len(slots) - len(previous_ids))
     chosen = [None] * len(slots)
@@ -124,14 +124,12 @@ def best_lineup(slots, previous_ids, players, schedule, week, now=None):
         p = players[pid]
         return 0.0 if locks.kickoff(schedule, p.get("team"), week) is None else (p.get("PROJ") or 0.0)
 
-    order = sorted((i for i in range(len(slots)) if chosen[i] is None),
-                   key=lambda i: len(ELIGIBLE.get(slots[i], {slots[i]})))
-    for i in order:
-        pool = [pid for pid, p in players.items()
-                if pid not in used and eligible(slots[i], p.get("position"))
-                and not locks.is_locked(schedule, p.get("team"), week, now)]
-        if pool:
-            best = max(pool, key=value)
-            chosen[i] = best
-            used.add(best)
+    open_idx = [i for i in range(len(slots)) if chosen[i] is None]
+    pool = [{"player_id": pid, "position": p.get("position"), "value": value(pid)}
+            for pid, p in players.items()
+            if pid not in used and not locks.is_locked(schedule, p.get("team"), week, now)]
+    _, picks = optimizer.best_assignment([slots[i] for i in open_idx], pool, eligible)
+    for i, pick in zip(open_idx, picks):
+        if pick:
+            chosen[i] = pick["player_id"]
     return validate(slots, chosen, prev, players, schedule, week, now)

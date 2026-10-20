@@ -2370,6 +2370,7 @@ body.auth-pending .boot-veil { display: flex; }
 
 .need-badge.need { background: rgba(87,226,164,0.15); color: var(--accent); }
 .need-badge.deep { background: rgba(224,184,78,0.12); color: var(--avg); }
+.need-badge.run { background: transparent; border: 1px solid var(--accent); color: var(--accent); }
 
 .draft-picker-list { display: flex; flex-direction: column; gap: 8px; }
 
@@ -4428,3 +4429,5 @@ tr.kbd-click:focus-visible { outline-offset: -2px; }
 @media (max-width: 640px) { .ssh-table td:first-child { min-width: 96px; } .ssh-table td, .ssh-table th { padding: 8px 6px; } }
 /* stacked on a phone there are no "sides" to swap */
 @media (max-width: 700px) { .ss-swap-btn { display: none; } }
+
+.pc-blend { margin-top: 8px; font-weight: 600; }

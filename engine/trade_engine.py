@@ -51,7 +51,7 @@ import itertools
 
 import numpy as np
 
-from . import consensus, lineup as lineup_layer, sleeper, value as value_layer
+from . import consensus, lineup as lineup_layer, optimizer, sleeper, value as value_layer
 
 POSITIONS = ("QB", "RB", "WR", "TE")
 CURVE_SCALE = 45.0
@@ -132,17 +132,8 @@ def trade_values(pool, league, rostered_ids=None, ecr=None):
 # ------------------------------------------------------------- lineups ----
 def lineup(players, slots):
     """(starting total, set of starter ids) for the best legal lineup."""
-    order = sorted(slots, key=lambda s: len(lineup_layer.ELIGIBLE.get(s, {s})))
-    used, total = set(), 0.0
-    for slot in order:
-        best = None
-        for p in players:
-            if p["player_id"] not in used and lineup_layer.eligible(slot, p["position"]) and (best is None or p["value"] > best["value"]):
-                best = p
-        if best:
-            used.add(best["player_id"])
-            total += best["value"]
-    return total, used
+    total, chosen = optimizer.best_assignment(slots, players, lineup_layer.eligible)
+    return total, {p["player_id"] for p in chosen if p}
 
 
 def after_trade(roster, out_ids, incoming, slots):

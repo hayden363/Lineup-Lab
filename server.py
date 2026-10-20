@@ -55,6 +55,7 @@ from engine import startsit_ai
 from engine import mail as mail_layer
 from engine import news as news_layer
 from engine import oauth as oauth_layer
+from engine import projection_blend
 from engine import refresh_scheduler
 from engine import sleeper as sleeper_layer
 from engine import tools
@@ -685,9 +686,13 @@ def api_player_projection_compare(player_id: str, opp: Optional[str] = Query(Non
         detail["player_display_name"], detail["position"], bundle["season"],
         week=detail.get("next_week"), scoring=fp_scoring,
     )
+    # Blend only when there is a real expert number AND a kickoff to measure
+    # from; otherwise `blend.blended` is None and the UI keeps our own number.
+    kickoff = locks.kickoff(bundle["schedule"], detail.get("recent_team"), detail.get("next_week"))
+    blend = projection_blend.blend(our_proj, consensus.get("proj"), projection_blend.hours_until(kickoff))
     return _clean({
         "player_id": player_id, "player_display_name": detail["player_display_name"],
-        "our_proj": our_proj, "consensus": consensus,
+        "our_proj": our_proj, "consensus": consensus, "blend": blend,
     })
 
 

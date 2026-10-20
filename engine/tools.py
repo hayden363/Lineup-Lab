@@ -13,7 +13,7 @@ import pandas as pd
 
 from . import lineup as lineup_layer
 from . import profile
-from . import context, data, db, decision, trade_engine, locks, trade_reasons, defense_scoring, kicker_scoring, role_baseline, sleeper, waivers
+from . import context, data, db, decision, draft_runs, trade_engine, locks, trade_reasons, defense_scoring, kicker_scoring, role_baseline, sleeper, waivers
 from .board import (POSITIONS, build_board, load_bundle, rest_of_season_value,
                      project_vs)
 from .scoring import apply_scoring
@@ -1526,6 +1526,7 @@ def draft_board(draft_id, my_roster_id=None, season=None, scoring=None, best_ava
     # be useful.
     best_available = []
     my_picks_recap = []
+    runs = []
     if is_complete:
         my_picks_recap = sorted(
             [p for p in picks_made if p["roster_id"] == my_roster_id],
@@ -1533,10 +1534,12 @@ def draft_board(draft_id, my_roster_id=None, season=None, scoring=None, best_ava
         )
     else:
         bundle = load_bundle(season)
+        runs = draft_runs.run_positions(sorted(picks_made, key=lambda p: p["pick_no"] or 0))
         for pos in POSITIONS:
             board = build_board(pos, season=season, scoring=scoring)
             board = board[~board.index.isin(drafted_gsis)]
             mult = _need_multiplier(pos, my_filled.get(pos, 0), needs) if my_roster_id is not None else 1.0
+            run_mult = draft_runs.RUN_MULTIPLIER if pos in runs else 1.0
             for pid, row in board.head(40).iterrows():
                 best_available.append({
                     "player_id": pid, "position": pos,
@@ -1546,8 +1549,9 @@ def draft_board(draft_id, my_roster_id=None, season=None, scoring=None, best_ava
                     # pandas-stubs 1.5.3.230321 mistypes Series.get(key, default)'s
                     # return as `Dtype` unconditionally — it's actually a scalar
                     # value here, so this is a real pyright false positive.
-                    "ADJ_SCORE": round(float(row.get("SCORE", 0)) * mult, 1),  # type: ignore[reportArgumentType]
+                    "ADJ_SCORE": round(float(row.get("SCORE", 0)) * mult * run_mult, 1),  # type: ignore[reportArgumentType]
                     "fpts_per_game": row.get("fpts_per_game"), "need_multiplier": mult,
+                    "run_multiplier": run_mult,
                 })
         best_available.sort(key=lambda r: r["ADJ_SCORE"], reverse=True)
 
@@ -1562,6 +1566,7 @@ def draft_board(draft_id, my_roster_id=None, season=None, scoring=None, best_ava
         "picks_until_mine": picks_until_mine, "my_next_pick_no": my_upcoming[0] if my_upcoming else None,
         "picks_made": picks_made,
         "best_available": best_available[:best_available_limit],
+        "position_runs": runs,
         "supported_format": draft.get("type") == "snake",
     }
 
