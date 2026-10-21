@@ -50,7 +50,7 @@ WAIVER_HOUR_ET = 3
 UNAVAILABLE_NOW = {"Out", "IR", "PUP", "Sus", "NA"}
 UNAVAILABLE_LONG = {"IR", "PUP", "Sus", "NA"}
 WEIGHTS = {"urgency": 0.35, "vorp": 0.30, "usage": 0.25, "schedule": 0.10}
-VORP_FULL_SCORE = 8.0   # +8 pts/game over replacement = a full 100 on the VORP input
+VORP_FULL_SCORE = 15.0  # +15 pts/game over replacement = a full 100 on the VORP input (8 saturated for every top add)
 GAIN_FULL_SCORE = 5.0   # +5 pts/week to your starting lineup = a full 100 on the gain input
 TRAP_SNAP_PCT = 35      # a big week on fewer snaps than this is a trap
 TRAP_MIN_POINTS = 12
