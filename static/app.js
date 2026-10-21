@@ -2773,6 +2773,51 @@ async function loadStartSitTab() {
   await renderStartSitPicker();
   loadTrackRecord();
   loadStartSitSuggestions();
+  renderLineupAdvisor();
+}
+
+// ------------------------------------------------ whole-lineup advisor ----
+// engine/lineup_advisor.py: the exact best lineup for this week under the
+// Safe / Balanced / Upside lens, flex slots included, and what it changes.
+const ADVISOR_MODES = [["safe", "Safe", "Protecting a lead: favors fewer duds"], ["balanced", "Balanced", "Highest average points"],
+  ["upside", "Upside", "Chasing: favors big weeks"]];
+
+function renderLineupAdvisor(res, loading) {
+  const host = $("#ss-lineup-advisor");
+  if (!host) return;
+  const mode = state.ssMode || "balanced";
+  const pills = ADVISOR_MODES.map(([k, l, t]) => `<button type="button" class="pill${k === mode ? " active" : ""}" data-mode="${k}" title="${esc(t)}">${l}</button>`).join("");
+  const face = (p) => `<img class="adv-face" ${headshotAttrs({ headshot_url: p.headshot_url, player_display_name: p.name || "" })} alt="">`;
+  let out = `<div class="muted small">Solves your whole lineup at once, flex slots included, instead of one pair at a time.</div>`;
+  if (loading) out = `<div class="loading small">Solving your lineup…</div>`;
+  else if (res && res.error) out = `<div class="form-msg error">${esc(res.error)}</div>`;
+  else if (res) {
+    const gain = res.best_mode_value - res.current_mode_value;
+    const head = res.changes.length
+      ? `<b>${res.changes.length} change${res.changes.length === 1 ? "" : "s"}</b> adds <b>${gain.toFixed(1)}</b> ${esc(mode)}-value points (${FMT.d1(res.current_mean)} → ${FMT.d1(res.best_mean)} average) for Week ${esc(res.week)}.`
+      : `Your Week ${esc(res.week)} lineup is already the best one for the ${esc(mode)} lens (${FMT.d1(res.best_mean)} average).`;
+    const rows = res.changes.map((c) => {
+      const add = res.adds.find((p) => p.player_id === c.in) || res.lineup.find((p) => p.player_id === c.in) || {};
+      return `<div class="adv-row">${face(add)}<div class="adv-txt"><b>Start ${esc(c.in_name)}</b> at ${esc(c.slot)}${c.out_name ? ` over ${esc(c.out_name)}` : ""}
+        <span class="muted small">${c.delta_mean >= 0 ? "+" : ""}${c.delta_mean.toFixed(1)} avg · ${c.delta_mode >= 0 ? "+" : ""}${c.delta_mode.toFixed(1)} ${esc(mode)}</span></div></div>`;
+    }).join("");
+    const locked = res.locked_slots.length ? `<div class="muted small">Already kicked off, left alone: ${res.locked_slots.map(esc).join(", ")}.</div>` : "";
+    out = `<div class="adv-head">${head}</div>${rows}${locked}
+      <div class="muted small">Ranks lineups by the lens you picked. It is not a win-probability calculation, and Out players and byes count as zero.</div>`;
+  }
+  host.innerHTML = `<div class="sec-head first"><div><h2>Best lineup, whole roster</h2></div><div class="pill-group adv-modes">${pills}</div></div>
+    ${out}<button type="button" class="primary-btn" id="adv-run"${loading ? " disabled" : ""}>Solve my lineup</button>`;
+  host.querySelectorAll(".adv-modes .pill").forEach((b) => b.addEventListener("click", () => {
+    state.ssMode = b.dataset.mode;
+    document.querySelectorAll("#ss-mode [data-mode]").forEach((x) => x.classList.toggle("active", x.dataset.mode === state.ssMode));
+    renderLineupAdvisor();
+  }));
+  $("#adv-run").addEventListener("click", async () => {
+    renderLineupAdvisor(null, true);
+    try {
+      renderLineupAdvisor(await api(`/api/startsit/lineup?mode=${encodeURIComponent(state.ssMode || "balanced")}${scoringQS()}`));
+    } catch (e) { renderLineupAdvisor({ error: e.message }); }
+  });
 }
 
 // ---------------------------------------------- top recommendations ----

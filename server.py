@@ -51,6 +51,7 @@ from engine import lineup as lineup_layer
 from engine import live_scores as live_scores_layer
 from engine import locks
 from engine import waivers as waivers_layer
+from engine import lineup_advisor
 from engine import ros_projection
 from engine import startsit_ai
 from engine import mail as mail_layer
@@ -785,6 +786,44 @@ def api_startsit_analysis(req: StartSitRequest, user=Depends(require_user)):
     out = startsit_ai.write_up(result)
     if out is None:
         raise HTTPException(502, "couldn't get a write-up right now; try again in a minute")
+    return _clean(out)
+
+
+lineupadv_rate_limit = rate_limit("lineupadv", limit=10, window_seconds=60)
+ADVISOR_MAX_PLAYERS = 30
+
+
+@app.get("/api/startsit/lineup", dependencies=[Depends(lineupadv_rate_limit)])
+def api_startsit_lineup(week: Optional[int] = Query(None, ge=1, le=25),
+                        mode: str = Query("balanced", pattern="^(balanced|safe|upside)$"),
+                        scoring: Optional[dict] = Depends(scoring_from_query), user=Depends(require_user)):
+    """Best whole lineup under a risk lens (engine/lineup_advisor.py): every
+    slot, flex included, solved exactly, with the changes from your current one."""
+    scoring = _effective_scoring(scoring, user)
+    _, result = _load_my_team(user, week, scoring)
+    slots, starter_ids, players = _lineup_inputs(result)
+    roster = {p["player_id"]: p for p in result["my_team"]["players"]}
+    skill = [pid for pid, p in players.items() if p.get("position") in ("QB", "RB", "WR", "TE")][:ADVISOR_MAX_PLAYERS]
+    if skill:
+        for r in tools.start_sit(skill, scoring=scoring, mode=mode)["players"]:
+            if "error" not in r and r.get("outcomes") and r["player_id"] in players:
+                players[r["player_id"]]["outcomes"] = r["outcomes"]
+    wk = result["nfl_week"]
+    out = lineup_advisor.advise(slots, starter_ids, players, load_bundle()["schedule"], wk, mode)
+
+    def row(pid):
+        p, r = players.get(pid), roster.get(pid, {})
+        o = (p or {}).get("outcomes") or {}
+        return {"player_id": pid, "name": p.get("name") if p else None, "position": p.get("position") if p else None,
+                "team": p.get("team") if p else None, "headshot_url": r.get("headshot_url"),
+                "PROJ": p.get("PROJ") if p else None, "p10": o.get("p10"), "p90": o.get("p90"), "out": bool(o.get("out"))}
+
+    out["lineup"] = [{"slot": slots[i], **row(pid)} if pid else {"slot": slots[i], "player_id": None}
+                     for i, pid in enumerate(out["chosen"])]
+    out["adds"] = [row(pid) for pid in out["adds"]]
+    out["drops"] = [row(pid) for pid in out["drops"]]
+    out.pop("chosen")
+    out["week"], out["league_name"] = wk, result.get("league_name")
     return _clean(out)
 
 
