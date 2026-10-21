@@ -17,6 +17,7 @@ import numpy as np
 import pandas as pd
 
 from . import data
+from . import history
 from . import defense as defense_layer
 from . import injury_impact
 from . import profile
@@ -443,12 +444,12 @@ def build_board(position, season=None, min_games=2, min_volume=None, scoring=Non
         # so a custom bar must never be read from or written to the shared
         # cache — it would silently change every later default-bar caller.
         board = _build_board_uncached(position, season, min_volume, scoring)
-        board["rate"] = shrunk_rate(board, position)
+        board["rate"] = shrunk_rate(board, position, scoring, season)
     else:
         board = _BOARD_CACHE.get(key)
     if board is None:
         board = _build_board_uncached(position, season, min_volume, scoring)
-        board["rate"] = shrunk_rate(board, position)
+        board["rate"] = shrunk_rate(board, position, scoring, season)
         _BOARD_CACHE[key] = board
     filtered = board[board["games"] >= min_games]
     # .attrs propagation through boolean-mask indexing isn't guaranteed on
@@ -520,21 +521,33 @@ SHRINK_GAMES = 3.0   # prior counts as this many games of evidence
 SHRINK_MIN_SAMPLE = 3
 
 
-def shrunk_rate(board, position):
-    """Per-game scoring pulled toward the average of every player at the
-    position who has a real sample (3+ games), by how few games he has played:
-    (n*rate + k*prior) / (n + k), k = 3 games. A 5-game 30-point streak
-    projects forward as roughly 23, a one-game 12-point scrub comes back
-    toward 10 rather than up to starter level, and a full season barely
-    moves. The prior is deliberately the broad average, not the starter
-    average: shrinking toward starters would inflate every thin-sample
-    backup."""
+def shrunk_rate(board, position, scoring=None, season=None):
+    """Per-game scoring pulled toward a prior by how few games he has played:
+    (n*rate + k*prior) / (n + k).
+
+    Without history (season=None, or a player with no prior seasons) the prior
+    is the average of every player at the position who has a real sample (3+
+    games) and k = 3 games: a 5-game 30-point streak projects forward as
+    roughly 23, a one-game 12-point scrub comes back toward 10 rather than up
+    to starter level, and a full season barely moves. The prior is
+    deliberately the broad average, not the starter average: shrinking toward
+    starters would inflate every thin-sample backup.
+
+    With season given, a player who has prior seasons (engine/history.py) is
+    pulled toward his OWN career rate instead, harder the more history there
+    is. Also adds board["history_weight"], the share of the rate that came
+    from history."""
     rate = board["fpts_per_game"]
     pool = board[board["games"] >= SHRINK_MIN_SAMPLE]["fpts_per_game"]
     if pool.empty:
         return rate
     prior = float(pool.mean())
     n = board["games"].astype(float)
+    if season is not None and history.available():
+        career = history.skill_career(position, scoring, season)
+        out, share = history.blend(rate, n, career, prior, base_k=SHRINK_GAMES)
+        board["history_weight"] = share.round(3)
+        return out
     return (n * rate + SHRINK_GAMES * prior) / (n + SHRINK_GAMES)
 
 
@@ -638,6 +651,8 @@ def player_detail(player_id, season=None, scoring=None):
     row["player_id"] = player_id
     row["position"] = position
     row["scoring"] = board.attrs.get("scoring")
+    if history.available():
+        row["history"] = history.summary(player_id, position, scoring, bundle["season"], row.get("history_weight"))
 
     wk_scored, settings = apply_scoring(prow, scoring)
     # Real per-week raw counting stats, not just fantasy points — lets the

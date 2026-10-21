@@ -20,6 +20,7 @@ values for anything a league doesn't specify.
 import numpy as np
 import pandas as pd
 
+from . import history
 from .metrics import _recency_weighted_pct
 
 DEFAULT_DEF_SCORING = dict(
@@ -162,7 +163,7 @@ def score_defense_weekly(weekly, def_settings):
     ).round(2)
 
 
-def build_defense_board(pbp, schedule, scoring_settings=None):
+def build_defense_board(pbp, schedule, scoring_settings=None, season=None):
     """SCORE/FORM/floor/ceiling/fpts_per_game for every real defense,
     keyed by nflverse team code (see SLEEPER_TO_NFLVERSE_TEAM for the one
     place that differs from a Sleeper DEF roster slot's own id) — shaped
@@ -207,6 +208,14 @@ def build_defense_board(pbp, schedule, scoring_settings=None):
 
     board["FORM"] = pd.Series({team: _form(d) for team, d in weekly.groupby("defteam")})
     board.index.name = "player_id"
+    # Per-game rate pulled toward the defense's own prior seasons
+    # (engine/history.py); the plain season average when none is on file.
+    if season is not None and history.available():
+        board["rate"], board["history_weight"] = history.blend(
+            board["fpts_per_game"], board["games"], history.defense_career(def_settings, season),
+            float(board["fpts_per_game"].mean()), base_k=3.0, hist_k=history.DEF_HIST_K)
+    else:
+        board["rate"], board["history_weight"] = board["fpts_per_game"], 0.0
     return board.sort_values("SCORE", ascending=False)
 
 

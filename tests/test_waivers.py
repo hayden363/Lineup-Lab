@@ -102,6 +102,29 @@ class FlagTest(unittest.TestCase):
         self.assertIsNone(w.flag(weeks, {2: 80})[0])
 
 
+class SpecTest(unittest.TestCase):
+    def test_wps_weights_are_35_30_25_10(self):
+        self.assertEqual(w.WEIGHTS, {"urgency": 0.35, "vorp": 0.30, "usage": 0.25, "schedule": 0.10})
+        self.assertAlmostEqual(sum(w.WEIGHTS.values()), 1.0)
+
+    def test_faab_ranges(self):
+        by = {k: (lo, hi) for k, _, lo, hi, _ in w.FAAB_TIERS}
+        self.assertEqual(by, {"floor": (2, 5), "market": (12, 18), "aggressive": (25, 45)})
+
+    def test_high_points_on_few_snaps_is_a_trap(self):
+        # 14 points but only 30% of snaps, and not TD driven
+        weeks = [{"week": 1, "fpts": 9, "opp": 9, "td_pts": 0}, {"week": 2, "fpts": 14, "opp": 9, "td_pts": 0}]
+        self.assertEqual(w.flag(weeks, {2: 30})[0], "trap")
+
+    def test_high_points_on_normal_snaps_is_not(self):
+        weeks = [{"week": 1, "fpts": 9, "opp": 9, "td_pts": 0}, {"week": 2, "fpts": 14, "opp": 9, "td_pts": 0}]
+        self.assertIsNone(w.flag(weeks, {2: 60})[0])
+
+    def test_low_points_on_few_snaps_is_not(self):
+        weeks = [{"week": 1, "fpts": 9, "opp": 9, "td_pts": 0}, {"week": 2, "fpts": 6, "opp": 3, "td_pts": 0}]
+        self.assertNotEqual(w.flag(weeks, {2: 20})[0], "trap")
+
+
 class BidsTest(unittest.TestCase):
     STATUS = {"is_faab": True, "faab_budget": 100.0, "faab_remaining": 20.0}
 
@@ -114,6 +137,13 @@ class BidsTest(unittest.TestCase):
 
     def test_desperate_need_bumps_tier(self):
         self.assertEqual(next(t for t in w.bid_tiers(66, 1.5, self.STATUS) if t["recommended"])["key"], "aggressive")
+
+    def test_rivals_who_can_cover_the_top_bid_are_counted(self):
+        status = {"is_faab": True, "faab_budget": 100.0, "faab_remaining": 60.0, "rivals_remaining": [90.0, 40.0, 10.0]}
+        by = {t["key"]: t for t in w.bid_tiers(70, 1.0, status)}
+        self.assertEqual(by["aggressive"]["rivals_can_cover"], 1)   # a 45 bid: only the 90 balance covers it
+        self.assertEqual(by["floor"]["rivals_can_cover"], 3)
+        self.assertEqual(by["aggressive"]["rivals"], 3)
 
     def test_no_bids_without_faab(self):
         self.assertIsNone(w.bid_tiers(90, 1.0, {"is_faab": False}))

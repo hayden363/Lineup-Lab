@@ -27,6 +27,7 @@ isn't really there.
 import numpy as np
 import pandas as pd
 
+from . import history
 from .metrics import _recency_weighted_pct
 
 DEFAULT_K_SCORING = dict(
@@ -143,7 +144,17 @@ def build_team_kicker_baseline(pbp, scoring_settings=None):
     return weekly.groupby("team")["fpts"].mean().round(2)
 
 
-def build_kicker_board(pbp, scoring_settings=None, min_games=2):
+def _with_history(board, k_settings, season):
+    """Per-game rate pulled toward the kicker's own prior seasons (engine/history.py).
+    No season given, or no history on file: the plain season average."""
+    if season is None or board.empty or not history.available():
+        return board["fpts_per_game"], pd.Series(0.0, index=board.index)
+    career = history.kicker_career(k_settings, season)
+    return history.blend(board["fpts_per_game"], board["games"], career,
+                         float(board["fpts_per_game"].mean()), base_k=3.0, hist_k=history.K_HIST_K)
+
+
+def build_kicker_board(pbp, scoring_settings=None, min_games=2, season=None):
     """SCORE/FORM/floor/ceiling/fpts_per_game for every real kicker who
     attempted a kick this season, keyed by gsis_id — same shape as
     build_board()'s offensive output and defense_scoring.build_defense_board,
@@ -183,4 +194,5 @@ def build_kicker_board(pbp, scoring_settings=None, min_games=2):
 
     board["FORM"] = pd.Series({pid: _form(d) for pid, d in weekly.groupby("player_id") if pid in board.index})
     board.index.name = "player_id"
+    board["rate"], board["history_weight"] = _with_history(board, k_settings, season)
     return board.sort_values("SCORE", ascending=False)

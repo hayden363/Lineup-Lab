@@ -1295,6 +1295,30 @@ function fantasyRangeHtml(p) {
     <div class="pcd-rgchips"><span class="scs-chip pos">Boom weeks ${Math.round(c.boom_rate)}%</span><span class="scs-chip ${c.bust_rate ? "neg" : ""}">Bust weeks ${Math.round(c.bust_rate)}%</span><span class="scs-chip">Swing ±${FMT.d1(c.std)}</span></div>`;
 }
 
+function careerHtml(p) {
+  const h = p.history;
+  const name = esc(p.player_display_name || "This player");
+  if (!h) return "";
+  if (!h.seasons || !h.seasons.length) {
+    return `<div class="pcd-lbl" style="margin-top:20px"><span>Career</span></div>
+      <div class="muted small">No earlier seasons on file for ${name}. Rookies and new players project from this season and the position average.</div>`;
+  }
+  const cons = p.consistency || {};
+  const rows = [{ label: String(h.seasons[0].season + 1), team: p.recent_team, games: p.games, ppg: p.fpts_per_game, best: cons.best, worst: cons.worst, now: true },
+    ...h.seasons.map((x) => ({ label: String(x.season), team: x.team, games: x.games, ppg: x.ppg, best: x.best, worst: x.worst }))];
+  const top = Math.max(1, ...rows.map((r) => r.ppg || 0));
+  const range = (r) => (r.best != null && r.worst != null ? ` · ${FMT.d1(r.worst)}&ndash;${FMT.d1(r.best)}` : "");
+  const lines = rows.map((r) => `<div class="cr-row${r.now ? " now" : ""}">
+      <span class="cr-y">${esc(r.label)}${r.now ? "<em>so far</em>" : ""}</span><span class="cr-t">${esc(r.team || "")}</span>
+      <div class="cr-bar"><i style="width:${Math.max(3, ((r.ppg || 0) / top) * 100)}%"></i></div>
+      <b>${r.ppg == null ? "—" : FMT.d1(r.ppg)}</b><small>${esc(r.games)} g${range(r)}</small></div>`).join("");
+  const lean = h.weight != null && h.weight > 0 ? `<span class="scs-chip">Projection leans ~${Math.round(h.weight * 100)}% on history</span>` : "";
+  return `<div class="pcd-lbl" style="margin-top:20px"><span>Career · points per game</span><span class="muted small">last ${esc(h.seasons.length)} season${h.seasons.length === 1 ? "" : "s"}</span></div>
+    <div class="cr">${lines}</div>
+    <div class="pcd-rgchips"><span class="scs-chip pos">Career ${FMT.d1(h.career_ppg)} PPG</span><span class="scs-chip">${esc(h.career_games)} games</span>${lean}</div>
+    <div class="muted small" style="margin-top:6px">Newest seasons count most. Rate shown under your league scoring.</div>`;
+}
+
 function scoutingSlidersHtml(p) {
   const rows = (p.ngs || []).filter((n) => n.percentile != null);
   if (!rows.length) return "";
@@ -1507,9 +1531,10 @@ function pjSimilar(g, pos) {
   const word = PJ_TIER[g.tier].toLowerCase();
   if (g.similar) {
     const n = g.similar.games;
-    return `Against ${word} defenses this season he has averaged <b>${FMT.d1(g.similar.avg)}</b> in ${n} game${n === 1 ? "" : "s"}.`;
+    const cur = g.similar.current ? g.similar.current.games : 0;
+    return `Against ${word} defenses he has averaged <b>${FMT.d1(g.similar.avg)}</b> in ${n} game${n === 1 ? "" : "s"} (${cur} this season).`;
   }
-  return `He hasn't faced a ${word} defense this season yet.`;
+  return `He hasn't faced a ${word} defense in the seasons on file.`;
 }
 
 function pjWaterfall(g) {
@@ -1554,22 +1579,43 @@ function pjMatchupTile(g, pos) {
 }
 
 function pjPastTile(d, g) {
-  const by = d.past_by_tier || {}, total = (d.past_games || []).length;
+  const by = d.past_by_tier || {}, total = Object.values(by).reduce((a, v) => a + v.games, 0);
+  const earlierN = (d.earlier_games || []).length;
   const bars = ["soft", "neutral", "tough"].map((t) => {
     const x = by[t];
     const max = Math.max(1, ...Object.values(by).map((v) => v.avg));
     return `<div class="pj-pt ${t}${g.tier === t ? " now" : ""}"><span>${PJ_TIER[t]}</span><div class="pj-pt-bar"><i style="width:${x ? Math.max(4, (x.avg / max) * 100) : 0}%"></i></div><b>${x ? FMT.d1(x.avg) : "—"}</b><small>${x ? `${x.games} game${x.games === 1 ? "" : "s"}` : "no games"}</small></div>`;
   }).join("");
-  const chips = (d.past_games || []).map((x) => `<span class="pj-gc ${x.tier || ""}" title="Week ${esc(x.week)} vs ${esc(x.opponent)}">W${esc(x.week)} ${esc(x.opponent)} <b>${FMT.d1(x.points)}</b></span>`).join("");
+  const chip = (x, lbl) => `<span class="pj-gc ${x.tier || ""}" title="${esc(lbl)} vs ${esc(x.opponent)}">${esc(lbl)} ${esc(x.opponent)} <b>${FMT.d1(x.points)}</b></span>`;
+  const chips = (d.past_games || []).map((x) => chip(x, `W${x.week}`)).join("");
+  const older = (d.earlier_games || []).slice().reverse().map((x) => chip(x, `'${String(x.season).slice(2)} W${x.week}`)).join("");
   const prior = g.prior_meeting ? `<div class="pj-line">He already played ${esc(g.opponent)} this season: <b>${FMT.d1(g.prior_meeting.points)}</b> in Week ${esc(g.prior_meeting.week)}.</div>` : "";
   return `<div class="pj-tile wide"><div class="pj-tk">Past matchups · points by defense difficulty</div>
     <div class="pj-pts">${bars}</div>
-    <div class="pj-line">${pjSimilar(g, d.position)}${total < 4 ? ` <span class="muted">Small sample: ${total} game${total === 1 ? "" : "s"} so far.</span>` : ""}</div>
-    ${prior}<div class="pj-gcs">${chips}</div></div>`;
+    <div class="pj-line">${pjSimilar(g, d.position)}${total < 8 ? ` <span class="muted">Small sample: ${total} game${total === 1 ? "" : "s"}.</span>` : ` <span class="muted">${total} games, ${earlierN} from earlier seasons.</span>`}</div>
+    ${prior}<div class="pj-gcs">${chips}</div>
+    ${older ? `<details class="pj-more"><summary>Earlier seasons (${earlierN} games)</summary><div class="pj-gcs">${older}</div></details>` : ""}</div>`;
 }
 
-function pjHistoryTile(d) {
-  return `<div class="pj-tile"><div class="pj-tk">History vs this team</div><div class="pj-line"><span class="pj-x flat">&times;1.00</span> neutral</div><div class="muted small">${esc(d.h2h_note || "")}</div></div>`;
+function pjHistoryTile(d, g) {
+  const v = g.vs_opponent, m = g.m_h2h == null ? 1 : g.m_h2h, opp = esc(g.opponent);
+  if (!v) {
+    return `<div class="pj-tile"><div class="pj-tk">History vs ${opp}</div><div class="pj-line">${pjMult(1)} no earlier games against them</div><div class="muted small">${esc(d.h2h_note || "")}</div></div>`;
+  }
+  const verdict = v.games < 2 ? "one meeting is too little to adjust"
+    : m > 1.004 ? "he has beaten his usual numbers against them" : m < 0.996 ? "he has fallen short of his usual numbers against them" : "about his usual numbers";
+  return `<div class="pj-tile"><div class="pj-tk">History vs ${opp}</div>
+    <div class="pj-line">${pjMult(m)} ${verdict}</div>
+    <div class="pj-line"><b>${esc(v.games)}</b> game${v.games === 1 ? "" : "s"}: avg <b>${FMT.d1(v.avg)}</b> (best ${FMT.d1(v.best)}, worst ${FMT.d1(v.worst)}). Last: <b>${FMT.d1(v.last.points)}</b>, ${esc(v.last.season)} Week ${esc(v.last.week)}.</div>
+    <div class="muted small">${esc(d.h2h_note || "")}</div></div>`;
+}
+
+function pjHistoryNote(d) {
+  const h = d.history;
+  if (!h) return "";
+  if (!h.seasons || !h.seasons.length) return `<div class="pj-hnote">No earlier seasons on file, so this projection comes from this season and the position average.</div>`;
+  const pct = h.weight != null ? Math.round(h.weight * 100) : null;
+  return `<div class="pj-hnote">${pct != null ? `About <b>${pct}%</b> of this baseline comes from` : "Built with"} his last ${esc(h.seasons.length)} season${h.seasons.length === 1 ? "" : "s"} (${FMT.d1(h.career_ppg)} PPG over ${esc(h.career_games)} games); the rest is this season. Newest seasons count most.</div>`;
 }
 
 function pjHeroHtml(d, p, top) {
@@ -1586,9 +1632,10 @@ function pjHeroHtml(d, p, top) {
     <div class="pj-med"><span class="pj-medk">Median outcome</span><b>${FMT.d1(g.median)}</b><span class="pj-medk">pts</span></div>
     ${pjRange(g, top, d.baseline)}
     <div class="pj-legend"><span><i class="g"></i>10th to 90th percentile</span><span><i class="b"></i>median</span><span><i class="u"></i>usual baseline ${FMT.d1(d.baseline)}</span></div>
+    ${pjHistoryNote(d)}
     ${pjWaterfall(g)}
   </div>
-  <div class="pj-grid">${pjUsageTile(d, p.position)}${pjEnvTile(g)}${pjMatchupTile(g, p.position)}${pjHistoryTile(d)}${pjPastTile(d, g)}</div>`;
+  <div class="pj-grid">${pjUsageTile(d, p.position)}${pjEnvTile(g)}${pjMatchupTile(g, p.position)}${pjHistoryTile(d, g)}${pjPastTile(d, g)}</div>`;
 }
 
 function pjTimelineHtml(d) {
@@ -1642,7 +1689,7 @@ async function loadProjPage(p, root) {
   const slot = root.querySelector(".proj-slot");
   if (!slot) return;
   try {
-    const d = await api(`/api/player/${p.player_id}/ros?${scoringQS().replace(/^&/, "")}`);
+    const d = await api(`/api/player/${encodeURIComponent(p.player_id)}/ros?${scoringQS().replace(/^&/, "")}`);
     if (!document.body.contains(slot)) return;
     slot.outerHTML = projPageHtml(d, p);
   } catch (e) {
@@ -1709,6 +1756,7 @@ function playerCardHtml(p) {
         <div class="weeklog-wrap">${weeklyRows(p).length ? weeklyChartHtml(weeklyRows(p), "fpts") : '<span class="muted">No games logged yet.</span>'}</div>
         ${gameLogHtml(p)}
         ${fantasyRangeHtml(p)}
+        ${careerHtml(p)}
         ${scoutGlanceHtml(p)}
       </section>
       <section data-sec="pj" id="pcd-pane-pj" role="tabpanel" aria-labelledby="pcd-tab-pj" hidden>${projSlotHtml()}<div class="pcd-sub">What the experts say for next game</div>${projectionCompareSlotHtml()}</section>
@@ -1863,7 +1911,7 @@ async function loadRosProjection(playerId, container) {
   const slot = container.querySelector(".ros-slot");
   if (!slot || !playerId) return;
   try {
-    const d = await api(`/api/player/${playerId}/ros?${scoringQS().replace(/^&/, "")}`);
+    const d = await api(`/api/player/${encodeURIComponent(playerId)}/ros?${scoringQS().replace(/^&/, "")}`);
     if (document.body.contains(slot)) slot.outerHTML = rosHtml(d);
   } catch (e) {
     if (document.body.contains(slot)) slot.outerHTML = `<div class="pc-card pc-empty"><div class="muted small">Couldn't project the rest of the season right now.</div></div>`;
@@ -2431,8 +2479,8 @@ function ssDecisionHtml(data, players) {
         <div class="ssd-pick">Start <span style="color:${color(d.pick)}">${esc(d.pick_name)}</span> <span class="ssd-over">over ${esc(d.over_name)}</span></div>
         <div class="ssd-line">${esc(d.line)}</div>
       </div>
-      <div class="ssd-conf ssd-conf-${esc(d.confidence.toLowerCase().replace(/\s+/g, "-"))}">
-        <b>${esc(d.confidence)}</b>
+      <div class="ssd-conf ssd-conf-${esc(String(d.confidence || "").toLowerCase().replace(/\s+/g, "-"))}">
+        <b>${esc(d.confidence || "")}</b>
         <span>${esc(d.edge || `${d.win_pct}% to outscore ${d.over_name}`)}</span>
       </div>
     </div>
@@ -3206,7 +3254,7 @@ function initTrade() {
 // (Sleeper add/drop velocity, handcuffs, a usage deep dive).
 let wvTimer = null;
 
-const WV_PARTS = [["urgency", "Need"], ["gain", "Gain"], ["usage", "Usage"], ["schedule", "Schedule"]];
+const WV_PARTS = [["urgency", "Need"], ["vorp", "VORP"], ["usage", "Usage"], ["schedule", "Schedule"]];
 const WV_BADGE = {
   trap: ["wv-trap", "Waiver trap"],
   breakout: ["wv-breakout", "Breakout signal"],
@@ -3270,6 +3318,7 @@ function wvBidsHtml(bids) {
       <span class="wv-bid-l">${esc(b.label)}${b.recommended ? " ✓" : ""}</span>
       <span class="wv-bid-v">$${b.dollars[0]}–$${b.dollars[1]}</span>
       <span>${b.pct[0]}–${b.pct[1]}% of budget</span>
+      ${b.rivals ? `<span class="muted">${esc(b.rivals_can_cover)} of ${esc(b.rivals)} rivals can cover the top bid</span>` : ""}
     </div>`).join("")}</div>`;
 }
 
@@ -3291,7 +3340,7 @@ function wvSmartCardHtml(s, i) {
         <div class="wv-name kbd-click" data-pid="${esc(s.player_id)}" role="button" tabindex="0">${esc(s.name)}${statusFlagsHtml(s)}</div>
         <div class="wv-meta"><span class="pos-chip pos-${esc(s.position)}">${esc(s.position)}</span>${esc(s.team)} · next 4 <span class="wv-grade g-${esc(s.schedule.grade.toLowerCase())}">${esc(s.schedule.grade)}</span>${wvBadgeHtml(s)}</div>
       </div>
-      <div class="wv-ring" style="--p:${Math.round(s.wps)}" title="Waiver Priority Score: 35% need + 35% lineup gain + 20% usage + 10% schedule"><b>${Math.round(s.wps)}</b><span>WPS</span></div>
+      <div class="wv-ring" style="--p:${Math.round(s.wps)}" title="Waiver Priority Score: 35% need + 30% value over replacement (VORP) + 25% usage + 10% schedule"><b>${Math.round(s.wps)}</b><span>WPS</span></div>
     </div>
     <div class="wv-gain">
       <span class="wv-gain-n ${g >= 0 ? "pos" : "neg"}">${wvSigned(g)}<small>/wk</small></span>

@@ -13,7 +13,7 @@ import pandas as pd
 
 from . import lineup as lineup_layer
 from . import profile
-from . import context, data, db, decision, draft_runs, trade_engine, locks, trade_reasons, defense_scoring, kicker_scoring, role_baseline, sleeper, waivers
+from . import context, data, db, decision, draft_runs, history, trade_engine, locks, trade_reasons, defense_scoring, kicker_scoring, role_baseline, sleeper, waivers
 from .board import (POSITIONS, build_board, load_bundle, rest_of_season_value,
                      project_vs)
 from .scoring import apply_scoring
@@ -87,13 +87,21 @@ def real_proj_for_player(player_id, position, bundle=None, scoring=None, week=No
     return _opponent_adjusted_proj(board, player_id, position, bundle, scoring, week=week)
 
 
+def _row_rate(row):
+    """A K or DEF board row's projection rate: the history-blended `rate` when
+    the board has one, else the plain season average."""
+    r = row.get("rate") if hasattr(row, "get") else None
+    return float(r) if r is not None and r == r else float(row["fpts_per_game"])
+
+
 def _defense_board(bundle, league_id=None):
     """Real DEF/ST board for this season (see engine/defense_scoring.py) —
     scored with the real league's own Sleeper scoring settings when we
     know them, Sleeper's common defaults otherwise. Cheap enough (one
     small groupby over ~32 teams) to build fresh per request."""
     return defense_scoring.build_defense_board(bundle["pbp"], bundle["schedule"],
-                                                 scoring_settings=_league_scoring_settings(league_id))
+                                                 scoring_settings=_league_scoring_settings(league_id),
+                                                 season=bundle.get("season"))
 
 
 def _offense_fragility(bundle, league_id=None):
@@ -120,7 +128,8 @@ def _defense_opponent(bundle, team_code, week=None):
 def _kicker_board(bundle, league_id=None):
     """Real K board for this season (see engine/kicker_scoring.py) — same
     per-request-fresh pattern as _defense_board."""
-    return kicker_scoring.build_kicker_board(bundle["pbp"], scoring_settings=_league_scoring_settings(league_id))
+    return kicker_scoring.build_kicker_board(bundle["pbp"], scoring_settings=_league_scoring_settings(league_id),
+                                             season=bundle.get("season"))
 
 
 def _kicker_team_baseline(bundle, league_id=None):
@@ -184,7 +193,7 @@ def _defense_row(raw_id, unscored, def_board, is_starter, slot, bundle=None, fra
     if bundle is not None:
         opp = _defense_opponent(bundle, raw_id, week)
         matchup_factor = defense_scoring.defense_matchup_factor(opp, fragility)
-    proj = round(row["fpts_per_game"] * (1 + row["FORM"] / 100.0) * matchup_factor, 1)
+    proj = round(_row_rate(row) * (1 + row["FORM"] / 100.0) * matchup_factor, 1)
     return {
         "player_id": raw_id, "position": "DEF",
         "player_display_name": unscored["player_display_name"],
@@ -210,7 +219,7 @@ def _kicker_row(gsis_id, unscored, k_board, team_baseline, is_starter, slot):
     valuation, and shouldn't be presented as one."""
     if k_board is not None and gsis_id is not None and gsis_id in k_board.index:
         row = k_board.loc[gsis_id].to_dict()
-        proj = round(row["fpts_per_game"] * (1 + row["FORM"] / 100.0), 1)
+        proj = round(_row_rate(row) * (1 + row["FORM"] / 100.0), 1)
         return {
             "player_id": gsis_id, "position": "K",
             "player_display_name": unscored["player_display_name"],
@@ -471,7 +480,11 @@ def _attach_decisions(valid, bundle, get_board, scoring, mode):
         pos_cv = float(q.median()) if len(q) else 0.55
         row = b.loc[pid] if pid in b.index else None
         games = int(row["games"]) if row is not None else 0
-        cv = decision.shrunk_cv(None if row is None else row.get("cv"), games, pos_cv)
+        career = history.weighted_career(pos, scoring, bundle["season"], pid) if history.available() else None
+        hist_h = float(career["h"]) if career else 0.0
+        cv_all = history.blend_cv(None if row is None else row.get("cv"), games,
+                                  career["cv"] if career else None, hist_h)
+        cv = decision.shrunk_cv(cv_all, games + hist_h, pos_cv)
         seed = int("".join(ch for ch in pid if ch.isdigit()) or 0) % (2 ** 32)
         r["outcomes"] = decision.outcomes(r["PROJ"], cv, seed)
         if r.get("injury_status") in decision.WONT_PLAY:
@@ -841,11 +854,11 @@ def _team_total(raw_ids, bundle, get_board, scoring, crosswalk=None, starters=No
                 if def_row:
                     matchup_factor = defense_scoring.defense_matchup_factor(
                         _defense_opponent(bundle, raw_id, week), fragility)
-                    total += def_row["fpts_per_game"] * (1 + def_row["FORM"] / 100.0) * matchup_factor
+                    total += _row_rate(def_row) * (1 + def_row["FORM"] / 100.0) * matchup_factor
                     continue
             if k_board is not None and gsis_id is not None and gsis_id in k_board.index:
                 k_row = k_board.loc[gsis_id]
-                total += k_row["fpts_per_game"] * (1 + k_row["FORM"] / 100.0)
+                total += _row_rate(k_row) * (1 + k_row["FORM"] / 100.0)
                 continue
             if k_team_baseline is not None or rank_baselines is not None:
                 unscored = sleeper.resolve_unscored_player(raw_id)

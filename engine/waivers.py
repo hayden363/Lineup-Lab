@@ -10,8 +10,12 @@ Two tracks over the same pool of free agents:
     breakout flags, and a handcuff index.
 
 Waiver Priority Score (0-100):
-    WPS = 0.35 * positional urgency + 0.35 * lineup gain
-        + 0.20 * usage quality      + 0.10 * schedule
+    WPS = 0.35 * positional urgency + 0.30 * VORP
+        + 0.25 * usage quality      + 0.10 * schedule
+    VORP = his rest-of-season points/game minus the replacement-level player at
+    his position (the first player a league of this shape leaves unrostered).
+    The lineup gain from adding him still decides which move is worth showing
+    and who to drop; it is shown next to the score but is not weighted in it.
 
 Every input is real data or computed from it:
   * rosters, FAAB budget and spend, waiver priority, waiver day   Sleeper league
@@ -34,7 +38,7 @@ from zoneinfo import ZoneInfo
 import numpy as np
 import pandas as pd
 
-from . import data, lineup as lineup_layer, optimizer, profile, sleeper
+from . import data, lineup as lineup_layer, optimizer, profile, sleeper, value as value_layer
 from .board import POSITIONS, build_board, load_bundle, matchup_multiplier, rest_of_season_value
 from .scoring import ScoringSettings, apply_scoring
 
@@ -45,12 +49,15 @@ WAIVER_TYPES = {0: "Rolling waivers", 1: "Reverse standings", 2: "FAAB"}
 WAIVER_HOUR_ET = 3
 UNAVAILABLE_NOW = {"Out", "IR", "PUP", "Sus", "NA"}
 UNAVAILABLE_LONG = {"IR", "PUP", "Sus", "NA"}
-WEIGHTS = {"urgency": 0.35, "gain": 0.35, "usage": 0.20, "schedule": 0.10}
+WEIGHTS = {"urgency": 0.35, "vorp": 0.30, "usage": 0.25, "schedule": 0.10}
+VORP_FULL_SCORE = 8.0   # +8 pts/game over replacement = a full 100 on the VORP input
 GAIN_FULL_SCORE = 5.0   # +5 pts/week to your starting lineup = a full 100 on the gain input
+TRAP_SNAP_PCT = 35      # a big week on fewer snaps than this is a trap
+TRAP_MIN_POINTS = 12
 WINDOW = 3              # weeks of byes/injuries the urgency check looks ahead
-FAAB_TIERS = [("floor", "Floor", 5, 8, "Speculative depth add; unlikely to be contested."),
+FAAB_TIERS = [("floor", "Floor", 2, 5, "Speculative depth add; unlikely to be contested."),
               ("market", "Market", 12, 18, "Competitive add in a 10-12 team league."),
-              ("aggressive", "Aggressive", 25, 40, "Starter-level role or you're desperate at the spot.")]
+              ("aggressive", "Desperation", 25, 45, "Starter-level role or you're desperate at the spot; 45% and up if rivals are flush.")]
 
 
 # ------------------------------------------------------------ league status ----
@@ -82,6 +89,11 @@ def league_status(league, rosters, my_roster_id, now=None):
         used = float(ms.get("waiver_budget_used") or 0)
         out.update(faab_budget=budget, faab_used=used, faab_remaining=max(0.0, budget - used),
                    faab_remaining_pct=round(100 * max(0.0, budget - used) / budget, 1) if budget else 0.0)
+        # What every OTHER team still has to bid: a bid only wins against rivals
+        # who can't outspend it.
+        out["rivals_remaining"] = sorted(
+            (max(0.0, budget - float((r.get("settings") or {}).get("waiver_budget_used") or 0))
+             for r in rosters if r.get("roster_id") != my_roster_id), reverse=True)
     run = next_waiver_run(s, now)
     if run:
         out["next_run"] = run.isoformat()
@@ -175,8 +187,9 @@ def weekly_usage(wk_scored):
 def flag(weeks, snaps):
     """'trap', 'breakout' or None from his game log (list of week dicts with
     fpts/opp/td_pts, oldest first) and {week: snap %}.
-      trap      big box score off little work: 12+ points (and 1.5x his usual)
-                on <= 5 opportunities or < 40% of snaps, mostly from TDs
+      trap      big box score off little work: 12+ points on under 35% of
+                snaps, or 12+ points (and 1.5x his usual) on <= 5 opportunities,
+                mostly from TDs
       breakout  work jumped 30%+ (opportunities or snaps) in his last game
                 while the box score stayed ordinary
     """
@@ -185,9 +198,10 @@ def flag(weeks, snaps):
     last, prior = weeks[-1], weeks[:-1]
     snap_last = snaps.get(last["week"])
     prior_fpts = np.mean([w["fpts"] for w in prior]) if prior else None
-    if (last["fpts"] >= 12 and (prior_fpts is None or last["fpts"] >= 1.5 * prior_fpts)
-            and (last["opp"] <= 5 or (snap_last is not None and snap_last < 40))
-            and last["td_pts"] >= 0.5 * last["fpts"]):
+    low_snaps = snap_last is not None and snap_last < TRAP_SNAP_PCT
+    td_fluke = (last["opp"] <= 5 and (prior_fpts is None or last["fpts"] >= 1.5 * prior_fpts)
+                and last["td_pts"] >= 0.5 * last["fpts"])
+    if last["fpts"] >= TRAP_MIN_POINTS and (low_snaps or td_fluke):
         work = f"{int(last['opp'])} touches/targets" + (f", {snap_last:.0f}% of snaps" if snap_last is not None else "")
         return "trap", f"{last['fpts']:.1f} pts in week {last['week']} on {work}; {last['td_pts']:.0f} of it from TDs"
     if len(prior) >= 2:
@@ -325,16 +339,25 @@ def best_swap(add, my_players, slots, roster_full, protected, byes, week):
 
 
 def bid_tiers(wps, need_mult, status):
-    """Our three FAAB bid ranges with one recommended (FAAB leagues only)."""
+    """Our three FAAB bid ranges with one recommended (FAAB leagues only).
+    When rival balances are known, each tier also says how many rivals can
+    afford its top bid, so a bid that every rival can cover reads as
+    contested instead of safe."""
     if not status.get("is_faab"):
         return None
     rec = "aggressive" if wps >= 80 or (need_mult >= 1.5 and wps >= 65) else "market" if wps >= 60 else "floor"
     budget, left = status["faab_budget"], status["faab_remaining"]
+    rivals = status.get("rivals_remaining") or []
     tiers = []
     for key, label, lo, hi, why in FAAB_TIERS:
-        tiers.append({"key": key, "label": label, "pct": [lo, hi], "why": why,
-                      "dollars": [min(left, round(budget * lo / 100)), min(left, round(budget * hi / 100))],
-                      "recommended": key == rec})
+        top = round(budget * hi / 100)
+        tier = {"key": key, "label": label, "pct": [lo, hi], "why": why,
+                "dollars": [min(left, round(budget * lo / 100)), min(left, top)],
+                "recommended": key == rec}
+        if rivals:
+            tier["rivals_can_cover"] = sum(1 for r in rivals if r >= top)
+            tier["rivals"] = len(rivals)
+        tiers.append(tier)
     return tiers
 
 
@@ -400,6 +423,23 @@ def player_pool(scoring, bundle):
     pool.loc[~pool["position"].isin(["RB"]), "hvt_pg"] = np.nan
     logs = {pid: grp.sort_values("week").to_dict("records") for pid, grp in usage.groupby("player_id")}
     return pool, logs
+
+
+def replacement_levels(pool, roster_positions, teams):
+    """{position: projected points/game of the first player this league shape
+    leaves unrostered}: rank (teams x starters at the position + 1) by value.
+    The baseline VORP is measured against (engine/value.replacement_ranks)."""
+    from . import trade_engine
+    if roster_positions:
+        shape = trade_engine.league_shape(roster_positions, teams)
+        ranks = value_layer.replacement_ranks({"teams": shape["teams"], "slots": shape["slots"]})
+    else:
+        ranks = value_layer.replacement_ranks(None)
+    out = {}
+    for pos in POSITIONS:
+        vals = pool.loc[pool["position"] == pos, "value"].sort_values(ascending=False)
+        out[pos] = float(vals.iloc[min(ranks[pos], len(vals)) - 1]) if len(vals) else 0.0
+    return out
 
 
 def usage_scores(pool):
@@ -509,6 +549,7 @@ def build(league_id=None, my_roster_id=None, scoring=None, now=None, limit=10):
         protected = handcuffs_on(my_players, depth)
         # IR/PUP/suspended players can't help a lineup soon; they stay in the
         # deep dive (flagged) but aren't Smart Match adds.
+        repl_level = replacement_levels(pool, league.get("roster_positions"), len(rosters))
         healthy = avail[~avail["injury_status"].isin(UNAVAILABLE_LONG)]
         candidates = healthy.sort_values("value", ascending=False).head(120)
         for pid, r in candidates.iterrows():
@@ -520,11 +561,13 @@ def build(league_id=None, my_roster_id=None, scoring=None, now=None, limit=10):
                 continue
             sched = sched_for(pid, r)
             n = need[r["position"]]
-            parts = {"urgency": n["score"], "gain": float(np.clip(gain / GAIN_FULL_SCORE * 100, 0, 100)),
+            vorp = float(r["value"]) - repl_level.get(r["position"], 0.0)
+            parts = {"urgency": n["score"], "vorp": float(np.clip(vorp / VORP_FULL_SCORE * 100, 0, 100)),
                      "usage": float(r["usage_score"]), "schedule": sched["score"]}
             wps = sum(WEIGHTS[k] * v for k, v in parts.items())
             smart.append({**player_card(pid, r, sched, badge_for(pid)), "wps": round(wps, 1),
                           "wps_parts": {k: round(v, 1) for k, v in parts.items()},
+                          "vorp": round(vorp, 1),
                           "gain_ros": round(gain, 1), "gain_next3": round(gain3, 1),
                           "need_reasons": n["reasons"], "need_multiplier": n["multiplier"],
                           "drop": None if drop is None else {"player_id": drop["player_id"], "name": drop["name"],

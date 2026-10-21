@@ -17,9 +17,16 @@ For every unplayed game on a player's team schedule:
              Neutral (1.0) for games the schedule feed has no lines for yet.
   M_defense  engine/defense: the opponent's per-stat matchup factor for his
              position, clamped to [0.80, 1.20].
-  M_h2h      always 1.0. History against a team is only worth using when the
-             same coordinator and coverage scheme are in place, and no free
-             feed here carries coordinators or shadow-coverage data.
+  M_h2h      his own record against this opponent over the prior three seasons
+             (engine/history.h2h_factor): his average there against his average
+             in the same seasons, pulled hard toward 1.0 by how few meetings there
+             are and capped at +/-8%. 1.0 with fewer than two meetings. A new
+             coordinator or scheme makes old meetings weaker evidence, which is
+             why it is small.
+
+History also shapes the baseline itself: this season's rate is shrunk toward
+his own career rate, not the position average (engine/board.shrunk_rate), and
+the game-to-game spread behind floor/ceiling uses all seasons.
 
 The range for each game (10th / 50th / 90th percentile) comes from the same
 gamma outcome model Start/Sit uses (engine/decision.py). The season total
@@ -29,7 +36,7 @@ to data.
 
 import pandas as pd
 
-from . import context, decision, waivers
+from . import context, decision, history, waivers
 from .scoring import apply_scoring
 from .board import (_injury_multiplier_col, _rate, build_board, load_bundle, matchup_multiplier)
 
@@ -82,8 +89,9 @@ def waterfall(baseline, m_vegas, m_defense, m_h2h=1.0, m_injury=1.0):
             "after_history": round(c, 1), "final": round(max(0.0, d), 1)}
 
 
-H2H_NOTE = ("History against this team is not used. It only counts when the same coordinator and coverage "
-            "scheme are back, and no free feed here says whether they are.")
+H2H_NOTE = ("Uses his own games against this team over the last three seasons, pulled toward neutral and "
+            "capped at 8%. It overlaps a little with the defense factor, and a new coordinator or scheme makes old "
+            "meetings weaker evidence.")
 
 
 def blend_baseline(xfp_trailing, rate):
@@ -138,6 +146,26 @@ def _usage(player_id, pos, bundle, xf_mine):
         return None
 
 
+def merge_tiers(current_by_tier, earlier):
+    """Fold earlier seasons' games into the per-tier averages. Each tier keeps
+    games/avg over everything and a split into this season vs earlier."""
+    cur = {t: v for t, v in current_by_tier.items()}
+    old = {}
+    for g in earlier:
+        if g.get("tier"):
+            old.setdefault(g["tier"], []).append(g["points"])
+    out = {}
+    for t in set(cur) | set(old):
+        c = cur.get(t)
+        o = old.get(t, [])
+        n_c = c["games"] if c else 0
+        tot = (c["avg"] * n_c if c else 0.0) + sum(o)
+        n = n_c + len(o)
+        out[t] = {"games": n, "avg": round(tot / n, 1),
+                  "current": c, "earlier": {"games": len(o), "avg": round(sum(o) / len(o), 1)} if o else None}
+    return out
+
+
 def player_ros(player_id, scoring=None, season=None, max_games=None):
     """Per-game rows plus a season total, or None when he can't be found."""
     bundle = load_bundle(season)
@@ -167,7 +195,12 @@ def player_ros(player_id, scoring=None, season=None, max_games=None):
     games_played = int(row["games"]) if pd.notna(row.get("games")) else 0
     q = board[(board["games"] >= 3) & (board["fpts_per_game"] >= 5)]["cv"].dropna()
     pos_cv = float(q.median()) if len(q) else 0.55
-    cv = decision.shrunk_cv(row.get("cv"), games_played, pos_cv)
+    season_now = bundle["season"]
+    hist_on = history.available()
+    career = history.weighted_career(pos, scoring, season_now, player_id) if hist_on else None
+    hist_h = float(career["h"]) if career else 0.0
+    cv_all = history.blend_cv(row.get("cv"), games_played, career["cv"] if career else None, hist_h)
+    cv = decision.shrunk_cv(cv_all, games_played + hist_h, pos_cv)
     seed = int("".join(ch for ch in player_id if ch.isdigit()) or 0) % (2 ** 32)
     injury = float(_injury_multiplier_col(board.loc[[player_id]], pos).iloc[0])
     target_share = float(row["target_share"]) if pd.notna(row.get("target_share")) else None
@@ -181,6 +214,11 @@ def player_ros(player_id, scoring=None, season=None, max_games=None):
               for r in wk_scored.sort_values("week").itertuples(index=False)
               if isinstance(getattr(r, "opponent_team", None), str)]
     past_games, past_by_tier = past_matchups(played, lambda o: decision.defense_rank(pos, o, factors))
+    earlier = history.tag_games(history.player_games(player_id, scoring, season_now), pos, scoring, season_now,
+                                defense_tier) if hist_on else []
+    past_by_tier = merge_tiers(past_by_tier, earlier)
+    all_games = earlier + [{"season": season_now, "week": g["week"], "opponent": g["opponent"],
+                            "points": g["points"]} for g in played]
 
     weeks = remaining_games(bundle["schedule"], team)
     if max_games:
@@ -192,7 +230,9 @@ def player_ros(player_id, scoring=None, season=None, max_games=None):
         m_v, notes = context.environment_factor(pos, ctx, target_share)
         m_d = clamp_defense(matchup_multiplier(pos, opp, bundle)) if opp else 1.0
         m_i = injury if i == 0 else 1.0
-        proj = combine(baseline, m_v, m_d, 1.0, m_i)
+        meet = history.versus(all_games, opp) if opp else None
+        m_h = history.h2h_factor(all_games, opp, baseline) if opp else 1.0
+        proj = combine(baseline, m_v, m_d, m_h, m_i)
         out = decision.ruled_out() if (i == 0 and row.get("injury_status") in decision.WONT_PLAY) \
             else decision.outcomes(proj, cv, seed + w)
         rank, n = decision.defense_rank(pos, opp, factors) if opp else (None, None)
@@ -204,7 +244,7 @@ def player_ros(player_id, scoring=None, season=None, max_games=None):
         games.append({
             "week": w, "opponent": opp, "home": ctx["home"] if ctx else None,
             "proj": round(out["mean"], 1), "floor": out["p10"], "median": out["p50"], "ceiling": out["p90"],
-            "m_vegas": m_v, "m_defense": round(m_d, 3), "m_h2h": 1.0,
+            "m_vegas": m_v, "m_defense": round(m_d, 3), "m_h2h": m_h, "vs_opponent": meet,
             "grade": grade_for(rank, n), "defense_rank": rank,
             "implied_total": ctx.get("implied_total") if ctx else None,
             "margin": ctx.get("margin") if ctx else None,
@@ -220,7 +260,7 @@ def player_ros(player_id, scoring=None, season=None, max_games=None):
             "roof": ctx.get("roof") if ctx else None,
             "weather": {"label": wx.get("label"), "temp": wx.get("temp"), "wind": wx.get("wind"),
                         "reasons": wx.get("reasons")} if wx else None,
-            "steps": waterfall(baseline, m_v, m_d, 1.0, m_i),
+            "steps": waterfall(baseline, m_v, m_d, m_h, m_i),
         })
     best = max(games, key=lambda g: g["proj"]) if games else None
     worst = min(games, key=lambda g: g["proj"]) if games else None
@@ -229,6 +269,8 @@ def player_ros(player_id, scoring=None, season=None, max_games=None):
         "baseline": round(baseline, 1), "baseline_xfp": None if xfp_t is None else round(xfp_t, 1),
         "baseline_rate": round(rate, 1),
         "usage": usage, "past_games": past_games, "past_by_tier": past_by_tier, "h2h_note": H2H_NOTE,
+        "history": history.summary(player_id, pos, scoring, season_now, row.get("history_weight")) if hist_on else None,
+        "earlier_games": earlier,
         "games": games, "total": round(total, 1), "n_games": len(games),
         "smash_week": best["week"] if best else None, "trap_week": worst["week"] if worst else None,
     }
