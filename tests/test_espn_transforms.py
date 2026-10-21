@@ -87,10 +87,10 @@ class RosterLineup(unittest.TestCase):
         self.assertEqual(self.raw_ids, ["1", "PHI", "2", "3", "4", "-20001"])
 
     def test_bench_and_ir_are_not_starters(self):
-        self.assertEqual(self.starters, ["1", "PHI", "4", "-20001"])
+        self.assertEqual(self.starters, ["1", "-20001", "PHI", "4"])
 
     def test_slot_labels_align_with_starters(self):
-        self.assertEqual(self.slot_labels, ["QB", "D/ST", "", "OP"])
+        self.assertEqual(self.slot_labels, ["QB", "OP", "D/ST", ""])
 
     def test_empty_lineup_slot_is_currently_counted_as_starter(self):
         """PINS CURRENT behaviour, not a verified-correct one: BENCH_SLOTS is
@@ -100,6 +100,21 @@ class RosterLineup(unittest.TestCase):
         capture -- if it turns out to be a bug, change this test with it."""
         self.assertIn("4", self.starters)
         self.assertIn("", self.slot_labels)
+
+
+class RosterLineupOrder(unittest.TestCase):
+    def test_starters_read_qb_rb_wr_te_flex_dst_k(self):
+        team = SimpleNamespace(roster=[
+            _player(1, "K", "BUF", "K"), _player(2, "WR", None, "WR"),
+            _player(3, "RB", None, "RB/WR/TE"), _player(4, "RB", None, "RB"),
+            _player(5, "D/ST", "PHI", "D/ST"), _player(6, "TE", None, "TE"),
+            _player(7, "QB", None, "QB"), _player(8, "RB", None, "RB"),
+            _player(9, "WR", None, "WR"), _player(10, "WR", None, "BE"),
+        ])
+        _, starters, labels = espn.roster_lineup(team)
+        self.assertEqual(labels, ["QB", "RB", "RB", "WR", "WR", "TE", "RB/WR/TE", "D/ST", "K"])
+        self.assertEqual(starters[0], "7")
+        self.assertEqual(starters[1:3], ["4", "8"])  # ESPN order kept within a slot
 
 
 class BuildUnscoredResolver(unittest.TestCase):

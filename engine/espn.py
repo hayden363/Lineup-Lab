@@ -213,6 +213,15 @@ def league_snapshot(league_id, year, espn_s2=None, swid=None):
 # ----------------------------------------------------------------------
 BENCH_SLOTS = {"BE", "IR"}
 
+# Display order for starting slots. Every flex-type label shares one rank so
+# they sit together after TE; sorted() is stable, so ESPN's order is kept
+# within a slot.
+_SLOT_ORDER = {
+    "QB": 0, "RB": 1, "WR": 2, "TE": 3,
+    "RB/WR": 4, "WR/TE": 4, "RB/WR/TE": 4, "OP": 4, "TQB": 4, "FLEX": 4,
+    "D/ST": 5, "K": 6,
+}
+
 
 def roster_lineup(team):
     """(raw_ids, starters, slot_labels) in the exact shape
@@ -223,13 +232,17 @@ def roster_lineup(team):
     (keyed on a team abbreviation, not a crosswalk-able id) works
     completely unmodified. Everyone else uses their espn_id, which the
     crosswalk in this file resolves to a gsis_id."""
-    raw_ids, starters, slot_labels = [], [], []
+    raw_ids, slotted = [], []
     for p in team.roster:
         raw_id = p.proTeam if p.position == "D/ST" else str(p.playerId)
         raw_ids.append(raw_id)
         if p.lineupSlot not in BENCH_SLOTS:
-            starters.append(raw_id)
-            slot_labels.append(p.lineupSlot)
+            slotted.append((raw_id, p.lineupSlot))
+    # ESPN returns the roster in its own internal order; show starters the
+    # way the lineup reads: QB, RB, RB, WR, WR, TE, FLEX, D/ST, K.
+    slotted.sort(key=lambda s: _SLOT_ORDER.get(s[1], len(_SLOT_ORDER)))
+    starters = [r for r, _ in slotted]
+    slot_labels = [s for _, s in slotted]
     return raw_ids, starters, slot_labels
 
 
