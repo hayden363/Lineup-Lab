@@ -4800,3 +4800,18 @@ tr.kbd-click:focus-visible { outline-offset: -2px; }
 .adv-face { width: 38px; height: 38px; border-radius: 50%; object-fit: cover; object-position: top; flex: none; background: var(--surface-2, #1e293b); }
 .adv-txt { display: flex; flex-direction: column; min-width: 0; }
 #adv-run { margin-top: 12px; }
+
+.sidebar-team-row.switching { opacity: .55; pointer-events: none; }
+.st-plat { margin-left: auto; flex: none; font: 700 9px var(--mono); letter-spacing: .06em; text-transform: uppercase; padding: 1px 5px; border-radius: 4px; border: 1px solid var(--border); opacity: .8; }
+.st-plat.espn { color: #f43f5e; border-color: rgba(244,63,94,.45); }
+.st-plat.sleeper { color: #38bdf8; border-color: rgba(56,189,248,.45); }
+
+/* Injury report card */
+.inj-card { margin: 0 0 16px; padding: 12px 14px; border-radius: 12px; border: 1px solid rgba(245,158,11,.35); background: rgba(245,158,11,.07); }
+.inj-card.severe { border-color: rgba(244,63,94,.4); background: rgba(244,63,94,.07); }
+.inj-top { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+.inj-row { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 2px 10px; align-items: baseline; padding: 4px 0; border-top: 1px solid rgba(148,163,184,.14); font-size: 13px; }
+.inj-row span { font: 500 11px var(--mono); color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+.inj-row small { grid-column: 2; color: var(--muted); font-size: 11.5px; }
+.inj-note { margin-top: 6px; padding: 8px 10px; border-left: 2px solid rgba(148,163,184,.4); font-size: 12.5px; line-height: 1.45; color: #d4d4d8; }
+.inj-line { margin-top: 6px; font-size: 12px; line-height: 1.45; color: #a1a1aa; } .inj-line b { color: #e4e4e7; }

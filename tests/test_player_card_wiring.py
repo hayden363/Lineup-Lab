@@ -19,6 +19,14 @@ class PlayerCardWiringTests(unittest.TestCase):
         self.assertIn("L.bestNote", js)
         self.assertIn("lu-best-note", open("static/style.css").read())
 
+    def test_league_scoring_is_platform_aware(self):
+        js = open("static/app.js").read()
+        self.assertIn("function fetchLeagueScoring", js)
+        self.assertEqual(js.count("api(`/api/sleeper/${"), 1)  # only the Sleeper-only draft tab
+
+    def test_sidebar_rows_show_platform(self):
+        self.assertIn("st-plat", open("static/app.js").read())
+
 
 if __name__ == "__main__":
     unittest.main()

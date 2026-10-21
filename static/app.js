@@ -448,6 +448,16 @@ function initSidebar() {
   });
 }
 
+// A connected team's league scoring, from whichever platform it lives on.
+// ESPN teams used to be fetched from the Sleeper endpoint, which always failed.
+async function fetchLeagueScoring(team) {
+  if (!team) return null;
+  const path = team.platform === "espn" ? "espn" : "sleeper";
+  try { return (await api(`/api/${path}/${encodeURIComponent(team.league_id)}`)).scoring || null; } catch (e) { return null; }
+}
+
+const platformLabel = (t) => (t.platform === "espn" ? "ESPN" : "Sleeper");
+
 function renderSidebarTeams() {
   const list = $("#sidebar-teams-list");
   if (!state.user) {
@@ -459,14 +469,23 @@ function renderSidebarTeams() {
     return;
   }
   list.innerHTML = state.teams.map((t) => `
-    <div class="sidebar-team-row kbd-click${t.active ? " active" : ""}" data-team-id="${esc(t.id)}" title="${esc(t.team_name)}" role="button" tabindex="0">
+    <div class="sidebar-team-row kbd-click${t.active ? " active" : ""}" data-team-id="${esc(t.id)}" title="${esc(t.team_name)} · ${esc(t.league_name || t.league_id)} (${platformLabel(t)}). Click to switch." role="button" tabindex="0" aria-pressed="${t.active ? "true" : "false"}">
       ${t.avatar_url ? `<img src="${proxyImg(t.avatar_url)}" data-fb-emoji="🏈" alt="">` : `<span class="team-emoji">🏈</span>`}
       <span class="st-name">${esc(t.team_name)}</span>
+      <span class="st-plat ${t.platform === "espn" ? "espn" : "sleeper"}">${platformLabel(t)}</span>
     </div>`).join("");
   list.querySelectorAll(".sidebar-team-row").forEach((row) => {
     row.addEventListener("click", async () => {
       if (row.classList.contains("active")) return;
-      const res = await api(`/api/teams/${row.dataset.teamId}/activate`, { method: "POST" });
+      row.classList.add("switching");
+      let res;
+      try {
+        res = await api(`/api/teams/${row.dataset.teamId}/activate`, { method: "POST" });
+      } catch (e) {
+        row.classList.remove("switching");
+        showToast(e.message || "Couldn't switch leagues.", "error");
+        return;
+      }
       state.teams = res.teams;
       const active = activeTeam();
       state.leagueScoringDict = null;
@@ -474,9 +493,8 @@ function renderSidebarTeams() {
       state.shopSelected = new Set();
       state.startsit = [];
       state.tradeA = []; state.tradeB = [];
-      if (active) {
-        try { state.leagueScoringDict = (await api(`/api/sleeper/${active.league_id}`)).scoring; } catch (e) {}
-      }
+      state.leagueScoringDict = await fetchLeagueScoring(active);
+      if (state.scoring === "league" && !state.leagueScoringDict) { state.scoring = ""; saveScoring(); }
       refreshScoringLeagueOption();
       renderSidebarTeams();
       if (state.tab === "settings") { renderTeamsList(); renderScoringPills(); }
@@ -1451,6 +1469,45 @@ function formMeterHtml(form) {
   return `<div class="pcd-meter" aria-hidden="true"><i class="${form < 0 ? "neg" : "pos"}" style="width:${w.toFixed(1)}%"></i></div>`;
 }
 
+function agoText(iso) {
+  const t = Date.parse(iso || "");
+  if (!t) return "";
+  const m = Math.max(0, Math.round((Date.now() - t) / 60000));
+  if (m < 60) return `${m || 1} min ago`;
+  if (m < 60 * 24) return `${Math.round(m / 60)} h ago`;
+  return `${Math.round(m / 1440)} d ago`;
+}
+
+// Live injury report (engine/injuries.py): status, what, when he is expected
+// back, ESPN's latest note, and what that designation has meant for scoring.
+function injuryReportHtml(p) {
+  const i = p.injury;
+  if (!i) return "";
+  const severe = ["Out", "IR", "PUP", "Sus"].includes(i.status);
+  const what = [i.body_part, i.detail, i.side].filter(Boolean).map(esc).join(" · ");
+  let back = "";
+  if (i.return_date) {
+    const d = new Date(`${i.return_date}T12:00:00`);
+    const when = d.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+    const wk = i.return_week ? ` (Week ${esc(i.return_week)})` : "";
+    const out = i.games_out > 0 ? ` · misses about ${esc(i.games_out)} more game${i.games_out === 1 ? "" : "s"}` : i.games_out === 0 ? " · no games missed" : "";
+    back = `<div class="inj-row"><span>Expected back</span><b>${esc(when)}${wk}</b><small>${out.replace(/^ · /, "")} · ESPN's estimate</small></div>`;
+  } else {
+    back = `<div class="inj-row"><span>Expected back</span><b>No date reported</b></div>`;
+  }
+  const im = i.impact;
+  const impact = im ? `<div class="inj-line">Players listed ${esc(im.status)} with a ${esc(String(im.body_part).toLowerCase())} injury have scored about <b>${Math.abs(Math.round(im.median_pct_change * 100))}% ${im.median_pct_change < 0 ? "below" : "above"}</b> their usual (${esc(im.real_sample_size)} past cases). It is already in his projection.</div>` : "";
+  const when = agoText(i.updated);
+  return `<div class="inj-card${severe ? " severe" : ""}">
+    <div class="inj-top"><span class="injury-flag${severe ? "" : " questionable"}">${esc(String(i.status).toUpperCase())}</span><b>Injury report</b>
+      <span class="muted small">${esc(i.source)}${when ? ` · updated ${esc(when)}` : ""}</span></div>
+    ${what ? `<div class="inj-row"><span>Injury</span><b>${what}</b></div>` : ""}
+    ${back}
+    ${i.note ? `<div class="inj-note">${esc(i.note)}</div>` : ""}
+    <div class="inj-line muted">${esc(i.meaning || "")}</div>${impact}
+  </div>`;
+}
+
 function cardKeyTilesHtml(p) {
   const mf = p.matchup_factor;
   const matchup = mf != null
@@ -1751,6 +1808,7 @@ function playerCardHtml(p) {
     <nav class="pcd-nav" role="tablist" aria-label="Player sections">${CARD_SECTIONS.map(([k, l]) => `<button type="button" role="tab" id="pcd-tab-${k}" data-go="${k}" aria-controls="pcd-pane-${k}" aria-selected="false" tabindex="-1">${l}</button>`).join("")}</nav>
     <div class="pcd-body">
       <section data-sec="ov" id="pcd-pane-ov" role="tabpanel" aria-labelledby="pcd-tab-ov" hidden>
+        ${injuryReportHtml(p)}
         ${cardKeyTilesHtml(p)}
         <div class="pcd-lbl pcd-wkhd"><span>Weekly Breakdown</span>${weeklyStatSelectHtml(p)}</div>
         <div class="weeklog-wrap">${weeklyRows(p).length ? weeklyChartHtml(weeklyRows(p), "fpts") : '<span class="muted">No games logged yet.</span>'}</div>
@@ -3069,6 +3127,8 @@ const TV_GATES = [
   ["fairness_passed", "Fairness index", "Within 95-105 is even; 85-94 only with a big need on their side; 106-115 only to land a tier-1 player."],
   ["roster_fit_passed", "Roster fit", "Extra players are covered by cutting bench players, never starters."],
   ["incentive_passed", "Their incentives", "Contenders don't sell studs for depth; only struggling teams sell a tier-1 player for two pieces."],
+  ["insult_passed", "Not an insult", "Asking for their best player means sending back at least 85% of his value."],
+  ["bye_passed", "Bye-week safe", "The trade can't leave them with an empty starting slot in an upcoming bye week."],
 ];
 const TV_SCRIPTS = [
   ["casual_manager", "Casual manager"], ["quantitative_analyst", "Numbers person"],
@@ -3089,7 +3149,7 @@ function tradeVerdictHtml(ev, compact) {
   if (!ev) return "";
   const v = ev.verdict, q = ev.quantitative_breakdown, d = ev.team_impact_diagnostics;
   const [cls, label] = TV_STATUS[v.status] || ["", v.status];
-  const gates = TV_GATES.map(([k, name, tip]) => `<span class="tv-gate ${ev.gate_audit[k] ? "pass" : "fail"}" title="${esc(tip)}">${ev.gate_audit[k] ? "✓" : "✕"} ${name}</span>`).join("");
+  const gates = TV_GATES.map(([k, name, tip]) => `<span class="tv-gate ${ev.gate_audit[k] !== false ? "pass" : "fail"}" title="${esc(tip)}">${ev.gate_audit[k] !== false ? "✓" : "✕"} ${name}</span>`).join("");
   const model = (q.acceptance_model || []).map((m) => `<li><span>${esc(m.factor)}</span><b class="${m.points >= 0 ? "pos" : "neg"}">${m.points > 0 && m !== q.acceptance_model[0] ? "+" : ""}${m.points}</b></li>`).join("");
   const scripts = TV_SCRIPTS.map(([k, name]) => ev.negotiation_scripts?.[k] ? `<div class="tv-script">
       <div class="tv-script-h"><span>${name}</span><button type="button" class="tv-copy" data-copy="${esc(ev.negotiation_scripts[k])}">Copy</button></div>
@@ -4033,6 +4093,12 @@ async function loadDraftTab() {
     return;
   }
 
+  if (activeTeam().platform === "espn") {
+    gate.style.display = "";
+    gate.querySelector(".gate-sub").textContent = "Live draft tracking reads Sleeper's draft feed, and ESPN has no public one. Switch to a Sleeper league in the sidebar to use the Draft Board.";
+    return;
+  }
+
   try {
     const snap = await api(`/api/sleeper/${activeTeam().league_id}`);
     draftTeamNames = {};
@@ -4732,10 +4798,7 @@ async function loadSettingsIntoState() {
     state.teams = teamsRes.teams;
     const active = activeTeam();
     if (active) {
-      try {
-        const snap = await api(`/api/sleeper/${active.league_id}`);
-        state.leagueScoringDict = snap.scoring;
-      } catch (e) { state.leagueScoringDict = null; }
+      state.leagueScoringDict = await fetchLeagueScoring(active);
     } else {
       state.leagueScoringDict = null;
     }
@@ -4933,9 +4996,7 @@ function renderTeamsList() {
       const res = await api(`/api/teams/${b.dataset.activate}/activate`, { method: "POST" });
       state.teams = res.teams;
       const active = activeTeam();
-      if (active) {
-        try { state.leagueScoringDict = (await api(`/api/sleeper/${active.league_id}`)).scoring; } catch (e) { state.leagueScoringDict = null; }
-      }
+      state.leagueScoringDict = await fetchLeagueScoring(active);
       refreshScoringLeagueOption();
       renderTeamsList();
       renderScoringPills();
@@ -4946,9 +5007,7 @@ function renderTeamsList() {
       state.teams = res.teams;
       const active = activeTeam();
       state.leagueScoringDict = null;
-      if (active) {
-        try { state.leagueScoringDict = (await api(`/api/sleeper/${active.league_id}`)).scoring; } catch (e) {}
-      }
+      state.leagueScoringDict = await fetchLeagueScoring(active);
       refreshScoringLeagueOption();
       renderTeamsList();
       renderScoringPills();

@@ -1584,6 +1584,14 @@ def draft_board(draft_id, my_roster_id=None, season=None, scoring=None, best_ava
     }
 
 
+def _next_unplayed_week(schedule):
+    """First regular-season week with a game still to play, or None."""
+    s = schedule[schedule["game_type"] == "REG"] if "game_type" in schedule.columns else schedule
+    if "home_score" in s.columns:
+        s = s[s["home_score"].isna()]
+    return int(s["week"].min()) if len(s) else None
+
+
 def _trade_setup(league_id, scoring=None, season=None):
     """Everything the trade engine needs for one Sleeper league: valued
     rosters (with records, weaknesses, usage, byes) and the league context."""
@@ -1609,7 +1617,7 @@ def _trade_setup(league_id, scoring=None, season=None):
     slots = [s for s in roster_positions if s in lineup_layer.ELIGIBLE and s not in ("K", "DEF", "D/ST")]
     trade_engine.annotate(rosters, slots)
     ctx = {"slots": slots, "profile": trade_engine.depth_profile(shape), "teams": shape["teams"],
-           "starters": shape["starters"]}
+           "starters": shape["starters"], "week": _next_unplayed_week(bundle["schedule"])}
     return bundle, rosters, ctx
 
 
@@ -1618,13 +1626,38 @@ def _public_player(p):
                                   "headshot_url", "value", "trade", "tier", "injury_status", "bye")}
 
 
-def trade_finder(league_id, my_roster_id, target_roster_id=None, give_player_ids=None,
-                  season=None, scoring=None, max_suggestions=6):
-    """Trades that pass every gate in engine/trade_engine.py (tier break,
-    both starting lineups, roster fit, records, fairness index), ranked by
-    mutual benefit. Need-driven by default; with `give_player_ids` (one or
-    two of yours) every suggestion includes them."""
-    bundle, rosters, ctx = _trade_setup(league_id, scoring, season)
+def _trade_setup_espn(league_id, scoring=None, season=None, year=None, espn_s2=None, swid=None):
+    """_trade_setup() for an ESPN league: the same valued rosters, records and
+    league context, read from ESPN. Scoring defaults to the league's own."""
+    from . import espn as espn_layer
+
+    year = year or espn_layer.resolve_year()
+    league = espn_layer.get_league(league_id, year, espn_s2=espn_s2, swid=swid)
+    if scoring is None:
+        scoring = espn_layer.scoring_from_espn(league)
+    roster_positions = espn_layer.roster_positions(league)
+    bundle = load_bundle(season)
+    pool, _ = waivers.cached_pool(scoring, bundle)
+    cw = espn_layer.id_crosswalk()
+    rostered = {cw.get(str(p.playerId)) for t in league.teams for p in t.roster} - {None}
+    shape = trade_engine.league_shape(roster_positions, len(league.teams))
+    values = trade_engine.trade_values(pool, shape, rostered)
+
+    def _f(v, scale=1.0):
+        return None if v is None or pd.isna(v) else round(float(v) * scale, 1)
+    usage = {pid: {"xfp_pg": _f(r.get("xfp_pg")), "target_share": _f(r.get("target_share")), "hvt_pg": _f(r.get("hvt_pg"))}
+             for pid, r in pool.iterrows()}
+    byes = profile.bye_weeks(bundle["schedule"])
+    rosters = trade_engine.build_rosters_espn(league, pool, values, cw, usage=usage, byes=byes)
+    slots = [s for s in roster_positions if s in lineup_layer.ELIGIBLE and s not in ("K", "DEF", "D/ST")]
+    trade_engine.annotate(rosters, slots)
+    ctx = {"slots": slots, "profile": trade_engine.depth_profile(shape), "teams": shape["teams"],
+           "starters": shape["starters"], "week": _next_unplayed_week(bundle["schedule"])}
+    return bundle, rosters, ctx
+
+
+def _run_trade_finder(setup, league_id, my_roster_id, target_roster_id, give_player_ids, max_suggestions):
+    bundle, rosters, ctx = setup
     if my_roster_id not in rosters:
         raise ValueError(f"roster_id {my_roster_id} not found in league {league_id}")
     mine_ids = {p["player_id"] for p in rosters[my_roster_id]["players"]}
@@ -1648,6 +1681,24 @@ def trade_finder(league_id, my_roster_id, target_roster_id=None, give_player_ids
             "analysis": {k: v for k, v in a.items() if not k.startswith("_")},
         })
     return {"season": bundle["season"], "my_roster_id": my_roster_id, "suggestions": out}
+
+
+def trade_finder(league_id, my_roster_id, target_roster_id=None, give_player_ids=None,
+                  season=None, scoring=None, max_suggestions=6):
+    """Trades that pass every gate in engine/trade_engine.py (tier break,
+    both starting lineups, roster fit, records, fairness index), ranked by
+    mutual benefit. Need-driven by default; with `give_player_ids` (one or
+    two of yours) every suggestion includes them."""
+    return _run_trade_finder(_trade_setup(league_id, scoring, season), league_id, my_roster_id,
+                             target_roster_id, give_player_ids, max_suggestions)
+
+
+def trade_finder_espn(league_id, my_roster_id, target_roster_id=None, give_player_ids=None, season=None,
+                      scoring=None, max_suggestions=6, year=None, espn_s2=None, swid=None):
+    """trade_finder() for an ESPN league. Kickers and defenses are not traded
+    here (the engine values QB/RB/WR/TE), same as for Sleeper."""
+    return _run_trade_finder(_trade_setup_espn(league_id, scoring, season, year, espn_s2, swid), league_id,
+                             my_roster_id, target_roster_id, give_player_ids, max_suggestions)
 
 
 def evaluate_trade(league_id, my_roster_id, opponent_roster_id, give_ids, get_ids, scoring=None, season=None):

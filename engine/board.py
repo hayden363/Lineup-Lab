@@ -18,6 +18,7 @@ import pandas as pd
 
 from . import data
 from . import history
+from . import injuries
 from . import defense as defense_layer
 from . import injury_impact
 from . import profile
@@ -452,6 +453,13 @@ def build_board(position, season=None, min_games=2, min_volume=None, scoring=Non
         board["rate"] = shrunk_rate(board, position, scoring, season)
         _BOARD_CACHE[key] = board
     filtered = board[board["games"] >= min_games]
+    # Live injury designations (ESPN's feed, 15 minutes old at most) over
+    # Sleeper's once-a-day list; see engine/injuries.py. Never lets the feed
+    # take a board down.
+    try:
+        filtered = injuries.overlay(filtered, load_bundle(season))
+    except Exception as e:
+        print(f"[board] live injuries skipped: {e}")
     # .attrs propagation through boolean-mask indexing isn't guaranteed on
     # pandas 1.5.3 (still marked experimental upstream) — set it explicitly
     # rather than trust it survived the filter above.
@@ -651,6 +659,10 @@ def player_detail(player_id, season=None, scoring=None):
     row["player_id"] = player_id
     row["position"] = position
     row["scoring"] = board.attrs.get("scoring")
+    row["injury"] = injuries.report_for(player_id, row, bundle["schedule"])
+    if row["injury"]:
+        row["injury"]["impact"] = injury_impact.injury_adjustment_detail(
+            position, row["injury"]["status"], row["injury"]["body_part"])
     if history.available():
         row["history"] = history.summary(player_id, position, scoring, bundle["season"], row.get("history_weight"))
 

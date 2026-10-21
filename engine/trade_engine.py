@@ -76,7 +76,7 @@ def league_shape(roster_positions, teams):
     for s in roster_positions or []:
         if s in ("QB", "RB", "WR", "TE"):
             slots[s] += 1
-        elif s in ("FLEX", "WRRB_FLEX", "REC_FLEX"):
+        elif s in ("FLEX", "WRRB_FLEX", "REC_FLEX", "RB/WR/TE", "RB/WR", "WR/TE"):   # last three: ESPN's labels
             slots["FLEX"] += 1
         elif s in ("SUPER_FLEX", "OP"):
             slots["SUPERFLEX"] += 1
@@ -184,6 +184,41 @@ def record(r):
             "text": f"{w}-{l}" + (f"-{t}" if t else "")}
 
 
+def record_espn(team):
+    """Same shape as record(), from an espn_api Team."""
+    w, l, t = int(getattr(team, "wins", 0) or 0), int(getattr(team, "losses", 0) or 0), int(getattr(team, "ties", 0) or 0)
+    g = w + l + t
+    return {"wins": w, "losses": l, "ties": t, "pct": round((w + 0.5 * t) / g, 3) if g else None,
+            "text": f"{w}-{l}" + (f"-{t}" if t else "")}
+
+
+def _player_entry(g, pool, values, usage, byes):
+    row = pool.loc[g]
+    st = row.get("injury_status")
+    return {"player_id": g, "name": row["player_display_name"], "player_display_name": row["player_display_name"],
+            "position": row["position"], "recent_team": row["recent_team"], "headshot_url": row.get("headshot_url"),
+            "value": round(float(row["value"]), 1), "trade": values[g]["trade"], "tier": values[g]["tier"],
+            "ecr": values[g]["ecr"], "injury_status": st if isinstance(st, str) else None,
+            "usage": (usage or {}).get(g), "bye": (byes or {}).get(row["recent_team"])}
+
+
+def build_rosters_espn(league, pool, values, crosswalk, usage=None, byes=None):
+    """{team_id: {name, players, record}} from an ESPN league, QB/RB/WR/TE we can
+    value. Players on IR are left out, as Sleeper's reserve/taxi spots are."""
+    out = {}
+    for t in league.teams:
+        ps = []
+        for p in t.roster:
+            if p.lineupSlot == "IR":
+                continue
+            g = crosswalk.get(str(p.playerId))
+            if not g or g not in pool.index or g not in values:
+                continue
+            ps.append(_player_entry(g, pool, values, usage, byes))
+        out[t.team_id] = {"name": (t.team_name or f"Team {t.team_id}").strip(), "players": ps, "record": record_espn(t)}
+    return out
+
+
 def archetype(rec):
     if not rec or rec["pct"] is None:
         return "Unknown"
@@ -219,6 +254,48 @@ def _names(ps):
     return ps[0]["name"] if len(ps) == 1 else ", ".join(p["name"] for p in ps[:-1]) + " and " + ps[-1]["name"]
 
 
+INSULT_RETURN = 0.85   # must send back at least this share of the best player's value to ask for him
+
+
+def grade_trade(fi, my_dsl, opp_dsl, fails):
+    """Letter grade A+ to F from the trade balance ratio (what you receive over
+    what you send, so 100/fairness index), both lineup deltas and the gates.
+      F  a tier-break or contender/stud gate failed, or they would get worse
+      D  lopsided on paper (TBR under 0.80 or over 1.30) or a side can't fill a slot
+      A+ both gain 2+ PPG with TBR .95-1.08; A / A- you gain 1.5+, they gain 1.0+, TBR .90-1.15
+      B+ / B  fair on paper, one side modest (+0.5 to +1.0) and the other 1.0+
+      C  fair on paper but neither side really improves
+    Anything that fits none of these is a C: it isn't broken, it isn't good."""
+    tbr = (100.0 / fi) if fi and fi > 0 else 0.0
+    if "tier" in fails or "contender" in fails or "stud_for_two" in fails or "insult" in fails or opp_dsl < 0:
+        return "F"
+    if tbr < 0.80 or tbr > 1.30 or "roster" in fails or "bye" in fails:
+        return "D"
+    if my_dsl >= 2.0 and opp_dsl >= 2.0 and 0.95 <= tbr <= 1.08:
+        return "A+"
+    if my_dsl >= 1.5 and opp_dsl >= 1.0 and 0.90 <= tbr <= 1.15:
+        return "A" if opp_dsl >= 1.5 else "A-"
+    if 0.85 <= tbr <= 1.20:
+        gains = sorted((my_dsl, opp_dsl))
+        if gains[1] >= 1.0 and gains[0] >= 0.5:
+            return "B+" if gains[0] >= 0.8 else "B"
+        if my_dsl < 0.5 and opp_dsl < 0.5 and 0.90 <= tbr <= 1.10:
+            return "C"
+    return "C"
+
+
+def bye_crash(roster_before, roster_after, slots, week=None):
+    """The first bye week where the trade leaves this team with fewer filled
+    starting slots than before it, or None. Only byes from `week` on count."""
+    byes = {p.get("bye") for p in roster_after if p.get("bye") and (week is None or p["bye"] >= week)}
+    for w in sorted(byes):
+        def filled(players):
+            return len(lineup([p for p in players if p.get("bye") != w], slots)[1])
+        if filled(roster_after) < filled(roster_before):
+            return w
+    return None
+
+
 def fairness_band(fi):
     if fi < 85:
         return "underpay"
@@ -239,7 +316,7 @@ def assess(give, get, me, opp, ctx, full=True):
     slots, profile = ctx["slots"], ctx["profile"]
     give_ids, get_ids = {p["player_id"] for p in give}, {p["player_id"] for p in get}
     gate = {"tier_break_passed": True, "lineup_delta_passed": True, "roster_fit_passed": True,
-            "incentive_passed": True, "fairness_passed": True}
+            "incentive_passed": True, "fairness_passed": True, "insult_passed": True, "bye_passed": True}
     fails = []
 
     # G1 tier break (both directions)
@@ -316,6 +393,22 @@ def assess(give, get, me, opp, ctx, full=True):
     if not gate["incentive_passed"] and not full:
         return None
 
+    # G5 insult filter: asking for their best player needs real value back.
+    best_theirs = max(opp["players"], key=lambda p: p["trade"], default=None)
+    if best_theirs and best_theirs["player_id"] in get_ids and v_give < INSULT_RETURN * best_theirs["trade"]:
+        gate["insult_passed"] = False
+        fails.append("insult")
+        if not full:
+            return None
+
+    # G6 bye-week crash test: they must not be left short on a bye they weren't short on before.
+    crash = bye_crash(opp["players"], opp_after, slots, ctx.get("week"))
+    if crash is not None:
+        gate["bye_passed"] = False
+        fails.append("bye")
+        if not full:
+            return None
+
     # Acceptance probability (model estimate; see module docstring)
     base = {"fair": 55, "slight_overpay": 70, "slight_underpay": 30, "underpay": 8, "overpay": 80}[band]
     parts = [("fairness: " + band.replace("_", " "), base)]
@@ -339,10 +432,13 @@ def assess(give, get, me, opp, ctx, full=True):
     near_miss = len(fails) == 1 and (
         (fails[0] == "fairness" and 78 <= fi <= 122) or (fails[0] == "lineup" and opp_dsl >= 0.5 and my_dsl >= MY_MIN_DSL))
     status = "APPROVED" if not fails else "MODIFICATION_REQUIRED" if near_miss else "VETOED"
-    if status == "APPROVED":
-        grade = "A+" if 97 <= fi <= 106 and opp_dsl >= 3 and my_dsl >= 2 else "A" if 95 <= fi <= 108 else "B"
-    else:
-        grade = "C" if status == "MODIFICATION_REQUIRED" else "F"
+    grade = grade_trade(fi, my_dsl, opp_dsl, fails)
+    if status == "APPROVED" and grade in ("C", "D", "F"):
+        grade = "B"   # every gate passed; the matrix alone must not sink an approved deal
+    if status == "VETOED" and grade not in ("D", "F"):
+        grade = "D"
+    if status == "MODIFICATION_REQUIRED" and grade not in ("C", "D", "F"):
+        grade = "C"
 
     out = {"_my_dsl": my_dsl, "_opp_dsl": opp_dsl, "_fi": fi, "_prob": prob, "_status": status,
            "_score": my_dsl + 0.5 * opp_dsl + prob / 20 - 0.4 * (len(give) + len(get) - 2)}
@@ -401,6 +497,8 @@ def _summary(status, fails, fi, my_dsl, opp_dsl, opp):
         "roster": "one side would have to cut a starter to make room",
         "contender": f"{opp['name']} is contending and won't sell a top player for depth",
         "stud_for_two": "only a struggling team sells a tier-1 player for two pieces",
+        "insult": f"{opp['name']}'s best player is worth more than what you're offering (send back at least 85% of his value)",
+        "bye": f"it would leave {opp['name']} with an empty starting slot in a bye week",
     }
     # Lead with the reason a person would see first: a wildly uneven trade
     # is "unfair" before it is anything else.

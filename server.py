@@ -1275,19 +1275,16 @@ def api_trade_finder(target_roster_id: Optional[int] = Query(None),
     active = db.get_active_team(user["id"])
     if not active:
         raise HTTPException(400, "connect a league in Settings first")
-    if active.get("platform") == "espn":
-        # Not built yet — needs every other roster's positional needs
-        # scanned the way Sleeper's trade_finder does, which ESPN's
-        # league object exposes differently. My Team, Waivers, and the
-        # rest of Trade already work for ESPN (see README Roadmap); this
-        # is the one piece still Sleeper-only, called out clearly rather
-        # than failing with a confusing Sleeper-side error underneath.
-        raise HTTPException(400, "Trade Finder's auto-suggest isn't built for ESPN leagues yet "
-                                  "— Trade's manual roster browser works fine for ESPN in the meantime.")
     scoring = _effective_scoring(scoring, user)
     try:
-        result = tools.trade_finder(active["league_id"], int(active["roster_id"]),
-                                     target_roster_id=target_roster_id, give_player_ids=give, scoring=scoring)
+        if active.get("platform") == "espn":
+            espn_s2, swid = db.get_espn_secrets(user["id"])
+            result = tools.trade_finder_espn(active["league_id"], int(active["roster_id"]),
+                                             target_roster_id=target_roster_id, give_player_ids=give,
+                                             scoring=scoring, espn_s2=espn_s2, swid=swid)
+        else:
+            result = tools.trade_finder(active["league_id"], int(active["roster_id"]),
+                                         target_roster_id=target_roster_id, give_player_ids=give, scoring=scoring)
     except Exception as e:
         raise HTTPException(400, str(e))
     if result.get("suggestions"):
