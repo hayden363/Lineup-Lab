@@ -3612,7 +3612,7 @@ function wvSmartRender() {
   const more = $("#wv-smart-more");
   more.style.display = "none";
   if (!d.has_league) {
-    $("#wv-smart").innerHTML = `<div class="empty">Connect your Sleeper league in Settings to get free agents scored against your roster, with the player to drop.</div>`;
+    $("#wv-smart").innerHTML = `<div class="empty">Connect your Sleeper or ESPN league in Settings to get free agents scored against your roster, with the player to drop.</div>`;
     return;
   }
   if (!d.smart_match.length) {
