@@ -4,8 +4,38 @@ from engine import ros_projection as ros
 
 
 class RosMathTests(unittest.TestCase):
-    def test_baseline_leans_on_xfp(self):
-        self.assertAlmostEqual(ros.blend_baseline(20.0, 10.0), 17.0)
+    def test_baseline_is_opportunity_not_the_rate(self):
+        # a full window of opportunity data: the rate no longer pulls the baseline at all
+        self.assertAlmostEqual(ros.blend_baseline(14.0, 30.0), 14.0)
+        self.assertAlmostEqual(ros.blend_baseline(14.0, 5.0, efficiency=1.05), 14.7)
+
+    def test_thin_opportunity_data_falls_back_to_rate(self):
+        self.assertAlmostEqual(ros.blend_baseline(14.0, 10.0, 1.0, n_games=2), 0.5 * 14.0 + 0.5 * 10.0)
+        self.assertAlmostEqual(ros.blend_baseline(14.0, 10.0, 1.0, n_games=0), 10.0)
+
+    def test_efficiency_is_capped_five_percent(self):
+        hot = ros.efficiency_multiplier(40.0, 10.0, 17)    # scoring 4x his opportunity
+        cold = ros.efficiency_multiplier(2.0, 10.0, 17)
+        self.assertEqual(hot, 1.05)
+        self.assertEqual(cold, 0.95)
+
+    def test_efficiency_regresses_with_few_games(self):
+        small = ros.efficiency_multiplier(10.3, 10.0, 2)       # 3% over, 2 games
+        big = ros.efficiency_multiplier(10.3, 10.0, 17)        # 3% over, 17 games
+        self.assertLess(small, big)
+        self.assertGreater(small, 1.0)
+        self.assertLess(big, 1.05)
+
+    def test_efficiency_neutral_when_unknown_or_normal(self):
+        self.assertEqual(ros.efficiency_multiplier(None, 10.0, 5), 1.0)
+        self.assertEqual(ros.efficiency_multiplier(10.0, 0, 5), 1.0)
+        self.assertEqual(ros.efficiency_multiplier(10.0, 10.0, 5), 1.0)
+        self.assertEqual(ros.efficiency_multiplier(10.6, 10.0, 5, pos_norm=1.06), 1.0)   # TE norm is above 1
+
+    def test_three_td_outlier_cannot_move_projection_more_than_five_percent(self):
+        base = ros.blend_baseline(12.0, 12.0, ros.efficiency_multiplier(12.0, 12.0, 6))
+        after_fluke = ros.blend_baseline(12.0, 30.0, ros.efficiency_multiplier(30.0, 12.0, 6))
+        self.assertLessEqual(after_fluke / base, 1.05 + 1e-9)
 
     def test_baseline_without_xfp_is_the_rate(self):
         self.assertEqual(ros.blend_baseline(None, 12.5), 12.5)

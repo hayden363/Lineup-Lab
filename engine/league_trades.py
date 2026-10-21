@@ -59,6 +59,38 @@ def league_trades(league_id, weeks, force=False):
     return out
 
 
+def parse_espn_trades(activities):
+    """ESPN's recent-activity feed as the same two-sided trade summaries.
+
+    Each Activity holds one (team, action, player, bid) tuple per player moved;
+    a TRADED action's team is the team that RECEIVED that player. In a
+    two-team trade each side's gives are therefore the other side's receives.
+    With three or more teams ESPN doesn't say who sent what, so gives stay
+    empty rather than guessed."""
+    out = []
+    for act in activities or []:
+        sides = {}
+        for team, action, player, _bid in getattr(act, "actions", []) or []:
+            if action != "TRADED" or team is None:
+                continue
+            tid = getattr(team, "team_id", None)
+            side = sides.setdefault(tid, {"roster_id": tid, "team": getattr(team, "team_name", None) or f"Team {tid}",
+                                          "receives": [], "gives": []})
+            pid = getattr(player, "playerId", None)
+            side["receives"].append({"kind": "player", "player_id": pid,
+                                     "name": getattr(player, "name", None) or str(player)})
+        if len(sides) < 2:
+            continue
+        if len(sides) == 2:
+            a, b = sides.values()
+            a["gives"], b["gives"] = list(b["receives"]), list(a["receives"])
+        ids = sorted(str(x["player_id"]) for sd in sides.values() for x in sd["receives"])
+        out.append({"id": f"espn-{getattr(act, 'date', '')}-{'-'.join(ids)}", "week": None,
+                    "at": getattr(act, "date", None), "sides": list(sides.values())})
+    out.sort(key=lambda t: t.get("at") or 0, reverse=True)
+    return out
+
+
 def new_trades(trades, seen_ids):
     """Trades whose id isn't in `seen_ids` — what to flag as 'new' to the user."""
     seen = set(seen_ids or [])

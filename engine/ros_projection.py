@@ -9,9 +9,15 @@ For every unplayed game on a player's team schedule:
              trailing-4-game expected fantasy points (xFP: every target and
              carry valued at the league-average points of that kind of
              opportunity, engine/waivers.xfp_by_player), so fluky touchdown
-             games don't set the number. 70% xFP / 30% the season rate with
-             form already on it (BASELINE_XFP_WEIGHT). QBs have no passing
-             xFP in this app, so a QB baseline is the rate alone.
+             games don't set the number. Opportunity comes first and
+             efficiency only nudges it: the baseline is that xFP times an
+             efficiency multiplier (his points per xFP against his position's
+             norm, regressed toward 1 by how few games he has, and capped at
+             0.95x to 1.05x), so a 3-TD game or a cold month can't move a
+             projection more than 5%. With fewer than 4 games of opportunity
+             data the missing share falls back to the season rate with form
+             on it. QBs have no passing xFP in this app, so a QB baseline is
+             the rate alone.
   M_vegas    engine/context.environment_factor: implied team total and
              spread, capped to +/-10% (the same number Start/Sit uses).
              Neutral (1.0) for games the schedule feed has no lines for yet.
@@ -36,12 +42,13 @@ to data.
 
 import pandas as pd
 
-from . import context, decision, play_prob, history, waivers
+from . import context, contingency, decision, play_prob, history, waivers
 from .scoring import apply_scoring
 from .board import (_injury_multiplier_col, _rate, build_board, load_bundle, matchup_multiplier)
 
-BASELINE_XFP_WEIGHT = 0.70
 TRAILING_GAMES = 4
+EFF_CAP = (0.95, 1.05)       # efficiency can move opportunity by at most 5% either way
+EFF_REGRESS_GAMES = 12       # k = n / (n + 12): 6 games keeps a third of his gap from the norm, 17 keeps 59%
 DEF_MIN, DEF_MAX = 0.80, 1.20
 GRADES = [(0.15, "A"), (0.35, "B"), (0.65, "C"), (0.85, "D")]   # share of defenses easier than this one
 
@@ -78,14 +85,14 @@ def past_matchups(played, rank_of):
     return games, summary
 
 
-def waterfall(baseline, m_vegas, m_defense, m_h2h=1.0, m_injury=1.0):
+def waterfall(baseline, m_vegas, m_defense, m_h2h=1.0, m_injury=1.0, teammates_out=0.0):
     """Running value after each multiplier, so the card can show where the
     number came from."""
-    a = baseline * m_vegas
+    a = (baseline + teammates_out) * m_vegas
     b = a * m_defense
     c = b * m_h2h
     d = c * m_injury
-    return {"baseline": round(baseline, 1), "after_environment": round(a, 1), "after_defense": round(b, 1),
+    return {"baseline": round(baseline, 1), "teammates_out": round(teammates_out, 1), "after_environment": round(a, 1), "after_defense": round(b, 1),
             "after_history": round(c, 1), "final": round(max(0.0, d), 1)}
 
 
@@ -94,12 +101,48 @@ H2H_NOTE = ("Uses his own games against this team over the last three seasons, p
             "meetings weaker evidence.")
 
 
-def blend_baseline(xfp_trailing, rate):
-    """Role-first baseline. Without xFP (QBs, or a player with no opportunity
-    data) the rate stands alone."""
+def efficiency_multiplier(actual_pg, xfp_pg, games, pos_norm=1.0):
+    """His points per expected point against his position's norm, regressed
+    toward 1.0 by how few games it rests on, capped at EFF_CAP. 1.0 when it
+    can't be computed. Efficiency (yards over expected, finishing) is far less
+    repeatable than opportunity, which is why it only nudges the baseline."""
+    if actual_pg is None or not xfp_pg or xfp_pg <= 0 or not games or games <= 0:
+        return 1.0
+    ratio = (actual_pg / xfp_pg) / (pos_norm if pos_norm and pos_norm > 0 else 1.0)
+    k = games / (games + EFF_REGRESS_GAMES)
+    return min(EFF_CAP[1], max(EFF_CAP[0], 1 + k * (ratio - 1)))
+
+
+def blend_baseline(xfp_trailing, rate, efficiency=1.0, n_games=TRAILING_GAMES):
+    """Opportunity first: trailing xFP x the capped efficiency multiplier. The
+    share of the trailing window with no opportunity data (n_games < 4) falls
+    back to the rate. Without xFP (QBs, or no opportunity data) the rate stands
+    alone."""
     if xfp_trailing is None:
         return rate
-    return BASELINE_XFP_WEIGHT * xfp_trailing + (1 - BASELINE_XFP_WEIGHT) * rate
+    w = min(1.0, max(0.0, n_games / TRAILING_GAMES))
+    return w * xfp_trailing * efficiency + (1 - w) * rate
+
+
+_NORMS = {}
+
+
+def position_norms(bundle, scoring, xf=None):
+    """{position: points per expected point across the league this season}: the
+    'normal' efficiency a player's own ratio is measured against. Cached per
+    (season, scoring, rows of data)."""
+    key = (bundle["season"], len(bundle["wk"]), tuple(sorted(scoring.items())) if scoring else None)
+    if key in _NORMS:
+        return _NORMS[key]
+    xf = waivers.xfp_by_player(bundle["pbp"], scoring) if xf is None else xf
+    wk, _ = apply_scoring(bundle["wk"][bundle["wk"]["position"].isin(["RB", "WR", "TE"])], scoring)
+    g = wk.merge(xf, on=["player_id", "week"], how="inner")
+    g = g[g["xfp"] > 0]
+    norms = {pos: float(d["fpts_active"].sum() / d["xfp"].sum()) for pos, d in g.groupby("position") if d["xfp"].sum() > 0}
+    if len(_NORMS) > 16:
+        _NORMS.clear()
+    _NORMS[key] = norms
+    return norms
 
 
 def clamp_defense(f):
@@ -119,6 +162,51 @@ def grade_for(rank, n):
 
 def combine(baseline, m_vegas, m_defense, m_h2h=1.0, m_injury=1.0):
     return max(0.0, baseline * m_vegas * m_defense * m_h2h * m_injury)
+
+
+def teammate_contingencies(player_id, pos, team, scoring, baseline, bundle):
+    """Teammates likely to miss the next game, each with the points per game
+    this player would gain without him (engine/contingency). Only RB/WR/TE
+    teammates with a real recent role produce an entry."""
+    if pos not in contingency.SKILL or not isinstance(team, str):
+        return []
+    out = []
+    for tpos in contingency.SKILL:
+        tb = build_board(tpos, bundle["season"], min_games=0, scoring=scoring)
+        if "injury_status" not in tb.columns:
+            continue
+        mates = tb[(tb["recent_team"] == team) & tb["injury_status"].notna() & (tb.index != player_id)]
+        for mid, m in mates.iterrows():
+            status = m["injury_status"]
+            pp_m = play_prob.play_probability(tpos, status, m.get("injury_report"))
+            po = contingency.p_out(status, pp_m["p_play"] if pp_m else None)
+            if po <= 0:
+                continue
+            u = contingency.uplift(bundle["wk"], scoring, team, bundle["season"], player_id, pos, mid, tpos, baseline)
+            if u:
+                out.append({"player_id": mid, "name": m.get("player_display_name") or m.get("player_name") or mid,
+                            "position": tpos, "status": status, "p_out": round(po, 3), **u})
+    out.sort(key=lambda c: -c["p_out"] * c["points"])
+    return out[:3]
+
+
+def _contingency_block(i, mates, mates_pts, pp, baseline, m_v, m_d, m_h, m_i, status):
+    """Dual projection for the next game: what he scores if he plays, what he
+    scores if he's out (zero), and what each likely-absent teammate is worth to
+    him. None when nothing about the game is contingent."""
+    if i != 0 or (not mates and not pp):
+        return None
+    block = {"expected_teammate_uplift": round(mates_pts, 1), "teammates_out": []}
+    for c in mates:
+        block["teammates_out"].append({
+            **c,
+            "proj_if_out": round(combine(baseline + c["points"], m_v, m_d, m_h, m_i), 1),
+            "proj_if_plays": round(combine(baseline, m_v, m_d, m_h, m_i), 1),
+        })
+    if pp:
+        block["self"] = {"status": status, "p_play": pp["p_play"], "basis": pp["basis"],
+                         "proj_if_plays": round(combine(baseline + mates_pts, m_v, m_d, m_h, m_i), 1), "proj_if_out": 0.0}
+    return block
 
 
 def remaining_games(schedule, team):
@@ -185,12 +273,14 @@ def player_ros(player_id, scoring=None, season=None, max_games=None):
     xfp_t = None
     xf_mine = None
     if pos != "QB":
-        xf = waivers.xfp_by_player(bundle["pbp"], scoring)
+        xf_all = waivers.xfp_by_player(bundle["pbp"], scoring)
+        xf = xf_all
         xf_mine = xf[xf["player_id"] == player_id].sort_values("week")
         xf = xf_mine.tail(TRAILING_GAMES)
         if len(xf):
             xfp_t = float(xf["xfp"].mean())
-    baseline = blend_baseline(xfp_t, rate)
+    baseline = rate
+    xf_all = None
 
     games_played = int(row["games"]) if pd.notna(row.get("games")) else 0
     q = board[(board["games"] >= 3) & (board["fpts_per_game"] >= 5)]["cv"].dropna()
@@ -210,6 +300,15 @@ def player_ros(player_id, scoring=None, season=None, max_games=None):
     # hard defenses so far (one season of data, so these are small samples).
     usage = _usage(player_id, pos, bundle, xf_mine)
     wk_scored, _ = apply_scoring(wk[wk["player_id"] == player_id], scoring)
+    eff, n_opp = 1.0, 0
+    if xfp_t is not None:
+        n_opp = len(xf_mine.tail(TRAILING_GAMES))
+        both = wk_scored.merge(xf_mine, on="week", how="inner")
+        both = both[both["xfp"] > 0]
+        if len(both):
+            norm = position_norms(bundle, scoring, xf_all).get(pos, 1.0)
+            eff = efficiency_multiplier(float(both["fpts_active"].mean()), float(both["xfp"].mean()), len(both), norm)
+        baseline = blend_baseline(xfp_t, rate, eff, n_opp)
     played = [{"week": int(r.week), "opponent": r.opponent_team, "points": round(float(r.fpts_active), 1)}
               for r in wk_scored.sort_values("week").itertuples(index=False)
               if isinstance(getattr(r, "opponent_team", None), str)]
@@ -225,6 +324,8 @@ def player_ros(player_id, scoring=None, season=None, max_games=None):
         weeks = weeks[:max_games]
     games, total = [], 0.0
     pp = play_prob.play_probability(pos, row.get("injury_status"), row.get("injury_report"))
+    mates = teammate_contingencies(player_id, pos, team, scoring, baseline, bundle) if weeks else []
+    mates_pts = sum(c["p_out"] * c["points"] for c in mates)
     for i, w in enumerate(weeks):
         ctx = context.game_context(bundle["schedule"], team, w)
         opp = ctx["opponent"] if ctx else None
@@ -233,7 +334,8 @@ def player_ros(player_id, scoring=None, season=None, max_games=None):
         m_i = injury if i == 0 else 1.0
         meet = history.versus(all_games, opp) if opp else None
         m_h = history.h2h_factor(all_games, opp, baseline) if opp else 1.0
-        proj = combine(baseline, m_v, m_d, m_h, m_i)
+        extra = mates_pts if i == 0 else 0.0     # the next game only: later weeks assume the teammate is back
+        proj = combine(baseline + extra, m_v, m_d, m_h, m_i)
         out = decision.ruled_out() if (i == 0 and row.get("injury_status") in decision.WONT_PLAY) \
             else decision.outcomes(proj, cv, seed + w, (pp["p_play"] if pp else 1.0) if i == 0 else 1.0)
         rank, n = decision.defense_rank(pos, opp, factors) if opp else (None, None)
@@ -261,14 +363,15 @@ def player_ros(player_id, scoring=None, season=None, max_games=None):
             "roof": ctx.get("roof") if ctx else None,
             "weather": {"label": wx.get("label"), "temp": wx.get("temp"), "wind": wx.get("wind"),
                         "reasons": wx.get("reasons")} if wx else None,
-            "steps": waterfall(baseline, m_v, m_d, m_h, m_i),
+            "steps": waterfall(baseline, m_v, m_d, m_h, m_i, extra),
+            "contingency": _contingency_block(i, mates, mates_pts, pp, baseline, m_v, m_d, m_h, m_i, row.get("injury_status")),
         })
     best = max(games, key=lambda g: g["proj"]) if games else None
     worst = min(games, key=lambda g: g["proj"]) if games else None
     return {
         "player_id": player_id, "position": pos, "team": team,
         "baseline": round(baseline, 1), "baseline_xfp": None if xfp_t is None else round(xfp_t, 1),
-        "baseline_rate": round(rate, 1),
+        "baseline_rate": round(rate, 1), "baseline_efficiency": round(eff, 3) if xfp_t is not None else None,
         "usage": usage, "past_games": past_games, "past_by_tier": past_by_tier, "h2h_note": H2H_NOTE,
         "history": history.summary(player_id, pos, scoring, season_now, row.get("history_weight")) if hist_on else None,
         "earlier_games": earlier,

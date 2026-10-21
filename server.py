@@ -43,6 +43,7 @@ from fastapi.responses import FileResponse, PlainTextResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
+from engine import correlation
 from engine import data as data_layer
 from engine import db
 from engine import espn as espn_layer
@@ -868,10 +869,14 @@ def api_startsit_lineup(week: Optional[int] = Query(None, ge=1, le=25),
     slots, starter_ids, players = _lineup_inputs(result)
     roster = {p["player_id"]: p for p in result["my_team"]["players"]}
     skill = [pid for pid, p in players.items() if p.get("position") in ("QB", "RB", "WR", "TE")][:ADVISOR_MAX_PLAYERS]
+    samples = {}
     if skill:
-        for r in tools.start_sit(skill, scoring=scoring, mode=mode)["players"]:
+        for r in tools.start_sit(skill, scoring=scoring, mode=mode, keep_samples=True)["players"]:
             if "error" not in r and r.get("outcomes") and r["player_id"] in players:
-                players[r["player_id"]]["outcomes"] = r["outcomes"]
+                o = r["outcomes"]
+                if o.get("_samples") is not None:
+                    samples[r["player_id"]] = o.pop("_samples")
+                players[r["player_id"]]["outcomes"] = o
     wk = result["nfl_week"]
     out = lineup_advisor.advise(slots, starter_ids, players, load_bundle()["schedule"], wk, mode)
 
@@ -884,6 +889,13 @@ def api_startsit_lineup(week: Optional[int] = Query(None, ge=1, le=25),
 
     out["lineup"] = [{"slot": slots[i], **row(pid)} if pid else {"slot": slots[i], "player_id": None}
                      for i, pid in enumerate(out["chosen"])]
+    def total_range(ids):
+        ids = [pid for pid in ids if pid in players]
+        const = sum(float(players[pid].get("PROJ") or 0.0) for pid in ids if pid not in samples)
+        return correlation.lineup_range([samples[pid] for pid in ids if pid in samples], const)
+
+    cur_ids = [pid for pid in starter_ids if pid]
+    out["range"] = {"current": total_range(cur_ids), "best": total_range([pid for pid in out["chosen"] if pid])} if samples else None
     out["adds"] = [row(pid) for pid in out["adds"]]
     out["drops"] = [row(pid) for pid in out["drops"]]
     out.pop("chosen")
@@ -1288,7 +1300,16 @@ def api_league_trades(seen: str = Query("", description="comma-separated trade i
     if not active:
         raise HTTPException(400, "connect a league in Settings first")
     if active.get("platform") == "espn":
-        raise HTTPException(400, "trade detection is Sleeper-only for now")
+        try:
+            espn_s2, swid = db.get_espn_secrets(user["id"])
+            league = espn_layer.get_league(active["league_id"], espn_layer.resolve_year(), espn_s2, swid)
+            trades = league_trades_layer.parse_espn_trades(league.recent_activity(size=100, msg_type="TRADED"))
+        except Exception as e:
+            raise HTTPException(400, str(e))
+        new_ids = {t["id"] for t in league_trades_layer.new_trades(trades, [x for x in seen.split(",") if x])}
+        for t in trades:
+            t["is_new"] = t["id"] in new_ids
+        return _clean({"trades": trades})
     try:
         live = sleeper_layer.get_nfl_state().get("week") or 1
         trades = league_trades_layer.league_trades(active["league_id"], range(1, max(1, int(live)) + 1))

@@ -1669,7 +1669,25 @@ function pjWaterfall(g) {
   const st = g.steps;
   const node = (label, v, cls = "") => `<div class="pj-wf-n ${cls}"><span>${label}</span><b>${FMT.d1(v)}</b></div>`;
   const arrow = (label, m) => `<div class="pj-wf-a"><span>${label}</span>${pjMult(m)}</div>`;
-  return `<div class="pj-wf">${node("Baseline", st.baseline)}${arrow("Game", g.m_vegas)}${node("", st.after_environment, "mid")}${arrow("Defense", g.m_defense)}${node("", st.after_defense, "mid")}${arrow("History", g.m_h2h)}${node("Expected", st.final, "end")}</div>`;
+  const mates = st.teammates_out > 0
+    ? `<div class="pj-wf-a"><span>Teammates out</span><b>+${FMT.d1(st.teammates_out)}</b></div>${node("", st.baseline + st.teammates_out, "mid")}` : "";
+  return `<div class="pj-wf">${node("Baseline", st.baseline)}${mates}${arrow("Game", g.m_vegas)}${node("", st.after_environment, "mid")}${arrow("Defense", g.m_defense)}${node("", st.after_defense, "mid")}${arrow("History", g.m_h2h)}${node("Expected", st.final, "end")}</div>`;
+}
+
+function pjContingency(g) {
+  const c = g.contingency;
+  if (!c || (!c.self && !(c.teammates_out || []).length)) return "";
+  const pct = (v) => Math.round(v * 100);
+  const rows = [];
+  if (c.self) {
+    rows.push(`<div class="pj-ct-row"><span>If he plays <em>${pct(c.self.p_play)}%</em></span><b>${FMT.d1(c.self.proj_if_plays)}</b><small>${esc(c.self.basis)}</small></div>`);
+    rows.push(`<div class="pj-ct-row"><span>If he sits <em>${100 - pct(c.self.p_play)}%</em></span><b>0.0</b><small>his work goes to teammates</small></div>`);
+  }
+  (c.teammates_out || []).forEach((t) => {
+    const more = [t.targets > 0.1 ? `${t.targets.toFixed(1)} more targets` : "", t.carries > 0.1 ? `${t.carries.toFixed(1)} more carries` : ""].filter(Boolean).join(" and ");
+    rows.push(`<div class="pj-ct-row"><span>If ${esc(t.name)} sits <em>${esc(t.status)}, ${pct(t.p_out)}% out</em></span><b>${FMT.d1(t.proj_if_out)}</b><small>vs ${FMT.d1(t.proj_if_plays)} if he plays: about ${esc(more)} from the volume teammates have absorbed in past absences</small></div>`);
+  });
+  return `<div class="pj-ct"><div class="pj-tk">Two ways this game goes</div>${rows.join("")}<div class="muted small">The expected number above already weights each outcome by its chance.</div></div>`;
 }
 
 function pjUsageTile(d, pos) {
@@ -1802,10 +1820,11 @@ function projPageHtml(d, p) {
     ? `<div class="pj-take"><div><span class="k pos">Smash spot</span> ${spot(smash)} · ${FMT.d1(smash.proj)} expected, ${FMT.d1(smash.ceiling)} ceiling</div>
        <div><span class="k neg">Trap spot</span> ${spot(trap)} · ${FMT.d1(trap.proj)} expected, ${FMT.d1(trap.floor)} floor</div></div>` : "";
   const baseNote = d.baseline_xfp != null
-    ? `Baseline ${FMT.d1(d.baseline)} pts/game: mostly his last 4 games of expected points (each target and carry valued by its chance of scoring), blended with his season rate, so a fluky touchdown game doesn't set the number.`
+    ? `Baseline ${FMT.d1(d.baseline)} pts/game: his last 4 games of expected points (each target and carry valued by its chance of scoring), nudged at most 5% up or down for how efficiently he turns those touches into points, so a fluky touchdown game can't set the number.`
     : `Baseline ${FMT.d1(d.baseline)} pts/game: his season rate with recent form. ${p.position === "QB" ? "Passers have no expected-points volume data here" : "He has no expected-points history yet"}, so this leans on points scored.`;
   return `<div class="pj-lead"><div><div class="pj-k">Next ${Math.min(4, d.games.length)} game${d.games.length === 1 ? "" : "s"}</div><div class="pj-big">${FMT.d1(d.games.slice(0, 4).reduce((a, g) => a + g.proj, 0))}<small>expected pts</small></div></div><div class="pj-adv">${advice}</div></div>
     <div class="pj-base">${baseNote}</div>
+    ${pjContingency(first)}
     ${pjHeroHtml(d, p, top)}
     ${d.games.length > 1 ? `<div class="pcd-sub">The weeks after: matchup difficulty</div>${pjTimelineHtml(d)}
       <div class="pj-follow">${follow.map((g) => pjFollowCardHtml(g, d, p, top)).join("")}</div>${take}` : ""}
@@ -2031,7 +2050,7 @@ function rosHtml(d) {
   }).join("");
   return `<div class="pc-card ros-card">
     <div class="section-label pc-header"><span>Rest of Season</span><span class="pc-wk">${esc(d.n_games)} GAMES · ${FMT.d1(d.total)} PTS</span></div>
-    <div class="muted small">Role baseline ${FMT.d1(d.baseline)} per game${d.baseline_xfp != null ? ` (${FMT.d1(d.baseline_xfp)} expected from his last-4-game touches, ${FMT.d1(d.baseline_rate)} from his season rate)` : ""}, then scaled by the game environment and the opponent. Floor and ceiling are the 10th and 90th percentile.</div>
+    <div class="muted small">Role baseline ${FMT.d1(d.baseline)} per game${d.baseline_xfp != null ? ` (${FMT.d1(d.baseline_xfp)} expected from his last-4-game touches${d.baseline_efficiency != null && d.baseline_efficiency !== 1 ? `, x${d.baseline_efficiency.toFixed(2)} efficiency` : ""}; season rate ${FMT.d1(d.baseline_rate)})` : ""}, then scaled by the game environment and the opponent. Floor and ceiling are the 10th and 90th percentile.</div>
     <div class="ros-scroll"><table class="ros-table"><thead><tr><th>Wk</th><th>Opp</th><th>Spread / ITT</th><th>Matchup</th><th>Vegas ×</th><th>Defense ×</th><th>Floor</th><th>Proj</th><th>Ceiling</th></tr></thead><tbody>${rows}</tbody></table></div>
     <div class="muted small pc-source-note">Head-to-head history isn't used: it only counts if the same coordinator and coverage scheme are back, and no data here says so. Games a few weeks out often have no betting line yet, so they get no Vegas adjustment. The weights are judgment calls, not fitted to data.</div>
   </div>`;
@@ -2614,7 +2633,7 @@ function ssDecisionHtml(data, players) {
         <span>${esc(d.edge || `${d.win_pct}% to outscore ${d.over_name}`)}</span>
       </div>
     </div>
-    <div class="ssd-tags"><span class="ssd-tag">${esc(d.archetype)}</span></div>
+    <div class="ssd-tags"><span class="ssd-tag">${esc(d.archetype)}</span>${d.correlated ? `<span class="ssd-tag" title="Players on the same offence, or facing each other, score together: a quarterback's big game is usually his receivers' too. Measured from 2023-26 games.">Linked scores: shared offence</span>` : ""}</div>
     <div class="ssd-odds"><div class="ssd-k">Win condition odds</div>${odds}</div>
   </div>
   <div class="ssd-grid">
@@ -2932,7 +2951,13 @@ function renderLineupAdvisor(res, loading) {
         <span class="muted small">${c.delta_mean >= 0 ? "+" : ""}${c.delta_mean.toFixed(1)} avg · ${c.delta_mode >= 0 ? "+" : ""}${c.delta_mode.toFixed(1)} ${esc(mode)}</span></div></div>`;
     }).join("");
     const locked = res.locked_slots.length ? `<div class="muted small">Already kicked off, left alone: ${res.locked_slots.map(esc).join(", ")}.</div>` : "";
-    out = `<div class="adv-head">${head}</div>${rows}${locked}
+    const rg = res.range && res.range.best ? (() => {
+      const f = (r) => `${FMT.d1(r.p10)}&ndash;${FMT.d1(r.p90)}`;
+      const wide = res.range.best.widening;
+      return `<div class="adv-range"><span class="k">Range this week</span> Best lineup <b>${f(res.range.best)}</b> (10th&ndash;90th percentile)${res.range.current ? `, your current one <b>${f(res.range.current)}</b>` : ""}.
+        ${Math.abs(wide) >= 1 ? `<span class="muted small">Stacked offences make it ${Math.abs(wide).toFixed(1)} points ${wide > 0 ? "wider" : "narrower"} than if every starter were unrelated.</span>` : ""}</div>`;
+    })() : "";
+    out = `<div class="adv-head">${head}</div>${rows}${rg}${locked}
       <div class="muted small">Ranks lineups by the lens you picked. It is not a win-probability calculation, and Out players and byes count as zero.</div>`;
   }
   host.innerHTML = `<div class="sec-head first"><div><h2>Best lineup, whole roster</h2></div><div class="pill-group adv-modes">${pills}</div></div>
@@ -4039,7 +4064,7 @@ async function loadTradesPanel() {
     if (!trades.length) { host.innerHTML = `${head}<div class="hint">No trades in your league yet.</div>`; return; }
     const side = (s) => `<div class="tr-side"><div class="tr-team">${esc(s.team)} <span class="muted small">gets</span></div>${s.receives.map((x) => `<div class="tr-item ${x.kind}">${esc(x.name)}</div>`).join("") || `<div class="muted small">nothing</div>`}</div>`;
     host.innerHTML = head +
-      trades.slice(0, 10).map((t) => `<div class="tr-card${t.is_new ? " is-new" : ""}"><div class="tr-head">Week ${esc(t.week ?? "—")}${t.is_new ? ` <span class="lk lk-open">NEW</span>` : ""}</div><div class="tr-sides">${t.sides.map(side).join("")}</div></div>`).join("");
+      trades.slice(0, 10).map((t) => `<div class="tr-card${t.is_new ? " is-new" : ""}"><div class="tr-head">${t.week != null ? `Week ${esc(t.week)}` : esc(t.at ? new Date(t.at).toLocaleDateString(undefined, { month: "short", day: "numeric" }) : "—")}${t.is_new ? ` <span class="lk lk-open">NEW</span>` : ""}</div><div class="tr-sides">${t.sides.map(side).join("")}</div></div>`).join("");
     try { localStorage.setItem("seenTrades", JSON.stringify(trades.map((t) => t.id))); } catch (e) { /* storage unavailable */ }
   } catch (e) {
     host.innerHTML = `${secHeadHtml("trades", "League trades", "")}<div class="hint">${esc(e.message)}</div>`;

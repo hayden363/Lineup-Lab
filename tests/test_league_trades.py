@@ -31,5 +31,35 @@ class TradeTests(unittest.TestCase):
         self.assertEqual(T.new_trades([t], ["t1"]), [])
 
 
+class EspnTradeTests(unittest.TestCase):
+    class _Obj:
+        def __init__(self, **kw):
+            self.__dict__.update(kw)
+
+    def act(self, date, actions):
+        return self._Obj(date=date, actions=actions)
+
+    def test_two_team_trade_fills_both_sides(self):
+        ta, tb = self._Obj(team_id=1, team_name="A"), self._Obj(team_id=2, team_name="B")
+        p1, p2 = self._Obj(playerId=11, name="One"), self._Obj(playerId=22, name="Two")
+        trades = T.parse_espn_trades([self.act(5, [(ta, "TRADED", p2, 0), (tb, "TRADED", p1, 0)])])
+        self.assertEqual(len(trades), 1)
+        a = next(s for s in trades[0]["sides"] if s["roster_id"] == 1)
+        self.assertEqual([x["name"] for x in a["receives"]], ["Two"])
+        self.assertEqual([x["name"] for x in a["gives"]], ["One"])
+
+    def test_ignores_non_trades_and_one_sided(self):
+        ta = self._Obj(team_id=1, team_name="A")
+        p = self._Obj(playerId=1, name="X")
+        self.assertEqual(T.parse_espn_trades([self.act(1, [(ta, "FA ADDED", p, 0)])]), [])
+        self.assertEqual(T.parse_espn_trades([self.act(1, [(ta, "TRADED", p, 0)])]), [])
+
+    def test_three_team_trade_does_not_guess_gives(self):
+        teams = [self._Obj(team_id=i, team_name=str(i)) for i in (1, 2, 3)]
+        acts = [(t, "TRADED", self._Obj(playerId=i, name=f"P{i}"), 0) for i, t in enumerate(teams)]
+        trade = T.parse_espn_trades([self.act(1, acts)])[0]
+        self.assertTrue(all(s["gives"] == [] for s in trade["sides"]))
+
+
 if __name__ == "__main__":
     unittest.main()

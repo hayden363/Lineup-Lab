@@ -13,7 +13,7 @@ import pandas as pd
 
 from . import lineup as lineup_layer
 from . import profile
-from . import context, data, db, decision, play_prob, draft_runs, history, trade_engine, locks, trade_reasons, defense_scoring, kicker_scoring, role_baseline, sleeper, waivers
+from . import context, correlation, data, db, decision, play_prob, draft_runs, history, trade_engine, locks, trade_reasons, defense_scoring, kicker_scoring, role_baseline, sleeper, waivers
 from .board import (POSITIONS, build_board, load_bundle, rest_of_season_value,
                      project_vs)
 from .scoring import apply_scoring
@@ -348,7 +348,7 @@ def _apply_recommendation_tiers(valid):
         r["confidence"] = confidence
 
 
-def start_sit(player_ids, opponents=None, season=None, scoring=None, mode="balanced"):
+def start_sit(player_ids, opponents=None, season=None, scoring=None, mode="balanced", keep_samples=False):
     """Compare 2+ players. `opponents`: optional {player_id: opp_abbr} for
     matchup-adjusted projections; players without one use a rest-of-season
     blended projection instead.
@@ -470,8 +470,11 @@ def start_sit(player_ids, opponents=None, season=None, scoring=None, mode="balan
         if call:
             for r in results:
                 r["recommended"] = ("error" not in r) and (r["player_id"] == call["pick"])
-    for r in valid:
-        r.get("outcomes", {}).pop("_samples", None)
+    if call and chart:
+        call["correlated"] = bool(chart.get("correlated"))
+    if not keep_samples:
+        for r in valid:
+            r.get("outcomes", {}).pop("_samples", None)
     return {"season": bundle["season"], "mode": mode, "summary": summary, "players": results,
             "decision": call, "chart": chart}
 
@@ -554,11 +557,19 @@ def _attach_decisions(valid, bundle, get_board, scoring, mode):
             "recent": recent, "goal_line_share": round(goal_line.get(pid, 0.0) * 100),
         }
         r["rank_value"] = decision.mode_value(r["outcomes"], mode)
+    # Players on one offence (or facing each other) move together: rearrange the
+    # draws so head-to-head odds and lineup totals see that (engine/correlation.py).
+    seed = int("".join(ch for ch in "".join(sorted(r["player_id"] for r in valid)) if ch.isdigit()) or 0) % (2 ** 32)
+    try:
+        correlated = correlation.apply(valid, wk, seed)
+    except Exception as e:
+        print(f"[startsit] correlation skipped: {e}")
+        correlated = False
     lo = 0.0
     hi = max(30.0, max(float(np.percentile(r["outcomes"]["_samples"], 97)) for r in valid))
     for r in valid:
         r["outcomes"]["curve"] = decision.curve(r["outcomes"]["_samples"], lo, hi)
-    return {"lo": lo, "hi": round(hi, 1), "bins": 40}
+    return {"lo": lo, "hi": round(hi, 1), "bins": 40, "correlated": correlated}
 
 
 # Every lineup-slot label that takes more than one of RB/WR/TE and no QB
