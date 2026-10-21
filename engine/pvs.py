@@ -6,57 +6,62 @@ receiver can outrank a 72 running back who is the better fantasy asset. PVS
 measures what wins leagues instead: the edge a player gives a starting lineup
 over the freely available replacement, backed by usage, upside and stability.
 
-    C   = (0.40 S_vorp + 0.25 S_vol + 0.15 S_ceil + 0.10 S_perf) x M_match
-    PVS = 100 x ((C - C_min) / (C_max - C_min)) ^ 1.30
+    C   = 0.40 S_vorp + 0.25 S_vol + 0.15 S_ceil + 0.10 S_perf + 0.10 S_match
+    PVS = 100 x C
 
 Pillars, each 0-1:
-  S_vorp  VORP / the league's best VORP. VORP = projected PPG minus the PPG of
-          the first free player at the position (engine/value.replacement_ranks,
-          so a 2-QB league lowers the QB baseline automatically).
+  S_vorp  VORP / the average VORP of the league's top ten players, capped at 1.
+          VORP = projected PPG minus the PPG of the first free player at the
+          position (engine/value.replacement_ranks, so a 2-QB league lowers the
+          QB baseline automatically).
   S_vol   Usage that repeats, unlike touchdowns: snap share (>= 70% counts as
           full; the closest public stand-in for route participation), touches or
           targets per game, and red-zone touches per game. Each usage input is
           scaled against the 90th percentile of his own position, so a 22-touch
           back and a 10-target receiver both read as "full workload".
   S_ceil  Week-winning upside: the 90th-percentile outcome minus the position's
-          replacement level, over the league's best. (The pasted spec used
-          (P90 - P50) / P50, which rewards low-median volatile players; this
-          form rewards upside that actually beats a waiver add.)
+          replacement level, over the top-ten average, capped at 1. (The pasted
+          spec used (P90 - P50) / P50, which rewards low-median volatile
+          players; this rewards upside that actually beats a waiver add.)
   S_perf  Stability and efficiency: consistency (1 - coefficient of variation),
           efficiency percentile within position (EPA per play / touch / target,
           rush yards over expected) and his last-4-game form.
-  M_match Optional multiplier from 0.75 to 1.25 (team implied total / 22 x the
-          opponent's positional defence). The season-long board's PROJ already
-          averages every defence, so it stays at 1.0 there; the weekly tools
-          pass a real one.
+  S_match Where this week's game sits between a bad spot (0.75x: low team total,
+          tough defence) and a great one (1.25x): (multiplier - 0.75) / 0.5.
+          The multiplier is team implied total / 22 x the opponent's
+          positional defence. An average game is 1.0x = 0.5, so a perfect
+          player in a neutral matchup scores 95 and only a perfect player in a
+          great one reaches 100. The season-long board's PROJ already averages
+          every defence, so it uses the neutral 0.5 there; the weekly tools
+          pass a real multiplier.
 
-The pasted spec gives 1.25 in its header formula and 1.30 in its worked step;
-this uses 1.30 (the step that is actually computed), and applies matchup as a
-multiplier (its Step 3) rather than also as a fifth 10% addend, which would
-count it twice. C is then scaled across the pool being scored: 0 at the lowest
-composite, 95 at the mean of the top five, and the few players above that
-spread linearly up to 100 for the single best (so ties at the top never hide
-the order). The spec's plain C_max let one outlier (a 15-VORP back in a
-6-game sample) squash everyone else, so only three players cleared 70 and the
-tiers meant nothing.
+Differences from the pasted spec, on purpose:
+  * The spec lists matchup as a 10% weight in its table but as a multiplier in
+    its Step 3. Using both counts it twice, so it is the 10% pillar only.
+  * No power curve. The spec stretches the elite tier (^1.30; its header says
+    1.25); on real data that made one back 100 and the next elite receiver 81.
+    Instead the VORP and ceiling pillars saturate at the top-ten average, so
+    the elite cluster sits close together, and the scale is absolute (C = 1 is
+    100), not "best player in the pool = 100". The best player lands in the
+    high 80s, with headroom for a better season, and a score means the same
+    thing next week as it does today.
 """
 
 import numpy as np
 import pandas as pd
 
-WEIGHTS = {"vorp": 0.40, "vol": 0.25, "ceil": 0.15, "perf": 0.10}
-GAMMA = 1.30
-TOP_ANCHOR = 5       # the scale is anchored at the mean of the top five composites, not the single best
-ANCHOR_SCORE = 95.0  # that anchor scores 95; only players above it spread up to 100
+WEIGHTS = {"vorp": 0.40, "vol": 0.25, "ceil": 0.15, "perf": 0.10, "match": 0.10}
+TOP_REF = 10       # VORP and ceiling are scored against the average of the league's top ten
 MATCHUP_RANGE = (0.75, 1.25)
 LEAGUE_AVG_ITT = 22.0
 SNAP_FULL = 0.70     # at or above this snap share = full marks, as the spec's route% rule
 HVT_FULL_PG = 7.0    # high-value touches per game that count as full marks (spec: "7+")
 
-# Fixed bands from the spec; a tier is a statement about the score, not a rank.
+# Fixed score bands (the spec's, shifted down to fit the absolute scale); a tier
+# is a statement about the score, not a rank.
 TIER_BANDS = [
-    (95, "Legendary"), (85, "Cornerstone"), (70, "Every-week starter"),
-    (50, "Matchup / flex play"), (25, "Bench stash"), (0, "Replacement"),
+    (90, "Legendary"), (80, "Cornerstone"), (68, "Every-week starter"),
+    (52, "Matchup / flex play"), (32, "Bench stash"), (0, "Replacement"),
 ]
 # Efficiency columns that exist on the boards, per position (higher = better).
 EFFICIENCY = {
@@ -65,6 +70,14 @@ EFFICIENCY = {
     "WR": ["epa_per_target", "yards_per_target"],
     "TE": ["epa_per_target", "yards_per_target"],
 }
+
+
+def tier_number(pvs):
+    """1 (Legendary) ... 6 (Replacement), the position of the PVS band."""
+    for i, (floor, _) in enumerate(TIER_BANDS, start=1):
+        if pvs is not None and not pd.isna(pvs) and pvs >= floor:
+            return i
+    return len(TIER_BANDS)
 
 
 def tier_label(pvs):
@@ -136,6 +149,13 @@ def _perf(g, pos):
     return pd.Series(np.where(den > 0, num / np.where(den > 0, den, 1), 0.5), index=g.index)
 
 
+def _top_ref(series):
+    """Average of the league's top TOP_REF values: the 'elite' reference a
+    pillar is scored against (never zero)."""
+    top = series.nlargest(min(TOP_REF, len(series)))
+    return max(float(top.mean()) if len(top) else 0.0, 1e-9)
+
+
 def add_pvs(allp, league=None, matchup=None):
     """Adds PVS (0-100), PVS_tier and the four pillar scores to a frame from
     value.compute_value (needs position, PROJ, VOR, replacement_proj; uses
@@ -146,10 +166,10 @@ def add_pvs(allp, league=None, matchup=None):
         return allp
     df = allp.copy()
     vorp = (df["PROJ"] - df["replacement_proj"]).clip(lower=0)
-    s_vorp = vorp / max(float(vorp.max()), 1e-9)
+    s_vorp = (vorp / _top_ref(vorp)).clip(0, 1)
 
     ceil_edge = (_col(df, "ceiling").fillna(df["PROJ"]) - df["replacement_proj"]).clip(lower=0)
-    s_ceil = ceil_edge / max(float(ceil_edge.max()), 1e-9)
+    s_ceil = (ceil_edge / _top_ref(ceil_edge)).clip(0, 1)
 
     s_vol = pd.Series(np.nan, index=df.index)
     s_perf = pd.Series(np.nan, index=df.index)
@@ -162,16 +182,10 @@ def add_pvs(allp, league=None, matchup=None):
     m = pd.Series(1.0, index=df.index)
     if matchup:
         m = pd.Series({pid: float(np.clip(matchup.get(pid, 1.0), *MATCHUP_RANGE)) for pid in df.index})
-    c = (WEIGHTS["vorp"] * s_vorp + WEIGHTS["vol"] * s_vol + WEIGHTS["ceil"] * s_ceil + WEIGHTS["perf"] * s_perf) * m
-    lo, top = float(c.min()), float(c.max())
-    hi = min(float(c.nlargest(min(TOP_ANCHOR, len(c))).mean()), top)
-    if hi - lo <= 1e-9:
-        pvs = pd.Series(0.0, index=df.index)
-    else:
-        below = ((c.clip(upper=hi) - lo) / (hi - lo)) ** GAMMA * ANCHOR_SCORE
-        above = (c - hi).clip(lower=0) / max(top - hi, 1e-9) * (100.0 - ANCHOR_SCORE)
-        pvs = below + above
-    df["PVS"] = pvs.clip(0, 100).round(1)
+    s_match = (m - MATCHUP_RANGE[0]) / (MATCHUP_RANGE[1] - MATCHUP_RANGE[0])
+    c = (WEIGHTS["vorp"] * s_vorp + WEIGHTS["vol"] * s_vol + WEIGHTS["ceil"] * s_ceil
+         + WEIGHTS["perf"] * s_perf + WEIGHTS["match"] * s_match)
+    df["PVS"] = (100.0 * c).clip(0, 100).round(1)
     df["PVS_tier"] = [tier_label(v) for v in df["PVS"]]
     df["pvs_vorp"] = s_vorp.round(3)
     df["pvs_vol"] = s_vol.round(3)
@@ -179,3 +193,19 @@ def add_pvs(allp, league=None, matchup=None):
     df["pvs_perf"] = s_perf.round(3)
     df["pvs_match"] = m.round(3)
     return df
+
+
+def reorder(df):
+    """Big Board order: by PVS, best first, with ties broken by VOR. Re-numbers
+    overall_rank, our_rank, ecr_gap and the tier number (1 = Legendary ... 6 =
+    Replacement, the fixed PVS bands) so every column agrees with the order shown. The
+    expert rank is kept as a comparison; it no longer moves a player."""
+    if df is None or df.empty or "PVS" not in df.columns:
+        return df
+    out = df.sort_values(["PVS", "VOR"], ascending=[False, False], kind="stable").copy()
+    out["overall_rank"] = range(1, len(out) + 1)
+    out["our_rank"] = out["overall_rank"].astype(float)
+    if "ecr" in out.columns:
+        out["ecr_gap"] = (out["our_rank"] - out["ecr"]).round(0)
+    out["tier"] = [tier_number(v) for v in out["PVS"]]
+    return out

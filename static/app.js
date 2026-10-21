@@ -919,7 +919,7 @@ function renderOverallBoard(data) {
       body.appendChild(tr);
     });
   $("#board-hint").textContent =
-    `Ranked by VOR — points per game above a free replacement at the same position (replacement ≈ QB${rr.QB}, RB${rr.RB}, WR${rr.WR}, TE${rr.TE} in a ${data.league?.teams || 12}-team league), nudged 30% toward the expert consensus. PVS is the 0–100 score beside it: that same edge, plus usage, ceiling and stability, scaled so a QB and an RB are comparable. That's why an elite tight end can outrank a good quarterback.`;
+    `Ranked by PVS (Player Value Score, 0–100): how many points per game he gives a lineup over a free replacement at his position (replacement ≈ QB${rr.QB}, RB${rr.RB}, WR${rr.WR}, TE${rr.TE} in a ${data.league?.teams || 12}-team league), plus his usage, ceiling and stability. The expert consensus rank is shown for comparison and no longer moves anyone. That's why an elite tight end can outrank a good quarterback.`;
 }
 
 // A short expanding circle where you clicked — pure CSS animation, removed when done.

@@ -23,7 +23,7 @@ def _league_rows(allen_proj=24.0):
     star RB (21.5) and star QB (allen_proj)."""
     rows = []
     for i in range(15):
-        rows.append((f"qb{i}", "QB", 21.0 - i * 0.7, 28.0 - i * 0.7))
+        rows.append((f"qb{i}", "QB", 22.0 - i * 0.4, 28.0 - i * 0.5))
     for i in range(35):
         rows.append((f"rb{i}", "RB", 17.0 - i * 0.28, 24.0 - i * 0.3))
     for i in range(35):
@@ -49,22 +49,36 @@ class TestPVS(unittest.TestCase):
     def test_superflex_lifts_quarterbacks(self):
         one_qb = _scored()
         sf = _scored(league={"teams": 12, "slots": {"SUPERFLEX": 1}})
-        self.assertGreater(sf.loc["allen", "pvs_vorp"], one_qb.loc["allen", "pvs_vorp"])
-        self.assertGreater(sf.loc["allen", "PVS"], one_qb.loc["allen", "PVS"])
+        # Allen is already past the elite reference in both leagues; a mid-pack QB is the one that moves
+        self.assertGreater(sf.loc["qb6", "pvs_vorp"], one_qb.loc["qb6", "pvs_vorp"])
+        self.assertGreater(sf.loc["qb6", "PVS"], one_qb.loc["qb6", "PVS"])
+        self.assertGreaterEqual(sf.loc["allen", "PVS"], one_qb.loc["allen", "PVS"])
         qb12 = sf[sf["position"] == "QB"].sort_values("PROJ", ascending=False)
         self.assertGreater(qb12["PVS"].iloc[11], one_qb[one_qb["position"] == "QB"].sort_values("PROJ", ascending=False)["PVS"].iloc[11])
 
     def test_range_and_replacement_floor(self):
         out = _scored()
         self.assertTrue(out["PVS"].between(0, 100).all())
-        self.assertEqual(out["PVS"].max(), 100.0)    # the top is capped, never above 100
+        self.assertLess(out["PVS"].max(), 100.0)     # absolute scale: the best player is not pinned at 100
+        self.assertGreater(out["PVS"].max(), 70.0)
         worst = out.sort_values("PVS").iloc[0]
-        self.assertLess(worst["PVS"], 5)
-        self.assertEqual(worst["PVS_tier"], "Replacement")
+        self.assertLess(worst["PVS"], out["PVS"].max() / 2)
+        self.assertIn(worst["PVS_tier"], ("Replacement", "Bench stash"))
 
     def test_one_outlier_does_not_flatten_the_rest(self):
         out = _scored()
         self.assertGreater((out["PVS"] >= 50).sum(), 3)
+        # the star RB beats the next best by far less than his raw lead would suggest
+        ranked = out["PVS"].sort_values(ascending=False)
+        self.assertLess(ranked.iloc[0] - ranked.iloc[4], 15)
+
+    def test_perfect_player_has_headroom_but_a_great_matchup_reaches_100(self):
+        rows = [("star", "RB", 40.0, 60.0)] + [(f"rb{i}", "RB", 17.0 - i * 0.28, 24.0) for i in range(35)]
+        allp = value_layer.compute_value(_frames(rows), ecr=None)
+        neutral = pvs.add_pvs(allp).loc["star", "PVS"]
+        great = pvs.add_pvs(allp, matchup={"star": 1.25}).loc["star", "PVS"]
+        self.assertLessEqual(neutral, 96.0)
+        self.assertGreater(great, neutral)
 
     def test_more_points_never_lowers_score_within_position(self):
         out = _scored()
@@ -107,12 +121,24 @@ class TestPVS(unittest.TestCase):
         self.assertTrue(pvs.add_pvs(pd.DataFrame()).empty)
 
     def test_tier_bands(self):
-        for score, name in [(100, "Legendary"), (95, "Legendary"), (94.9, "Cornerstone"), (85, "Cornerstone"),
-                            (84.9, "Every-week starter"), (70, "Every-week starter"), (69.9, "Matchup / flex play"),
-                            (50, "Matchup / flex play"), (49.9, "Bench stash"), (25, "Bench stash"),
-                            (24.9, "Replacement"), (0, "Replacement")]:
+        for score, name in [(100, "Legendary"), (90, "Legendary"), (89.9, "Cornerstone"), (80, "Cornerstone"),
+                            (79.9, "Every-week starter"), (68, "Every-week starter"), (67.9, "Matchup / flex play"),
+                            (52, "Matchup / flex play"), (51.9, "Bench stash"), (32, "Bench stash"),
+                            (31.9, "Replacement"), (0, "Replacement")]:
             self.assertEqual(pvs.tier_label(score), name, score)
         self.assertIsNone(pvs.tier_label(float("nan")))
+
+
+class TestReorder(unittest.TestCase):
+    def test_big_board_order_follows_pvs_and_ranks_agree(self):
+        out = pvs.reorder(_scored())
+        self.assertTrue(out["PVS"].is_monotonic_decreasing)
+        self.assertEqual(list(out["overall_rank"]), list(range(1, len(out) + 1)))
+        self.assertEqual(list(out["our_rank"]), [float(i) for i in range(1, len(out) + 1)])
+        self.assertTrue(out["tier"].is_monotonic_increasing)
+        self.assertGreaterEqual(out["tier"].iloc[-1], 5)
+        self.assertEqual(pvs.tier_number(92), 1)
+        self.assertEqual(pvs.tier_number(55), 4)
 
 
 if __name__ == "__main__":

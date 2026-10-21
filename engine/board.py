@@ -656,7 +656,7 @@ def overall_board(scoring=None, league=None, season=None, ecr=None):
     if ecr is None:
         ecr = consensus.overall_lookup()
     out = value_layer.compute_value(frames, ecr=ecr, league=league)
-    out = pvs.add_pvs(out, league=league)
+    out = pvs.reorder(pvs.add_pvs(out, league=league))
     out.attrs["scoring"] = frames["QB"].attrs.get("scoring")
     out.attrs["replacement_ranks"] = value_layer.replacement_ranks(league)
     return out
