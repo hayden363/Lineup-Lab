@@ -51,6 +51,7 @@ from engine import lineup as lineup_layer
 from engine import live_scores as live_scores_layer
 from engine import locks
 from engine import waivers as waivers_layer
+from engine import ros_projection
 from engine import startsit_ai
 from engine import mail as mail_layer
 from engine import news as news_layer
@@ -696,6 +697,17 @@ def api_player_projection_compare(player_id: str, opp: Optional[str] = Query(Non
     })
 
 
+@app.get("/api/player/{player_id}/ros", dependencies=[Depends(projcompare_rate_limit)])
+def api_player_ros(player_id: str, games: Optional[int] = Query(None, ge=1, le=20),
+                   scoring: Optional[dict] = Depends(scoring_from_query), user=Depends(current_user)):
+    """Game-by-game projection for the rest of the season (engine/ros_projection.py)."""
+    scoring = _effective_scoring(scoring, user)
+    out = ros_projection.player_ros(player_id, scoring=scoring, max_games=games)
+    if out is None:
+        raise HTTPException(404, "player not found or not enough data")
+    return _clean(out)
+
+
 @app.get("/api/search")
 def api_search(q: str = Query(..., min_length=1), limit: int = Query(20, ge=1, le=50)):
     return {"query": q, "results": _clean(search_players(q, limit=limit))}
@@ -985,6 +997,21 @@ def _espn_teams_for_lookup(league_id, user):
     }
 
 
+def _espn_error_message(e):
+    """Plain-English reason an ESPN league couldn't be loaded. ESPN gives
+    the same refusal for a private league as for bad cookies, and the
+    library's own wording means nothing to a user."""
+    name = type(e).__name__
+    if name == "ESPNAccessDenied":
+        return ("That ESPN league isn't public, so Lineup Lab can't read it. "
+                "In ESPN go to League → Settings → Basic Settings and tick "
+                "\"Make League Viewable to Public\" (commissioner only), then try again.")
+    if name == "ESPNInvalidLeague":
+        return ("ESPN says that league doesn't exist for this season. Check the league ID "
+                "(the number after leagueId= in the ESPN URL).")
+    return f"Couldn't load that ESPN league right now ({e}). If it keeps happening, check the league is public."
+
+
 @app.post("/api/teams/lookup")
 def api_teams_lookup(req: ConnectTeamRequest, user=Depends(current_user)):
     """Step 1 of connecting a team: accepts a bare league ID OR a pasted
@@ -999,7 +1026,7 @@ def api_teams_lookup(req: ConnectTeamRequest, user=Depends(current_user)):
         try:
             return _clean(_espn_teams_for_lookup(league_id, user))
         except Exception as e:
-            raise HTTPException(400, f"Couldn't load that ESPN league: {e}")
+            raise HTTPException(400, _espn_error_message(e))
 
     league_id = sleeper_layer.parse_league_id(req.league_id_or_url)
     if not league_id:

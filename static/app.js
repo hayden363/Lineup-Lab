@@ -1040,25 +1040,13 @@ async function openPlayerModal(playerId, opp) {
   }
   if (!stillWanted()) return;
 
-  root.innerHTML = `<div class="modal-backdrop"><div class="modal ${posAccentClass(p.position)}">
-    <div class="modal-header">
-      <img ${headshotAttrs(p)} alt="">
-      <div>
-        <h2>${esc(p.player_display_name)}${statusFlagsHtml(p)}</h2>
-        <div class="muted">${esc(p.position)} · ${esc(p.recent_team)} ${p.next_opponent ? "· Next: vs " + esc(p.next_opponent) + " (Wk " + esc(p.next_week) + ")" : ""}</div>
-      </div>
-      <button class="modal-close" aria-label="Close">✕</button>
-    </div>
-    ${playerStatsBodyHtml(p)}
-    <div class="section-label">Latest News</div>
-    <div id="player-news-slot" class="player-news-slot"><div class="loading small">Checking for news…</div></div>
-  </div></div>`;
+  root.innerHTML = `<div class="modal-backdrop"><div class="modal pcard" style="${teamThemeStyle(p.recent_team)}">${playerCardHtml(p)}</div></div>`;
 
   root.querySelector(".modal-backdrop").addEventListener("click", (e) => {
     if (e.target.classList.contains("modal-backdrop")) closeModal();
   });
   root.querySelector(".modal-close").addEventListener("click", closeModal);
-  wirePlayerStatsBody(root, p);
+  wirePlayerCard(root, p);
 
   // Fetched separately from the rest of the modal (real RSS + an optional
   // AI summary can take a moment, especially the AI call) so opening the
@@ -1090,12 +1078,13 @@ function valueStripHtml(p) {
   return `<div class="value-strip"><span class="bye-chip">BYE week ${esc(p.bye_week)}</span></div>`;
 }
 
-function totalsHtml(p) {
+function totalsHtml(p, bare = false) {
   const t = p.totals;
   if (!t) return "";
   const keys = Object.keys(TOTAL_LABELS).filter((k) => t[k] != null && (t[k] !== 0 || ["interceptions", "fumbles_lost"].includes(k)));
   const tiles = keys.map((k) => `<div class="metric-tile"><div class="label">${TOTAL_LABELS[k]}</div><div class="value">${fmtTotal(t[k])}</div></div>`).join("");
-  return `<div class="section-label">Season Stats</div><div class="metric-grid stagger-in">${tiles}</div>`;
+  const grid = `<div class="metric-grid stagger-in">${tiles}</div>`;
+  return bare ? grid : `<div class="section-label">Season Stats</div>${grid}`;
 }
 
 // Next Gen Stats as a scouting report. Skill stats get a letter grade from
@@ -1145,6 +1134,202 @@ function ngsHtml(p) {
     ${styles ? `<div class="sr-sub">Play style <span class="muted small">how he plays, not how well</span></div><div class="sr-styles">${styles}</div>` : ""}`;
 }
 
+// ---- Team theme -------------------------------------------------------
+// One display color per team, tuned to read on the dark UI (a navy or black
+// primary is swapped for the team's brighter color). The card only uses it
+// as a tint, so it stays a slight cue rather than a re-skin.
+const TEAM_COLORS = {
+  ARI: "#E4313F", ATL: "#E03A3E", BAL: "#8E64D6", BUF: "#3C7BE8", CAR: "#1B9BD8", CHI: "#E8602C", CIN: "#FB4F14", CLE: "#FF5A1F",
+  DAL: "#4C7FE0", DEN: "#F26B2A", DET: "#1B9BE0", GB: "#FFB612", HOU: "#D4263F", IND: "#3E7BE0", JAX: "#1AAFC0", KC: "#E31837",
+  LV: "#A5ACAF", LAC: "#1E9BE8", LA: "#3D78E8", MIA: "#1CB5BA", MIN: "#8E64D6", NE: "#D1243F", NO: "#D8BE82", NYG: "#3F6FD9",
+  NYJ: "#2FA676", PHI: "#1FA58F", PIT: "#FFB612", SF: "#D83A3E", SEA: "#6CC24A", TB: "#E0352F", TEN: "#4B92DB", WAS: "#C8434F",
+};
+const TEAM_ALIAS = { LAR: "LA", JAC: "JAX", WSH: "WAS", OAK: "LV", SD: "LAC", STL: "LA", ARZ: "ARI", BLT: "BAL", CLV: "CLE", HST: "HOU", SL: "LA" };
+function teamThemeStyle(team) {
+  const key = TEAM_ALIAS[team] || team;
+  const hex = TEAM_COLORS[key];
+  if (!hex) return "";
+  const n = parseInt(hex.slice(1), 16);
+  return `--tm:${hex};--tm-rgb:${(n >> 16) & 255},${(n >> 8) & 255},${n & 255}`;
+}
+
+// ---- Scouting ---------------------------------------------------------
+// The same real Next Gen percentiles as ngsHtml, but as a read, a shape and
+// sliders instead of letter grades. All of it is computed from p.ngs.
+function scoutTier(pct) {
+  return pct >= 90 ? "Elite" : pct >= 70 ? "Strong" : pct >= 40 ? "Average" : pct >= 20 ? "Below avg" : "Weak";
+}
+// Madden-style letter grade for a percentile vs same-position players.
+function scoutGrade(pct) {
+  return pct >= 90 ? "A" : pct >= 70 ? "B" : pct >= 40 ? "C" : pct >= 20 ? "D" : "F";
+}
+// "Beat projection in N of M games (+x / G)" from the weeks that have both a
+// real score and a pre-game projection; empty when fewer than 2 qualify.
+function beatProjChipHtml(p) {
+  const rows = (p.weekly_status || []).filter((w) => w.status === "played" && w.fpts != null
+    && w.proj && !w.proj.out && w.proj.fpts != null);
+  if (rows.length < 2) return "";
+  const beat = rows.filter((w) => w.fpts >= w.proj.fpts).length;
+  const per = rows.reduce((a, w) => a + (w.fpts - w.proj.fpts), 0) / rows.length;
+  const good = beat * 2 >= rows.length;
+  return `<span class="pcd-chip beat ${good ? "up" : "down"}" title="Actual points vs. Sleeper's pre-game projection, rescored for your league">`
+    + `${good ? "Beat" : "Missed"} projection in ${beat} of ${rows.length} (${per >= 0 ? "+" : ""}${per.toFixed(1)} / G)</span>`;
+}
+function scoutHue(pct) { return Math.round(pct * 1.3); } // 0 red -> 130 green
+const ordinal = (n) => { const v = n % 100; return n + (["th", "st", "nd", "rd"][(v - 20) % 10] || ["th", "st", "nd", "rd"][v] || "th"); };
+
+// Six traits per position, each a real NGS percentile. `inv` flips a stat
+// where a LOW number is the trait (quick release = low time to throw).
+const RADAR_WR = [["Separation", "avg_separation"], ["After catch", "avg_yac_above_expectation"], ["YAC", "avg_yac"],
+  ["Deep role", "avg_intended_air_yards"], ["Target share", "percent_share_of_intended_air_yards"], ["Hands", "catch_percentage"]];
+const RADAR_AXES = {
+  QB: [["Accuracy", "completion_percentage_above_expectation"], ["Quick release", "avg_time_to_throw", true], ["Deep game", "avg_intended_air_yards"],
+    ["Risk taking", "aggressiveness"], ["Big plays", "max_completed_air_distance"], ["Efficiency", "passer_rating"]],
+  RB: [["Creation", "rush_yards_over_expected_per_att"], ["Beats expected", "rush_pct_over_expected"], ["Decisive", "avg_time_to_los", true],
+    ["Downhill", "efficiency"], ["Loaded boxes", "percent_attempts_gte_eight_defenders"], ["Yds / carry", "avg_rush_yards"]],
+  WR: RADAR_WR, TE: RADAR_WR,
+};
+
+function scoutAxes(p) {
+  const by = Object.fromEntries((p.ngs || []).filter((n) => n.percentile != null).map((n) => [n.key, n.percentile]));
+  return (RADAR_AXES[p.position] || []).filter(([, k]) => by[k] != null).map(([label, k, inv]) => ({ label, pct: inv ? 100 - by[k] : by[k] }));
+}
+
+function scoutRadarHtml(axes, team) {
+  if (axes.length < 3) return "";
+  const c = 160, cy = 118, R = 80, n = axes.length;
+  const pt = (i, r) => [c + Math.sin(i * 2 * Math.PI / n) * r, cy - Math.cos(i * 2 * Math.PI / n) * r];
+  const ring = (f) => axes.map((_, i) => pt(i, R * f).join(",")).join(" ");
+  const poly = axes.map((a, i) => pt(i, R * Math.max(a.pct, 4) / 100).join(",")).join(" ");
+  const labels = axes.map((a, i) => {
+    const [x, y] = pt(i, R + 20);
+    const anchor = x < c - 8 ? "end" : x > c + 8 ? "start" : "middle";
+    return `<text class="rd-l" x="${x.toFixed(1)}" y="${(y - 1).toFixed(1)}" text-anchor="${anchor}">${esc(a.label)}</text><text class="rd-n" x="${x.toFixed(1)}" y="${(y + 11).toFixed(1)}" text-anchor="${anchor}">${a.pct}</text>`;
+  }).join("");
+  return `<svg class="scs-radar" viewBox="0 0 320 236" role="img" aria-label="Player shape: ${axes.map((a) => `${esc(a.label)} ${a.pct}`).join(", ")}">
+    ${[.25, .5, .75, 1].map((f) => `<polygon points="${ring(f)}" class="rd-ring${f === .5 ? " avg" : ""}"/>`).join("")}
+    ${axes.map((_, i) => `<line x1="${c}" y1="${cy}" x2="${pt(i, R)[0].toFixed(1)}" y2="${pt(i, R)[1].toFixed(1)}" class="rd-ax"/>`).join("")}
+    <polygon points="${poly}" class="rd-shape"/>
+    ${axes.map((a, i) => { const [x, y] = pt(i, R * Math.max(a.pct, 4) / 100); return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3.6" class="rd-dot"/>`; }).join("")}
+    ${labels}
+  </svg>`;
+}
+
+// Archetype headline + one honest sentence, picked by rules on his own
+// percentiles (never invented text). Falls back to "Balanced".
+function scoutArchetype(p, g) {
+  const pos = p.position;
+  if (pos === "QB") {
+    const ttt = g("avg_time_to_throw"), iay = g("avg_intended_air_yards"), agg = g("aggressiveness"), cpoe = g("completion_percentage_above_expectation");
+    if (ttt != null && iay != null && ttt <= 33 && iay <= 33) return ["Quick-game distributor", "Gets the ball out fast and short, and rarely forces it."];
+    if (iay != null && agg != null && iay >= 66 && agg >= 66) return ["Gunslinger", "Pushes the ball downfield and throws into tight windows."];
+    if (iay != null && iay >= 66) return ["Vertical passer", "Aims deeper than most QBs."];
+    if (ttt != null && ttt >= 66) return ["Pocket holder", "Takes his time and lets plays develop."];
+    if (cpoe != null && cpoe >= 66) return ["Precision passer", "Completes throws the difficulty says he shouldn't."];
+    return ["Balanced passer", "No extreme style: sits near the QB average."];
+  }
+  if (pos === "RB") {
+    const cr = g("rush_yards_over_expected_per_att"), ns = g("efficiency"), tl = g("avg_time_to_los"), box = g("percent_attempts_gte_eight_defenders");
+    if (cr != null && cr >= 66) return ["Chunk-play creator", "Gains more than the blocking gives him."];
+    if (ns != null && ns >= 66 && (tl == null || tl <= 50)) return ["Downhill runner", "Hits the hole and runs straight ahead."];
+    if (tl != null && tl >= 66) return ["Patient zone runner", "Lets blocks develop before he commits."];
+    if (box != null && box >= 66) return ["Defense's main focus", "Sees loaded boxes more than most backs."];
+    return ["Balanced back", "No extreme style: sits near the RB average."];
+  }
+  const sep = g("avg_separation"), yx = g("avg_yac_above_expectation"), yac = g("avg_yac"), iay = g("avg_intended_air_yards"), sh = g("percent_share_of_intended_air_yards"), ct = g("catch_percentage");
+  if (sh != null && sh >= 66 && (sep == null || sep >= 50)) return ["Alpha target", "The offense runs through him: a big share of the targeted air yards, and he gets open."];
+  if (iay != null && iay >= 66) return ["Deep threat", "His targets come downfield."];
+  if ((yx != null && yx >= 66) || (yac != null && yac >= 66)) return ["After-catch weapon", "Turns short catches into big gains."];
+  if (sep != null && sep >= 66) return ["Separator", "Gets open more cleanly than most."];
+  if (ct != null && ct >= 66 && (iay == null || iay <= 40)) return ["Chain mover", "Reliable hands on shorter targets."];
+  return [`Balanced ${pos}`, `No extreme style: sits near the ${pos} average.`];
+}
+
+function scoutReadHtml(p, axes) {
+  const by = Object.fromEntries((p.ngs || []).filter((n) => n.percentile != null).map((n) => [n.key, n.percentile]));
+  const g = (k) => (by[k] != null ? by[k] : null);
+  const [title, line] = scoutArchetype(p, g);
+  const bits = [];
+  if (axes.length >= 3) {
+    const hi = axes.reduce((a, b) => (b.pct > a.pct ? b : a)), lo = axes.reduce((a, b) => (b.pct < a.pct ? b : a));
+    if (hi.pct - lo.pct >= 15) bits.push(`Best trait: <b>${esc(hi.label)}</b> (${ordinal(hi.pct)} percentile). Softest: <b>${esc(lo.label)}</b> (${ordinal(lo.pct)}).`);
+  }
+  if (p.position === "QB" && g("expected_completion_percentage") >= 66 && g("completion_percentage_above_expectation") != null && g("completion_percentage_above_expectation") < 50) {
+    bits.push(`His throws are among the easiest in the league, so a high completion rate is partly the scheme. Adjusted for that, accuracy is ${g("completion_percentage_above_expectation") < 40 ? "below" : "about"} average.`);
+  }
+  return `<div class="scs-read"><div class="scs-arch">${esc(title)}</div><p class="scs-line">${esc(line)}</p>${bits.map((b) => `<p class="scs-bit">${b}</p>`).join("")}</div>`;
+}
+
+// Weekly NGS values as a tiny line plus whether the latest game is up or
+// down against his earlier ones.
+function scoutTrend(n) {
+  const v = (n.weekly || []).map((w) => w.value).filter((x) => x != null);
+  if (v.length < 3) return { spark: "", tag: "" };
+  const last = v[v.length - 1], prev = v.slice(0, -1), avg = prev.reduce((a, b) => a + b, 0) / prev.length;
+  const range = Math.max(...v) - Math.min(...v), d = last - avg;
+  const flat = !range || Math.abs(d) < range * 0.15;
+  const good = n.higher_is_better === false ? d < 0 : d > 0;
+  const cls = flat ? "flat" : n.higher_is_better == null ? "neu" : good ? "up" : "dn";
+  const w = 54, h = 18, mn = Math.min(...v);
+  const pts = v.map((x, i) => `${(2 + i * (w - 4) / (v.length - 1)).toFixed(1)},${(h - 2 - ((x - mn) / (range || 1)) * (h - 4)).toFixed(1)}`).join(" ");
+  return {
+    spark: `<svg class="scs-spark ${cls}" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" aria-hidden="true"><polyline points="${pts}"/></svg>`,
+    tag: `<span class="scs-trend ${cls}">${flat ? "steady" : d > 0 ? "▲ up lately" : "▼ down lately"}</span>`,
+  };
+}
+
+// Fantasy floor / average / ceiling from the consistency numbers the app
+// already computes.
+function fantasyRangeHtml(p) {
+  const c = p.consistency;
+  if (!c || c.games == null || c.games < 1 || c.best == null || c.worst == null) return "";
+  const hi = c.best * 1.12 || 1, pos = (v) => Math.max(0, Math.min(100, (v / hi) * 100));
+  const small = c.games < 4 ? `<span class="muted small">only ${c.games} game${c.games === 1 ? "" : "s"} so far</span>` : "";
+  return `<div class="pcd-lbl" style="margin-top:20px"><span>Fantasy Range</span>${small}</div>
+    <div class="pcd-range">
+      <div class="rg-bar" style="left:${pos(c.worst)}%;width:${Math.max(pos(c.best) - pos(c.worst), 2)}%"></div>
+      <div class="rg-avg" style="left:${pos(c.mean)}%"><span>Avg ${FMT.d1(c.mean)}</span></div>
+      <div class="rg-end lo" style="left:${pos(c.worst)}%"><b>Floor</b> ${FMT.d1(c.worst)}</div>
+      <div class="rg-end hi" style="left:${pos(c.best)}%"><b>Ceiling</b> ${FMT.d1(c.best)}</div>
+    </div>
+    <div class="pcd-rgchips"><span class="scs-chip pos">Boom weeks ${Math.round(c.boom_rate)}%</span><span class="scs-chip ${c.bust_rate ? "neg" : ""}">Bust weeks ${Math.round(c.bust_rate)}%</span><span class="scs-chip">Swing ±${FMT.d1(c.std)}</span></div>`;
+}
+
+function scoutingSlidersHtml(p) {
+  const rows = (p.ngs || []).filter((n) => n.percentile != null);
+  if (!rows.length) return "";
+  const pos = esc(p.position);
+  const val = (n) => fmtTotal(n.value, n.value != null && Math.abs(n.value) >= 100 ? 0 : 1);
+  const skill = rows.filter((n) => n.higher_is_better != null).sort((a, b) => b.percentile - a.percentile);
+  const style = rows.filter((n) => n.higher_is_better == null && n.style);
+  const skillRow = (n, i) => {
+    const h = scoutHue(n.percentile), t = scoutTrend(n);
+    return `<div class="scs-row" style="--p:${n.percentile};--h:${h};--d:${i * 70}ms" title="${esc(n.tip || "")}">
+      <div class="scs-top"><span class="scs-name">${esc(n.label)}</span><span class="scs-val">${t.spark}${val(n)}</span></div>
+      <div class="scs-track skill"><i class="scs-fill"></i><b class="scs-orb">${n.percentile}</b></div>
+      <div class="scs-sub"><span><b class="scs-grade" style="--h:${h}">${scoutGrade(n.percentile)}</b> <span class="scs-tier">${scoutTier(n.percentile)}</span> ${t.tag}</span><span>better than ${n.percentile}% of ${pos}s</span></div>
+    </div>`;
+  };
+  const styleRow = (n, i) => {
+    const [lo, hi] = n.style, t = scoutTrend(n);
+    const side = n.percentile >= 60 ? "hi" : n.percentile <= 40 ? "lo" : "mid";
+    return `<div class="scs-row sty" style="--p:${n.percentile};--d:${i * 70}ms" title="${esc(n.tip || "")}">
+      <div class="scs-top"><span class="scs-name">${esc(n.label)}</span><span class="scs-val">${t.spark}${val(n)}</span></div>
+      <div class="scs-track style"><b class="scs-orb">${n.percentile}</b></div>
+      <div class="scs-ends"><span class="${side === "lo" ? "on" : ""}">${esc(lo)}</span><span class="${side === "hi" ? "on" : ""}">${esc(hi)}</span></div>
+    </div>`;
+  };
+  const strong = skill.filter((n) => n.percentile >= 70).slice(0, 2);
+  const weak = skill.filter((n) => n.percentile < 40).slice(-2);
+  const chips = [...strong.map((n) => `<span class="scs-chip pos">${esc(n.label)}</span>`), ...weak.map((n) => `<span class="scs-chip neg">${esc(n.label)}</span>`)].join("");
+  const axes = scoutAxes(p), radar = scoutRadarHtml(axes, p.recent_team);
+  return `<div class="pcd-lbl"><span>Scouting Report</span><span class="scs-legend">vs other ${pos}s</span></div>
+    <div class="scs-hero${radar ? "" : " solo"}">${scoutReadHtml(p, axes)}${radar ? `<div class="scs-shape"><div class="scs-cap">Shape · percentile vs ${pos}s</div>${radar}</div>` : ""}</div>
+    ${chips ? `<div class="scs-chips">${chips}</div>` : ""}
+    ${skill.length ? `<div class="pcd-sub">How good he is <span class="scs-legend">line = league average</span></div><div class="scs-list">${skill.map(skillRow).join("")}</div>` : ""}
+    ${style.length ? `<div class="pcd-sub">How he plays</div><div class="scs-list">${style.map(styleRow).join("")}</div>` : ""}`;
+}
+
 // The SCORE/FORM/matchup grid + per-stat gauges + weekly chart — shared
 // between the full player modal and the inline expand-in-place panel on
 // a Start/Sit card (see startSitCardHtml/toggleSSExpand below), so both
@@ -1152,11 +1337,11 @@ function ngsHtml(p) {
 // drifting apart. Scoped by `.closest(container)` in wirePlayerStatsBody
 // rather than a hardcoded id, since more than one of these can be open
 // at once (several expanded Start/Sit cards) — an id would collide.
-function playerStatsBodyHtml(p) {
+function detailSectionsHtml(p, labelCls = "section-label") {
   // Every percentage-based stat gets a little breakdown bar under its
   // number — a real visual, not just a number, for every stat that has
   // a natural 0–100 scale to plot against.
-  const sections = (DETAIL_METRICS[p.position] || []).map(([label, metrics]) => {
+  return (DETAIL_METRICS[p.position] || []).map(([label, metrics]) => {
     const tiles = metrics.map(([key, mlabel, fmt]) => {
       const raw = p[key];
       const gauge = fmt === FMT.pct && raw != null
@@ -1168,12 +1353,22 @@ function playerStatsBodyHtml(p) {
       const gLabel = key === "games" && state.meta?.season ? `${mlabel} (${state.meta.season})` : mlabel;
       return `<div class="metric-tile"><div class="label">${esc(gLabel)}</div><div class="value">${fmt(raw)}</div>${gauge}</div>`;
     }).join("");
-    return `<div class="section-label">${esc(label)}</div><div class="metric-grid">${tiles}</div>`;
+    return `<div class="${labelCls}">${esc(label)}</div><div class="metric-grid">${tiles}</div>`;
   }).join("");
+}
 
-  const weeks = weeklyRows(p);
+// The "Fantasy Points / Passing Yards / ..." picker above the weekly chart,
+// or "" when he only has the one stat to show.
+function weeklyStatSelectHtml(p) {
   const statKeys = ["fpts", ...Object.keys((p.weekly_log || [])[0] || {}).filter((k) => !["week", "opponent_team", "fpts"].includes(k))];
+  if (statKeys.length < 2) return "";
   const statOptions = statKeys.map((k) => `<option value="${esc(k)}">${esc(WEEKLY_STAT_LABELS[k] || k)}</option>`).join("");
+  return `<select class="weeklog-stat-select">${statOptions}</select>`;
+}
+
+function playerStatsBodyHtml(p) {
+  const sections = detailSectionsHtml(p);
+  const weeks = weeklyRows(p);
   const matchupLine = p.matchup_factor != null
     ? `<div class="metric-tile"><div class="label">Matchup vs ${esc(p.matchup_opponent)}</div><div class="value">${p.matchup_factor.toFixed(2)}x</div></div>` : "";
 
@@ -1187,13 +1382,428 @@ function playerStatsBodyHtml(p) {
     ${valueStripHtml(p)}
     <div class="section-label weeklog-header">
       <span>Weekly Breakdown</span>
-      ${statKeys.length > 1 ? `<select class="weeklog-stat-select">${statOptions}</select>` : ""}
+      ${weeklyStatSelectHtml(p)}
     </div>
     <div class="weeklog-wrap">${weeks.length ? weeklyChartHtml(weeks, "fpts") : '<span class="muted">No games logged yet.</span>'}</div>
     ${totalsHtml(p)}
     ${projectionCompareSlotHtml()}
     ${sections}
     ${ngsHtml(p)}`;
+}
+
+// --------------------------------------------------- player card (modal) ----
+// The full-size player card: banner + identity, an action bar, a sticky
+// section bar, then Overview / Projection / Weekly / Stats / Scouting / News.
+// Every section reuses the same builders the inline Start/Sit panel uses
+// (weeklyChartHtml, totalsHtml, detailSectionsHtml, ngsHtml, the projection
+// and news slots) so a number never differs between the two surfaces.
+const SCORING_LABELS = { "": "PPR", half_ppr: "Half PPR", standard: "Standard", te_premium: "TE Premium", league: "My League" };
+const CARD_SECTIONS = [["ov", "Overview"], ["pj", "Projection"], ["st", "Stats"], ["sc", "Scouting"], ["nw", "News"]];
+
+// matchup_factor multiplies his projection against this defense, so 1.00 is
+// an average defense. Within 5% either way reads as neutral: a judgment-call
+// band, not a fitted threshold.
+function matchupTagHtml(f) {
+  if (f >= 1.05) return '<span class="pcd-tag soft">Soft</span>';
+  if (f <= 0.95) return '<span class="pcd-tag tough">Tough</span>';
+  return '<span class="pcd-tag">Neutral</span>';
+}
+
+function scoreRingHtml(score) {
+  const r = 19, len = 2 * Math.PI * r;
+  const pct = Math.max(0, Math.min(100, score ?? 0)) / 100;
+  return `<svg class="pcd-ring" viewBox="0 0 46 46" aria-hidden="true">
+    <circle cx="23" cy="23" r="${r}" class="pcd-ring-bg"/>
+    <circle cx="23" cy="23" r="${r}" class="pcd-ring-fg" transform="rotate(-90 23 23)"
+      style="--len:${len.toFixed(1)};stroke-dasharray:${len.toFixed(1)};stroke-dashoffset:${(len * (1 - pct)).toFixed(1)}"/>
+  </svg>`;
+}
+
+// Form is a percent change; the meter fills left (red) or right (green)
+// from the middle, full half at 10%.
+function formMeterHtml(form) {
+  if (form == null) return "";
+  const w = Math.min(50, (Math.abs(form) / 10) * 50);
+  return `<div class="pcd-meter" aria-hidden="true"><i class="${form < 0 ? "neg" : "pos"}" style="width:${w.toFixed(1)}%"></i></div>`;
+}
+
+function cardKeyTilesHtml(p) {
+  const mf = p.matchup_factor;
+  const matchup = mf != null
+    ? `<div class="pcd-tile"><div class="l">Matchup vs ${esc(p.matchup_opponent)}</div><div class="v">${mf.toFixed(2)}x${matchupTagHtml(mf)}</div><div class="n">vs an average defense</div></div>` : "";
+  return `<div class="pcd-keys">
+    <div class="pcd-tile"><div class="l">Score</div><div class="pcd-score"><div class="v" style="color:var(--accent)">${FMT.d1(p.SCORE)}</div>${scoreRingHtml(p.SCORE)}</div><div class="n">out of 100</div></div>
+    <div class="pcd-tile"><div class="l">Form</div><div class="v">${formCell(p.FORM)}</div>${formMeterHtml(p.FORM)}</div>
+    <div class="pcd-tile"><div class="l">FPTS/G</div><div class="v">${FMT.d1(p.fpts_per_game)}</div><div class="n">Fantasy pts per game</div></div>
+    ${matchup}
+  </div>`;
+}
+
+const CARD_ICONS = {
+  compare: '<path d="M5 3v14M15 3v14M2 7h6M12 13h6"/>',
+  startsit: '<path d="M6 5l-3 3 3 3M3 8h9M14 12l3 3-3 3M17 15H8"/>',
+  trade: '<path d="M13 3l3 3-3 3M16 6H4M7 17l-3-3 3-3M4 14h12"/>',
+};
+const cardIcon = (k) => `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${CARD_ICONS[k]}</svg>`;
+
+// Overview teaser for the scouting tab: the archetype in one line and a
+// jump to the full report.
+function scoutGlanceHtml(p) {
+  if (!(p.ngs || []).some((n) => n.percentile != null)) return "";
+  const by = Object.fromEntries(p.ngs.filter((n) => n.percentile != null).map((n) => [n.key, n.percentile]));
+  const [title, line] = scoutArchetype(p, (k) => (by[k] != null ? by[k] : null));
+  return `<button type="button" class="pcd-glance" data-go="sc">
+    <span class="pg-l">Scouting read</span><span class="pg-t">${esc(title)}</span><span class="pg-s">${esc(line)}</span>
+    <span class="pg-go">Full scouting report</span></button>`;
+}
+
+// ---- Projection tab: next game in detail, then the weeks after ----------
+// Everything comes from /api/player/{id}/ros (engine/ros_projection.py):
+// his role baseline, the betting-line and defense multipliers, the 10th /
+// 50th / 90th percentile range, and how he has scored so far against easy
+// and hard defenses. Past matchups are one season of games, so they are
+// small samples and the card says so.
+const PJ_TIER = { soft: "Soft", neutral: "Neutral", tough: "Tough" };
+
+function projSlotHtml() {
+  return `<div class="proj-slot"><div class="loading small">Building his next games…</div></div>`;
+}
+
+function pjKickoff(g) {
+  const k = g.kickoff || {};
+  if (!k.day) return "";
+  const d = new Date(`${k.day}T12:00:00Z`);
+  const day = d.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric", timeZone: "UTC" });
+  let time = "";
+  if (k.time) {
+    const [h, m] = k.time.split(":").map(Number);
+    time = ` · ${((h + 11) % 12) + 1}:${String(m).padStart(2, "0")} ${h >= 12 ? "PM" : "AM"} ET`;
+  }
+  return day + time;
+}
+
+function pjTierLine(g, pos) {
+  if (!g.defense_rank) return "no defense data yet";
+  const n = g.defense_count || 32, r = g.defense_rank;
+  if (g.tier === "soft") return `${ordinal(r)}-softest defense vs ${pos}s`;
+  if (g.tier === "tough") return `${ordinal(n - r + 1)}-toughest defense vs ${pos}s`;
+  return `mid-pack defense vs ${pos}s`;
+}
+
+function pjMult(v) {
+  const cls = v > 1.004 ? "up" : v < 0.996 ? "dn" : "flat";
+  return `<span class="pj-x ${cls}">&times;${v.toFixed(2)}</span>`;
+}
+
+function pjRange(g, top, baseline) {
+  const pct = (v) => Math.max(0, Math.min(100, (v / top) * 100));
+  return `<div class="pj-range"><i style="left:${pct(g.floor)}%;width:${Math.max(pct(g.ceiling) - pct(g.floor), 2)}%"></i>
+    <u style="left:${pct(baseline)}%" title="His usual baseline"></u><b style="left:${pct(g.median)}%"></b></div>
+    <div class="pj-nums"><span>Floor <b>${FMT.d1(g.floor)}</b></span><span>Median <b>${FMT.d1(g.median)}</b></span><span>Ceiling <b>${FMT.d1(g.ceiling)}</b></span></div>`;
+}
+
+function pjSimilar(g, pos) {
+  if (!g.tier) return "";
+  const word = PJ_TIER[g.tier].toLowerCase();
+  if (g.similar) {
+    const n = g.similar.games;
+    return `Against ${word} defenses this season he has averaged <b>${FMT.d1(g.similar.avg)}</b> in ${n} game${n === 1 ? "" : "s"}.`;
+  }
+  return `He hasn't faced a ${word} defense this season yet.`;
+}
+
+function pjWaterfall(g) {
+  const st = g.steps;
+  const node = (label, v, cls = "") => `<div class="pj-wf-n ${cls}"><span>${label}</span><b>${FMT.d1(v)}</b></div>`;
+  const arrow = (label, m) => `<div class="pj-wf-a"><span>${label}</span>${pjMult(m)}</div>`;
+  return `<div class="pj-wf">${node("Baseline", st.baseline)}${arrow("Game", g.m_vegas)}${node("", st.after_environment, "mid")}${arrow("Defense", g.m_defense)}${node("", st.after_defense, "mid")}${arrow("History", g.m_h2h)}${node("Expected", st.final, "end")}</div>`;
+}
+
+function pjUsageTile(d, pos) {
+  const u = d.usage;
+  if (!u) return `<div class="pj-tile"><div class="pj-tk">Role lately</div><div class="muted small">Usage data isn't available yet.</div></div>`;
+  const rows = [["Snap share", u.snap_pct, "%"], ["Target share", u.target_share, "%"], ["Red-zone + targets / g", u.hvt_pg, ""], ["Expected pts / g", u.xfp_pg, ""]]
+    .filter(([, v]) => v && v.recent != null);
+  const items = rows.map(([label, v, unit]) => {
+    const diff = v.season ? (v.recent - v.season) / v.season : 0;
+    const trend = Math.abs(diff) < 0.05 ? "" : diff > 0 ? `<em class="up">&#9650; up</em>` : `<em class="dn">&#9660; down</em>`;
+    return `<div class="pj-use"><span>${label}</span><b>${FMT.d1(v.recent)}${unit}</b><small>season ${FMT.d1(v.season)}${unit}</small>${trend}</div>`;
+  }).join("");
+  return `<div class="pj-tile"><div class="pj-tk">Role · last ${esc(u.games)} games</div>${items || '<div class="muted small">No usage numbers yet.</div>'}</div>`;
+}
+
+function pjEnvTile(g) {
+  if (!g.has_lines) {
+    return `<div class="pj-tile"><div class="pj-tk">Game environment</div><div class="muted small">No betting line is posted for this game yet, so the game environment is neutral (&times;1.00).</div></div>`;
+  }
+  const spread = g.margin == null ? "—" : g.margin === 0 ? "PK" : `${g.margin > 0 ? "-" : "+"}${Math.abs(g.margin)}`;
+  const notes = g.notes || [];
+  const indoors = notes.some((n) => /indoors/i.test(n)) || g.roof === "dome" || g.roof === "closed";
+  const wx = g.weather ? `<div class="pj-line">${esc(g.weather.label || "Weather")}${g.weather.temp != null ? ` · ${Math.round(g.weather.temp)}°F` : ""}${g.weather.wind != null ? ` · wind ${Math.round(g.weather.wind)} mph` : ""}</div>` : "";
+  return `<div class="pj-tile"><div class="pj-tk">Game environment</div>
+    <div class="pj-trio"><div><b>${FMT.d1(g.implied_total)}</b><span>team total</span></div><div><b>${esc(spread)}</b><span>${g.margin > 0 ? "favored" : g.margin < 0 ? "underdog" : "spread"}</span></div><div><b>${FMT.d1(g.game_total)}</b><span>game total</span></div></div>
+    ${notes.filter((n) => !/^indoors$/i.test(n)).map((n) => `<div class="pj-line">${esc(n)}</div>`).join("")}${wx}${indoors && !g.weather ? `<div class="pj-line muted">Indoors, no weather impact.</div>` : ""}</div>`;
+}
+
+function pjMatchupTile(g, pos) {
+  const good = (g.flags_good || []).map((t) => `<li class="up">${esc(t)}</li>`).join("");
+  const bad = (g.flags_bad || []).map((t) => `<li class="dn">${esc(t)}</li>`).join("");
+  return `<div class="pj-tile"><div class="pj-tk">Matchup · ${esc(g.opponent)} defense</div>
+    <div class="pj-line"><b class="pj-tag ${g.tier || "neutral"}">${PJ_TIER[g.tier] || "Unknown"}</b> ${esc(pjTierLine(g, pos))} · defense &times;${g.m_defense.toFixed(2)}</div>
+    ${good || bad ? `<ul class="pj-flags">${good}${bad}</ul>` : `<div class="muted small">No standout strength or weakness against ${esc(pos)}s.</div>`}</div>`;
+}
+
+function pjPastTile(d, g) {
+  const by = d.past_by_tier || {}, total = (d.past_games || []).length;
+  const bars = ["soft", "neutral", "tough"].map((t) => {
+    const x = by[t];
+    const max = Math.max(1, ...Object.values(by).map((v) => v.avg));
+    return `<div class="pj-pt ${t}${g.tier === t ? " now" : ""}"><span>${PJ_TIER[t]}</span><div class="pj-pt-bar"><i style="width:${x ? Math.max(4, (x.avg / max) * 100) : 0}%"></i></div><b>${x ? FMT.d1(x.avg) : "—"}</b><small>${x ? `${x.games} game${x.games === 1 ? "" : "s"}` : "no games"}</small></div>`;
+  }).join("");
+  const chips = (d.past_games || []).map((x) => `<span class="pj-gc ${x.tier || ""}" title="Week ${esc(x.week)} vs ${esc(x.opponent)}">W${esc(x.week)} ${esc(x.opponent)} <b>${FMT.d1(x.points)}</b></span>`).join("");
+  const prior = g.prior_meeting ? `<div class="pj-line">He already played ${esc(g.opponent)} this season: <b>${FMT.d1(g.prior_meeting.points)}</b> in Week ${esc(g.prior_meeting.week)}.</div>` : "";
+  return `<div class="pj-tile wide"><div class="pj-tk">Past matchups · points by defense difficulty</div>
+    <div class="pj-pts">${bars}</div>
+    <div class="pj-line">${pjSimilar(g, d.position)}${total < 4 ? ` <span class="muted">Small sample: ${total} game${total === 1 ? "" : "s"} so far.</span>` : ""}</div>
+    ${prior}<div class="pj-gcs">${chips}</div></div>`;
+}
+
+function pjHistoryTile(d) {
+  return `<div class="pj-tile"><div class="pj-tk">History vs this team</div><div class="pj-line"><span class="pj-x flat">&times;1.00</span> neutral</div><div class="muted small">${esc(d.h2h_note || "")}</div></div>`;
+}
+
+function pjHeroHtml(d, p, top) {
+  const g = d.games[0];
+  const home = g.home === false ? "AWAY" : "HOME";
+  const when = [pjKickoff(g), g.roof === "dome" || g.roof === "closed" ? "Indoors" : ""].filter(Boolean).join(" · ");
+  return `<div class="pj-hero">
+    <div class="pj-hero-top">
+      <div><div class="pj-k">Next game · Week ${esc(g.week)}</div>
+        <div class="pj-opp">${g.home === false ? "@" : "vs"} ${esc(g.opponent)}<span class="pj-loc">${home}</span></div>
+        <div class="pj-when">${esc(when)}</div></div>
+      <div class="pj-tier ${g.tier || "neutral"}"><b>${PJ_TIER[g.tier] || "Unknown"} matchup</b><span>${esc(pjTierLine(g, p.position))}</span></div>
+    </div>
+    <div class="pj-med"><span class="pj-medk">Median outcome</span><b>${FMT.d1(g.median)}</b><span class="pj-medk">pts</span></div>
+    ${pjRange(g, top, d.baseline)}
+    <div class="pj-legend"><span><i class="g"></i>10th to 90th percentile</span><span><i class="b"></i>median</span><span><i class="u"></i>usual baseline ${FMT.d1(d.baseline)}</span></div>
+    ${pjWaterfall(g)}
+  </div>
+  <div class="pj-grid">${pjUsageTile(d, p.position)}${pjEnvTile(g)}${pjMatchupTile(g, p.position)}${pjHistoryTile(d)}${pjPastTile(d, g)}</div>`;
+}
+
+function pjTimelineHtml(d) {
+  const cells = d.games.map((g, i) => `<div class="pj-tl-c ${g.tier || "neutral"}${i === 0 ? " now" : ""}" title="Week ${esc(g.week)} ${g.home === false ? "@" : "vs"} ${esc(g.opponent)}: ${esc(PJ_TIER[g.tier] || "Unknown")} matchup, median ${FMT.d1(g.median)}">
+    <span class="w">W${esc(g.week)}</span><span class="o">${g.home === false ? "@" : ""}${esc(g.opponent)}</span><span class="m">${FMT.d1(g.median)}</span></div>`).join("");
+  return `<div class="pj-tl-wrap"><div class="pj-tl">${cells}</div></div>
+    <div class="pj-tl-key"><span class="soft">Soft</span><span class="neutral">Neutral</span><span class="tough">Tough</span><span class="muted">Number = median points</span></div>`;
+}
+
+function pjFollowCardHtml(g, d, p, top) {
+  const env = g.has_lines
+    ? `<span class="pj-chip">${g.margin > 0 ? "Favored by " + g.margin : g.margin < 0 ? "Underdog by " + Math.abs(g.margin) : "Pick'em"}</span><span class="pj-chip">Team total ${FMT.d1(g.implied_total)}</span>`
+    : `<span class="pj-chip dim">No betting line yet</span>`;
+  const flag = (g.flags_bad && g.flags_bad[0]) ? `<div class="pj-line dn">${esc(g.flags_bad[0])}</div>` : (g.flags_good && g.flags_good[0]) ? `<div class="pj-line up">${esc(g.flags_good[0])}</div>` : "";
+  return `<div class="pj-card">
+    <div class="pj-card-h"><span class="pj-wk">Wk ${esc(g.week)}</span><span class="pj-copp">${g.home === false ? "@" : "vs"} ${esc(g.opponent)}</span><b class="pj-tag ${g.tier || "neutral"}">${PJ_TIER[g.tier] || "Unknown"}</b><span class="pj-cmed">${FMT.d1(g.median)}<small>median</small></span></div>
+    ${pjRange(g, top, d.baseline)}
+    <div class="pj-chips">${env}<span class="pj-chip">${esc(pjTierLine(g, p.position))}</span></div>
+    <div class="pj-line">${pjSimilar(g, p.position)}</div>${flag}
+    <div class="pj-mults">Game ${pjMult(g.m_vegas)} Defense ${pjMult(g.m_defense)} History ${pjMult(g.m_h2h)}</div></div>`;
+}
+
+function projPageHtml(d, p) {
+  if (!d.games || !d.games.length) {
+    return `<div class="ros-empty">${p.bye_week != null ? "No games left on his schedule." : "No upcoming games found."}</div>`;
+  }
+  const top = Math.max(...d.games.map((g) => g.ceiling)) * 1.06 || 1;
+  const first = d.games[0], follow = d.games.slice(1, 4);
+  const ratio = d.baseline ? first.proj / d.baseline : 1;
+  const advice = ratio >= 1.05 ? "Start with confidence: next week sets up better than his usual."
+    : ratio <= 0.85 ? "Tough spot: start him on name value only if your options are worse."
+    : "A normal week: nothing here says move him up or down.";
+  const smash = d.games.find((g) => g.week === d.smash_week), trap = d.games.find((g) => g.week === d.trap_week);
+  const spot = (g) => `Wk ${esc(g.week)} ${g.home === false ? "@" : "vs"} ${esc(g.opponent)}`;
+  const take = d.games.length > 1 && smash && trap && smash.week !== trap.week
+    ? `<div class="pj-take"><div><span class="k pos">Smash spot</span> ${spot(smash)} · ${FMT.d1(smash.proj)} expected, ${FMT.d1(smash.ceiling)} ceiling</div>
+       <div><span class="k neg">Trap spot</span> ${spot(trap)} · ${FMT.d1(trap.proj)} expected, ${FMT.d1(trap.floor)} floor</div></div>` : "";
+  const baseNote = d.baseline_xfp != null
+    ? `Baseline ${FMT.d1(d.baseline)} pts/game: mostly his last 4 games of expected points (each target and carry valued by its chance of scoring), blended with his season rate, so a fluky touchdown game doesn't set the number.`
+    : `Baseline ${FMT.d1(d.baseline)} pts/game: his season rate with recent form. ${p.position === "QB" ? "Passers have no expected-points volume data here" : "He has no expected-points history yet"}, so this leans on points scored.`;
+  return `<div class="pj-lead"><div><div class="pj-k">Next ${Math.min(4, d.games.length)} game${d.games.length === 1 ? "" : "s"}</div><div class="pj-big">${FMT.d1(d.games.slice(0, 4).reduce((a, g) => a + g.proj, 0))}<small>expected pts</small></div></div><div class="pj-adv">${advice}</div></div>
+    <div class="pj-base">${baseNote}</div>
+    ${pjHeroHtml(d, p, top)}
+    ${d.games.length > 1 ? `<div class="pcd-sub">The weeks after: matchup difficulty</div>${pjTimelineHtml(d)}
+      <div class="pj-follow">${follow.map((g) => pjFollowCardHtml(g, d, p, top)).join("")}</div>${take}` : ""}
+    <details class="pj-all"><summary>All ${d.games.length} remaining games</summary>${rosHtml(d)}</details>
+    <div class="pj-foot">Built as role baseline &times; betting line (capped &plusmn;10%) &times; opponent defense (capped &plusmn;20%). The weights are judgment calls, not fitted to data. Past matchups are one season, so treat them as context, not a forecast.</div>`;
+}
+
+async function loadProjPage(p, root) {
+  const slot = root.querySelector(".proj-slot");
+  if (!slot) return;
+  try {
+    const d = await api(`/api/player/${p.player_id}/ros?${scoringQS().replace(/^&/, "")}`);
+    if (!document.body.contains(slot)) return;
+    slot.outerHTML = projPageHtml(d, p);
+  } catch (e) {
+    if (document.body.contains(slot)) slot.innerHTML = `<div class="muted small">Couldn't build his next games right now.</div>`;
+  }
+}
+
+let lastCardTab = "ov"; // stays on the same tab when you open the next player
+
+// Game-by-game list for the Weekly tab, newest first, from the same rows
+// the bar chart uses.
+function gameLogHtml(p) {
+  const n = (v) => (v == null ? 0 : Math.round(v));
+  const line = (w) => {
+    if (p.position === "QB") return `${n(w.completions)}/${n(w.attempts)}, ${n(w.passing_yards)} yds, ${n(w.passing_tds)} TD`;
+    if (p.position === "RB") return `${n(w.carries)} car, ${n(w.rushing_yards)} yds, ${n(w.rushing_tds)} TD · ${n(w.receptions)} rec, ${n(w.receiving_yards)} yds`;
+    return `${n(w.receptions)}/${n(w.targets)} rec, ${n(w.receiving_yards)} yds, ${n(w.receiving_tds)} TD`;
+  };
+  const rows = weeklyRows(p).filter((w) => w.status === "played" || w.status === "dnp" || w.status === "bye" || (!w.status && w.fpts != null)).slice().reverse();
+  if (!rows.length) return "";
+  const items = rows.map((w) => {
+    const opp = w.opponent || w.opponent_team;
+    if (w.status === "bye") return `<div class="gl-row off"><span class="gl-wk">W${esc(w.week)}</span><span class="gl-opp">Bye week</span><span class="gl-line"></span><span class="gl-pts">&mdash;</span></div>`;
+    if (w.status === "dnp") return `<div class="gl-row off"><span class="gl-wk">W${esc(w.week)}</span><span class="gl-opp">${w.home === false ? "@" : "vs"} ${esc(opp)}</span><span class="gl-line">Did not play</span><span class="gl-pts">&mdash;</span></div>`;
+    return `<div class="gl-row"><span class="gl-wk">W${esc(w.week)}</span><span class="gl-opp">${w.home === false ? "@" : "vs"} ${esc(opp)}</span><span class="gl-line">${line(w)}</span><span class="gl-pts">${FMT.d1(w.fpts)}</span></div>`;
+  }).join("");
+  return `<div class="pcd-sub">Game log</div><div class="gl-list">${items}</div>`;
+}
+
+// The signature delta: average points per game against his pre-game
+// projection, big, next to the streak chip.
+function deltaCalloutHtml(p) {
+  const rows = (p.weekly_status || []).filter((w) => w.status === "played" && w.fpts != null && w.proj && !w.proj.out && w.proj.fpts != null);
+  if (rows.length < 2) return "";
+  const per = rows.reduce((a, w) => a + (w.fpts - w.proj.fpts), 0) / rows.length;
+  return `<div class="pcd-delta ${per >= 0 ? "up" : "dn"}" title="Average points per game vs. the pre-game projection, rescored for your league"><b>${per >= 0 ? "+" : ""}${per.toFixed(1)}</b><span>PPG vs projected</span></div>`;
+}
+
+function playerCardHtml(p) {
+  const next = p.next_opponent ? `<span class="pcd-chip">Next: vs ${esc(p.next_opponent)} (Wk ${esc(p.next_week)})</span>` : "";
+  const bye = p.bye_week != null ? `<span class="pcd-chip bye">BYE week ${esc(p.bye_week)}</span>` : "";
+  const ngs = scoutingSlidersHtml(p);
+  return `
+    <div class="pcd-hd"><button class="modal-close" aria-label="Close">✕</button></div>
+    <div class="pcd-id">
+      <div class="pcd-av"><img ${headshotAttrs(p)} alt=""></div>
+      <div class="pcd-who">
+        <h2>${esc(p.player_display_name)}${statusFlagsHtml(p)}</h2>
+        <div class="pcd-chips"><span class="pcd-chip">${esc(p.position)}</span><span class="pcd-chip team">${esc(p.recent_team)}</span>${next}${bye}${beatProjChipHtml(p)}</div>
+      </div>
+      ${deltaCalloutHtml(p)}
+    </div>
+    <div class="pcd-acts">
+      <button type="button" class="pcd-btn pri" data-act="compare">${cardIcon("compare")}Compare</button>
+      <button type="button" class="pcd-btn" data-act="startsit">${cardIcon("startsit")}Start / Sit</button>
+      <button type="button" class="pcd-btn" data-act="trade" hidden>${cardIcon("trade")}Shop in trades</button>
+      <div class="pcd-scoring">Scoring <span>${esc(SCORING_LABELS[state.scoring] || "PPR")}</span></div>
+    </div>
+    <nav class="pcd-nav" role="tablist" aria-label="Player sections">${CARD_SECTIONS.map(([k, l]) => `<button type="button" role="tab" id="pcd-tab-${k}" data-go="${k}" aria-controls="pcd-pane-${k}" aria-selected="false" tabindex="-1">${l}</button>`).join("")}</nav>
+    <div class="pcd-body">
+      <section data-sec="ov" id="pcd-pane-ov" role="tabpanel" aria-labelledby="pcd-tab-ov" hidden>
+        ${cardKeyTilesHtml(p)}
+        <div class="pcd-lbl pcd-wkhd"><span>Weekly Breakdown</span>${weeklyStatSelectHtml(p)}</div>
+        <div class="weeklog-wrap">${weeklyRows(p).length ? weeklyChartHtml(weeklyRows(p), "fpts") : '<span class="muted">No games logged yet.</span>'}</div>
+        ${gameLogHtml(p)}
+        ${fantasyRangeHtml(p)}
+        ${scoutGlanceHtml(p)}
+      </section>
+      <section data-sec="pj" id="pcd-pane-pj" role="tabpanel" aria-labelledby="pcd-tab-pj" hidden>${projSlotHtml()}<div class="pcd-sub">What the experts say for next game</div>${projectionCompareSlotHtml()}</section>
+      <section data-sec="st" id="pcd-pane-st" role="tabpanel" aria-labelledby="pcd-tab-st" hidden>
+        <div class="pcd-lbl"><span>Season Stats</span></div>
+        ${totalsHtml(p, true)}
+        ${detailSectionsHtml(p, "pcd-sub")}
+      </section>
+      <section data-sec="sc" id="pcd-pane-sc" role="tabpanel" aria-labelledby="pcd-tab-sc" hidden>${ngs || '<div class="pcd-lbl"><span>Scouting Report</span></div><div class="muted small">No Next Gen Stats for this player yet.</div>'}</section>
+      <section data-sec="nw" id="pcd-pane-nw" role="tabpanel" aria-labelledby="pcd-tab-nw" hidden>
+        <div class="pcd-lbl"><span>Latest News</span></div>
+        <div id="player-news-slot" class="player-news-slot"><div class="loading small">Checking for news…</div></div>
+      </section>
+    </div>`;
+}
+
+// Everything the card does after it is on screen: the action bar, the
+// section bar (click to jump, scroll to highlight), and the shared stat
+// picker + projection loader.
+function wirePlayerCard(root, p) {
+  const card = root.querySelector(".modal");
+  const pid = p.player_id;
+
+  card.querySelector('[data-act="compare"]').addEventListener("click", () => {
+    if (!state.compareSelected.has(pid)) {
+      if (state.compareSelected.size >= CMP_MAX) { showToast(`Compare holds up to ${CMP_MAX} players. Remove one on the Big Board first.`); return; }
+      toggleCompare(p);
+    }
+    if (state.compareSelected.size >= 2) { openCompareModal(); return; }
+    closeModal();
+    switchTab("board");
+    showToast(`${p.player_display_name} added. Pick one more player to compare.`);
+  });
+
+  card.querySelector('[data-act="startsit"]').addEventListener("click", () => {
+    if (!state.user || !activeTeam()) { showToast("Connect your team in Settings to use Start / Sit."); return; }
+    if (!state.startsit.some((x) => x.player_id === pid)) {
+      if (state.startsit.length >= 4) { showToast("Start / Sit holds up to 4 players. Remove one first."); return; }
+      state.startsit.push({ player_id: pid, player_display_name: p.player_display_name, position: p.position,
+        recent_team: p.recent_team, headshot_url: p.headshot_url, injury_status: p.injury_status, opp: "" });
+    }
+    closeModal();
+    switchTab("startsit");
+    renderStartSitChips();
+  });
+
+  // Trade shopping works from the user's own roster, so the button only
+  // appears for a player they actually have.
+  const tradeBtn = card.querySelector('[data-act="trade"]');
+  if (state.user && activeTeam()) {
+    ensureMyRoster().then((roster) => {
+      if (roster.some((x) => x.player_id === pid)) tradeBtn.hidden = false;
+    }).catch(() => {});
+  }
+  tradeBtn.addEventListener("click", () => {
+    state.shopSelected = new Set([pid]);
+    closeModal();
+    switchTab("trade");
+    showToast(`${p.player_display_name} selected. Hit "Find trades for selected".`);
+  });
+
+  // Real tabs: one pane at a time, header stays put, the pane scrolls.
+  const nav = card.querySelector(".pcd-nav");
+  const body = card.querySelector(".pcd-body");
+  const btns = [...nav.querySelectorAll("[data-go]")];
+  const panes = [...card.querySelectorAll("[data-sec]")];
+  const showTab = (key, focus) => {
+    if (!panes.some((s) => s.dataset.sec === key)) key = "ov";
+    lastCardTab = key;
+    btns.forEach((b) => {
+      const on = b.dataset.go === key;
+      b.classList.toggle("on", on);
+      b.setAttribute("aria-selected", on ? "true" : "false");
+      b.tabIndex = on ? 0 : -1;
+      if (on) { nav.scrollTo({ left: Math.max(0, b.offsetLeft - 18), behavior: "smooth" }); if (focus) b.focus(); }
+    });
+    panes.forEach((s) => { s.hidden = s.dataset.sec !== key; });
+    body.scrollTop = 0;
+  };
+  // Any element with data-go (the nav and the Overview teaser) switches tabs.
+  card.addEventListener("click", (e) => {
+    const go = e.target.closest("[data-go]");
+    if (go && card.contains(go)) showTab(go.dataset.go);
+  });
+  nav.addEventListener("keydown", (e) => {
+    const i = btns.findIndex((b) => b.classList.contains("on"));
+    const step = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0;
+    if (step) { e.preventDefault(); showTab(btns[(i + step + btns.length) % btns.length].dataset.go, true); }
+    else if (e.key === "Home") { e.preventDefault(); showTab(btns[0].dataset.go, true); }
+    else if (e.key === "End") { e.preventDefault(); showTab(btns[btns.length - 1].dataset.go, true); }
+  });
+  showTab(lastCardTab);
+
+  loadProjPage(p, card);
+  wirePlayerStatsBody(root, p);
 }
 
 // Wires the stat-picker inside whatever container just received
@@ -1205,6 +1815,7 @@ function wirePlayerStatsBody(container, p) {
     container.querySelector(".weeklog-wrap").innerHTML = weeklyChartHtml(weeks, e.target.value);
   });
   loadProjectionCompare(p.player_id, p.matchup_opponent, container);
+  loadRosProjection(p.player_id, container);
 }
 
 // ------------------------------------------- projection breakdown ----
@@ -1221,6 +1832,44 @@ function wirePlayerStatsBody(container, p) {
 // from the same design file as everything else's motion, not hand-tuned)
 // — was designed and keyframed in that Figma file before being ported
 // to CSS below (see .pc-fill/.pc-badge.pc-in in style.css).
+// ------------------------------------------- rest of season ----
+// Game-by-game projection from engine/ros_projection.py: role baseline
+// (trailing xFP) x Vegas x defense. Fetched separately, like the compare.
+function rosSlotHtml() {
+  return `<div class="ros-slot"><div class="loading small">Projecting the rest of the season…</div></div>`;
+}
+
+function rosHtml(d) {
+  if (!d.games.length) return `<div class="pc-card pc-empty"><div class="muted small">No games left to project.</div></div>`;
+  const mult = (v) => (Math.abs(v - 1) < 0.005 ? `<span class="muted">1.00</span>` : `<span class="${v > 1 ? "ros-up" : "ros-dn"}">${v.toFixed(2)}</span>`);
+  const rows = d.games.map((g) => {
+    const tag = g.week === d.smash_week && d.n_games > 1 ? '<span class="ros-tag up">Smash</span>' : g.week === d.trap_week && d.n_games > 1 ? '<span class="ros-tag dn">Trap</span>' : "";
+    const line = g.has_lines ? `${g.margin > 0 ? "-" : "+"}${Math.abs(g.margin)} / ${g.implied_total} ITT` : "no line yet";
+    return `<tr title="${esc((g.notes || []).join(" · "))}">
+      <td>Wk ${esc(g.week)}</td><td>${g.home === false ? "@" : "vs"} ${esc(g.opponent)} ${tag}</td>
+      <td class="ros-line">${esc(line)}</td><td>${g.grade ? `<b class="scs-grade" style="--h:${scoutHue(g.grade === "A" ? 95 : g.grade === "B" ? 75 : g.grade === "C" ? 50 : g.grade === "D" ? 30 : 10)}">${g.grade}</b>` : "—"}</td>
+      <td>${mult(g.m_vegas)}</td><td>${mult(g.m_defense)}</td>
+      <td>${FMT.d1(g.floor)}</td><td><b>${FMT.d1(g.proj)}</b></td><td>${FMT.d1(g.ceiling)}</td></tr>`;
+  }).join("");
+  return `<div class="pc-card ros-card">
+    <div class="section-label pc-header"><span>Rest of Season</span><span class="pc-wk">${esc(d.n_games)} GAMES · ${FMT.d1(d.total)} PTS</span></div>
+    <div class="muted small">Role baseline ${FMT.d1(d.baseline)} per game${d.baseline_xfp != null ? ` (${FMT.d1(d.baseline_xfp)} expected from his last-4-game touches, ${FMT.d1(d.baseline_rate)} from his season rate)` : ""}, then scaled by the game environment and the opponent. Floor and ceiling are the 10th and 90th percentile.</div>
+    <div class="ros-scroll"><table class="ros-table"><thead><tr><th>Wk</th><th>Opp</th><th>Spread / ITT</th><th>Matchup</th><th>Vegas ×</th><th>Defense ×</th><th>Floor</th><th>Proj</th><th>Ceiling</th></tr></thead><tbody>${rows}</tbody></table></div>
+    <div class="muted small pc-source-note">Head-to-head history isn't used: it only counts if the same coordinator and coverage scheme are back, and no data here says so. Games a few weeks out often have no betting line yet, so they get no Vegas adjustment. The weights are judgment calls, not fitted to data.</div>
+  </div>`;
+}
+
+async function loadRosProjection(playerId, container) {
+  const slot = container.querySelector(".ros-slot");
+  if (!slot || !playerId) return;
+  try {
+    const d = await api(`/api/player/${playerId}/ros?${scoringQS().replace(/^&/, "")}`);
+    if (document.body.contains(slot)) slot.outerHTML = rosHtml(d);
+  } catch (e) {
+    if (document.body.contains(slot)) slot.outerHTML = `<div class="pc-card pc-empty"><div class="muted small">Couldn't project the rest of the season right now.</div></div>`;
+  }
+}
+
 function projectionCompareSlotHtml() {
   return `<div class="pc-slot"><div class="loading small">Checking real consensus…</div></div>`;
 }
@@ -1741,7 +2390,8 @@ async function toggleSSExpand(card, playerId, opp) {
   try {
     const oppQS = opp ? `&opp=${opp}` : "";
     const p = await api(`/api/player/${playerId}?${scoringQS().replace(/^&/, "")}${oppQS}`);
-    panel.innerHTML = playerStatsBodyHtml(p);
+    panel.innerHTML = `<button type="button" class="ss-fullcard">Open full player card <span aria-hidden="true">&rarr;</span></button>${playerStatsBodyHtml(p)}`;
+    panel.querySelector(".ss-fullcard").addEventListener("click", (e) => { e.stopPropagation(); openPlayerModal(playerId, opp); });
     wirePlayerStatsBody(panel, p);
     panel.dataset.loaded = "1";
   } catch (e) {
@@ -4212,6 +4862,7 @@ function renderTeamsList() {
       $("#set-connect-input").placeholder = connectPlatform === "espn"
         ? "Paste ESPN league URL or ID" : "Paste Sleeper league URL or ID";
       $("#set-espn-disclaimer").style.display = connectPlatform === "espn" ? "" : "none";
+      $("#set-espn-public-note").style.display = connectPlatform === "espn" ? "" : "none";
       connectArea.innerHTML = "";
     };
   });

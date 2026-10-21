@@ -28,6 +28,7 @@ Treat the first real connection attempt as the actual test.
 
 import os
 import re
+import threading
 import time
 
 import pandas as pd
@@ -123,13 +124,34 @@ def resolve_year():
         return datetime.date.today().year
 
 
+LEAGUE_TTL = 120
+_LEAGUE_CACHE = {}
+_LEAGUE_LOCK = threading.Lock()
+
+
 def get_league(league_id, year, espn_s2=None, swid=None):
     """The raw espn-api League client — one real HTTP fetch, everything
     else (teams, rosters, schedule) already loaded onto it in memory.
     Public, not `_client`: my_team_espn (engine/tools.py) needs the full
-    object, not just the flattened league_snapshot() dict below."""
+    object, not just the flattened league_snapshot() dict below.
+
+    Cached for LEAGUE_TTL seconds per (league, year, credentials): every
+    ESPN screen (My Team, Waivers, Trade, lookup) re-fetched the whole
+    league, which is slow and invites ESPN rate limits. A failed fetch is
+    never cached."""
+    key = (str(league_id), int(year), hash((espn_s2 or "", swid or "")))
+    now = time.time()
+    with _LEAGUE_LOCK:
+        hit = _LEAGUE_CACHE.get(key)
+        if hit and now - hit[0] < LEAGUE_TTL:
+            return hit[1]
     from espn_api.football import League  # imported lazily — optional dependency, only needed here
-    return League(league_id=int(league_id), year=int(year), espn_s2=espn_s2 or None, swid=swid or None)
+    league = League(league_id=int(league_id), year=int(year), espn_s2=espn_s2 or None, swid=swid or None)
+    with _LEAGUE_LOCK:
+        if len(_LEAGUE_CACHE) > 50:
+            _LEAGUE_CACHE.clear()
+        _LEAGUE_CACHE[key] = (now, league)
+    return league
 
 
 def owner_name(team):

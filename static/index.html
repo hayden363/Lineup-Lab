@@ -407,11 +407,15 @@
 
         <div class="settings-block">
           <div class="settings-block-title">My Leagues &amp; Teams</div>
-          <div class="hint">Connect as many teams as you play in, Sleeper or ESPN — paste the league's URL (from your browser's address bar) or just its ID. A private ESPN league also needs the espn_s2/SWID cookies below, saved first. Switch which one is "active" any time; My Team, Waivers, and News all follow whichever team is active.</div>
+          <div class="hint">Connect as many teams as you play in, Sleeper or ESPN — paste the league's URL (from your browser's address bar) or just its ID. An ESPN league must be set to public (see the note when you pick ESPN). Switch which one is "active" any time; My Team, Waivers, and News all follow whichever team is active.</div>
           <div id="set-teams-list"></div>
           <div class="pill-group" id="set-connect-platform" style="margin-top:14px;">
             <button type="button" class="pill active" data-platform="sleeper">Sleeper</button>
             <button type="button" class="pill" data-platform="espn">ESPN <span class="soon-badge" style="margin-left:4px">beta</span></button>
+          </div>
+          <div class="espn-public-note" id="set-espn-public-note" role="note" style="display:none">
+            <strong>Your ESPN league must be set to public.</strong>
+            <span>This app can only read a league that anyone with the link can view. To turn that on: open your league on ESPN, go to <em>League → Settings → Basic Settings</em> (commissioner only), and tick <em>“Make League Viewable to Public”</em>. Then paste the league URL or ID here. Not the commissioner? Ask them to switch it on. You can switch it back off after connecting.</span>
           </div>
           <div class="hint" id="set-espn-disclaimer" style="display:none;margin-top:8px">This isn't an official ESPN integration — it uses your own ESPN session cookies to read your league the same way your browser does, and may stop working if ESPN changes something on their end. Your cookies are encrypted at rest and never shown back to you or anyone else once saved. Disconnect anytime below.</div>
           <div class="form-grid" style="margin-top:10px;">
@@ -429,7 +433,7 @@
 
         <div class="settings-block">
           <div class="settings-block-title">ESPN Cookies <span class="opt-badge">private leagues only</span></div>
-          <div class="hint">Only needed for a <em>private</em> ESPN league — a public one connects with just its league ID via "My Leagues &amp; Teams" above (pick ESPN there). These are the two session cookies that prove it's really you:</div>
+          <div class="hint">Advanced and optional. The easy way is to make your ESPN league public (see the note under “My Leagues &amp; Teams”). Only use this if that isn't possible and the league is private — these two session cookies prove it's really you:</div>
           <ul style="margin:0 0 12px;">
             <li><strong>SWID</strong> and <strong>espn_s2</strong> — find them in your browser's dev tools (Application → Cookies → fantasy.espn.com) while logged into ESPN. Encrypted at rest, never shown back to you in full. Never type your actual ESPN password anywhere in this app.</li>
           </ul>
