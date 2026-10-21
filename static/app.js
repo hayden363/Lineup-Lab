@@ -2420,9 +2420,13 @@ function ssDecisionHtml(data, players) {
       <span class="ssd-odds-v"><b>${p.outcomes.p_10plus}%</b> 10+</span>
       <span class="ssd-odds-v"><b>${p.outcomes.p_20plus}%</b> 20+</span>
     </div>`).join("");
+  const pickP = players.find((p) => p.player_id === d.pick);
+  const overP = players.find((p) => p.player_display_name === d.over_name && p.player_id !== d.pick) || players.find((p) => p.player_id !== d.pick);
+  const face = (p, cls) => p ? `<span class="ssd-face ${cls}" style="--c:${color(p.player_id)}"><img ${headshotAttrs(p)} alt=""></span>` : "";
   return `<div class="ssd-card">
     <div class="ssd-top">
-      <div>
+      <div class="ssd-faces">${face(pickP, "pick")}${face(overP, "over")}</div>
+      <div class="ssd-callbody">
         <div class="ssd-k">The call · ${esc(SS_MODE_TEXT[d.mode] || d.mode)}</div>
         <div class="ssd-pick">Start <span style="color:${color(d.pick)}">${esc(d.pick_name)}</span> <span class="ssd-over">over ${esc(d.over_name)}</span></div>
         <div class="ssd-line">${esc(d.line)}</div>
@@ -3766,13 +3770,15 @@ function renderLineupPanel(check) {
       <div class="lu-foot"><span>Projected <b class="tabular">${FMT.d1(total)}</b></span>
         <span class="lu-actions"><button class="pill" id="lu-best">Best lineup</button><button class="pill" id="lu-reset">Reset</button><button class="pill active" id="lu-check">Check</button></span></div>
       ${msgs ? `<ul class="lu-msgs">${msgs}</ul>` : check ? `<div class="lu-ok">✓ Legal lineup</div>` : ""}
+      ${L.bestNote ? `<div class="lu-best-note">${esc(L.bestNote)}</div>` : ""}
       <div class="muted small">Sleeper can't be edited from outside its app. Set this lineup there; locked slots here match the real kickoffs.</div>
     </div>`;
   host.querySelectorAll(".lu-pick").forEach((sel) => sel.addEventListener("change", () => {
     L.proposed[+sel.dataset.i] = sel.value || null;
+    L.bestNote = null;
     renderLineupPanel();
   }));
-  $("#lu-reset").addEventListener("click", () => { L.proposed = L.original.slice(); renderLineupPanel(); });
+  $("#lu-reset").addEventListener("click", () => { L.proposed = L.original.slice(); L.bestNote = null; renderLineupPanel(); });
   $("#lu-check").addEventListener("click", async () => {
     try {
       const r = await api("/api/lineup/check", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ week: L.week, proposed: L.proposed, scoring: scoringDict() }) });
@@ -3782,6 +3788,12 @@ function renderLineupPanel(check) {
   $("#lu-best").addEventListener("click", async () => {
     try {
       const r = await api(`/api/lineup/best?week=${L.week}${scoringQS()}`);
+      const before = total;
+      const after = r.total_proj != null ? r.total_proj : before;
+      const gain = after - before;
+      L.bestNote = gain >= 0.05
+        ? `Best lineup adds ${gain.toFixed(1)} pts: ${FMT.d1(before)} → ${FMT.d1(after)}. It tries every legal arrangement of your roster, flex slots included, so no better lineup exists.`
+        : `Your lineup is already the best possible (${FMT.d1(after)} pts). No legal swap beats it.`;
       L.proposed = r.lineup.map((x) => x.player_id);
       renderLineupPanel(r);
     } catch (e) { showToast(e.message, "error"); }

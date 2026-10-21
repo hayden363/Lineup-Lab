@@ -4766,3 +4766,13 @@ tr.kbd-click:focus-visible { outline-offset: -2px; }
 .ss-fullcard { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; margin: 0 0 12px; padding: 10px 14px; border-radius: 12px; cursor: pointer;
   font: 600 13px var(--sans); color: var(--text); border: 1px solid rgba(52,211,153,.4); background: rgba(52,211,153,.08); transition: background .15s, border-color .15s; }
 .ss-fullcard:hover { background: rgba(52,211,153,.16); border-color: rgba(52,211,153,.7); }
+
+.ssd-top { display: flex; gap: 14px; align-items: flex-start; flex-wrap: wrap; }
+.ssd-faces { display: flex; align-items: flex-end; flex: none; }
+.ssd-face { display: block; border-radius: 50%; overflow: hidden; border: 3px solid var(--c, #10b981); background: var(--surface-2, #1e293b); }
+.ssd-face img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: top; }
+.ssd-face.pick { width: 76px; height: 76px; box-shadow: 0 0 0 4px rgba(16,185,129,.15); z-index: 1; }
+.ssd-face.over { width: 46px; height: 46px; margin-left: -12px; opacity: .7; filter: grayscale(.5); border-width: 2px; }
+.ssd-callbody { flex: 1 1 220px; min-width: 0; }
+.ssd-top .ssd-conf { margin-left: auto; }
+.lu-best-note { margin-top: 8px; padding: 8px 10px; border-radius: 8px; font-size: 12.5px; line-height: 1.4; background: rgba(16,185,129,.1); border: 1px solid rgba(16,185,129,.35); }
