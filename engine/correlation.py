@@ -51,7 +51,8 @@ _CACHE = {}
 
 def _team_weeks(wk):
     """One row per team-week: points of the QB, RB1-2, WR1-3, TE1 plus the
-    opponent, from history and this season's weekly stats."""
+    opponent, from history and this season's weekly stats. Slots go by
+    attempts (QB, at least 15), carries (RB) and targets (WR, TE)."""
     cols = ["season", "week", "recent_team", "opponent_team", "player_id", "position",
             "targets", "carries", "attempts", "fantasy_points_ppr"]
     parts = []
@@ -62,18 +63,23 @@ def _team_weeks(wk):
     df = pd.concat(parts, ignore_index=True)
     df = df[df["position"].isin(POS)]
     df[["targets", "carries", "attempts"]] = df[["targets", "carries", "attempts"]].fillna(0.0)
-    rows = []
-    for (season, week, team), g in df.groupby(["season", "week", "recent_team"]):
-        row = {"season": season, "week": week, "team": team, "opp": g["opponent_team"].iloc[0]}
-        qb = g[g["position"] == "QB"].nlargest(1, "attempts")
-        if len(qb) and qb.iloc[0]["attempts"] >= 15:
-            row["QB"] = float(qb.iloc[0]["fantasy_points_ppr"])
-        for pos, key, n in SLOTS:
-            top = g[g["position"] == pos].nlargest(n, key)
-            for i, v in enumerate(top["fantasy_points_ppr"], 1):
-                row[f"{pos}{i}"] = float(v)
-        rows.append(row)
-    return pd.DataFrame(rows)
+    keys = ["season", "week", "recent_team"]
+    opp = df.groupby(keys)["opponent_team"].first().rename("opp")
+    pieces = []
+    qb = df[(df["position"] == "QB") & (df["attempts"] >= 15)].copy()
+    qb["slot"] = qb.groupby(keys)["attempts"].rank(method="first", ascending=False)
+    qb = qb[qb["slot"] == 1].assign(col="QB")
+    pieces.append(qb[keys + ["col", "fantasy_points_ppr"]])
+    for pos, key, n in SLOTS:
+        g = df[df["position"] == pos].copy()
+        g["slot"] = g.groupby(keys)[key].rank(method="first", ascending=False)
+        g = g[g["slot"] <= n]
+        g["col"] = pos + g["slot"].astype(int).astype(str)
+        pieces.append(g[keys + ["col", "fantasy_points_ppr"]])
+    long = pd.concat(pieces, ignore_index=True)
+    w = long.pivot_table(index=keys, columns="col", values="fantasy_points_ppr", aggfunc="first")
+    w = w.join(opp, how="left").reset_index().rename(columns={"recent_team": "team"})
+    return w
 
 
 def _pooled(values_by_pair):
@@ -88,7 +94,7 @@ def measure(wk):
     w = _team_weeks(wk)
     if w.empty:
         return {"same": {}, "opp": {}, "n": 0}
-    slots = [c for c in w.columns if c[:2] in POS or c == "QB"]
+    slots = [c for c in w.columns if c.rstrip("123") in POS]
     pos_of = lambda c: c.rstrip("123")  # noqa: E731
     ranks = w[slots].rank(pct=True)
     same = {}

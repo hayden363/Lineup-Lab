@@ -34,10 +34,11 @@ import asyncio
 import os
 import time
 
-from . import board, tools
+from . import board, contingency, correlation, tools
 
 DEFAULT_INTERVAL_HOURS = 24
 _WARM_TASK = None
+_TABLES_TASK = None
 
 
 def _interval_seconds():
@@ -83,6 +84,7 @@ async def _refresh_loop():
             bundle = await asyncio.to_thread(board.load_bundle, None, True)
             print(f"[refresh_scheduler] refreshed season {bundle['season']} "
                   f"in {time.time() - started:.1f}s")
+            await _warm_model_tables(delay=0)   # this week's games change both tables
             # Deliberately not eagerly warming board.py's cache here either
             # (see the comment above this loop) — on a memory-constrained
             # host, real request traffic filling the cache in naturally,
@@ -107,6 +109,21 @@ async def _refresh_loop():
                 print(f"[refresh_scheduler] resolved {resolved} track-record prediction(s)")
         except Exception as e:
             print(f"[refresh_scheduler] track-record resolve skipped: {e}")
+
+
+async def _warm_model_tables(delay=20):
+    """Always on, and cheap (no extra memory measured): the correlation and
+    teammate-absence tables are built from history, take a few seconds on a
+    small host, and would otherwise land on whichever visitor first compares
+    two teammates or opens a card with an injured teammate."""
+    try:
+        await asyncio.sleep(delay)
+        bundle = await asyncio.to_thread(board.load_bundle)
+        await asyncio.to_thread(correlation.table, bundle["wk"])
+        await asyncio.to_thread(contingency.absorption, bundle["wk"])
+        print("[refresh_scheduler] correlation and teammate-absence tables ready")
+    except Exception as e:
+        print(f"[refresh_scheduler] model-table warm skipped: {e}")
 
 
 def _warm_enabled():
@@ -138,4 +155,6 @@ def start():
     other referent keeping it alive); nothing else needs the handle."""
     global _WARM_TASK
     _WARM_TASK = asyncio.ensure_future(_warm_on_start())   # held so it isn't garbage-collected mid-flight
+    global _TABLES_TASK
+    _TABLES_TASK = asyncio.ensure_future(_warm_model_tables())
     return asyncio.ensure_future(_refresh_loop())

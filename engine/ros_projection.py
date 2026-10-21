@@ -30,6 +30,13 @@ For every unplayed game on a player's team schedule:
              coordinator or scheme makes old meetings weaker evidence, which is
              why it is small.
 
+Teammates out (next game only): when a RB/WR/TE teammate is Out, or Questionable
+and likely to sit, the work he vacates is added to this player's baseline,
+weighted by the chance he is out (engine/contingency.py: how volume actually
+moved in past absences, split by current share, capped at half the baseline).
+Each game carries a `contingency` block with the number if he plays, if he
+sits (zero) and what each teammate's absence is worth to him.
+
 History also shapes the baseline itself: this season's rate is shrunk toward
 his own career rate, not the position average (engine/board.shrunk_rate), and
 the game-to-game spread behind floor/ceiling uses all seasons.
