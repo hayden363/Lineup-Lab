@@ -27,6 +27,15 @@ services:
         value: 3.9.6
       - key: REFRESH_INTERVAL_HOURS
         value: "24"
+      # Opt in once the plan has about 1 GB or more: builds the default boards in
+      # the background after each deploy/restart so the first visitors don't pay
+      # for it. Left off on the 512 MiB plan (an earlier 16-board version of this
+      # pushed memory too high).
+      # - key: WARM_ON_START
+      #   value: "1"
+      # Distinct custom league-scoring settings kept in memory (default 8).
+      # - key: MAX_CUSTOM_SCORINGS
+      #   value: "8"
       # Required for accounts/sessions/settings to work at all.
       - key: DATABASE_URL
         sync: false

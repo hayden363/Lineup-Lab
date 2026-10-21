@@ -28,6 +28,7 @@ SECURITY POSTURE (see README for the full writeup):
 import hashlib
 import math
 import os
+import re
 import secrets
 import time
 from collections import defaultdict, deque
@@ -95,6 +96,29 @@ SESSION_COOKIE = "eb_session"
 
 
 # ------------------------------------------------------------- security ----
+# Read-only endpoints whose answer is the same for every signed-out visitor
+# (the Big Board, a player card, the app's config). Letting a CDN or the
+# browser hold them for a few minutes takes most read traffic off the app.
+_PUBLIC_CACHE_PATHS = ("/api/meta", "/api/board")
+_PUBLIC_CACHE_PLAYER = re.compile(r"^/api/player/[^/]+$")
+PUBLIC_CACHE_CONTROL = "public, max-age=60, s-maxage=300, stale-while-revalidate=600"
+
+
+def _public_cache_headers(request: Request, response: Response) -> None:
+    """Cache-Control for the endpoints above, only for a signed-out GET that
+    succeeded. Anyone with a session cookie gets no caching header at all: their
+    answer depends on their saved scoring and must never be stored or shared.
+    Vary: Cookie keeps a shared cache from handing one kind of answer to the other."""
+    path = request.url.path
+    if request.method != "GET" or response.status_code != 200:
+        return
+    if path not in _PUBLIC_CACHE_PATHS and not _PUBLIC_CACHE_PLAYER.match(path):
+        return
+    response.headers.append("Vary", "Cookie")
+    if SESSION_COOKIE not in request.cookies and "cache-control" not in response.headers:
+        response.headers["Cache-Control"] = PUBLIC_CACHE_CONTROL
+
+
 @app.middleware("http")
 async def security_headers(request: Request, call_next):
     t0 = time.perf_counter()
@@ -127,6 +151,7 @@ async def security_headers(request: Request, call_next):
     # baked-in preload list) worth a deliberate decision, not a default.
     if request.url.scheme == "https":
         response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    _public_cache_headers(request, response)
     # request timing: path only (never the query string — league ids must
     # not reach logs); /api/ only so /healthz and static files stay quiet
     if request.url.path.startswith("/api/"):

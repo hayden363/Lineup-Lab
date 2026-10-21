@@ -9,6 +9,8 @@ Pipeline: weekly stats -> base metrics -> SCORE (weighted) -> advanced
 projection vs an opponent defense.
 """
 
+import json
+import os
 import threading
 import time
 from typing import TypedDict
@@ -102,6 +104,13 @@ _BUNDLE_LOCK = threading.Lock()
 # valid for the raw tables it was built from.
 _BOARD_CACHE: dict = {}
 _PVS_CACHE: dict = {}
+# Boards and PVS tables are cached per scoring setting. The default and the
+# named presets are what nearly everyone uses, so they stay. A signed-in user
+# with custom league scoring adds their own variant; without a bound, enough
+# different leagues would grow this without limit on a 512 MiB host. Beyond
+# MAX_CUSTOM_SCORINGS distinct custom settings, the least recently used one is
+# dropped (and simply rebuilt, ~0.5 s, if its owner comes back).
+MAX_CUSTOM_SCORINGS = int(os.environ.get("MAX_CUSTOM_SCORINGS", "8"))
 _PVS_LOCAL = threading.local()
 
 
@@ -297,6 +306,7 @@ def _load_bundle_locked(season, key, force) -> Bundle:
         # a hot path).
         _BOARD_CACHE.clear()
         _PVS_CACHE.clear()
+        _OVERALL_CACHE.clear()
     return bundle
 
 
@@ -427,6 +437,42 @@ def _build_board_uncached(position, season, min_volume, scoring):
     return board.sort_values("SCORE", ascending=False)
 
 
+def _protected_scoring_keys():
+    return {None} | {_scoring_cache_key(p) for p in PRESETS.values()}
+
+
+def _cache_get(cache, key, scoring_key_of):
+    """cache[key] or None; a hit on a custom-scoring entry marks it recently used."""
+    hit = cache.get(key)
+    if hit is not None and scoring_key_of(key) not in _protected_scoring_keys():
+        cache.pop(key, None)
+        cache[key] = hit
+    return hit
+
+
+def _cache_put(cache, key, value, scoring_key_of):
+    """Store, then drop the least recently used custom-scoring variants beyond
+    MAX_CUSTOM_SCORINGS. Presets and the default are never dropped."""
+    cache[key] = value
+    protected = _protected_scoring_keys()
+    seen = []
+    for k in list(cache):
+        sk = scoring_key_of(k)
+        if sk not in protected and sk not in seen:
+            seen.append(sk)
+    for sk in seen[:max(0, len(seen) - MAX_CUSTOM_SCORINGS)]:
+        for k in [k for k in cache if scoring_key_of(k) == sk]:
+            cache.pop(k, None)
+
+
+def _board_key_scoring(key):
+    return key[2]
+
+
+def _pvs_key_scoring(key):
+    return key[1]
+
+
 def build_board(position, season=None, min_games=2, min_volume=None, scoring=None):
     """The scored/advanced/FORM/floor-ceiling board for one position,
     cached by (position, season, scoring) — every real call site (the API,
@@ -451,11 +497,11 @@ def build_board(position, season=None, min_games=2, min_volume=None, scoring=Non
         board = _build_board_uncached(position, season, min_volume, scoring)
         board["rate"] = shrunk_rate(board, position, scoring, season)
     else:
-        board = _BOARD_CACHE.get(key)
+        board = _cache_get(_BOARD_CACHE, key, _board_key_scoring)
     if board is None:
         board = _build_board_uncached(position, season, min_volume, scoring)
         board["rate"] = shrunk_rate(board, position, scoring, season)
-        _BOARD_CACHE[key] = board
+        _cache_put(_BOARD_CACHE, key, board, _board_key_scoring)
     filtered = board[board["games"] >= min_games]
     # Live injury designations (ESPN's feed, 15 minutes old at most) over
     # Sleeper's once-a-day list; see engine/injuries.py. Never lets the feed
@@ -487,7 +533,7 @@ def pvs_lookup(season=None, scoring=None):
     superflex) are applied to that list separately."""
     season = season or data.resolve_season()
     key = (season, _scoring_cache_key(scoring))
-    hit = _PVS_CACHE.get(key)
+    hit = _cache_get(_PVS_CACHE, key, _pvs_key_scoring)
     if hit is None:
         _PVS_LOCAL.building = True
         try:
@@ -495,8 +541,22 @@ def pvs_lookup(season=None, scoring=None):
         finally:
             _PVS_LOCAL.building = False
         hit = {pid: (float(r.PVS), r.PVS_tier) for pid, r in allp[["PVS", "PVS_tier"]].iterrows()}
-        _PVS_CACHE[key] = hit
+        _cache_put(_PVS_CACHE, key, hit, _pvs_key_scoring)
     return hit
+
+
+def warm_default_boards(season=None, pause=0.5):
+    """Build only the default-scoring board for each position, one at a time with
+    a short pause, then its PVS table. Unlike warm_common_boards (16 builds in a
+    burst, which pushed memory past what a small host tolerates), this is four
+    builds, and it is what a signed-out visitor hits first. Opt-in at process
+    start via WARM_ON_START (see engine/refresh_scheduler.py)."""
+    for pos in POSITIONS:
+        try:
+            build_board(pos, season=season)
+        except Exception as e:
+            print(f"[board] default warm skipped for {pos}: {e}")
+        time.sleep(pause)
 
 
 def warm_common_boards(season=None):
@@ -640,7 +700,38 @@ def rest_of_season_value(board, position, bundle=None, season=None, scoring=None
     return (_rate(board) * form_mult * avg_factor * injury_mult * avail).round(1)
 
 
+_OVERALL_CACHE: dict = {}
+OVERALL_TTL_SECONDS = 120   # live injuries (15 min feed) are the freshest input; 2 minutes is well inside that
+
+
+def _overall_key_scoring(key):
+    return key[1]
+
+
 def overall_board(scoring=None, league=None, season=None, ecr=None):
+    """Cached for OVERALL_TTL_SECONDS per (season, scoring, league): it is the
+    same stitched list for everyone who asks for it, and rebuilding it per
+    request (four boards, the expert-rank lookup, value and PVS) was the
+    heaviest thing a signed-out visitor could trigger. Always returns a copy.
+    A caller that passes its own `ecr` bypasses the cache."""
+    if ecr is not None:
+        return _overall_board_uncached(scoring, league, season, ecr)
+    season = season or data.resolve_season()
+    league_key = None if league is None else json.dumps(league, sort_keys=True, default=str)
+    key = (season, _scoring_cache_key(scoring), league_key)
+    hit = _cache_get(_OVERALL_CACHE, key, _overall_key_scoring)
+    if hit is not None and time.time() - hit[0] < OVERALL_TTL_SECONDS:
+        out = hit[1].copy()
+        out.attrs = dict(hit[1].attrs)
+        return out
+    out = _overall_board_uncached(scoring, league, season, None)
+    _cache_put(_OVERALL_CACHE, key, (time.time(), out), _overall_key_scoring)
+    copy = out.copy()
+    copy.attrs = dict(out.attrs)
+    return copy
+
+
+def _overall_board_uncached(scoring=None, league=None, season=None, ecr=None):
     """Every QB/RB/WR/TE ranked on ONE list by value over replacement, blended
     with the expert consensus rank (see engine/value.py). `league` is
     {teams, slots} (engine/value.DEFAULT_LEAGUE shape) or None for a 12-team

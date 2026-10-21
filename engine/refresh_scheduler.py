@@ -37,6 +37,7 @@ import time
 from . import board, tools
 
 DEFAULT_INTERVAL_HOURS = 24
+_WARM_TASK = None
 
 
 def _interval_seconds():
@@ -108,10 +109,33 @@ async def _refresh_loop():
             print(f"[refresh_scheduler] track-record resolve skipped: {e}")
 
 
+def _warm_enabled():
+    return os.environ.get("WARM_ON_START", "").strip().lower() in ("1", "true", "yes")
+
+
+async def _warm_on_start():
+    """Opt-in (WARM_ON_START=1): after a deploy or restart, build the default
+    boards in the background so the first visitors don't all pay for it at once.
+    Off by default: on a 512 MiB host the older 16-build version of this pushed
+    memory too high (see the note in _refresh_loop). Turn it on once the host has
+    headroom (about 1 GB or more)."""
+    if not _warm_enabled():
+        return
+    started = time.time()
+    try:
+        await asyncio.to_thread(board.load_bundle)
+        await asyncio.to_thread(board.warm_default_boards)
+        print(f"[refresh_scheduler] default boards warmed in {time.time() - started:.1f}s")
+    except Exception as e:
+        print(f"[refresh_scheduler] warm on start skipped: {e}")
+
+
 def start():
     """Schedule the background refresh loop. Call once, from server.py's
     lifespan startup, inside a running event loop. Returns the
     asyncio.Task — server.py holds onto it only so it isn't
     garbage-collected mid-flight (a bare fire-and-forget task has no
     other referent keeping it alive); nothing else needs the handle."""
+    global _WARM_TASK
+    _WARM_TASK = asyncio.ensure_future(_warm_on_start())   # held so it isn't garbage-collected mid-flight
     return asyncio.ensure_future(_refresh_loop())
