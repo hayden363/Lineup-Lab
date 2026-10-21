@@ -93,9 +93,12 @@ def id_crosswalk(force=False):
 ESPN_STAT_ID_MAP = {
     3: "pass_yard", 4: "pass_td", 20: "interception",
     24: "rush_yard", 25: "rush_td",
-    41: "reception", 42: "rec_yard", 43: "rec_td",
+    # ESPN has two receptions stats: 41 and 53 (espn-api notes it can't tell them apart).
+    # A real league ("Each reception") uses 53, so reading only 41 scored every league as full PPR.
+    41: "reception", 53: "reception", 42: "rec_yard", 43: "rec_td",
     72: "fumble_lost",  # "Total Fumbles Lost" — one combined field, same as this app's own model
     62: "two_pt",        # "Total 2pt Conversions" — ESPN splits pass/rush/rec 2pt into 3 stats; this is the combined one
+    19: "two_pt", 26: "two_pt", 44: "two_pt",   # the separate pass / rush / receiving 2pt stats leagues actually use
 }
 
 

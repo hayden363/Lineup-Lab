@@ -38,7 +38,7 @@ class ScoringFromEspn(unittest.TestCase):
     def test_maps_known_ids_and_skips_unknown(self):
         league = SimpleNamespace(settings=SimpleNamespace(scoring_format=[
             {"id": 41, "points": 1.0},
-            {"id": 53, "points": 0.5},   # not in ESPN_STAT_ID_MAP -> skipped
+            {"id": 999, "points": 5.0},  # not in ESPN_STAT_ID_MAP -> skipped
             {"id": 3, "points": 0.04},
             {"id": 72},                  # no points -> defaults to 0
         ]))
@@ -46,6 +46,19 @@ class ScoringFromEspn(unittest.TestCase):
             espn.scoring_from_espn(league),
             {"reception": 1.0, "pass_yard": 0.04, "fumble_lost": 0},
         )
+
+    def test_reception_stat_53_is_read(self):
+        # Real leagues label receptions with id 53; reading only 41 scored
+        # every half-PPR or standard league as full PPR.
+        half = SimpleNamespace(settings=SimpleNamespace(scoring_format=[{"id": 53, "points": 0.5}]))
+        std = SimpleNamespace(settings=SimpleNamespace(scoring_format=[{"id": 53, "points": 0.0}]))
+        self.assertEqual(espn.scoring_from_espn(half), {"reception": 0.5})
+        self.assertEqual(espn.scoring_from_espn(std), {"reception": 0.0})
+
+    def test_separate_two_point_stats(self):
+        league = SimpleNamespace(settings=SimpleNamespace(scoring_format=[
+            {"id": 19, "points": 2.0}, {"id": 26, "points": 2.0}, {"id": 44, "points": 2.0}]))
+        self.assertEqual(espn.scoring_from_espn(league), {"two_pt": 2.0})
 
 
 class OwnerName(unittest.TestCase):
