@@ -91,6 +91,53 @@ def parse_espn_trades(activities):
     return out
 
 
+def parse_espn_pending(pending, team_names, player_name):
+    """Trades ESPN lists as pending (proposed, or accepted and sitting in the
+    league's review window), from its public `mPendingTransactions` view.
+    Each item says which team sends a player to which, so both sides are exact.
+    `teamActions` holds every team's response, which becomes the vote tally."""
+    out = []
+    for tx in pending or []:
+        items = [i for i in tx.get("items") or [] if i.get("type") == "TRADE"]
+        if not tx.get("type", "").startswith("TRADE") or not items:
+            continue
+        sides = {}
+        def side(tid):
+            return sides.setdefault(tid, {"roster_id": tid, "team": team_names.get(tid, f"Team {tid}"),
+                                          "receives": [], "gives": []})
+        for it in items:
+            pl = {"kind": "player", "player_id": it.get("playerId"), "name": player_name(it.get("playerId"))}
+            side(it.get("toTeamId"))["receives"].append(pl)
+            side(it.get("fromTeamId"))["gives"].append(pl)
+        actions = tx.get("teamActions") or {}
+        tally = {"approved": 0, "vetoed": 0, "accepted": 0}
+        for act in actions.values():
+            key = {"APPROVED": "approved", "VETOED": "vetoed", "ACCEPTED": "accepted"}.get(act)
+            if key:
+                tally[key] += 1
+        reviewing = tx.get("type") == "TRADE_ACCEPT"
+        out.append({"id": f"espn-{tx.get('id')}", "week": None, "at": tx.get("acceptedDate") or tx.get("proposedDate"),
+                    "status": "Under league review" if reviewing else "Proposed",
+                    "votes": tally if reviewing else None,
+                    "review_ends": tx.get("processDate") if reviewing else None,
+                    "sides": list(sides.values())})
+    out.sort(key=lambda t: t.get("at") or 0, reverse=True)
+    return out
+
+
+def espn_trade_log(league, activities=None):
+    """Pending trades (public, always) followed by completed ones (only when the
+    caller passes ESPN's recent activity, which needs the user's ESPN login)."""
+    names = {t.team_id: t.team_name for t in league.teams}
+    pm = getattr(league, "player_map", {})
+    pending = league.espn_request.league_get(params={"view": "mPendingTransactions"}).get("pendingTransactions", [])
+    log = parse_espn_pending(pending, names, lambda pid: pm.get(pid) or str(pid))
+    done = parse_espn_trades(activities)
+    for t in done:
+        t.setdefault("status", "Completed")
+    return log + done
+
+
 def new_trades(trades, seen_ids):
     """Trades whose id isn't in `seen_ids` — what to flag as 'new' to the user."""
     seen = set(seen_ids or [])

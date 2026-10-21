@@ -1303,7 +1303,11 @@ def api_league_trades(seen: str = Query("", description="comma-separated trade i
         try:
             espn_s2, swid = db.get_espn_secrets(user["id"])
             league = espn_layer.get_league(active["league_id"], espn_layer.resolve_year(), espn_s2, swid)
-            trades = league_trades_layer.parse_espn_trades(league.recent_activity(size=100, msg_type="TRADED"))
+            try:
+                activity = league.recent_activity(size=100, msg_type="TRADED") if (espn_s2 and swid) else []
+            except Exception:
+                activity = []  # the completed-trade feed needs a login; pending trades are public
+            trades = league_trades_layer.espn_trade_log(league, activity)
         except Exception as e:
             raise HTTPException(400, str(e))
         new_ids = {t["id"] for t in league_trades_layer.new_trades(trades, [x for x in seen.split(",") if x])}

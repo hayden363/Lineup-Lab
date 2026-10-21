@@ -4064,7 +4064,7 @@ async function loadTradesPanel() {
     if (!trades.length) { host.innerHTML = `${head}<div class="hint">No trades in your league yet.</div>`; return; }
     const side = (s) => `<div class="tr-side"><div class="tr-team">${esc(s.team)} <span class="muted small">gets</span></div>${s.receives.map((x) => `<div class="tr-item ${x.kind}">${esc(x.name)}</div>`).join("") || `<div class="muted small">nothing</div>`}</div>`;
     host.innerHTML = head +
-      trades.slice(0, 10).map((t) => `<div class="tr-card${t.is_new ? " is-new" : ""}"><div class="tr-head">${t.week != null ? `Week ${esc(t.week)}` : esc(t.at ? new Date(t.at).toLocaleDateString(undefined, { month: "short", day: "numeric" }) : "—")}${t.is_new ? ` <span class="lk lk-open">NEW</span>` : ""}</div><div class="tr-sides">${t.sides.map(side).join("")}</div></div>`).join("");
+      trades.slice(0, 10).map((t) => `<div class="tr-card${t.is_new ? " is-new" : ""}"><div class="tr-head">${t.week != null ? `Week ${esc(t.week)}` : esc(t.at ? new Date(t.at).toLocaleDateString(undefined, { month: "short", day: "numeric" }) : "—")}${t.is_new ? ` <span class="lk lk-open">NEW</span>` : ""}${t.status ? ` <span class="lk">${esc(t.status)}</span>` : ""}${t.votes ? ` <span class="muted small">${esc(t.votes.approved)} approve · ${esc(t.votes.vetoed)} veto</span>` : ""}</div><div class="tr-sides">${t.sides.map(side).join("")}</div></div>`).join("");
     try { localStorage.setItem("seenTrades", JSON.stringify(trades.map((t) => t.id))); } catch (e) { /* storage unavailable */ }
   } catch (e) {
     host.innerHTML = `${secHeadHtml("trades", "League trades", "")}<div class="hint">${esc(e.message)}</div>`;

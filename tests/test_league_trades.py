@@ -61,5 +61,29 @@ class EspnTradeTests(unittest.TestCase):
         self.assertTrue(all(s["gives"] == [] for s in trade["sides"]))
 
 
+class EspnPendingTests(unittest.TestCase):
+    PENDING = [{"id": "x1", "type": "TRADE_ACCEPT", "acceptedDate": 5, "processDate": 9,
+                "teamActions": {"12": "ACCEPTED", "11": "ACCEPTED", "10": "VETOED", "6": "APPROVED", "1": "VETOED", "2": "APPROVED"},
+                "items": [{"type": "TRADE", "playerId": 1, "fromTeamId": 12, "toTeamId": 11},
+                          {"type": "TRADE", "playerId": 2, "fromTeamId": 11, "toTeamId": 12}]}]
+
+    def test_sides_and_votes(self):
+        (t,) = T.parse_espn_pending(self.PENDING, {11: "Eleven", 12: "Twelve"}, lambda pid: f"P{pid}")
+        a = next(s for s in t["sides"] if s["roster_id"] == 11)
+        self.assertEqual([x["name"] for x in a["receives"]], ["P1"])
+        self.assertEqual([x["name"] for x in a["gives"]], ["P2"])
+        self.assertEqual(t["status"], "Under league review")
+        self.assertEqual(t["votes"], {"approved": 2, "vetoed": 2, "accepted": 2})
+
+    def test_unaccepted_proposal_has_no_votes(self):
+        p = [{**self.PENDING[0], "type": "TRADE_PROPOSAL"}]
+        (t,) = T.parse_espn_pending(p, {}, str)
+        self.assertEqual(t["status"], "Proposed")
+        self.assertIsNone(t["votes"])
+
+    def test_ignores_non_trades(self):
+        self.assertEqual(T.parse_espn_pending([{"type": "WAIVER", "items": []}], {}, str), [])
+
+
 if __name__ == "__main__":
     unittest.main()
