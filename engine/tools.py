@@ -413,7 +413,7 @@ def start_sit(player_ids, opponents=None, season=None, scoring=None, mode="balan
             "player_id": pid, "position": pos,
             "player_display_name": row.get("player_display_name"),
             "recent_team": row.get("recent_team"), "headshot_url": row.get("headshot_url"),
-            "SCORE": row.get("SCORE"), "FORM": row.get("FORM"), "fpts_per_game": row.get("fpts_per_game"),
+            "SCORE": row.get("SCORE"), "PVS": row.get("PVS"), "FORM": row.get("FORM"), "fpts_per_game": row.get("fpts_per_game"),
             "opponent": opp, "matchup_tag": matchup_tag, "matchup_factor": matchup_factor, "PROJ": proj, "week": wk_no,
             "floor": floor_v, "ceiling": ceil_v,
             "snap_pct": _clean_num(row.get("snap_pct")), "redzone_touches": _clean_num(row.get("redzone_touches")),
@@ -690,7 +690,7 @@ def trade_analyzer(side_a_ids, side_b_ids, season=None, scoring=None, league_ctx
                 "player_id": pid, "position": pos,
                 "player_display_name": row.get("player_display_name"),
                 "recent_team": row.get("recent_team"), "headshot_url": row.get("headshot_url"),
-                "SCORE": row.get("SCORE"), "value": round(value, 1),
+                "SCORE": row.get("SCORE"), "PVS": row.get("PVS"), "value": round(value, 1),
                 "injury_status": _clean_num(row.get("injury_status")),
                 "injury_body_part": _clean_num(row.get("injury_body_part")),
             })
@@ -811,7 +811,7 @@ def _roster_players(raw_ids, bundle, get_board, scoring, crosswalk=None, starter
             "player_id": gsis_id, "position": pos,
             "player_display_name": row.get("player_display_name"),
             "recent_team": row.get("recent_team"), "headshot_url": row.get("headshot_url"),
-            "SCORE": row.get("SCORE"), "FORM": row.get("FORM"),
+            "SCORE": row.get("SCORE"), "PVS": row.get("PVS"), "FORM": row.get("FORM"),
             "fpts_per_game": row.get("fpts_per_game"), "PROJ": proj,
             "injury_status": _clean_num(row.get("injury_status")),
             "injury_body_part": _clean_num(row.get("injury_body_part")),
@@ -978,7 +978,7 @@ def roster_player_list(league_id, roster_id, season=None, scoring=None):
                 # on this exact class of fallback row.
                 players.append({k: special_row.get(k) for k in
                                  ("player_id", "position", "player_display_name", "recent_team",
-                                  "headshot_url", "SCORE", "PROJ", "injury_status",
+                                  "headshot_url", "SCORE", "PVS", "PROJ", "injury_status",
                                   "injury_body_part", "injury_factor", "injury_sample_n")})
                 continue
             players.append({
@@ -1009,7 +1009,7 @@ def roster_player_list(league_id, roster_id, season=None, scoring=None):
             "player_id": gsis_id, "position": pos,
             "player_display_name": row.get("player_display_name"),
             "recent_team": row.get("recent_team"), "headshot_url": row.get("headshot_url"),
-            "SCORE": row.get("SCORE"), "PROJ": proj,
+            "SCORE": row.get("SCORE"), "PVS": row.get("PVS"), "PROJ": proj,
             "injury_status": _clean_num(row.get("injury_status")),
             "injury_body_part": _clean_num(row.get("injury_body_part")),
             "injury_factor": injury_factor, "injury_sample_n": injury_sample_n,
@@ -1303,7 +1303,7 @@ def roster_player_list_espn(league_id, roster_id, year=None, season=None, scorin
     # last_active_week at all (no board row to source them from) —
     # bracket access here would KeyError on exactly those real rosters.
     players = [{k: r.get(k) for k in ("player_id", "position", "player_display_name", "recent_team",
-                                       "headshot_url", "SCORE", "PROJ", "injury_status",
+                                       "headshot_url", "SCORE", "PVS", "PROJ", "injury_status",
                                        "injury_body_part", "injury_factor", "injury_sample_n",
                                        "weeks_since_played", "last_active_week")} for r in rows]
     players.sort(key=lambda p: -(p["PROJ"] or 0))
@@ -1560,7 +1560,7 @@ def draft_board(draft_id, my_roster_id=None, season=None, scoring=None, best_ava
                     "player_id": pid, "position": pos,
                     "player_display_name": row.get("player_display_name"),
                     "recent_team": row.get("recent_team"), "headshot_url": row.get("headshot_url"),
-                    "SCORE": row.get("SCORE"),
+                    "SCORE": row.get("SCORE"), "PVS": row.get("PVS"),
                     # pandas-stubs 1.5.3.230321 mistypes Series.get(key, default)'s
                     # return as `Dtype` unconditionally — it's actually a scalar
                     # value here, so this is a real pyright false positive.

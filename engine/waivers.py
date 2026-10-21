@@ -475,7 +475,7 @@ def player_card(pid, r, sched, badge, extra=None):
         "player_id": pid, "name": r["player_display_name"], "position": r["position"], "team": r["recent_team"],
         "headshot_url": r.get("headshot_url"), "injury_status": r.get("injury_status") if isinstance(r.get("injury_status"), str) else None,
         "ros": _num(r["value"]), "fpts_pg": _num(r["fpts_per_game"]), "games": int(r["games"]),
-        "SCORE": _num(r.get("SCORE")), "FORM": _num(r.get("FORM")),
+        "SCORE": _num(r.get("SCORE")), "PVS": _num(r.get("PVS")), "FORM": _num(r.get("FORM")),
         "snap_pct": _num(snap * 100 if snap is not None and not pd.isna(snap) and snap <= 1 else snap),
         "target_share": _num(r.get("target_share")),   # board stores these as percents
         "wopr": _num(r.get("wopr") / 100 if _num(r.get("wopr")) is not None else None, 2), "xfp_pg": _num(r.get("xfp_pg")), "xfp_diff": _num(r.get("xfp_diff")),
@@ -624,7 +624,7 @@ def build(league_id=None, my_roster_id=None, scoring=None, now=None, limit=10, e
     except Exception:
         trend48 = {}
     # 2+ games, same bar as the original list: one big game shouldn't top it.
-    top = avail[avail["games"] >= 2].sort_values("SCORE", ascending=False).groupby("position", group_keys=False).head(20)
+    top = avail[avail["games"] >= 2].sort_values("PVS" if "PVS" in avail.columns else "SCORE", ascending=False, na_position="last").groupby("position", group_keys=False).head(20)
     deep = [player_card(pid, r, sched_for(pid, r), badge_for(pid),
                         {"usage_score": _num(r["usage_score"]), "trending_adds": int(trend48.get(pid, 0))})
             for pid, r in top.iterrows()]

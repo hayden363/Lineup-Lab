@@ -552,6 +552,7 @@ _OVERALL_COLUMNS = [
     "PROJ", "VOR", "VALUE", "replacement_proj", "ecr", "ecr_sd", "ecr_gap", "SCORE", "FORM", "games",
     "fpts_per_game", "floor", "ceiling", "cv", "boom_rate", "bust_rate", "bye_week", "stat_line",
     "injury_status", "injury_body_part", "weeks_since_played",
+    "PVS", "PVS_tier", "pvs_vorp", "pvs_vol", "pvs_ceil", "pvs_perf", "pvs_match",
 ]
 
 
@@ -589,6 +590,8 @@ def api_board(
 
     bundle = load_bundle()
     board = build_board(pos, min_games=min_games, scoring=scoring)
+    if "PVS" in board.columns:   # the list is ordered by the number it displays
+        board = board.sort_values("PVS", ascending=False, na_position="last", kind="stable")
     breakdown = []
     if opp:
         opp = opp.upper()

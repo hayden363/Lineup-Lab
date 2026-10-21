@@ -23,6 +23,7 @@ from . import defense as defense_layer
 from . import injury_impact, play_prob
 from . import profile
 from . import consensus
+from . import pvs
 from . import value as value_layer
 from . import weekly_proj
 from .metrics import METRIC_FNS, WEIGHTS, MIN_GAMES, score_players, form_adjustment
@@ -100,6 +101,8 @@ _BUNDLE_LOCK = threading.Lock()
 # (load_bundle's force=True path below), since a cached board is only
 # valid for the raw tables it was built from.
 _BOARD_CACHE: dict = {}
+_PVS_CACHE: dict = {}
+_PVS_LOCAL = threading.local()
 
 
 def _scoring_cache_key(scoring):
@@ -293,6 +296,7 @@ def _load_bundle_locked(season, key, force) -> Bundle:
         # on the 24h scheduler tick or an explicit POST /api/refresh, not
         # a hot path).
         _BOARD_CACHE.clear()
+        _PVS_CACHE.clear()
     return bundle
 
 
@@ -464,7 +468,35 @@ def build_board(position, season=None, min_games=2, min_volume=None, scoring=Non
     # pandas 1.5.3 (still marked experimental upstream) — set it explicitly
     # rather than trust it survived the filter above.
     filtered.attrs["scoring"] = board.attrs.get("scoring")
+    if not getattr(_PVS_LOCAL, "building", False):
+        try:
+            look = pvs_lookup(season, scoring)
+            filtered["PVS"] = [look[p][0] if p in look else np.nan for p in filtered.index]
+            filtered["PVS_tier"] = [look[p][1] if p in look else None for p in filtered.index]
+            filtered.attrs["scoring"] = board.attrs.get("scoring")
+        except Exception as e:
+            print(f"[board] PVS skipped: {e}")
     return filtered
+
+
+def pvs_lookup(season=None, scoring=None):
+    """{player_id: (PVS, tier)} from the default-league overall board (12 teams,
+    1 QB), cached per (season, scoring). It is what every position board and
+    the player card show as the player's score, so one number means the same
+    thing on every screen. The Big Board's own league settings (team count,
+    superflex) are applied to that list separately."""
+    season = season or data.resolve_season()
+    key = (season, _scoring_cache_key(scoring))
+    hit = _PVS_CACHE.get(key)
+    if hit is None:
+        _PVS_LOCAL.building = True
+        try:
+            allp = overall_board(scoring=scoring, season=season)
+        finally:
+            _PVS_LOCAL.building = False
+        hit = {pid: (float(r.PVS), r.PVS_tier) for pid, r in allp[["PVS", "PVS_tier"]].iterrows()}
+        _PVS_CACHE[key] = hit
+    return hit
 
 
 def warm_common_boards(season=None):
@@ -624,6 +656,7 @@ def overall_board(scoring=None, league=None, season=None, ecr=None):
     if ecr is None:
         ecr = consensus.overall_lookup()
     out = value_layer.compute_value(frames, ecr=ecr, league=league)
+    out = pvs.add_pvs(out, league=league)
     out.attrs["scoring"] = frames["QB"].attrs.get("scoring")
     out.attrs["replacement_ranks"] = value_layer.replacement_ranks(league)
     return out

@@ -342,7 +342,21 @@ async function api(path, opts) {
     err.status = res.status;
     throw err;
   }
-  return res.json();
+  return adoptPvs(await res.json());
+}
+
+// The score every screen shows is the Player Value Score (PVS): edge over a
+// replacement player, comparable across positions (engine/pvs.py). The
+// server still sends the old position-relative grade as SCORE; walk the
+// response once, keep that as SCORE_POS and let SCORE carry the PVS wherever
+// the server attached one (K and D/ST have none and keep their own grade).
+function adoptPvs(x) {
+  if (Array.isArray(x)) { x.forEach(adoptPvs); return x; }
+  if (x && typeof x === "object") {
+    if (typeof x.PVS === "number" && !("SCORE_POS" in x)) { x.SCORE_POS = x.SCORE; x.SCORE = x.PVS; }
+    for (const k in x) { const v = x[k]; if (v && typeof v === "object") adoptPvs(v); }
+  }
+  return x;
 }
 
 // current scoring as a dict of point values, or null for default (server
@@ -652,7 +666,7 @@ function playerCellHtml(p) {
 
 function renderBoardHead(cols, showProj) {
   const head = $("#board-head");
-  let html = `<th></th><th>Player</th><th>SCORE</th><th>FORM</th><th>FPTS/G</th>`;
+  let html = `<th></th><th>Player</th><th title="Player Value Score: edge over a replacement player, comparable across positions">PVS</th><th>FORM</th><th>FPTS/G</th>`;
   cols.forEach((c) => {
     html += `<th${c.mobileHide ? ' class="hide-mobile"' : ""}>${esc(c.label)}</th>`;
   });
@@ -793,7 +807,7 @@ function cmpCardHtml(p, players, isTopOverall, delayMs) {
 
   const maxOf = (key) => Math.max(0.1, ...players.map((x) => x[key]).filter((v) => v != null));
 
-  let rows = cmpRowHtml("SCORE", p, "SCORE", { decimals: 1, maxVal: maxOf("SCORE"), isBest: scoreBest.has(p.player_id) });
+  let rows = cmpRowHtml("PVS", p, "SCORE", { decimals: 1, maxVal: maxOf("SCORE"), isBest: scoreBest.has(p.player_id) });
   rows += cmpRowHtml("FORM", p, "FORM", { decimals: 1, suffix: "%", signed: true, isBest: formBest.has(p.player_id) });
   rows += cmpRowHtml("FPTS/G", p, "fpts_per_game", { decimals: 1, maxVal: maxOf("fpts_per_game"), isBest: fptsBest.has(p.player_id) });
   if (hasProj) rows += cmpRowHtml("PROJ", p, "PROJ", { decimals: 1, maxVal: maxOf("PROJ"), isBest: projBest.has(p.player_id) });
@@ -873,7 +887,7 @@ function initCompareTray() {
 // see engine/value.py. PROJ is points per game; VOR is how many of those
 // points beat the free replacement at his position.
 function renderOverallBoard(data) {
-  $("#board-head").innerHTML = `<th></th><th>Player</th><th>Tier</th><th>PROJ</th><th>VOR</th><th class="hide-mobile">Experts</th>`;
+  $("#board-head").innerHTML = `<th></th><th>Player</th><th>Tier</th><th title="Player Value Score: edge over a replacement player, comparable across positions">PVS</th><th>PROJ</th><th>VOR</th><th class="hide-mobile">Experts</th>`;
   const body = $("#board-body");
   body.innerHTML = "";
   const q = state.search.trim().toLowerCase();
@@ -893,6 +907,7 @@ function renderOverallBoard(data) {
           ${playerCellHtml(p)}
         </div></td>
         <td>${tierPillHtml(p.tier)}</td>
+        <td>${p.PVS == null ? "—" : scoreCell(p.PVS)}</td>
         <td>${FMT.d1(p.PROJ)}</td>
         <td><span class="vor-cell" title="Points per game above a free replacement ${esc(p.position)}">+${FMT.d1(p.VOR)}</span></td>
         <td class="hide-mobile">${ecrGapHtml(p)}</td>`;
@@ -904,7 +919,7 @@ function renderOverallBoard(data) {
       body.appendChild(tr);
     });
   $("#board-hint").textContent =
-    `Ranked by VOR — points per game above a free replacement at the same position (replacement ≈ QB${rr.QB}, RB${rr.RB}, WR${rr.WR}, TE${rr.TE} in a ${data.league?.teams || 12}-team league), nudged 30% toward the expert consensus. That's why an elite tight end can outrank a good quarterback.`;
+    `Ranked by VOR — points per game above a free replacement at the same position (replacement ≈ QB${rr.QB}, RB${rr.RB}, WR${rr.WR}, TE${rr.TE} in a ${data.league?.teams || 12}-team league), nudged 30% toward the expert consensus. PVS is the 0–100 score beside it: that same edge, plus usage, ceiling and stability, scaled so a QB and an RB are comparable. That's why an elite tight end can outrank a good quarterback.`;
 }
 
 // A short expanding circle where you clicked — pure CSS animation, removed when done.
@@ -941,7 +956,7 @@ async function loadBoard() {
     renderBoardRows(data.players, cols, !!state.opp);
     $("#board-hint").textContent = state.opp
       ? `PROJ = projected points vs ${state.opp} this week — a real, multi-stat matchup read (run D, pass D, pressure), adjusted for recent form and your scoring.`
-      : `SCORE = weighted 0–100 value from real stats + Next Gen Stats. Pick an opponent above to see matchup-adjusted projections.`;
+      : `PVS = 0–100 value over a replacement player: projected edge, usage, ceiling and stability. Pick an opponent above to see matchup-adjusted projections.`;
     loading.style.display = "none";
     $("#board-table").style.display = "";
     animateScoreBars();
@@ -1416,7 +1431,7 @@ function playerStatsBodyHtml(p) {
 
   return `
     <div class="metric-grid">
-      <div class="metric-tile"><div class="label">SCORE</div><div class="value" style="color:var(--accent)">${FMT.d1(p.SCORE)}</div></div>
+      <div class="metric-tile"><div class="label">PVS</div><div class="value" style="color:var(--accent)">${FMT.d1(p.SCORE)}</div></div>
       <div class="metric-tile"><div class="label">FORM</div><div class="value">${formCell(p.FORM)}</div></div>
       <div class="metric-tile"><div class="label">FPTS/G</div><div class="value">${FMT.d1(p.fpts_per_game)}</div></div>
       ${matchupLine}
@@ -1516,7 +1531,7 @@ function cardKeyTilesHtml(p) {
   const matchup = mf != null
     ? `<div class="pcd-tile"><div class="l">Matchup vs ${esc(p.matchup_opponent)}</div><div class="v">${mf.toFixed(2)}x${matchupTagHtml(mf)}</div><div class="n">vs an average defense</div></div>` : "";
   return `<div class="pcd-keys">
-    <div class="pcd-tile"><div class="l">Score</div><div class="pcd-score"><div class="v" style="color:var(--accent)">${FMT.d1(p.SCORE)}</div>${scoreRingHtml(p.SCORE)}</div><div class="n">out of 100</div></div>
+    <div class="pcd-tile"><div class="l">PVS</div><div class="pcd-score"><div class="v" style="color:var(--accent)">${FMT.d1(p.SCORE)}</div>${scoreRingHtml(p.SCORE)}</div><div class="n">out of 100</div></div>
     <div class="pcd-tile"><div class="l">Form</div><div class="v">${formCell(p.FORM)}</div>${formMeterHtml(p.FORM)}</div>
     <div class="pcd-tile"><div class="l">FPTS/G</div><div class="v">${FMT.d1(p.fpts_per_game)}</div><div class="n">Fantasy pts per game</div></div>
     ${matchup}
@@ -2171,11 +2186,11 @@ function startSitCompareSentence(top, p) {
   let scoreCaveat = "";
   if (top.SCORE != null && p.SCORE != null && Math.abs(top.SCORE - p.SCORE) >= 3) {
     if (top.SCORE > p.SCORE) {
-      bits.push(`a higher SCORE (${FMT.d1(top.SCORE)} vs ${FMT.d1(p.SCORE)})`);
+      bits.push(`a higher PVS (${FMT.d1(top.SCORE)} vs ${FMT.d1(p.SCORE)})`);
     } else {
       // PROJ favors top despite a lower season-long SCORE — worth flagging as
       // an upset call, not silently claiming a "higher SCORE" that isn't true.
-      scoreCaveat = ` That's despite a lower season-long SCORE (${FMT.d1(top.SCORE)} vs ${FMT.d1(p.SCORE)}) — this week's projection is matchup/form-driven.`;
+      scoreCaveat = ` That's despite a lower season-long PVS (${FMT.d1(top.SCORE)} vs ${FMT.d1(p.SCORE)}) — this week's projection is matchup/form-driven.`;
     }
   }
   const trend = formTrendPhrase(top.FORM);
@@ -2216,7 +2231,7 @@ function statChipsHtml(p) {
   const chips = [];
   if (p.snap_pct != null) chips.push(`Snap ${Math.round(p.snap_pct * 100)}%`);
   if (p.redzone_touches != null) chips.push(`RZ touches ${p.redzone_touches}`);
-  if (p.SCORE != null) chips.push(`SCORE ${FMT.d1(p.SCORE)}`);
+  if (p.SCORE != null) chips.push(`PVS ${FMT.d1(p.SCORE)}`);
   return chips.map((c) => `<span class="ss-stat-chip">${esc(c)}</span>`).join("");
 }
 
@@ -2395,7 +2410,7 @@ function ssBreakdownPanelHtml(players) {
   const volume =
     ssMultiBarRowHtml("Snap Share", "", players, (p) => (p.snap_pct || 0) * 100, (v) => Math.round(v) + "%", 100) +
     ssMultiBarRowHtml("Red-Zone Touches", "", players, (p) => p.redzone_touches || 0, (v) => Math.round(v), maxRz) +
-    ssMultiBarRowHtml("SCORE", "0–100 composite", players, (p) => p.SCORE || 0, (v) => FMT.d1(v), 100);
+    ssMultiBarRowHtml("PVS", "value over replacement, 0–100", players, (p) => p.SCORE || 0, (v) => FMT.d1(v), 100);
 
   const matchup = `<div class="ss-metric-block">
     <div class="ss-metric-head"><span class="ss-metric-label">Matchup Difficulty</span><span class="ss-metric-sub">tough ← average → soft, real per-stat defense factor</span></div>
@@ -3111,7 +3126,7 @@ function tradePlayerCardHtml(p, delayMs) {
   const accent = posAccentClass(p.position);
   return `<div class="result-card${accent ? ` ${accent}` : ""}" style="animation-delay:${delayMs}ms">
     <img ${headshotAttrs(p)} alt="">
-    <div><div class="name">${esc(p.player_display_name)}</div><div class="meta">${esc(p.position)} · ${esc(p.recent_team)} · SCORE ${FMT.d1(p.SCORE)}</div></div>
+    <div><div class="name">${esc(p.player_display_name)}</div><div class="meta">${esc(p.position)} · ${esc(p.recent_team)} · PVS ${FMT.d1(p.SCORE)}</div></div>
     <div class="proj"><div class="num">${FMT.d1(p.value)}</div><div class="lbl">value</div></div>
   </div>`;
 }
@@ -3503,11 +3518,11 @@ function wvCuffsHtml(cuffs, hasLeague) {
 
 // The original waiver list (rank, SCORE, FORM, FPTS/G, trending) with the
 // usage columns behind a toggle, so the default view stays a quick scan.
-const WV_SIMPLE = [["rank", "#"], ["name", "Player"], ["SCORE", "SCORE"], ["FORM", "FORM"], ["fpts_pg", "FPTS/G"], ["ros", "ROS pts/wk"]];
-const WV_ADV = [["rank", "#"], ["name", "Player"], ["SCORE", "SCORE"], ["ros", "ROS pts/wk"], ["snap_pct", "Snap %"],
+const WV_SIMPLE = [["rank", "#"], ["name", "Player"], ["SCORE", "PVS"], ["FORM", "FORM"], ["fpts_pg", "FPTS/G"], ["ros", "ROS pts/wk"]];
+const WV_ADV = [["rank", "#"], ["name", "Player"], ["SCORE", "PVS"], ["ros", "ROS pts/wk"], ["snap_pct", "Snap %"],
   ["target_share", "Target %"], ["xfp_pg", "xFP/G"], ["xfp_diff", "Pts vs xFP"], ["hvt_pg", "HVT/G"], ["wopr", "WOPR"], ["sched", "Next 4"]];
 const WV_TIPS = {
-  SCORE: "Our 0-100 rating of how good he's been this season, same as the Big Board.",
+  SCORE: "Player Value Score, 0-100: how much more he gives a lineup than a freely available replacement at his position. Same number as the Big Board.",
   ros: "Projected fantasy points per week for the rest of the season.",
   snap_pct: "Share of his team's offensive snaps in his most recent game.",
   xfp_pg: "Expected fantasy points per game: what an average player would score on his targets and carries, given their depth and field position (our model, this season's play-by-play).",
@@ -3656,8 +3671,8 @@ async function loadWaivers(pos) {
     $("#wv-cuffs").innerHTML = wvCuffsHtml(d.handcuffs, d.has_league);
     $("#wv-gaps").textContent = `Not shown: ${d.not_available.join("; ")}. xFP is our own model and FAAB bids are our suggestion, not a market consensus.`;
     $("#waivers-hint").textContent = d.has_league
-      ? "Ranked by SCORE, excluding everyone rostered in your league. 🔥 = adds on Sleeper in the last 48h."
-      : "Ranked by SCORE. Connect your Sleeper or ESPN league in Settings to hide players who are already rostered.";
+      ? "Ranked by PVS, excluding everyone rostered in your league. 🔥 = adds on Sleeper in the last 48h."
+      : "Ranked by PVS. Connect your Sleeper or ESPN league in Settings to hide players who are already rostered.";
     wvDeepRender();
     ["#wv-movers", "#wv-cuffs"].forEach((sel) => wvWireRows($(sel)));
   } catch (e) {
