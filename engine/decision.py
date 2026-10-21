@@ -27,7 +27,7 @@ splits, two-minute-drill snaps.
 import numpy as np
 import pandas as pd
 
-from . import defense as defense_layer
+from . import defense as defense_layer, play_prob
 
 CV_SCALE = 1.15
 CV_PRIOR_GAMES = 8
@@ -65,16 +65,20 @@ def shrunk_cv(cv, games, pos_cv):
     return max(0.15, base * CV_SCALE)
 
 
-def outcomes(proj, cv, seed=0):
+def outcomes(proj, cv, seed=0, p_play=1.0):
     """Range of outcomes for a projection: p10/p50/p90, P(10+), P(20+), and
-    the samples (for head-to-head odds). Deterministic for a given seed."""
+    the samples (for head-to-head odds). Deterministic for a given seed.
+    `proj` is his score if he plays; with p_play < 1 that share of games is a
+    zero, so a Questionable player keeps his upside but loses his floor."""
     proj = max(0.1, float(proj))
     k = 1.0 / cv ** 2
     rng = np.random.default_rng(seed)
     s = rng.gamma(k, proj / k, SAMPLES)
+    if p_play < 1.0:
+        s = np.where(rng.random(SAMPLES) < p_play, s, 0.0)
     q = np.percentile(s, [10, 50, 90])
     return {"p10": round(float(q[0]), 1), "p50": round(float(q[1]), 1), "p90": round(float(q[2]), 1),
-            "mean": round(proj, 1), "cv": round(cv, 3),
+            "mean": round(proj * p_play, 1), "cv": round(cv, 3), "p_play": round(p_play, 3),
             "p_10plus": round(float((s >= 10).mean()) * 100), "p_20plus": round(float((s >= 20).mean()) * 100),
             "_samples": s}
 
@@ -252,7 +256,8 @@ def rating(r, usage_pct, ctx, split, mrank, recent=None):
     elif u.get("label") == "falling":
         recent = _clip(recent - 15)
     if r.get("injury_status") in ("Questionable",):
-        recent = _clip(recent - 20)
+        pp = play_prob.play_probability(r.get("position"), "Questionable", r.get("injury_report"))
+        recent = _clip(recent - (round((1 - pp["p_play"]) * 50) if pp else 20))
     elif r.get("injury_status") in ("Doubtful", "Out", "IR"):
         recent = 0.0
     comps = {"role": round(role, 1), "matchup": round(m_score, 1), "script": round(script, 1), "recent": round(recent, 1)}
@@ -294,7 +299,8 @@ def player_flags(r, ctx, split, xfp, td_share, snap_trend):
     elif snap_trend is not None and snap_trend >= 15:
         good.append(f"Snap share up {snap_trend:.0f} points over his last 2 games")
     if r.get("injury_status") in ("Questionable", "Doubtful", "Out", "IR"):
-        bad.append(f"Listed {r['injury_status']}")
+        pp = play_prob.play_probability(pos, r["injury_status"], r.get("injury_report"))
+        bad.append(f"Listed {r['injury_status']}" + (f": {pp['basis']}" if pp else ""))
     return good, bad
 
 

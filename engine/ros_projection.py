@@ -36,7 +36,7 @@ to data.
 
 import pandas as pd
 
-from . import context, decision, history, waivers
+from . import context, decision, play_prob, history, waivers
 from .scoring import apply_scoring
 from .board import (_injury_multiplier_col, _rate, build_board, load_bundle, matchup_multiplier)
 
@@ -224,6 +224,7 @@ def player_ros(player_id, scoring=None, season=None, max_games=None):
     if max_games:
         weeks = weeks[:max_games]
     games, total = [], 0.0
+    pp = play_prob.play_probability(pos, row.get("injury_status"), row.get("injury_report"))
     for i, w in enumerate(weeks):
         ctx = context.game_context(bundle["schedule"], team, w)
         opp = ctx["opponent"] if ctx else None
@@ -234,7 +235,7 @@ def player_ros(player_id, scoring=None, season=None, max_games=None):
         m_h = history.h2h_factor(all_games, opp, baseline) if opp else 1.0
         proj = combine(baseline, m_v, m_d, m_h, m_i)
         out = decision.ruled_out() if (i == 0 and row.get("injury_status") in decision.WONT_PLAY) \
-            else decision.outcomes(proj, cv, seed + w)
+            else decision.outcomes(proj, cv, seed + w, (pp["p_play"] if pp else 1.0) if i == 0 else 1.0)
         rank, n = decision.defense_rank(pos, opp, factors) if opp else (None, None)
         tier = defense_tier(rank, n)
         good, bad = decision.matchup_flags(pos, opp, factors) if opp else ([], [])

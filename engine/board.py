@@ -20,7 +20,7 @@ from . import data
 from . import history
 from . import injuries
 from . import defense as defense_layer
-from . import injury_impact
+from . import injury_impact, play_prob
 from . import profile
 from . import consensus
 from . import value as value_layer
@@ -509,6 +509,13 @@ def _injury_multiplier_col(board, position):
     )
 
 
+def _availability_col(board, schedule):
+    if "injury_report" not in board.columns:
+        return pd.Series(1.0, index=board.index)
+    return pd.Series([injuries.availability(r, schedule) if isinstance(r.get("injury_report"), dict) else 1.0
+                      for _, r in board.iterrows()], index=board.index)
+
+
 def _injury_sample_col(board, position):
     """The real sample size (n) backing injury_factor above, or None when
     no real adjustment applied — so the frontend can disclose WHY a
@@ -595,7 +602,10 @@ def rest_of_season_value(board, position, bundle=None, season=None, scoring=None
     avg_factor = defense_layer.league_average_composite(position, bundle["defense_factors"])
     form_mult = 1 + board["FORM"] / 100.0
     injury_mult = _injury_multiplier_col(board, position)
-    return (_rate(board) * form_mult * avg_factor * injury_mult).round(1)
+    # Games he is expected to miss (ESPN's return date) cut his rest-of-season
+    # value: a season-ending injury is worth nothing.
+    avail = _availability_col(board, bundle["schedule"])
+    return (_rate(board) * form_mult * avg_factor * injury_mult * avail).round(1)
 
 
 def overall_board(scoring=None, league=None, season=None, ecr=None):
@@ -663,6 +673,7 @@ def player_detail(player_id, season=None, scoring=None):
     if row["injury"]:
         row["injury"]["impact"] = injury_impact.injury_adjustment_detail(
             position, row["injury"]["status"], row["injury"]["body_part"])
+        row["injury"]["play_chance"] = play_prob.play_probability(position, row["injury"]["status"], row.get("injury_report"))
     if history.available():
         row["history"] = history.summary(player_id, position, scoring, bundle["season"], row.get("history_weight"))
 

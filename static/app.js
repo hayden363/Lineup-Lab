@@ -1497,12 +1497,15 @@ function injuryReportHtml(p) {
   }
   const im = i.impact;
   const impact = im ? `<div class="inj-line">Players listed ${esc(im.status)} with a ${esc(String(im.body_part).toLowerCase())} injury have scored about <b>${Math.abs(Math.round(im.median_pct_change * 100))}% ${im.median_pct_change < 0 ? "below" : "above"}</b> their usual (${esc(im.real_sample_size)} past cases). It is already in his projection.</div>` : "";
+  const pc = i.play_chance;
+  const chance = pc ? `<div class="inj-row"><span>Chance he plays</span><b>${Math.round(pc.p_play * 100)}%</b><small>${esc(pc.basis)}</small></div>` : "";
   const when = agoText(i.updated);
   return `<div class="inj-card${severe ? " severe" : ""}">
     <div class="inj-top"><span class="injury-flag${severe ? "" : " questionable"}">${esc(String(i.status).toUpperCase())}</span><b>Injury report</b>
       <span class="muted small">${esc(i.source)}${when ? ` · updated ${esc(when)}` : ""}</span></div>
     ${what ? `<div class="inj-row"><span>Injury</span><b>${what}</b></div>` : ""}
     ${back}
+    ${chance}
     ${i.note ? `<div class="inj-note">${esc(i.note)}</div>` : ""}
     <div class="inj-line muted">${esc(i.meaning || "")}</div>${impact}
   </div>`;

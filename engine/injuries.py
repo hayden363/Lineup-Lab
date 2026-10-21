@@ -205,7 +205,7 @@ def timeline(return_date, schedule, team, today=None):
     """From ESPN's estimated return date and the team's remaining games:
     {return_date, return_week, games_out, days_out}. games_out counts games
     before that date; None values when nothing can be said."""
-    out = {"return_date": return_date, "return_week": None, "games_out": None, "days_out": None}
+    out = {"return_date": return_date, "return_week": None, "games_out": None, "days_out": None, "games_left": None}
     if not return_date:
         return out
     today = today or date.today()
@@ -226,6 +226,7 @@ def timeline(return_date, schedule, team, today=None):
             games.append((int(r.week), date.fromisoformat(str(r.gameday)[:10])))
         except (TypeError, ValueError):
             continue
+    out["games_left"] = len(games)
     missed = [w for w, d in games if d < back]
     out["games_out"] = len(missed)
     later = [w for w, d in games if d >= back]
@@ -250,3 +251,33 @@ def report_for(player_id, row, schedule, today=None):
         **tl,
     }
     return out
+
+
+LONG_ABSENCE_GAMES = 4   # the NFL's own IR minimum
+
+
+def availability(row, schedule, today=None):
+    """Share of his team's remaining regular-season games he is expected to
+    play, from ESPN's estimated return date: 0.0 for a season-ending injury,
+    1.0 when there is no return date to go on (a plain 'Out' is one game,
+    handled by the week-level checks)."""
+    status = row.get("injury_status")
+    rec = row.get("injury_report")
+    if not isinstance(status, str) or not isinstance(rec, dict) or not rec.get("return_date"):
+        return 1.0
+    tl = timeline(rec["return_date"], schedule, row.get("recent_team"), today)
+    if not tl["games_left"]:
+        return 1.0
+    return max(0.0, 1.0 - tl["games_out"] / tl["games_left"])
+
+
+def out_long(row, schedule, today=None):
+    """True when he will miss at least the IR minimum of games: on a long-term
+    list, or ESPN's return date is that many games away."""
+    if row.get("injury_status") in ("IR", "PUP", "Sus", "NA"):
+        return True
+    rec = row.get("injury_report")
+    if not isinstance(rec, dict) or not rec.get("return_date"):
+        return False
+    tl = timeline(rec["return_date"], schedule, row.get("recent_team"), today)
+    return (tl["games_out"] or 0) >= LONG_ABSENCE_GAMES

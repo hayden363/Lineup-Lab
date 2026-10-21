@@ -1,0 +1,130 @@
+{
+ "generated_at": "2026-10-21T10:06:13",
+ "seasons_used": [
+  2016,
+  2017,
+  2018,
+  2019,
+  2020,
+  2021,
+  2022,
+  2023,
+  2024
+ ],
+ "min_n": 40,
+ "method": "share of Questionable/Doubtful player-weeks with at least one attempt, carry or target",
+ "factors": {
+  "Questionable": {
+   "n": 2603,
+   "p_play": 0.703
+  },
+  "QB|Questionable": {
+   "n": 182,
+   "p_play": 0.582
+  },
+  "QB|Questionable|limited": {
+   "n": 124,
+   "p_play": 0.524
+  },
+  "RB|Questionable": {
+   "n": 662,
+   "p_play": 0.648
+  },
+  "RB|Questionable|full": {
+   "n": 94,
+   "p_play": 0.787
+  },
+  "RB|Questionable|limited": {
+   "n": 445,
+   "p_play": 0.69
+  },
+  "RB|Questionable|dnp": {
+   "n": 114,
+   "p_play": 0.351
+  },
+  "WR|Questionable": {
+   "n": 1230,
+   "p_play": 0.737
+  },
+  "WR|Questionable|full": {
+   "n": 194,
+   "p_play": 0.897
+  },
+  "WR|Questionable|limited": {
+   "n": 798,
+   "p_play": 0.771
+  },
+  "WR|Questionable|dnp": {
+   "n": 230,
+   "p_play": 0.487
+  },
+  "TE|Questionable": {
+   "n": 529,
+   "p_play": 0.735
+  },
+  "TE|Questionable|full": {
+   "n": 119,
+   "p_play": 0.899
+  },
+  "TE|Questionable|limited": {
+   "n": 333,
+   "p_play": 0.736
+  },
+  "TE|Questionable|dnp": {
+   "n": 69,
+   "p_play": 0.464
+  },
+  "Questionable|full": {
+   "n": 446,
+   "p_play": 0.872
+  },
+  "Questionable|limited": {
+   "n": 1700,
+   "p_play": 0.725
+  },
+  "Questionable|dnp": {
+   "n": 431,
+   "p_play": 0.443
+  },
+  "Doubtful": {
+   "n": 328,
+   "p_play": 0.015
+  },
+  "QB|Doubtful": {
+   "n": 40,
+   "p_play": 0.0
+  },
+  "RB|Doubtful": {
+   "n": 95,
+   "p_play": 0.021
+  },
+  "RB|Doubtful|dnp": {
+   "n": 68,
+   "p_play": 0.029
+  },
+  "WR|Doubtful": {
+   "n": 126,
+   "p_play": 0.016
+  },
+  "WR|Doubtful|dnp": {
+   "n": 113,
+   "p_play": 0.009
+  },
+  "TE|Doubtful": {
+   "n": 67,
+   "p_play": 0.015
+  },
+  "TE|Doubtful|dnp": {
+   "n": 55,
+   "p_play": 0.018
+  },
+  "Doubtful|limited": {
+   "n": 57,
+   "p_play": 0.018
+  },
+  "Doubtful|dnp": {
+   "n": 259,
+   "p_play": 0.015
+  }
+ }
+}

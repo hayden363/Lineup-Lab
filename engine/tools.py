@@ -13,7 +13,7 @@ import pandas as pd
 
 from . import lineup as lineup_layer
 from . import profile
-from . import context, data, db, decision, draft_runs, history, trade_engine, locks, trade_reasons, defense_scoring, kicker_scoring, role_baseline, sleeper, waivers
+from . import context, data, db, decision, play_prob, draft_runs, history, trade_engine, locks, trade_reasons, defense_scoring, kicker_scoring, role_baseline, sleeper, waivers
 from .board import (POSITIONS, build_board, load_bundle, rest_of_season_value,
                      project_vs)
 from .scoring import apply_scoring
@@ -486,7 +486,9 @@ def _attach_decisions(valid, bundle, get_board, scoring, mode):
                                   career["cv"] if career else None, hist_h)
         cv = decision.shrunk_cv(cv_all, games + hist_h, pos_cv)
         seed = int("".join(ch for ch in pid if ch.isdigit()) or 0) % (2 ** 32)
-        r["outcomes"] = decision.outcomes(r["PROJ"], cv, seed)
+        pp = play_prob.play_probability(pos, r.get("injury_status"), r.get("injury_report"))
+        r["play_chance"] = pp
+        r["outcomes"] = decision.outcomes(r["PROJ"], cv, seed, pp["p_play"] if pp else 1.0)
         if r.get("injury_status") in decision.WONT_PLAY:
             r["outcomes"] = decision.ruled_out()
         ctx = (r.get("environment") or {}).get("game")

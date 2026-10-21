@@ -38,7 +38,7 @@ from zoneinfo import ZoneInfo
 import numpy as np
 import pandas as pd
 
-from . import data, lineup as lineup_layer, optimizer, profile, sleeper, value as value_layer
+from . import data, injuries, lineup as lineup_layer, optimizer, profile, sleeper, value as value_layer
 from .board import POSITIONS, build_board, load_bundle, matchup_multiplier, rest_of_season_value
 from .scoring import ScoringSettings, apply_scoring
 
@@ -580,7 +580,8 @@ def build(league_id=None, my_roster_id=None, scoring=None, now=None, limit=10, e
         # IR/PUP/suspended players can't help a lineup soon; they stay in the
         # deep dive (flagged) but aren't Smart Match adds.
         repl_level = replacement_levels(pool, roster_positions, n_teams)
-        healthy = avail[~avail["injury_status"].isin(UNAVAILABLE_LONG)]
+        healthy = avail[~avail["injury_status"].isin(UNAVAILABLE_LONG)
+                        & ~avail.apply(lambda r: injuries.out_long(r, schedule), axis=1)]
         candidates = healthy.sort_values("value", ascending=False).head(120)
         for pid, r in candidates.iterrows():
             add = {"player_id": pid, "position": r["position"], "team": r["recent_team"], "value": float(r["value"]),
