@@ -3654,7 +3654,7 @@ async function loadWaivers(pos) {
     $("#wv-gaps").textContent = `Not shown: ${d.not_available.join("; ")}. xFP is our own model and FAAB bids are our suggestion, not a market consensus.`;
     $("#waivers-hint").textContent = d.has_league
       ? "Ranked by SCORE, excluding everyone rostered in your league. 🔥 = adds on Sleeper in the last 48h."
-      : "Ranked by SCORE. Connect your Sleeper league in Settings to hide players who are already rostered.";
+      : "Ranked by SCORE. Connect your Sleeper or ESPN league in Settings to hide players who are already rostered.";
     wvDeepRender();
     ["#wv-movers", "#wv-cuffs"].forEach((sel) => wvWireRows($(sel)));
   } catch (e) {

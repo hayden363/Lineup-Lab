@@ -487,7 +487,17 @@ def player_card(pid, r, sched, badge, extra=None):
     }
 
 
-def build(league_id=None, my_roster_id=None, scoring=None, now=None, limit=10):
+def espn_status(league, my_team_id):
+    """League status from an ESPN league: waiver priority and team count.
+    espn-api exposes no FAAB budget, so ESPN leagues get no bid ranges."""
+    mine = next((t for t in league.teams if t.team_id == my_team_id), None)
+    return {"waiver_type": "Waivers", "is_faab": False, "teams": len(league.teams),
+            "priority": getattr(mine, "waiver_rank", None) or None}
+
+
+def build(league_id=None, my_roster_id=None, scoring=None, now=None, limit=10, espn=None):
+    """`espn` = {"league": espn_api League, "team_id": int} reads rosters and
+    settings from ESPN instead of Sleeper."""
     bundle = load_bundle()
     schedule = bundle["schedule"]
     week = target_week(schedule)
@@ -499,34 +509,54 @@ def build(league_id=None, my_roster_id=None, scoring=None, now=None, limit=10):
 
     rostered, status, my_players, slots, league_rosters, roster_full = set(), None, [], [], [], False
     mine_raw = {}
-    if league_id and my_roster_id is not None:
+    roster_positions, n_teams = None, 0
+
+    def as_players(ids):
+        out = []
+        for g in ids:
+            if g and g in pool.index:
+                row = pool.loc[g]
+                out.append({"player_id": g, "position": row["position"], "team": row["recent_team"],
+                            "value": float(row["value"]), "name": row["player_display_name"],
+                            "injury_status": row.get("injury_status") if isinstance(row.get("injury_status"), str) else None,
+                            "week0": week})
+        return out
+
+    if espn:
+        from . import espn as espn_layer
+        eleague, cw = espn["league"], espn_layer.id_crosswalk()
+        roster_positions = espn_layer.roster_positions(eleague)
+        n_teams = len(eleague.teams)
+        status = espn_status(eleague, espn["team_id"])
+        slots = scoring_slots(roster_positions)
+        for t in eleague.teams:
+            ids = [cw.get(str(p.playerId)) for p in t.roster]
+            rostered |= set(ids)
+            ps = as_players([g for p, g in zip(t.roster, ids) if p.lineupSlot != "IR"])
+            if t.team_id == espn["team_id"]:
+                my_players = ps
+            league_rosters.append(ps)
+        counts = getattr(eleague.settings, "position_slot_counts", None) or {}
+        cap = sum(n for k, n in counts.items() if k != "IR")
+        mine_t = next((t for t in eleague.teams if t.team_id == espn["team_id"]), None)
+        roster_full = bool(mine_t and cap and len([p for p in mine_t.roster if p.lineupSlot != "IR"]) >= cap)
+        rostered.discard(None)
+    elif league_id and my_roster_id is not None:
         league = sleeper.get_league(league_id)
         rosters = sleeper.get_rosters(league_id)
+        roster_positions, n_teams = league.get("roster_positions"), len(rosters)
         status = league_status(league, rosters, my_roster_id, now)
-        slots = scoring_slots(league.get("roster_positions"))
+        slots = scoring_slots(roster_positions)
         cw = sleeper.id_crosswalk()
-
-        def as_players(r):
-            out = []
-            for raw in r.get("players") or []:
-                g = cw.get(str(raw))
-                if g and g in pool.index:
-                    row = pool.loc[g]
-                    out.append({"player_id": g, "position": row["position"], "team": row["recent_team"],
-                                "value": float(row["value"]), "name": row["player_display_name"],
-                                "injury_status": row.get("injury_status") if isinstance(row.get("injury_status"), str) else None,
-                                "week0": week})
-            return out
-
         for r in rosters:
             rostered |= {cw.get(str(x)) for x in (r.get("players") or [])}
-            ps = as_players(r)
+            ps = as_players([cw.get(str(raw)) for raw in r.get("players") or []])
             if r.get("roster_id") == my_roster_id:
                 my_players = ps
                 mine_raw = r
             league_rosters.append(ps)
         active = len(mine_raw.get("players") or []) - len(mine_raw.get("reserve") or []) - len(mine_raw.get("taxi") or [])
-        roster_full = active >= len([s for s in league.get("roster_positions") or [] if s not in ("IR", "TAXI")])
+        roster_full = active >= len([s_ for s_ in league.get("roster_positions") or [] if s_ not in ("IR", "TAXI")])
         rostered.discard(None)
 
     avail = pool[~pool.index.isin(rostered) & ~pool.index.isin(bundle["retired_ids"])]
@@ -549,7 +579,7 @@ def build(league_id=None, my_roster_id=None, scoring=None, now=None, limit=10):
         protected = handcuffs_on(my_players, depth)
         # IR/PUP/suspended players can't help a lineup soon; they stay in the
         # deep dive (flagged) but aren't Smart Match adds.
-        repl_level = replacement_levels(pool, league.get("roster_positions"), len(rosters))
+        repl_level = replacement_levels(pool, roster_positions, n_teams)
         healthy = avail[~avail["injury_status"].isin(UNAVAILABLE_LONG)]
         candidates = healthy.sort_values("value", ascending=False).head(120)
         for pid, r in candidates.iterrows():
@@ -583,7 +613,7 @@ def build(league_id=None, my_roster_id=None, scoring=None, now=None, limit=10):
             s["swap"] = swap_detail(s, pool, my_players, slots, sched_for, byes, week)
 
     # ---- Market movers
-    movers = market_movers(pool, rostered, sched_for, badge_for, bool(league_id))
+    movers = market_movers(pool, rostered, sched_for, badge_for, bool(my_players))
 
     # ---- The ranked list (+ usage columns) and handcuffs
     # Ranked by SCORE like the original waiver list. Top 20 per position, so filtering to one position in the table still

@@ -963,6 +963,7 @@ def api_waiver_engine(scoring: Optional[dict] = Depends(scoring_from_query), use
     feeds (market movers, deep dive, handcuffs) for everyone."""
     scoring = _effective_scoring(scoring, user)
     league_id = roster_id = None
+    espn_ctx = None
     note = None
     if user:
         active = db.get_active_team(user["id"])
@@ -974,9 +975,17 @@ def api_waiver_engine(scoring: Optional[dict] = Depends(scoring_from_query), use
                 except Exception as e:
                     print(f"[waivers] couldn't load league scoring: {e}")
         elif active:
-            note = "Smart Match needs a Sleeper league for now; ESPN leagues get the discovery feeds only."
+            try:
+                espn_s2, swid = db.get_espn_secrets(user["id"])
+                eleague = espn_layer.get_league(active["league_id"], espn_layer.resolve_year(), espn_s2, swid)
+                espn_ctx = {"league": eleague, "team_id": int(active["roster_id"])}
+                if scoring is None:
+                    scoring = espn_layer.scoring_from_espn(eleague)
+            except Exception as e:
+                print(f"[waivers] couldn't load ESPN league: {e}")
+                note = "Couldn't read your ESPN league just now, so these lists don't hide players already rostered. " + _espn_error_message(e)
     try:
-        result = waivers_layer.build(league_id, roster_id, scoring=scoring)
+        result = waivers_layer.build(league_id, roster_id, scoring=scoring, espn=espn_ctx)
     except Exception as e:
         raise HTTPException(500, f"waiver engine failed: {e}")
     result["note"] = note
