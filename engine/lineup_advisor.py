@@ -75,19 +75,26 @@ def advise(slots, starter_ids, players, schedule, week, mode="balanced", now=Non
     cur_ids = [pid for pid in prev if pid in players]
     new_ids = [pid for pid in chosen if pid]
     val = lambda p, g: player_value(p, mode, g)  # noqa: E731
-    changes = []
-    for i, (old, new) in enumerate(zip(prev, chosen)):
-        if old == new or new is None:
-            continue
+    # Who comes into the lineup and who leaves it. Two starters trading slots
+    # (RB1 <-> RB2) is not a change, so this compares people, not slots.
+    adds = [pid for pid in new_ids if pid not in cur_ids]
+    drops = [pid for pid in cur_ids if pid not in new_ids]
+    slot_of = {pid: slots[i] for i, pid in enumerate(chosen) if pid}
+    changes, left = [], list(drops)
+    for new in adds:
+        # pair each arrival with the leaver at the same position, else the next one
+        old = next((d for d in left if players[d].get("position") == players[new].get("position")), None)
+        if old is None and left:
+            old = left[0]
+        if old is not None:
+            left.remove(old)
         o, n = players.get(old), players[new]
         changes.append({
-            "slot": slots[i], "out": old, "out_name": o.get("name") if o else None,
+            "slot": slot_of[new], "out": old, "out_name": o.get("name") if o else None,
             "in": new, "in_name": n.get("name"),
             "delta_mode": round(val(n, has_game(new)) - (val(o, has_game(old)) if o else 0.0), 1),
             "delta_mean": round(_mean(n, has_game(new)) - (_mean(o, has_game(old)) if o else 0.0), 1),
         })
-    adds = [pid for pid in new_ids if pid not in cur_ids]
-    drops = [pid for pid in cur_ids if pid not in new_ids]
     return {
         "mode": mode, "chosen": chosen,
         "current_mode_value": round(total(cur_ids, val), 1), "best_mode_value": round(total(new_ids, val), 1),

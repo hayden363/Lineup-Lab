@@ -30,6 +30,23 @@ class AdvisorTests(unittest.TestCase):
         self.assertEqual(sorted(x for x in out["chosen"] if x), ["r1", "w1", "w2"])
         self.assertEqual(len(set(out["chosen"])), 3)
 
+    def test_players_trading_slots_is_not_a_change(self):
+        # Both RBs already start; the solver may seat them in the other order.
+        slots = ["RB", "RB", "WR"]
+        players = {"r1": P("R1", "RB", 10), "r2": P("R2", "RB", 20), "w1": P("W1", "WR", 12)}
+        out = self.run_advise(slots, ["r1", "r2", "w1"], players)
+        self.assertEqual(out["changes"], [])
+        self.assertEqual((out["adds"], out["drops"]), ([], []))
+
+    def test_one_real_swap_is_reported_once(self):
+        slots = ["RB", "RB", "WR"]
+        players = {"r1": P("R1", "RB", 10), "r2": P("R2", "RB", 20), "r3": P("R3", "RB", 15), "w1": P("W1", "WR", 12)}
+        out = self.run_advise(slots, ["r1", "r2", "w1"], players)
+        self.assertEqual(len(out["changes"]), 1)
+        c = out["changes"][0]
+        self.assertEqual((c["out"], c["in"]), ("r1", "r3"))
+        self.assertAlmostEqual(c["delta_mean"], 5.0)
+
     def test_no_player_started_twice(self):
         slots = ["QB", "SUPER_FLEX", "RB"]
         players = {"q1": P("Q1", "QB", 22), "q2": P("Q2", "QB", 18), "r1": P("R1", "RB", 14)}
