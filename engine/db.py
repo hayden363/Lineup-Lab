@@ -253,7 +253,8 @@ def find_or_create_oauth_user(provider, provider_id, email, name_hint=None):
         user_id = _fetch_row(c)["id"]
         c.execute("INSERT INTO user_settings (user_id, updated_at) VALUES (%s, %s)", (user_id, time.time()))
         c.execute("SELECT * FROM users WHERE id = %s", (user_id,))
-        return _public(c.fetchone())
+        # just_created lets the caller send a welcome email once, for a brand-new account only
+        return {**_public(c.fetchone()), "just_created": True}
 
 
 def change_password(user_id, current_password, new_password):

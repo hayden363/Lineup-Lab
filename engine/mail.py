@@ -1,10 +1,19 @@
 """
-OUTBOUND MAIL — Gmail SMTP
-============================
-Sends the two emails this app sends: "verify your account" and
-"reset your password." Uses Gmail's SMTP relay with an App Password (not
-your real Gmail password — a 16-character app-specific one you generate
-once).
+OUTBOUND MAIL — Resend (preferred) or Gmail SMTP
+================================================
+Sends the four emails this app sends: "verify your account", "reset your
+password", a welcome message once an account is confirmed, and a "your password
+was changed" security notice.
+
+Two ways to send; if both are configured Resend is tried first and Gmail is
+the fallback:
+
+  Resend   RESEND_API_KEY + MAIL_FROM (e.g. "Lineup Lab <hello@yourdomain.com>").
+           Sends from an address on a domain you verify with Resend (SPF/DKIM),
+           so it looks like Lineup Lab and lands in inboxes far more reliably.
+           MAIL_REPLY_TO is optional (where replies should go).
+  Gmail    GMAIL_ADDRESS + an App Password (below). Fine for a handful of
+           people; consumer Gmail caps sends at a few hundred a day.
 
 IMPORTANT — whose email address this is: `GMAIL_ADDRESS` below is YOUR
 Gmail account (or any address you control) — Lineup Lab sends through it,
@@ -34,6 +43,8 @@ the request.
 
 import os
 import smtplib
+import time
+import requests
 from email.message import EmailMessage
 from email.utils import formatdate, make_msgid
 from urllib.parse import urlsplit
@@ -46,6 +57,11 @@ except ImportError:
 
 GMAIL_ADDRESS = os.environ.get("GMAIL_ADDRESS")
 GMAIL_APP_PASSWORD = os.environ.get("GMAIL_APP_PASSWORD")
+RESEND_API_KEY = os.environ.get("RESEND_API_KEY")
+MAIL_FROM = os.environ.get("MAIL_FROM")          # required with Resend, e.g. "Lineup Lab <hello@example.com>"
+MAIL_REPLY_TO = os.environ.get("MAIL_REPLY_TO")  # optional
+RESEND_URL = "https://api.resend.com/emails"
+_RESEND_TIMEOUT = 10
 
 
 class MailNotConfigured(Exception):
@@ -56,15 +72,64 @@ class MailSendError(Exception):
     pass
 
 
-def configured():
+def gmail_configured():
     return bool(GMAIL_ADDRESS and GMAIL_APP_PASSWORD)
 
 
+def resend_configured():
+    return bool(RESEND_API_KEY and MAIL_FROM)
+
+
+def configured():
+    return resend_configured() or gmail_configured()
+
+
+def _send_resend(to_email, subject, text_body, html_body):
+    payload = {"from": MAIL_FROM, "to": [to_email], "subject": subject, "text": text_body, "html": html_body,
+               "headers": {"Auto-Submitted": "auto-generated"}}
+    if MAIL_REPLY_TO:
+        payload["reply_to"] = MAIL_REPLY_TO
+    try:
+        r = requests.post(RESEND_URL, json=payload, timeout=_RESEND_TIMEOUT,
+                          headers={"Authorization": f"Bearer {RESEND_API_KEY}", "User-Agent": "LineupLab/1.0"})
+    except requests.RequestException as e:
+        raise MailSendError(f"Resend unreachable: {type(e).__name__}: {e}") from e
+    if r.status_code >= 300:
+        try:
+            detail = (r.json() or {}).get("message") or r.text[:200]
+        except ValueError:
+            detail = r.text[:200]
+        raise MailSendError(f"Resend rejected the email ({r.status_code}): {detail}")
+
+
 def _send(to_email, subject, text_body, html_body):
-    if not configured():
+    """Resend first when configured, Gmail otherwise or as the fallback. With a
+    single provider its own error is raised unchanged."""
+    senders = []
+    if resend_configured():
+        senders.append(_send_resend)
+    if gmail_configured():
+        senders.append(_send_gmail)
+    if not senders:
         raise MailNotConfigured(
-            "GMAIL_ADDRESS / GMAIL_APP_PASSWORD not set — see engine/mail.py or .env.example"
+            "No mail provider set — RESEND_API_KEY + MAIL_FROM, or GMAIL_ADDRESS + GMAIL_APP_PASSWORD "
+            "(see engine/mail.py or .env.example)"
         )
+    errors = []
+    for i, send in enumerate(senders):
+        try:
+            send(to_email, subject, text_body, html_body)
+            return
+        except MailSendError as e:
+            errors.append(str(e))
+            if i < len(senders) - 1:
+                print(f"[mail] {getattr(send, '__name__', 'provider')} failed, trying the next provider: {e}")
+    if len(errors) == 1:
+        raise MailSendError(errors[0])
+    raise MailSendError(" | ".join(errors))
+
+
+def _send_gmail(to_email, subject, text_body, html_body):
     # configured() guarantees both are set, but that's invisible to pyright
     # across the function-call boundary — spell it out so smtp.login() below
     # type-checks as the non-Optional strs they actually are here.
@@ -252,5 +317,81 @@ def send_password_reset_email(to_email, username, reset_url):
         body,
         "This link expires in 1 hour and works once. If you didn't request this, you can safely ignore this email — your password stays the same.",
         _origin(reset_url),
+    )
+    _send(to_email, subject, text, html)
+
+
+def send_welcome_email(to_email, username, app_url):
+    """Sent once, when an account's email is confirmed (or a Google sign-up
+    creates a pre-confirmed account). `app_url` is any absolute URL on the app's
+    own host; the logo and the button both come from that host."""
+    origin = _origin(app_url)
+    subject = "Welcome to Lineup Lab"
+    text = (
+        f"Hi {username},\n\n"
+        f"Welcome to Lineup Lab. A few good places to start:\n\n"
+        f"- Big Board: every QB, RB, WR and TE on one list, ranked by Player Value Score (0-100), "
+        f"the points a player gives your lineup over a free replacement.\n"
+        f"- Settings: connect your Sleeper or ESPN league so My Team, Waivers, Start/Sit and the "
+        f"trade finder use your real roster and scoring.\n"
+        f"- Start/Sit and Waivers: who to play this week and who to pick up.\n\n"
+        f"Open Lineup Lab: {origin}\n\n"
+        f"Questions or something looks wrong? Just reply to this email.\n"
+    )
+    body = f"""
+      <p style="color:#3c4a44;font-size:14px;line-height:1.6;">
+        Hi {username}, welcome to Lineup Lab. A few good places to start:
+      </p>
+      <ul style="color:#3c4a44;font-size:14px;line-height:1.7;padding-left:20px;margin:0 0 4px;">
+        <li><strong>Big Board</strong> &mdash; every QB, RB, WR and TE on one list, ranked by
+            Player Value Score (0&ndash;100): the points a player gives your lineup over a free replacement.</li>
+        <li><strong>Settings</strong> &mdash; connect your Sleeper or ESPN league so My Team, Waivers,
+            Start/Sit and the trade finder use your real roster and scoring.</li>
+        <li><strong>Start/Sit and Waivers</strong> &mdash; who to play this week and who to pick up.</li>
+      </ul>
+      {_button(origin, "Open Lineup Lab")}
+    """
+    html = _wrap(
+        "Welcome to Lineup Lab",
+        body,
+        "Questions, or something looks wrong? Just reply to this email.",
+        origin,
+    )
+    _send(to_email, subject, text, html)
+
+
+def send_password_changed_email(to_email, username, app_url, when=None):
+    """Security notice after a password change or reset. Says when, and what to
+    do if it wasn't the account owner. Never contains the password or a link
+    that logs anyone in."""
+    origin = _origin(app_url)
+    stamp = time.strftime("%B %d, %Y at %H:%M UTC", time.gmtime(when if when is not None else time.time()))
+    subject = "Your Lineup Lab password was changed"
+    text = (
+        f"Hi {username},\n\n"
+        f"The password on your Lineup Lab account was changed on {stamp}.\n\n"
+        f"If that was you, there's nothing more to do.\n\n"
+        f"If it wasn't you, reset your password right away: open {origin}, choose Sign in, then "
+        f"\"Forgot password\", and use the link we email you. Then reply to this email so we know.\n"
+    )
+    body = f"""
+      <p style="color:#3c4a44;font-size:14px;line-height:1.6;">
+        Hi {username}, the password on your Lineup Lab account was changed on <strong>{stamp}</strong>.
+      </p>
+      <p style="color:#3c4a44;font-size:14px;line-height:1.6;">
+        If that was you, there's nothing more to do.
+      </p>
+      <p style="color:#3c4a44;font-size:14px;line-height:1.6;">
+        <strong>If it wasn't you</strong>, reset your password right away: open Lineup Lab, choose
+        <em>Sign in</em>, then <em>Forgot password</em>, and use the link we email you. Then reply to this
+        email so we know.
+      </p>
+      {_button(origin, "Open Lineup Lab")}
+    """
+    html = _wrap(
+        "Your password was changed",
+        body,
+        "We send this notice every time a password changes so a change you didn't make never goes unnoticed.",
+        origin,
     )
     _send(to_email, subject, text, html)

@@ -37,7 +37,7 @@ from typing import Any, Dict, List, Optional
 from urllib.parse import urlparse
 
 import requests
-from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response
+from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Query, Request, Response
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse, PlainTextResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
@@ -301,6 +301,26 @@ def _send_verification(request: Request, user) -> str:
     return "sent"
 
 
+def _notify_welcome(base_url: str, user) -> None:
+    """Welcome email, best-effort and after the response: a mail problem must never
+    break a verify or sign-in."""
+    if not mail_layer.configured():
+        return
+    try:
+        mail_layer.send_welcome_email(user["email"], user["username"], base_url)
+    except (mail_layer.MailNotConfigured, mail_layer.MailSendError) as e:
+        print(f"[mail] couldn't send welcome email: {e}")
+
+
+def _notify_password_changed(base_url: str, user) -> None:
+    if not mail_layer.configured():
+        return
+    try:
+        mail_layer.send_password_changed_email(user["email"], user["username"], base_url)
+    except (mail_layer.MailNotConfigured, mail_layer.MailSendError) as e:
+        print(f"[mail] couldn't send password-changed email: {e}")
+
+
 @app.post("/api/auth/signup", dependencies=[Depends(signup_rate_limit)])
 def signup(req: SignupRequest, request: Request, response: Response):
     try:
@@ -312,9 +332,10 @@ def signup(req: SignupRequest, request: Request, response: Response):
 
 
 @app.get("/api/auth/verify", include_in_schema=False)
-def verify_email(token: str):
+def verify_email(token: str, request: Request, background: BackgroundTasks):
     try:
-        db.consume_verification_token(token)
+        user = db.consume_verification_token(token)
+        background.add_task(_notify_welcome, str(request.base_url), user)
         return RedirectResponse(url="/?verified=1")
     except db.AuthError:
         return RedirectResponse(url="/?verified=0")
@@ -361,8 +382,8 @@ def oauth_google_start(request: Request):
 
 
 @app.get("/api/auth/google/callback", dependencies=[Depends(oauth_rate_limit)])
-def oauth_google_callback(request: Request, response: Response, code: Optional[str] = None,
-                           state: Optional[str] = None, error: Optional[str] = None):
+def oauth_google_callback(request: Request, response: Response, background: BackgroundTasks,
+                           code: Optional[str] = None, state: Optional[str] = None, error: Optional[str] = None):
     expected_state = request.cookies.get(OAUTH_STATE_COOKIE)
     if error or not code or not state or not expected_state or state != expected_state:
         return RedirectResponse(url="/?oauth_error=1")
@@ -375,6 +396,8 @@ def oauth_google_callback(request: Request, response: Response, code: Optional[s
     resp = RedirectResponse(url="/?oauth=1")
     resp.delete_cookie(OAUTH_STATE_COOKIE)
     _set_session_cookie(request, resp, db.create_session(user["id"]))
+    if user.get("just_created"):
+        background.add_task(_notify_welcome, str(request.base_url), user)
     return resp
 
 
@@ -400,11 +423,13 @@ def me(user=Depends(require_user)):
 
 
 @app.post("/api/auth/change-password")
-def change_password(req: ChangePasswordRequest, user=Depends(require_user)):
+def change_password(req: ChangePasswordRequest, request: Request, background: BackgroundTasks,
+                    user=Depends(require_user)):
     try:
         db.change_password(user["id"], req.current_password, req.new_password)
     except db.AuthError as e:
         raise HTTPException(400, str(e))
+    background.add_task(_notify_password_changed, str(request.base_url), user)
     return {"status": "ok"}
 
 
@@ -440,12 +465,13 @@ def forgot_password(req: ForgotPasswordRequest, request: Request):
 
 
 @app.post("/api/auth/reset-password", dependencies=[Depends(reset_rate_limit)])
-def reset_password(req: ResetPasswordRequest, request: Request, response: Response):
+def reset_password(req: ResetPasswordRequest, request: Request, response: Response, background: BackgroundTasks):
     try:
         user = db.reset_password(req.token, req.new_password)
     except db.AuthError as e:
         raise HTTPException(400, str(e))
     _set_session_cookie(request, response, db.create_session(user["id"]))
+    background.add_task(_notify_password_changed, str(request.base_url), user)
     return user
 
 
