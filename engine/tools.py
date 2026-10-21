@@ -29,6 +29,17 @@ def _league_scoring_settings(league_id):
         return None
 
 
+def _team_on_bye(bundle, team, week):
+    """True when `team` has its bye in the explicitly requested NFL `week`: it
+    plays no game, so every player on it scores 0, not a next-game projection."""
+    if week is None or not team:
+        return False
+    byes = bundle.get("_bye_weeks")
+    if byes is None:
+        byes = bundle["_bye_weeks"] = profile.bye_weeks(bundle["schedule"])
+    return byes.get(team) == int(week)
+
+
 def _opponent_adjusted_proj_full(board, gsis_id, pos, bundle, scoring, week=None):
     """Same real computation as _opponent_adjusted_proj below, also
     returning the real injury-factor disclosure detail behind PROJ (None,
@@ -42,6 +53,8 @@ def _opponent_adjusted_proj_full(board, gsis_id, pos, bundle, scoring, week=None
     recent_team = row["recent_team"].iloc[0] if "recent_team" in row.columns else None
     opp = None
     if recent_team:
+        if _team_on_bye(bundle, recent_team, week):
+            return 0.0, (None, None)
         opp, _ = data.next_opponent(bundle["schedule"], recent_team, week)
     if opp:
         projected = project_vs(row, pos, opp, bundle=bundle, scoring=scoring)
@@ -833,6 +846,7 @@ def _roster_players(raw_ids, bundle, get_board, scoring, crosswalk=None, starter
             # that should be visible without having to click into them.
             "weeks_since_played": _clean_num(row.get("weeks_since_played")),
             "last_active_week": _clean_num(row.get("last_active_week")),
+            "on_bye": _team_on_bye(bundle, row.get("recent_team"), week),
         }
 
     starter_set = set(starters)

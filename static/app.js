@@ -3793,7 +3793,7 @@ function rosterRowHtml(p, isBench) {
   return `<div class="myteam-roster-row${isBench ? " bench" : ""}${unscored ? " unscored" : " kbd-click"}" data-pid="${esc(p.player_id)}" ${unscored ? 'data-unscored="1"' : 'role="button" tabindex="0"'}>
     <img ${headshotAttrs(p)} alt="">
     <span class="pos-badge">${esc(p.slot || p.position)}</span>
-    <span>${esc(p.player_display_name)}${statusFlagsHtml(p)}</span>
+    <span>${esc(p.player_display_name)}${statusFlagsHtml(p)}${p.on_bye ? ' <span class="bye-tag" title="Team is on a bye this week">BYE</span>' : ""}</span>
     <span class="proj-num tabular">${FMT.d1(p.PROJ)}</span>
   </div>`;
 }
