@@ -1564,6 +1564,59 @@ function scoutGlanceHtml(p) {
 // small samples and the card says so.
 const PJ_TIER = { soft: "Soft", neutral: "Neutral", tough: "Tough" };
 
+// ------------------------------------------------ this week's projection ----
+// One number, its honest range, and what moved it (engine/tools.projection_explain).
+function explainSlotHtml() {
+  return `<div class="wp-slot"><div class="loading small">Working out this week…</div></div>`;
+}
+
+function explainRangeHtml(d) {
+  const top = Math.max(d.ceiling * 1.1, d.expected * 1.5, 5);
+  const at = (v) => Math.max(0, Math.min(100, (v / top) * 100));
+  return `<div class="wp-range" role="img" aria-label="Floor ${FMT.d1(d.floor)}, typical ${FMT.d1(d.typical)}, expected ${FMT.d1(d.expected)}, ceiling ${FMT.d1(d.ceiling)} points">
+    <i style="left:${at(d.floor)}%;width:${Math.max(at(d.ceiling) - at(d.floor), 2)}%"></i>
+    <u class="typ" style="left:${at(d.typical)}%"></u><b class="exp" style="left:${at(d.expected)}%"></b>
+    <span class="wp-end lo" style="left:${at(d.floor)}%">${FMT.d1(d.floor)}</span>
+    <span class="wp-end hi" style="left:${at(d.ceiling)}%">${FMT.d1(d.ceiling)}</span>
+  </div>`;
+}
+
+function explainHtml(d) {
+  const head = `<div class="wp-head"><span class="wp-title">This week</span><span class="wp-meta">${d.week ? `WK ${esc(d.week)}` : ""}${d.opponent ? ` · ${d.position === "DEF" ? "" : "vs "}${esc(d.opponent)}` : ""}</span></div>`;
+  if (d.out) {
+    const why = d.out_reason === "bye" ? "is on a bye this week" : `is ${esc(d.injury_status || "out")} and will not play`;
+    return `<div class="wp-card">${head}<div class="wp-out">${esc(d.name)} ${why}. He projects to 0 points.</div></div>`;
+  }
+  const mark = (dir) => (dir === "up" ? "▲" : dir === "down" ? "▼" : "•");
+  const drivers = d.drivers.map((x) => `<li class="wp-d ${x.direction}">
+      <span class="wp-mark" aria-hidden="true">${mark(x.direction)}</span>
+      <div><div class="wp-dl"><b>${esc(x.label)}</b>${x.effect_pct != null && Math.abs(x.effect_pct) >= 1 ? `<span class="wp-eff">${x.effect_pct > 0 ? "+" : ""}${esc(x.effect_pct)}%</span>` : ""}</div>
+      <div class="wp-dt">${esc(x.text)}</div>${x.detail ? `<div class="wp-dd">${esc(x.detail)}</div>` : ""}</div></li>`).join("");
+  const b = d.backtest;
+  return `<div class="wp-card">${head}
+    <div class="wp-top">
+      <div class="wp-big"><span class="wp-num">${FMT.d1(d.expected)}</span><span class="wp-unit">expected points</span></div>
+      <div class="wp-stats"><div><b>${FMT.d1(d.typical)}</b><small>typical week</small></div><div><b>${d.p_10plus}%</b><small>10+ pts</small></div><div><b>${d.p_20plus}%</b><small>20+ pts</small></div></div>
+    </div>
+    ${explainRangeHtml(d)}
+    <div class="wp-legend"><span><i class="k-band"></i>Floor to ceiling (9 in 10 weeks)</span><span><i class="k-typ"></i>Typical</span><span><i class="k-exp"></i>Expected</span></div>
+    <div class="wp-why">What moved it</div>
+    <ul class="wp-drivers">${drivers}</ul>
+    <div class="wp-trust">Weekly scoring is noisy: across ${b.games.toLocaleString()} real games (${esc(b.seasons)}), this method missed by about ${Math.round(b.mae)} points a week on average. The range above is the honest picture; the big number is its average. Built from real NFL data and your league's scoring, nothing simulated or guessed.</div>
+  </div>`;
+}
+
+async function loadExplain(p, root) {
+  const slot = root.querySelector(".wp-slot");
+  if (!slot) return;
+  try {
+    const d = await api(`/api/player/${encodeURIComponent(p.player_id)}/explain?${scoringQS().replace(/^&/, "")}`);
+    if (document.body.contains(slot)) slot.outerHTML = explainHtml(d);
+  } catch (e) {
+    if (document.body.contains(slot)) slot.innerHTML = `<div class="muted small">Couldn't work out this week right now.</div>`;
+  }
+}
+
 function projSlotHtml() {
   return `<div class="proj-slot"><div class="loading small">Building his next games…</div></div>`;
 }
@@ -1835,7 +1888,7 @@ function playerCardHtml(p) {
         ${careerHtml(p)}
         ${scoutGlanceHtml(p)}
       </section>
-      <section data-sec="pj" id="pcd-pane-pj" role="tabpanel" aria-labelledby="pcd-tab-pj" hidden>${projSlotHtml()}<div class="pcd-sub">What the experts say for next game</div>${projectionCompareSlotHtml()}</section>
+      <section data-sec="pj" id="pcd-pane-pj" role="tabpanel" aria-labelledby="pcd-tab-pj" hidden>${explainSlotHtml()}${projSlotHtml()}<div class="pcd-sub">What the experts say for next game</div>${projectionCompareSlotHtml()}</section>
       <section data-sec="st" id="pcd-pane-st" role="tabpanel" aria-labelledby="pcd-tab-st" hidden>
         <div class="pcd-lbl"><span>Season Stats</span></div>
         ${totalsHtml(p, true)}
@@ -1926,6 +1979,7 @@ function wirePlayerCard(root, p) {
   });
   showTab(lastCardTab);
 
+  loadExplain(p, card);
   loadProjPage(p, card);
   wirePlayerStatsBody(root, p);
 }
@@ -2593,7 +2647,7 @@ function ssRangeChartHtml(chart, players, color) {
   const rows = players.map((p) => `<div class="ssr-row">
       <span class="ssd-dot" style="background:${color(p.player_id)}"></span>
       <span class="ssr-name">${esc(p.player_display_name)}</span>
-      ${p.outcomes.out ? `<span class="muted">Ruled out: 0 points</span>` : `
+      ${p.outcomes.out ? `<span class="muted">${p.outcomes.reason === "bye" ? "On a bye: 0 points" : "Ruled out: 0 points"}</span>` : `
       <span class="ssr-v"><em>Floor</em><b>${FMT.d1(p.outcomes.p10)}</b></span>
       <span class="ssr-v"><em>Median</em><b>${FMT.d1(p.outcomes.p50)}</b></span>
       <span class="ssr-v"><em>Ceiling</em><b>${FMT.d1(p.outcomes.p90)}</b></span>`}
@@ -3167,7 +3221,9 @@ function tradeVerdictHtml(ev, compact) {
   if (!ev) return "";
   const v = ev.verdict, q = ev.quantitative_breakdown, d = ev.team_impact_diagnostics;
   const [cls, label] = TV_STATUS[v.status] || ["", v.status];
-  const gates = TV_GATES.map(([k, name, tip]) => `<span class="tv-gate ${ev.gate_audit[k] !== false ? "pass" : "fail"}" title="${esc(tip)}">${ev.gate_audit[k] !== false ? "✓" : "✕"} ${name}</span>`).join("");
+  const gates = TV_GATES.map(([k, name, tip]) => ev.gate_audit[k] === null
+    ? `<span class="tv-gate skip" title="Not required for a dead-even trade: it can be fair without moving either lineup.">– ${name} (not required)</span>`
+    : `<span class="tv-gate ${ev.gate_audit[k] !== false ? "pass" : "fail"}" title="${esc(tip)}">${ev.gate_audit[k] !== false ? "✓" : "✕"} ${name}</span>`).join("");
   const model = (q.acceptance_model || []).map((m) => `<li><span>${esc(m.factor)}</span><b class="${m.points >= 0 ? "pos" : "neg"}">${m.points > 0 && m !== q.acceptance_model[0] ? "+" : ""}${m.points}</b></li>`).join("");
   const scripts = TV_SCRIPTS.map(([k, name]) => ev.negotiation_scripts?.[k] ? `<div class="tv-script">
       <div class="tv-script-h"><span>${name}</span><button type="button" class="tv-copy" data-copy="${esc(ev.negotiation_scripts[k])}">Copy</button></div>
@@ -4214,7 +4270,7 @@ async function loadTradeFinder(giveIds) {
     // stripping one leading "&" is well-formed either way.
     const data = await api(`/api/trade-finder?${(scoringQS() + giveQS).replace(/^&/, "")}`);
     if (!data.suggestions.length) {
-      results.innerHTML = `<div class="empty tf-empty">No trade for that pick passes all three checks right now (fair on the trade chart, better lineup for you, no worse for them). Try a different player or pair.</div>`;
+      results.innerHTML = `<div class="empty tf-empty">No fair trade turns up for that pick right now. Try a different player or pair.</div>`;
       return;
     }
     renderTradeFinderResults(results, data.suggestions);
@@ -4223,18 +4279,21 @@ async function loadTradeFinder(giveIds) {
   }
 }
 
-function renderTradeFinderResults(results, suggestions) {
+function renderTradeFinderResults(results, suggestions, showAll) {
+  const fair = suggestions.filter((s) => s.kind === "fair").length;
   const realistic = suggestions.filter((s) => s.analysis?.verdict?.status === "APPROVED").length;
+  const LIMIT = 25;
+  const shown = showAll ? suggestions : suggestions.slice(0, LIMIT);
   let html = realistic
     ? `<div class="tf-summary">
         <span class="tf-summary-count" data-target="${realistic}"></span>
-        <span class="tf-summary-lbl">realistic trade${realistic === 1 ? "" : "s"}</span>
-        <span class="tf-summary-best">every one passes all five checks below</span>
+        <span class="tf-summary-lbl">trade${realistic === 1 ? "" : "s"} found</span>
+        <span class="tf-summary-best">${fair ? `${fair} dead-even on the trade chart (listed first, even if they don't help a lineup), then the best trades for both teams` : "every one passes all five checks below"}</span>
       </div>`
     : `<div class="tf-summary"><span class="tf-summary-lbl">No trade passes every check right now. These are the closest; each says what to change.</span></div>`;
-  html += suggestions.map((s, i) => `
-      <div class="trade-suggestion${i === 0 && realistic ? " best-value" : ""}" style="animation-delay:${i * 70}ms">
-        <div class="ts-opp"><span>vs ${esc(s.opponent_team_name)}</span>${i === 0 && realistic ? `<span class="badge-recommended">TOP PICK</span>` : ""}</div>
+  html += shown.map((s, i) => `
+      <div class="trade-suggestion tf-clickable${i === 0 && realistic ? " best-value" : ""}" data-idx="${i}" tabindex="0" role="button" aria-label="Open trade details" style="animation-delay:${Math.min(i, 8) * 70}ms">
+        <div class="ts-opp"><span>vs ${esc(s.opponent_team_name)}</span>${s.kind === "fair" ? `<span class="badge-fair">DEAD EVEN</span>` : ""}${i === 0 && realistic ? `<span class="badge-recommended">TOP PICK</span>` : ""}</div>
         <div class="ts-swap">
           <div class="ts-side">${playerChipsHtml(s.you_give)}</div>
           <div class="ts-swap-icon">⇄</div>
@@ -4242,22 +4301,79 @@ function renderTradeFinderResults(results, suggestions) {
         </div>
         ${tradeVerdictHtml(s.analysis, true)}
         <div class="ts-footer">
-          <span></span>
+          <span class="tf-open-hint">Tap for the full trade breakdown</span>
           <button class="pill" data-give='${esc(JSON.stringify(s.you_give))}' data-get='${esc(JSON.stringify(s.you_get))}'>Load into builder</button>
         </div>
       </div>`).join("");
+  if (!showAll && suggestions.length > LIMIT) html += `<button class="pill tf-more" id="tf-more">Show all ${suggestions.length} trades</button>`;
   results.innerHTML = html;
+  $("#tf-more")?.addEventListener("click", () => renderTradeFinderResults(results, suggestions, true));
   wireTradeVerdict(results);
   const countEl = results.querySelector(".tf-summary-count[data-target]");
   if (countEl) countUp(countEl, Number(countEl.dataset.target), { decimals: 0, duration: 500 });
   results.querySelectorAll("button[data-give]").forEach((b) => {
-    b.addEventListener("click", () => {
-      state.tradeA = JSON.parse(b.dataset.give);
-      state.tradeB = JSON.parse(b.dataset.get);
-      renderTradeChips("a"); renderTradeChips("b");
-      window.scrollTo({ top: document.querySelector(".trade-columns").offsetTop - 80, behavior: "smooth" });
+    b.addEventListener("click", (e) => {
+      e.stopPropagation();
+      loadTradeIntoBuilder(JSON.parse(b.dataset.give), JSON.parse(b.dataset.get));
     });
   });
+  results.querySelectorAll(".tf-clickable").forEach((card) => {
+    const open = () => openTradeDetail(shown[Number(card.dataset.idx)]);
+    card.addEventListener("click", (e) => { if (!e.target.closest("button, summary, details, a")) open(); });
+    card.addEventListener("keydown", (e) => { if ((e.key === "Enter" || e.key === " ") && e.target === card) { e.preventDefault(); open(); } });
+  });
+}
+
+function loadTradeIntoBuilder(give, get) {
+  state.tradeA = give;
+  state.tradeB = get;
+  renderTradeChips("a"); renderTradeChips("b");
+  window.scrollTo({ top: document.querySelector(".trade-columns").offsetTop - 80, behavior: "smooth" });
+}
+
+function tdPlayerRowHtml(p) {
+  const tierN = p.tier;
+  const flags = [p.injury_status && `<span class="injury-flag questionable">${esc(p.injury_status)}</span>`, p.bye && `<span class="muted small">Bye wk ${esc(p.bye)}</span>`].filter(Boolean).join(" ");
+  return `<div class="td-player">
+    <img ${headshotAttrs(p)} alt="">
+    <div class="td-pinfo"><div class="name">${esc(p.player_display_name || p.name)}</div>
+      <div class="meta">${esc(p.position)} · ${esc(p.recent_team)}${tierN ? ` · Tier ${esc(tierN)}` : ""} ${flags}</div></div>
+    <div class="td-pnums"><div><b>${p.trade != null ? FMT.d1(p.trade) : "—"}</b><small>chart value</small></div>
+      <div><b>${p.value != null ? FMT.d1(p.value) : "—"}</b><small>proj PPG</small></div></div>
+  </div>`;
+}
+
+function openTradeDetail(s) {
+  if (!s) return;
+  const a = s.analysis, c = a?.context || {};
+  const total = (ps) => ps.reduce((t, p) => t + (p.trade || 0), 0);
+  const benched = (list) => list?.length ? list.map((x) => `${esc(x.name)} (${FMT.d1(x.proj_ppg)} PPG)`).join(", ") : "nobody";
+  const tags = (arr) => (arr && arr.length ? arr.map(esc).join(", ") : "none");
+  const root = $("#modal-root");
+  root.innerHTML = `<div class="modal-backdrop"><div class="modal tdetail">
+    <div class="modal-header"><div><h2>Trade with ${esc(s.opponent_team_name)}</h2>
+      <div class="muted">${s.kind === "fair" ? "Dead even on the trade chart" : "Helps both lineups"} · everything the engine checked</div></div>
+      <button class="modal-close" aria-label="Close">✕</button></div>
+    <div class="td-sides">
+      <div class="td-side"><div class="section-label">You give <span class="muted">· ${FMT.d1(total(s.you_give))} chart value</span></div>${s.you_give.map(tdPlayerRowHtml).join("")}</div>
+      <div class="td-side"><div class="section-label">You get <span class="muted">· ${FMT.d1(total(s.you_get))} chart value</span></div>${s.you_get.map(tdPlayerRowHtml).join("")}</div>
+    </div>
+    ${a ? tradeVerdictHtml(a, false) : ""}
+    ${a ? `<div class="td-ctx">
+      <div class="section-label">Lineup moves</div>
+      <p><b>You:</b> ${benched(c.user_starter_replaced)} would lose a starting spot.<br><b>${esc(s.opponent_team_name)}:</b> ${benched(c.opponent_starter_replaced)} would lose a starting spot.</p>
+      <div class="section-label">Both teams</div>
+      <p><b>You</b> (${esc(c.user_record || "no record yet")}): needs ${tags(c.user_weaknesses)}; strong at ${tags(c.user_strengths)}.<br>
+      <b>${esc(s.opponent_team_name)}</b> (${esc(c.opponent_record || "no record yet")}${c.opponent_archetype ? `, ${esc(c.opponent_archetype)}` : ""}): needs ${tags(c.opponent_weaknesses)}; strong at ${tags(c.opponent_strengths)}.</p>
+    </div>` : ""}
+    <div class="td-actions"><button class="primary-btn" id="td-load">Load into builder</button><button class="pill" id="td-close">Close</button></div>
+  </div></div>`;
+  syncModalScrollLock();
+  root.querySelector(".modal-backdrop").addEventListener("click", (e) => { if (e.target.classList.contains("modal-backdrop")) closeModal(); });
+  root.querySelector(".modal-close").addEventListener("click", closeModal);
+  $("#td-close").addEventListener("click", closeModal);
+  $("#td-load").addEventListener("click", () => { closeModal(); loadTradeIntoBuilder(s.you_give, s.you_get); });
+  wireTradeVerdict(root);
 }
 
 // Shared "my own roster" cache — both the Trade Finder's shop picker and

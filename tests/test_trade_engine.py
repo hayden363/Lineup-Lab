@@ -106,7 +106,7 @@ class FinderTest(unittest.TestCase):
         for rid in range(2, 6):
             t = team([dict(p, player_id=f"{p['player_id']}{rid}") for p in me.them["players"]], 2, 2, weak=["WR2"])
             rosters[rid] = dict(t, name=f"T{rid}")
-        out = T.find_trades(rosters, 1, CTX, max_suggestions=10)
+        out = T.find_trades(rosters, 1, CTX, max_suggestions=10, fair_first=False)
         self.assertTrue(out)
         per_opp = {}
         for s in out:
@@ -115,6 +115,9 @@ class FinderTest(unittest.TestCase):
         self.assertTrue(all(n <= 2 for n in per_opp.values()))
         shopped = T.find_trades(rosters, 1, CTX, give_ids=["w3"])
         self.assertTrue(all(any(p["player_id"] == "w3" for p in s["you_give"]) for s in shopped))
+        # the fair-first list is every even trade, not capped per opponent
+        mixed = T.find_trades(rosters, 1, CTX, max_suggestions=10)
+        self.assertTrue(all(s["kind"] in ("fair", "approved") for s in mixed))
 
 
 if __name__ == "__main__":

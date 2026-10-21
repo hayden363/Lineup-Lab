@@ -712,6 +712,16 @@ def api_player_ros(player_id: str, games: Optional[int] = Query(None, ge=1, le=2
     return _clean(out)
 
 
+@app.get("/api/player/{player_id}/explain", dependencies=[Depends(projcompare_rate_limit)])
+def api_player_explain(player_id: str, scoring: Optional[dict] = Depends(scoring_from_query), user=Depends(current_user)):
+    """This week's projection for one player, with what moved it (engine/tools.projection_explain)."""
+    scoring = _effective_scoring(scoring, user)
+    out = tools.projection_explain(player_id, scoring=scoring)
+    if out is None:
+        raise HTTPException(404, "player not found or not enough data")
+    return _clean(out)
+
+
 @app.get("/api/search")
 def api_search(q: str = Query(..., min_length=1), limit: int = Query(20, ge=1, le=50)):
     return {"query": q, "results": _clean(search_players(q, limit=limit))}

@@ -351,6 +351,9 @@ def start_sit(player_ids, opponents=None, season=None, scoring=None, mode="balan
     get_board = _board_cache(season, scoring)
 
     results = []
+    # A team on bye in this week's slate isn't playing, whatever its next game is.
+    slate_week = waivers.target_week(bundle["schedule"])
+    byes = profile.bye_weeks(bundle["schedule"])
     for pid in player_ids:
         pos = _position_of(pid, bundle)
         if pos is None:
@@ -378,6 +381,7 @@ def start_sit(player_ids, opponents=None, season=None, scoring=None, mode="balan
         # With no override, the projection is against that real next opponent.
         next_opp, wk_no = data.next_opponent(bundle["schedule"], row.get("recent_team"))
         opp = opponents.get(pid) or next_opp
+        on_bye = not opponents.get(pid) and byes.get(row.get("recent_team")) == slate_week
         if opp:
             projected = project_vs(board.loc[[pid]], pos, opp, bundle=bundle, scoring=scoring)
             proj = float(projected["PROJ"].iloc[0])
@@ -414,7 +418,8 @@ def start_sit(player_ids, opponents=None, season=None, scoring=None, mode="balan
             "player_display_name": row.get("player_display_name"),
             "recent_team": row.get("recent_team"), "headshot_url": row.get("headshot_url"),
             "SCORE": row.get("SCORE"), "PVS": row.get("PVS"), "FORM": row.get("FORM"), "fpts_per_game": row.get("fpts_per_game"),
-            "opponent": opp, "matchup_tag": matchup_tag, "matchup_factor": matchup_factor, "PROJ": proj, "week": wk_no,
+            "opponent": None if on_bye else opp, "matchup_tag": matchup_tag, "matchup_factor": matchup_factor, "PROJ": proj,
+            "week": slate_week if on_bye else wk_no, "on_bye": on_bye,
             "floor": floor_v, "ceiling": ceil_v,
             "snap_pct": _clean_num(row.get("snap_pct")), "redzone_touches": _clean_num(row.get("redzone_touches")),
             "injury_status": _clean_num(row.get("injury_status")),
@@ -491,6 +496,9 @@ def _attach_decisions(valid, bundle, get_board, scoring, mode):
         r["outcomes"] = decision.outcomes(r["PROJ"], cv, seed, pp["p_play"] if pp else 1.0)
         if r.get("injury_status") in decision.WONT_PLAY:
             r["outcomes"] = decision.ruled_out()
+        if r.get("on_bye"):
+            r["outcomes"] = decision.ruled_out()
+            r["outcomes"]["reason"] = "bye"
         ctx = (r.get("environment") or {}).get("game")
         opp = r.get("opponent") or (ctx or {}).get("opponent")
         split = decision.script_split(bundle["pbp"], pid, r.get("recent_team"),
@@ -518,6 +526,8 @@ def _attach_decisions(valid, bundle, get_board, scoring, mode):
         rate, comps = decision.rating(r, usage_pct, ctx, split, mrank, recent)
         mg, mb = decision.matchup_flags(pos, opp, factors) if opp else ([], [])
         pg, pb = decision.player_flags(r, ctx, split, xfp, td_share, snap_trend)
+        if r.get("on_bye"):
+            pb = ["On a bye this week: he scores 0"] + list(pb)
         def _f(v, nd=1):
             return None if v is None or pd.isna(v) else round(float(v), nd)
         r["decision"] = {
@@ -1676,7 +1686,7 @@ def _run_trade_finder(setup, league_id, my_roster_id, target_roster_id, give_pla
     for f in found:
         a = f["analysis"]
         out.append({
-            "opponent_roster_id": f["opponent_roster_id"], "opponent_team_name": f["opponent_team_name"],
+            "opponent_roster_id": f["opponent_roster_id"], "opponent_team_name": f["opponent_team_name"], "kind": f.get("kind"),
             "you_give": [_public_player(p) for p in f["you_give"]], "you_get": [_public_player(p) for p in f["you_get"]],
             "value_diff": a["_my_dsl"], "my_gain": a["_my_dsl"], "their_gain": a["_opp_dsl"],
             "fills_need": max(f["you_get"], key=lambda p: p["trade"])["position"],
@@ -1749,3 +1759,76 @@ def waiver_wire(positions=None, rostered_ids=None, season=None, scoring=None, li
         board["trending_adds"] = board["player_id"].map(trending_counts).fillna(0).astype(int)
         out[pos] = board.to_dict(orient="records")  # kept in SCORE order; trending is a badge, not a re-sort
     return {"season": bundle["season"], "available": out}
+
+
+# Out-of-sample error of the projection formula, measured by scripts/backtest_projection.py on
+# every QB/RB/WR/TE game from 2016-2024 (each prediction uses only earlier games).
+BACKTEST = {"mae": 5.15, "games": 32004, "seasons": "2016-2024"}
+
+
+def projection_explain(player_id, scoring=None, season=None):
+    """One player's projection for the coming week, laid out plainly: the expected
+    number, the typical and the floor-to-ceiling range, and each thing that moved it
+    with real numbers. None when he can't be found."""
+    from . import ros_projection
+
+    res = start_sit([player_id], scoring=scoring, season=season)
+    p = res["players"][0] if res.get("players") else None
+    if not p or p.get("error"):
+        return None
+    ros = ros_projection.player_ros(player_id, scoring=scoring, season=season) or {}
+    o = p["outcomes"]
+    out = {"player_id": player_id, "name": p.get("player_display_name"), "position": p["position"],
+           "team": p.get("recent_team"), "week": p.get("week"), "opponent": p.get("opponent"),
+           "on_bye": bool(p.get("on_bye")), "out": bool(o.get("out")), "out_reason": o.get("reason"),
+           "injury_status": p.get("injury_status"), "backtest": BACKTEST, "drivers": []}
+    if out["out"]:
+        return out
+    out.update({"expected": o["mean"], "typical": o["p50"], "floor": o["p10"], "ceiling": o["p90"],
+                "p_10plus": o["p_10plus"], "p_20plus": o["p_20plus"], "p_play": o.get("p_play", 1.0)})
+
+    def pct(f):
+        return None if f is None else round((f - 1) * 100)
+
+    def add(label, text, effect=None, detail=None):
+        direction = "flat" if effect is None or abs(effect) < 2 else "up" if effect > 0 else "down"
+        out["drivers"].append({"label": label, "text": text, "effect_pct": effect, "direction": direction, "detail": detail})
+
+    games = len([g for g in ros.get("past_games", [])])
+    ppg = p.get("fpts_per_game")
+    hist = ros.get("history") or {}
+    if ppg is not None:
+        detail = None
+        if hist.get("career_ppg") is not None and hist.get("weight"):
+            detail = (f"Blended with his last {hist['lookback']} seasons ({hist['career_ppg']:.1f} a game over {hist['career_games']} games), "
+                      f"which makes up {round(hist['weight'] * 100)}% of the starting rate.")
+        add("Season scoring", f"{ppg:.1f} points a game over {games or p.get('games') or '?'} games", None, detail)
+    if p.get("FORM") not in (None, 0):
+        add("Recent form", f"Last few games {'above' if p['FORM'] > 0 else 'below'} his season pace", round(p["FORM"]),
+            "Recent games count more, but a hot or cold streak only moves the number partway: past seasons show weekly scoring regresses fast.")
+    xfp = (ros.get("usage") or {}).get("xfp_pg") or {}
+    if xfp.get("recent") is not None and ppg is not None:
+        gap = ppg - xfp["recent"]
+        if gap >= 3:
+            add("Usage vs results", f"Scoring {gap:.1f} a game more than his touches usually produce ({xfp['recent']:.1f} expected)", None,
+                "Yards and touchdowns above his workload tend to even out. His rest-of-season baseline weights usage at 70%, so it sits below his scoring.")
+        elif gap <= -3:
+            add("Usage vs results", f"Scoring {abs(gap):.1f} a game less than his touches usually produce ({xfp['recent']:.1f} expected)", None,
+                "His workload says better days are coming. His rest-of-season baseline weights usage at 70%, so it sits above his scoring.")
+        else:
+            add("Usage vs results", f"Scoring in line with his touches ({xfp['recent']:.1f} expected a game)")
+    if p.get("usage") and p["usage"].get("label") in ("rising", "falling"):
+        u = p["usage"]
+        add("Role trend", f"{u['metric'].capitalize()} {u['label']}: {u['recent_avg']:g} a game lately vs {u['earlier_avg']:g} earlier", None)
+    if p.get("opponent") and p.get("matchup_factor") is not None:
+        add("Matchup", f"vs {p['opponent']}: {p.get('matchup_tag') or 'average'} defense for his position", pct(p["matchup_factor"]))
+    env = p.get("environment") or {}
+    if env.get("factor") not in (None, 1.0) or env.get("notes"):
+        add("Game environment", "; ".join(env.get("notes") or []) or "Betting lines", pct(env.get("factor")),
+            "Capped at 10% either way.")
+    pc = p.get("play_chance")
+    if pc:
+        add("Health", f"Listed {p.get('injury_status')}: {round(pc['p_play'] * 100)}% chance he plays", round((pc["p_play"] - 1) * 100), pc.get("basis"))
+    elif p.get("injury_status"):
+        add("Health", f"Listed {p['injury_status']}", None)
+    return out

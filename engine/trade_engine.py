@@ -308,11 +308,13 @@ def fairness_band(fi):
     return "overpay"
 
 
-def assess(give, get, me, opp, ctx, full=True):
+def assess(give, get, me, opp, ctx, full=True, fair=False):
     """Judge one proposal. `me`/`opp`: {"players", "record", "name", "weak",
     "strong"}; ctx: {"slots", "profile", "teams"}. With full=False (the
     finder's fast path) returns None as soon as a gate fails, otherwise the
-    numbers only; with full=True, the complete analysis whatever the verdict."""
+    numbers only; with full=True, the complete analysis whatever the verdict.
+    fair=True judges a trade on fairness alone: a dead-even trade passes even if
+    it does nothing for either starting lineup."""
     slots, profile = ctx["slots"], ctx["profile"]
     give_ids, get_ids = {p["player_id"] for p in give}, {p["player_id"] for p in get}
     gate = {"tier_break_passed": True, "lineup_delta_passed": True, "roster_fit_passed": True,
@@ -357,7 +359,9 @@ def assess(give, get, me, opp, ctx, full=True):
     opp_before, opp_st0 = lineup(opp["players"], slots)
     opp_now, opp_st1 = lineup(opp_after, slots)
     my_dsl, opp_dsl = round(my_now - my_before, 1), round(opp_now - opp_before, 1)
-    if opp_dsl < OPP_MIN_DSL or my_dsl < MY_MIN_DSL:
+    if fair and (opp_dsl < OPP_MIN_DSL or my_dsl < MY_MIN_DSL):
+        gate["lineup_delta_passed"] = None   # not required for a fair-first trade
+    if not fair and (opp_dsl < OPP_MIN_DSL or my_dsl < MY_MIN_DSL):
         gate["lineup_delta_passed"] = False
         fails.append("lineup")
         if not full and (my_dsl < MY_MIN_DSL or opp_dsl < 0.5):
@@ -373,11 +377,11 @@ def assess(give, get, me, opp, ctx, full=True):
     opp_weak = opp.get("weak") or []
     big_need = opp_dsl >= 3.0 or any(w.startswith(p["position"]) for w in opp_weak for p in give)
     gets_elite = any(tier(p["trade"]) == 1 for p in get)
-    if band in ("underpay", "overpay") or (band == "slight_underpay" and not big_need) or \
-            (band == "slight_overpay" and not gets_elite):
+    if (band != "fair") if fair else (band in ("underpay", "overpay") or (band == "slight_underpay" and not big_need) or
+                                      (band == "slight_overpay" and not gets_elite)):
         gate["fairness_passed"] = False
         fails.append("fairness")
-        if not full and not 78 <= fi <= 122:
+        if not full and (fair or not 78 <= fi <= 122):
             return None
 
     # G4 incentives
@@ -648,9 +652,56 @@ def _combos(players, sizes, must=None):
             yield combo
 
 
-def find_trades(rosters, my_roster_id, ctx, give_ids=None, target_ids=None, max_suggestions=6):
-    """Every 1-for-1 up to 2-for-2 that passes every gate, ranked by mutual
-    benefit, at most two per opponent and three per player of yours."""
+FAIR_PREFILTER = (88.0, 112.0)   # cheap fairness window before the full check
+FAIR_POOL = 12                    # players per side considered for fair trades
+MAX_FAIR = 150
+
+
+def _fair_trades(rosters, my_roster_id, ctx, give_ids, target_ids):
+    """Every 1-for-1 up to 2-for-2 that is dead-even on the trade chart (and
+    clears the tier, roster, contender, insult and bye checks), whether or not
+    it helps either lineup. Closest to even first (in 2-point bands), then by mutual benefit."""
+    me, profile = rosters[my_roster_id], ctx["profile"]
+
+    def pool(ps, must=None):
+        ok = sorted([p for p in ps if p.get("injury_status") != "IR" and p["trade"] >= THROW_IN], key=lambda p: -p["trade"])
+        top = ok[:FAIR_POOL]
+        return top + [p for p in ps if must and p["player_id"] in must and p not in top]
+    my_pool = pool(me["players"], give_ids)
+    my_sizes = (len(give_ids),) if give_ids and len(give_ids) >= 2 else (1, 2)
+    lo, hi = FAIR_PREFILTER
+    found = []
+    for rid, opp in rosters.items():
+        if rid == my_roster_id or (target_ids and rid not in target_ids):
+            continue
+        their_pool = pool(opp["players"])
+        for give in _combos(my_pool, my_sizes, must=give_ids):
+            vg = effective_value(give, profile)
+            for get in _combos(their_pool, (1, 2)):
+                vt = effective_value(get, profile)
+                if not vt or not lo <= 100 * vg / vt <= hi:
+                    continue
+                quick = assess(give, get, me, opp, ctx, full=False, fair=True)
+                if quick and quick["_status"] == "APPROVED":
+                    found.append((round(abs(quick["_fi"] - 100) / 2), -quick["_score"], rid, give, get))
+    found.sort(key=lambda x: (x[0], x[1]))
+    out, cores = [], set()
+    for _, _, rid, give, get in found:
+        core = (rid, frozenset(p["player_id"] for p in give if p["trade"] >= THROW_IN),
+                frozenset(p["player_id"] for p in get if p["trade"] >= THROW_IN))
+        if core in cores:
+            continue
+        cores.add(core)
+        out.append((rid, give, get))
+        if len(out) >= MAX_FAIR:
+            break
+    return out
+
+
+def find_trades(rosters, my_roster_id, ctx, give_ids=None, target_ids=None, max_suggestions=6, fair_first=True):
+    """First every dead-even 1-for-1 up to 2-for-2 (see _fair_trades), then the
+    trades that pass every gate ranked by mutual benefit, at most two per
+    opponent and three per player of yours."""
     me = rosters[my_roster_id]
 
     def tradeable(ps):
@@ -684,18 +735,27 @@ def find_trades(rosters, my_roster_id, ctx, give_ids=None, target_ids=None, max_
                         found.append((quick["_score"] - 5, rid, give, get))
     found.sort(key=lambda x: -x[0])
     picked, per_opp, per_player, cores = [], {}, {}, set()
+    fair_keys = set()
+    for rid, give, get in (_fair_trades(rosters, my_roster_id, ctx, give_ids, target_ids) if fair_first else []):
+        fair_keys.add((rid, frozenset(p["player_id"] for p in give), frozenset(p["player_id"] for p in get)))
+        picked.append({"opponent_roster_id": rid, "opponent_team_name": rosters[rid]["name"], "kind": "fair",
+                       "you_give": list(give), "you_get": list(get),
+                       "analysis": assess(give, get, me, rosters[rid], ctx, full=True, fair=True)})
+    n_fair = len(picked)
     for _, rid, give, get in found:
         core = (rid, frozenset(p["player_id"] for p in give if p["trade"] >= THROW_IN),
                 frozenset(p["player_id"] for p in get if p["trade"] >= THROW_IN))
+        if (rid, frozenset(p["player_id"] for p in give), frozenset(p["player_id"] for p in get)) in fair_keys:
+            continue
         if core in cores or per_opp.get(rid, 0) >= 2 or any(per_player.get(p["player_id"], 0) >= 3 for p in give):
             continue
-        picked.append({"opponent_roster_id": rid, "opponent_team_name": rosters[rid]["name"],
+        picked.append({"opponent_roster_id": rid, "opponent_team_name": rosters[rid]["name"], "kind": "approved",
                        "you_give": list(give), "you_get": list(get),
                        "analysis": assess(give, get, me, rosters[rid], ctx, full=True)})
         cores.add(core)
         per_opp[rid] = per_opp.get(rid, 0) + 1
         for p in give:
             per_player[p["player_id"]] = per_player.get(p["player_id"], 0) + 1
-        if len(picked) >= max_suggestions:
+        if len(picked) - n_fair >= max_suggestions:
             break
     return picked
