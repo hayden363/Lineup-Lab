@@ -29,6 +29,78 @@ def _league_scoring_settings(league_id):
         return None
 
 
+class _Actuals:
+    """What actually happened in games already played in one NFL week, so a
+    completed (or part-completed) week shows real points instead of a
+    projection of a game that is over. A team's game counts as final only when
+    the schedule has its score AND the weekly stats table has that team's
+    players for the week (the stats lag the schedule by a day or so), so a
+    just-finished game keeps its projection until the stats arrive."""
+
+    def __init__(self, bundle, scoring, week, league_id=None):
+        self.week = int(week)
+        sched = bundle["schedule"]
+        s = sched[(sched["week"] == self.week) & sched["home_score"].notna()]
+        if "game_type" in s.columns:
+            s = s[s["game_type"] == "REG"]
+        played = set(s["home_team"]) | set(s["away_team"])
+        wk = bundle["wk"]
+        in_stats = set(wk.loc[wk["week"] == self.week, "recent_team"])
+        self.final_teams = played & in_stats
+        self._skill = {}
+        if self.final_teams:
+            scored, _ = apply_scoring(wk[wk["week"] == self.week], scoring)
+            self._skill = scored.groupby("player_id")["fpts_active"].sum().to_dict()
+        self._defense, self._kicker = {}, {}
+        league = _league_scoring_settings(league_id)
+        if self.final_teams:
+            try:
+                d = defense_scoring.build_defense_weekly(bundle["pbp"], sched)
+                d = d[d["week"] == self.week]
+                pts = defense_scoring.score_defense_weekly(d, defense_scoring.def_scoring_from_sleeper(league))
+                self._defense = dict(zip(d["defteam"], pts))
+            except Exception as e:
+                print(f"[tools] actual defense scores unavailable: {e}")
+            try:
+                k = kicker_scoring.build_kicker_weekly(bundle["pbp"])
+                k = k[k["week"] == self.week]
+                pts = kicker_scoring.score_kicker_weekly(k, kicker_scoring.k_scoring_from_sleeper(league))
+                self._kicker = dict(zip(k["player_id"], pts))
+            except Exception as e:
+                print(f"[tools] actual kicker scores unavailable: {e}")
+
+    def any(self):
+        return bool(self.final_teams)
+
+    def skill(self, gsis_id, team):
+        if team not in self.final_teams:
+            return None
+        return round(float(self._skill.get(gsis_id, 0.0)), 1)
+
+    def defense(self, raw_team):
+        team = defense_scoring.to_nflverse_team(raw_team)
+        if team not in self.final_teams or team not in self._defense:
+            return None
+        return round(float(self._defense[team]), 1)
+
+    def kicker(self, gsis_id, team=None):
+        if gsis_id in self._kicker:
+            return round(float(self._kicker[gsis_id]), 1)
+        if team and defense_scoring.to_nflverse_team(team) in self.final_teams:
+            return 0.0       # his team played and he never attempted a kick
+        return None
+
+    def points(self, row):
+        """Actual points for a roster row, or None while his game is unplayed."""
+        pos, pid = row.get("position"), row.get("player_id")
+        if pos == "DEF":
+            return self.defense(pid)
+        if pos == "K":
+            return self.kicker(pid, row.get("recent_team"))
+        team = defense_scoring.to_nflverse_team(row.get("recent_team"))
+        return self.skill(pid, team) if pos in ("QB", "RB", "WR", "TE") else None
+
+
 def _team_on_bye(bundle, team, week):
     """True when `team` has its bye in the explicitly requested NFL `week`: it
     plays no game, so every player on it scores 0, not a next-game projection."""
@@ -60,9 +132,20 @@ def _opponent_adjusted_proj_full(board, gsis_id, pos, bundle, scoring, week=None
         projected = project_vs(row, pos, opp, bundle=bundle, scoring=scoring)
         proj = round(float(projected["PROJ"].iloc[0]), 1)
         detail = (_clean_num(projected["injury_factor"].iloc[0]), _clean_num(projected["injury_sample_n"].iloc[0]))
-        return proj, detail
-    proj = round(float(rest_of_season_value(row, pos, bundle=bundle, scoring=scoring).iloc[0]), 1)
-    return proj, (None, None)
+    else:
+        proj = round(float(rest_of_season_value(row, pos, bundle=bundle, scoring=scoring).iloc[0]), 1)
+        detail = (None, None)
+    # The number above is his score if he plays. A player who won't play scores
+    # nothing, and one listed Questionable/Doubtful plays only some of the time
+    # (the same chance Start/Sit uses), so a team total can't count him in full.
+    status = row["injury_status"].iloc[0] if "injury_status" in row.columns else None
+    if status in decision.WONT_PLAY:
+        return 0.0, detail
+    report = row["injury_report"].iloc[0] if "injury_report" in row.columns else None
+    pp = play_prob.play_probability(pos, status, report)
+    if pp:
+        proj = round(proj * pp["p_play"], 1)
+    return proj, detail
 
 
 def _opponent_adjusted_proj(board, gsis_id, pos, bundle, scoring, week=None):
@@ -760,7 +843,7 @@ def trade_analyzer(side_a_ids, side_b_ids, season=None, scoring=None, league_ctx
 
 def _roster_players(raw_ids, bundle, get_board, scoring, crosswalk=None, starters=None,
                      slot_labels=None, def_board=None, k_board=None, k_team_baseline=None,
-                     rank_baselines=None, resolve_unscored=None, week=None, fragility=None):
+                     rank_baselines=None, resolve_unscored=None, week=None, fragility=None, actuals=None):
     """Real starting lineup (in real slot order — QB/RB/RB/WR/WR/TE/FLEX/
     FLEX/DEF/K, whatever the league actually runs, including multi-FLEX)
     first, then bench sorted by projected value. `starters`/`slot_labels`
@@ -860,15 +943,22 @@ def _roster_players(raw_ids, bundle, get_board, scoring, crosswalk=None, starter
             "on_bye": _team_on_bye(bundle, row.get("recent_team"), week),
         }
 
+    def settle(row):
+        """Swap in the real score once his game has been played."""
+        if row is None or actuals is None:
+            return row
+        pts = actuals.points(row)
+        return row if pts is None else {**row, "PROJ": pts, "final": True}
+
     starter_set = set(starters)
     rows, total = [], 0.0
     for raw_id, slot in zip(starters, slot_labels):
-        row = build_row(raw_id, True, slot)
+        row = settle(build_row(raw_id, True, slot))
         if row:
             rows.append(row)
             total += row["PROJ"]
 
-    bench_rows = [r for r in (build_row(raw_id, False, None) for raw_id in raw_ids if raw_id not in starter_set) if r]
+    bench_rows = [r for r in (settle(build_row(raw_id, False, None)) for raw_id in raw_ids if raw_id not in starter_set) if r]
     bench_rows.sort(key=lambda r: -r["PROJ"])
     rows.extend(bench_rows)
 
@@ -877,7 +967,7 @@ def _roster_players(raw_ids, bundle, get_board, scoring, crosswalk=None, starter
 
 def _team_total(raw_ids, bundle, get_board, scoring, crosswalk=None, starters=None,
                  def_board=None, k_board=None, k_team_baseline=None, rank_baselines=None, week=None,
-                 fragility=None):
+                 fragility=None, actuals=None):
     """Same 'starters only' rule as _roster_players, for the lighter-weight
     'every other matchup this week' view that doesn't need full rosters."""
     crosswalk = crosswalk or {}
@@ -889,12 +979,20 @@ def _team_total(raw_ids, bundle, get_board, scoring, crosswalk=None, starters=No
             if def_board is not None:
                 def_row = defense_scoring.resolve_defense_row(raw_id, def_board)
                 if def_row:
+                    done = actuals.defense(raw_id) if actuals else None
+                    if done is not None:
+                        total += done
+                        continue
                     matchup_factor = defense_scoring.defense_matchup_factor(
                         _defense_opponent(bundle, raw_id, week), fragility)
                     total += _row_rate(def_row) * (1 + def_row["FORM"] / 100.0) * matchup_factor
                     continue
             if k_board is not None and gsis_id is not None and gsis_id in k_board.index:
                 k_row = k_board.loc[gsis_id]
+                done = actuals.kicker(gsis_id) if actuals else None
+                if done is not None:
+                    total += done
+                    continue
                 total += _row_rate(k_row) * (1 + k_row["FORM"] / 100.0)
                 continue
             if k_team_baseline is not None or rank_baselines is not None:
@@ -923,7 +1021,8 @@ def _team_total(raw_ids, bundle, get_board, scoring, crosswalk=None, starters=No
             if gsis_id not in raw_board.index:
                 continue
             board = raw_board
-        total += _opponent_adjusted_proj(board, gsis_id, pos, bundle, scoring, week=week)
+        done = actuals.skill(gsis_id, board.loc[gsis_id].get("recent_team")) if actuals else None
+        total += done if done is not None else _opponent_adjusted_proj(board, gsis_id, pos, bundle, scoring, week=week)
     return round(total, 1)
 
 
@@ -1132,6 +1231,7 @@ def my_team(league_id, roster_id, season=None, scoring=None, week=None):
     k_board = _kicker_board(bundle, league_id)
     k_team_baseline = _kicker_team_baseline(bundle, league_id)
     rank_baselines = _role_rank_baselines(bundle, scoring)
+    actuals = _Actuals(bundle, scoring, week, league_id)
     try:
         starters_by_roster = sleeper.starters_for_week(league_id, week)
     except Exception:
@@ -1148,7 +1248,8 @@ def my_team(league_id, roster_id, season=None, scoring=None, week=None):
         players, total = _roster_players(raw_ids, bundle, get_board, scoring,
                                           crosswalk=crosswalk, starters=starters, slot_labels=slot_labels,
                                           def_board=def_board, k_board=k_board, k_team_baseline=k_team_baseline,
-                                          rank_baselines=rank_baselines, week=week, fragility=fragility)
+                                          rank_baselines=rank_baselines, week=week, fragility=fragility,
+                                          actuals=actuals)
         return {"roster_id": entry["roster_id"], "team_name": entry["team_name"],
                 "avatar_url": entry.get("avatar_url") or entry.get("owner_avatar_url"),
                 "owner": entry.get("owner"), "players": players, "total_proj": total}
@@ -1174,7 +1275,8 @@ def my_team(league_id, roster_id, season=None, scoring=None, week=None):
             "total_proj": _team_total(raw_rosters.get(e["roster_id"], e["player_ids"]), bundle, get_board, scoring,
                                        crosswalk=crosswalk, starters=starters_by_roster.get(e["roster_id"], []),
                                        def_board=def_board, k_board=k_board, k_team_baseline=k_team_baseline,
-                                       rank_baselines=rank_baselines, week=week, fragility=fragility),
+                                       rank_baselines=rank_baselines, week=week, fragility=fragility,
+                                       actuals=actuals),
         } for e in entries]
         league_matchups.append({"matchup_id": pair["matchup_id"], "teams": sides})
     result["league_matchups"] = league_matchups
@@ -1236,6 +1338,7 @@ def my_team_espn(league_id, team_id, season=None, scoring=None, week=None, year=
     rank_baselines = _role_rank_baselines(bundle, scoring)
     crosswalk = espn_layer.id_crosswalk()
     resolve_unscored = espn_layer.build_unscored_resolver(league)
+    actuals = _Actuals(bundle, scoring, week)
 
     def team_card(t):
         raw_ids, starters, slot_labels = espn_layer.roster_lineup(t)
@@ -1243,7 +1346,7 @@ def my_team_espn(league_id, team_id, season=None, scoring=None, week=None, year=
                                           crosswalk=crosswalk, starters=starters, slot_labels=slot_labels,
                                           def_board=def_board, k_board=k_board, k_team_baseline=k_team_baseline,
                                           rank_baselines=rank_baselines, resolve_unscored=resolve_unscored, week=week,
-                                          fragility=fragility)
+                                          fragility=fragility, actuals=actuals)
         return {"roster_id": t.team_id, "team_name": t.team_name,
                 "avatar_url": t.logo_url or None, "owner": espn_layer.owner_name(t),
                 "players": players, "total_proj": total}

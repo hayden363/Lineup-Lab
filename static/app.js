@@ -1820,8 +1820,8 @@ function projPageHtml(d, p) {
     ? `<div class="pj-take"><div><span class="k pos">Smash spot</span> ${spot(smash)} · ${FMT.d1(smash.proj)} expected, ${FMT.d1(smash.ceiling)} ceiling</div>
        <div><span class="k neg">Trap spot</span> ${spot(trap)} · ${FMT.d1(trap.proj)} expected, ${FMT.d1(trap.floor)} floor</div></div>` : "";
   const baseNote = d.baseline_xfp != null
-    ? `Baseline ${FMT.d1(d.baseline)} pts/game: his last 4 games of expected points (each target and carry valued by its chance of scoring), nudged at most 5% up or down for how efficiently he turns those touches into points, so a fluky touchdown game can't set the number.`
-    : `Baseline ${FMT.d1(d.baseline)} pts/game: his season rate with recent form. ${p.position === "QB" ? "Passers have no expected-points volume data here" : "He has no expected-points history yet"}, so this leans on points scored.`;
+    ? `Baseline ${FMT.d1(d.baseline)} pts/game: a model fitted on past seasons that weighs his season average, last 4 games, opportunity (targets and carries) and last year's average, so a fluky touchdown game can't set the number.`
+    : `Baseline ${FMT.d1(d.baseline)} pts/game: a model fitted on past seasons that weighs his season average, last 4 games and last year's average. ${p.position === "QB" ? "Passers have no expected-points volume data here." : "He has no expected-points history yet."}`;
   return `<div class="pj-lead"><div><div class="pj-k">Next ${Math.min(4, d.games.length)} game${d.games.length === 1 ? "" : "s"}</div><div class="pj-big">${FMT.d1(d.games.slice(0, 4).reduce((a, g) => a + g.proj, 0))}<small>expected pts</small></div></div><div class="pj-adv">${advice}</div></div>
     <div class="pj-base">${baseNote}</div>
     ${pjContingency(first)}
@@ -1876,7 +1876,7 @@ function deltaCalloutHtml(p) {
 }
 
 function playerCardHtml(p) {
-  const next = p.next_opponent ? `<span class="pcd-chip">Next: vs ${esc(p.next_opponent)} (Wk ${esc(p.next_week)})</span>` : "";
+  const next = p.next_opponent ? `<span class="pcd-chip">Next: ${p.next_is_away ? "@" : "vs"} ${esc(p.next_opponent)} (Wk ${esc(p.next_week)})</span>` : "";
   const bye = p.bye_week != null ? `<span class="pcd-chip bye">BYE week ${esc(p.bye_week)}</span>` : "";
   const ngs = scoutingSlidersHtml(p);
   return `
@@ -2050,7 +2050,7 @@ function rosHtml(d) {
   }).join("");
   return `<div class="pc-card ros-card">
     <div class="section-label pc-header"><span>Rest of Season</span><span class="pc-wk">${esc(d.n_games)} GAMES · ${FMT.d1(d.total)} PTS</span></div>
-    <div class="muted small">Role baseline ${FMT.d1(d.baseline)} per game${d.baseline_xfp != null ? ` (${FMT.d1(d.baseline_xfp)} expected from his last-4-game touches${d.baseline_efficiency != null && d.baseline_efficiency !== 1 ? `, x${d.baseline_efficiency.toFixed(2)} efficiency` : ""}; season rate ${FMT.d1(d.baseline_rate)})` : ""}, then scaled by the game environment and the opponent. Floor and ceiling are the 10th and 90th percentile.</div>
+    <div class="muted small">Role baseline ${FMT.d1(d.baseline)} per game${d.baseline_xfp != null ? ` (his last 4 games' touches are worth ${FMT.d1(d.baseline_xfp)} expected)` : ""}, then scaled by the game environment and the opponent. Floor and ceiling are the 10th and 90th percentile.</div>
     <div class="ros-scroll"><table class="ros-table"><thead><tr><th>Wk</th><th>Opp</th><th>Spread / ITT</th><th>Matchup</th><th>Vegas ×</th><th>Defense ×</th><th>Floor</th><th>Proj</th><th>Ceiling</th></tr></thead><tbody>${rows}</tbody></table></div>
     <div class="muted small pc-source-note">Head-to-head history isn't used: it only counts if the same coordinator and coverage scheme are back, and no data here says so. Games a few weeks out often have no betting line yet, so they get no Vegas adjustment. The weights are judgment calls, not fitted to data.</div>
   </div>`;
@@ -3837,14 +3837,28 @@ function teamCardHtml(team, kind) {
   return `<div class="myteam-card${kind === "opponent" ? " opponent" : ""}">
       <div class="mt-label">${kind === "mine" ? "MY TEAM" : "OPPONENT"}</div>
       <div class="mt-name-row">${avatar}<div class="mt-name">${esc(team.team_name)}</div></div>
-      <div class="mt-total-lbl">PROJECTED (STARTERS)</div>
+      <div class="mt-total-lbl">${esc(teamTotalLabel(team))}</div>
       <div class="mt-total tabular">${FMT.d1(team.total_proj)}</div>
       <div style="margin-top:14px">${rows}</div>
     </div>`;
 }
 
+// "Projected" until his games are played. Rows the server settled with real
+// scores carry final:true, so a finished week reads FINAL and a part-played
+// one says it mixes the two.
+function teamTotalLabel(team) {
+  const starters = (team.players || []).filter((p) => p.is_starter);
+  const done = starters.filter((p) => p.final).length;
+  if (!starters.length || !done) return "PROJECTED (STARTERS)";
+  return done === starters.length ? "FINAL (STARTERS)" : "ACTUAL + PROJECTED (STARTERS)";
+}
+
 // A big center "VS" badge between the two team cards, plus who's favored —
 // the head-to-head feel of a real matchup page, not just two cards side by side.
+function matchupSettled(mine, opp) {
+  return [mine, opp].every((t) => teamTotalLabel(t) === "FINAL (STARTERS)");
+}
+
 function matchupCenterHtml(mine, opp) {
   if (!opp) return `<div class="matchup-vs-center"><div class="matchup-vs-badge">VS</div></div>`;
   const diff = (mine.total_proj || 0) - (opp.total_proj || 0);
@@ -3853,7 +3867,7 @@ function matchupCenterHtml(mine, opp) {
   // plainly (it's not "good"), never in the app's success color.
   const favor = Math.abs(diff) < 0.1
     ? `<span style="color:var(--muted)">Dead even</span>`
-    : `<span class="matchup-favor-lbl">Projected edge</span><span class="${diff >= 0 ? "" : "is-opp"}">${esc(favoredName)} +${FMT.d1(Math.abs(diff))}</span>`;
+    : `<span class="matchup-favor-lbl">${matchupSettled(mine, opp) ? "Final margin" : "Projected edge"}</span><span class="${diff >= 0 ? "" : "is-opp"}">${esc(favoredName)} +${FMT.d1(Math.abs(diff))}</span>`;
   return `<div class="matchup-vs-center">
     <div class="matchup-vs-badge">VS</div>
     <div class="matchup-favor">${favor}</div>

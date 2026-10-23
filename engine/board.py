@@ -28,6 +28,7 @@ from . import consensus
 from . import pvs
 from . import value as value_layer
 from . import weekly_proj
+from . import projmodel
 from .metrics import METRIC_FNS, WEIGHTS, MIN_GAMES, score_players, form_adjustment
 from .advanced import qb_advanced, rb_advanced, wr_advanced, te_advanced, weekly_epa, ADVANCED_COLS
 from .matchup import matchup_tag
@@ -650,16 +651,40 @@ def shrunk_rate(board, position, scoring=None, season=None):
         return rate
     prior = float(pool.mean())
     n = board["games"].astype(float)
+    board["FORM_ADJ"] = board["FORM"] if "FORM" in board.columns else 0.0
     if season is not None and history.available():
         career = history.skill_career(position, scoring, season)
         out, share = history.blend(rate, n, career, prior, base_k=SHRINK_GAMES)
         board["history_weight"] = share.round(3)
-        return out
-    return (n * rate + SHRINK_GAMES * prior) / (n + SHRINK_GAMES)
+    else:
+        out = (n * rate + SHRINK_GAMES * prior) / (n + SHRINK_GAMES)
+    # A fitted per-position model (engine/projmodel.py) replaces the formula above
+    # for everyone with 3+ games; thin samples and a deploy without history keep it.
+    if season is not None and position in projmodel.POSITIONS:
+        try:
+            wk_scored, _ = apply_scoring(load_bundle(season)["wk"], scoring)
+            fitted = projmodel.predict(position, wk_scored, scoring, season)
+        except Exception as e:
+            print(f"[board] fitted projection model skipped for {position}: {e}")
+            fitted = None
+        if fitted is not None:
+            have = fitted.index.intersection(board.index)
+            out = out.copy()
+            out.loc[have] = fitted.loc[have, "rate"].astype(float)
+            board["history_weight"] = board.get("history_weight", pd.Series(0.0, index=board.index))
+            board.loc[have, "history_weight"] = fitted.loc[have, "history_weight"].round(3)
+            board.loc[have, "FORM_ADJ"] = 0.0    # recent form is already inside the fitted rate
+    return out
 
 
 def _rate(board):
     return board["rate"] if "rate" in board.columns else board["fpts_per_game"]
+
+
+def form_pct(board):
+    """The FORM percentage to multiply a rate by: 0 for rows whose rate is the
+    fitted model's (it already contains the last-4-game form), else FORM."""
+    return board["FORM_ADJ"] if "FORM_ADJ" in board.columns else board["FORM"]
 
 
 def project_vs(board, position, opp, bundle=None, season=None, scoring=None):
@@ -670,7 +695,7 @@ def project_vs(board, position, opp, bundle=None, season=None, scoring=None):
     bundle = bundle or load_bundle(season)
     factor = matchup_multiplier(position, opp, bundle)
     breakdown = defense_layer.matchup_breakdown(position, opp, bundle["defense_factors"]) if opp in bundle["defense_factors"].index else []
-    form_mult = 1 + board["FORM"] / 100.0
+    form_mult = 1 + form_pct(board) / 100.0
     injury_mult = _injury_multiplier_col(board, position)
     injury_n = _injury_sample_col(board, position)
     board = board.copy()
@@ -692,7 +717,7 @@ def rest_of_season_value(board, position, bundle=None, season=None, scoring=None
     need one number, not a per-opponent one."""
     bundle = bundle or load_bundle(season)
     avg_factor = defense_layer.league_average_composite(position, bundle["defense_factors"])
-    form_mult = 1 + board["FORM"] / 100.0
+    form_mult = 1 + form_pct(board) / 100.0
     injury_mult = _injury_multiplier_col(board, position)
     # Games he is expected to miss (ESPN's return date) cut his rest-of-season
     # value: a season-ending injury is worth nothing.
@@ -844,4 +869,8 @@ def player_detail(player_id, season=None, scoring=None):
         opp, wk_no = data.next_opponent(bundle["schedule"], team)
         row["next_opponent"] = opp
         row["next_week"] = wk_no
+        if opp:
+            sched = bundle["schedule"]
+            game = sched[(sched["week"] == wk_no) & ((sched["home_team"] == team) | (sched["away_team"] == team))]
+            row["next_is_away"] = bool(len(game)) and game.iloc[0]["away_team"] == team
     return row
