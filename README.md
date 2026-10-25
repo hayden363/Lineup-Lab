@@ -204,6 +204,25 @@ just stay unverified / reset links don't go out until mail is configured.
 data yet — see Roadmap. The Settings page explains exactly what each field
 is for and which are optional.
 
+### League chat
+
+Signed-in users in the same **Sleeper** league can chat in the League Chat
+tab. Membership is proven, not claimed: the app issues a one-time code
+(`llab-` plus 8 hex characters, valid 15 minutes), the user puts it in their
+Sleeper team name, and the server re-reads the league's users from Sleeper and
+looks for it. (`connected_teams` accepts any roster ID, and Sleeper has no
+login to check, so neither is evidence of ownership.) One Sleeper user maps to
+one Lineup Lab account per league; the first member becomes the moderator.
+
+Text only, 500 characters, 10 posts a minute per user. Members can report a
+message; authors and moderators can delete it (soft delete); moderators can
+mute for up to 7 days. The tab polls every 5 s while visible — no WebSockets,
+which suits the single small instance. Deleting an account cascades to its
+messages. **ESPN leagues are not supported yet** (no ownership proof is
+designed for them). Tables live in `migrations/20261025000000_league_chat.sql`;
+apply it to Supabase before deploying the code. Design:
+`docs/superpowers/specs/2026-10-25-league-chat-design.md`.
+
 ## Security
 
 This is a LAN-local dev app (not deployed behind TLS), so some of this is
