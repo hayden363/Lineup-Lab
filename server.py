@@ -43,6 +43,7 @@ from fastapi.responses import FileResponse, PlainTextResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
+from engine import chat as chat_layer
 from engine import correlation
 from engine import data as data_layer
 from engine import db
@@ -1200,6 +1201,114 @@ def api_teams_remove(team_id: int, user=Depends(require_user)):
     except db.AuthError as e:
         raise HTTPException(404, str(e))
     return {"teams": db.list_connected_teams(user["id"])}
+
+
+# ------------------------------------------------------------- league chat ----
+def user_rate_limit(key_prefix: str, limit: int, window_seconds: int):
+    """Same sliding window as rate_limit, keyed by signed-in user so a league
+    sharing one network address (a dorm, a bar) doesn't share one budget."""
+    def dep(user=Depends(require_user)):
+        bucket = _RATE_BUCKETS[f"{key_prefix}:u{user['id']}"]
+        now = time.time()
+        while bucket and now - bucket[0] > window_seconds:
+            bucket.popleft()
+        if len(bucket) >= limit:
+            raise HTTPException(429, "Slow down a little and try again.")
+        bucket.append(now)
+    return dep
+
+
+chat_challenge_limit = user_rate_limit("chat_challenge", limit=5, window_seconds=10 * 60)
+chat_join_limit = user_rate_limit("chat_join", limit=10, window_seconds=10 * 60)
+chat_poll_limit = user_rate_limit("chat_poll", limit=30, window_seconds=60)
+chat_post_limit = user_rate_limit("chat_post", limit=10, window_seconds=60)
+chat_report_limit = user_rate_limit("chat_report", limit=10, window_seconds=60)
+
+
+class ChatLeague(BaseModel):
+    platform: str = "sleeper"
+    league_id: str
+
+
+class ChatJoin(ChatLeague):
+    token: str
+
+
+class ChatPost(ChatLeague):
+    body: str
+
+
+class ChatReport(BaseModel):
+    message_id: int
+
+
+class ChatMute(ChatLeague):
+    user_id: int
+    minutes: int
+
+
+def _chat(fn, *args, **kwargs):
+    try:
+        return fn(*args, **kwargs)
+    except chat_layer.ChatError as e:
+        raise HTTPException(e.status, str(e))
+
+
+def _sleeper_only(platform: str):
+    if platform != "sleeper":
+        raise HTTPException(400, "League chat is Sleeper-only for now.")
+
+
+@app.post("/api/chat/challenge", dependencies=[Depends(chat_challenge_limit)])
+def api_chat_challenge(req: ChatLeague, user=Depends(require_user)):
+    """Step 1 of joining: a one-time code to paste into the user's Sleeper team name."""
+    _sleeper_only(req.platform)
+    token = _chat(chat_layer.create_challenge, user["id"], req.platform, req.league_id)
+    return {"token": token, "expires_in": chat_layer.CHALLENGE_TTL}
+
+
+@app.post("/api/chat/join", dependencies=[Depends(chat_join_limit)])
+def api_chat_join(req: ChatJoin, user=Depends(require_user)):
+    """Step 2: re-read the league from Sleeper, find the code in a team name, add the member."""
+    _sleeper_only(req.platform)
+    external_id = _chat(chat_layer.verify_sleeper_owner, user["id"], req.league_id, req.token)
+    member = _chat(chat_layer.add_member, user["id"], req.platform, req.league_id, external_id, "member")
+    return {"member": member}
+
+
+@app.get("/api/chat/messages", dependencies=[Depends(chat_poll_limit)])
+def api_chat_messages(platform: str = "sleeper", league_id: str = Query(...), after: str = "0",
+                      user=Depends(require_user)):
+    member = _chat(chat_layer._require_member, user["id"], platform, league_id)
+    try:
+        after_id = max(0, int(after))
+    except ValueError:
+        raise HTTPException(400, "after must be a message id.")
+    messages = _chat(chat_layer.list_messages, platform, league_id, after=after_id)
+    return _clean({"messages": messages, "role": member["role"]})
+
+
+@app.post("/api/chat/messages", dependencies=[Depends(chat_post_limit)])
+def api_chat_post(req: ChatPost, user=Depends(require_user)):
+    return _clean({"message": _chat(chat_layer.post_message, user["id"], req.platform, req.league_id, req.body)})
+
+
+@app.delete("/api/chat/messages/{message_id}")
+def api_chat_delete(message_id: int, user=Depends(require_user)):
+    _chat(chat_layer.delete_message, user["id"], message_id)
+    return {"ok": True}
+
+
+@app.post("/api/chat/report", dependencies=[Depends(chat_report_limit)])
+def api_chat_report(req: ChatReport, user=Depends(require_user)):
+    _chat(chat_layer.report_message, user["id"], req.message_id)
+    return {"ok": True}
+
+
+@app.post("/api/chat/mute")
+def api_chat_mute(req: ChatMute, user=Depends(require_user)):
+    _chat(chat_layer.mute_member, user["id"], req.user_id, req.platform, req.league_id, req.minutes)
+    return {"ok": True}
 
 
 def _load_my_team(user, week, scoring):
