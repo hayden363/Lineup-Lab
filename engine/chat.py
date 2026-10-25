@@ -146,15 +146,19 @@ def post_message(user_id, platform, league_id, body):
 def list_messages(platform, league_id, after=0, limit=PAGE_SIZE):
     after = max(0, int(after))
     limit = max(1, min(int(limit), PAGE_SIZE))
+    # A fresh load (after=0) wants the most recent page; polling after a known id
+    # wants whatever came next. Either way the caller gets oldest-first.
+    newest_first = after == 0
     with db._conn() as c:
         c.execute(
             "SELECT m.id, m.user_id, u.username, m.body, m.created_at "
             "FROM league_messages m JOIN users u ON u.id = m.user_id "
             "WHERE m.platform = %s AND m.league_id = %s AND m.id > %s AND m.deleted_at IS NULL "
-            "ORDER BY m.id LIMIT %s",
+            f"ORDER BY m.id{' DESC' if newest_first else ''} LIMIT %s",
             (platform, league_id, after, limit),
         )
-        return [dict(r) for r in c.fetchall()]
+        rows = [dict(r) for r in c.fetchall()]
+    return rows[::-1] if newest_first else rows
 
 
 def _message_row(message_id):

@@ -154,6 +154,21 @@ class Messages(unittest.TestCase):
         self.assertIn(0, params)
         self.assertEqual(out, [{"id": 1}])
 
+    def test_first_load_returns_the_latest_page_oldest_first(self):
+        # the database hands back newest-first; callers must get 8 then 9
+        cur = FakeCursor(all_rows=[{"id": 9}, {"id": 8}])
+        with patched_conn(cur):
+            out = chat.list_messages("sleeper", "L1", after=0)
+        self.assertIn("ORDER BY m.id DESC", cur.executed[0][0])
+        self.assertEqual([m["id"] for m in out], [8, 9])
+
+    def test_polling_after_an_id_returns_the_next_messages_oldest_first(self):
+        cur = FakeCursor(all_rows=[{"id": 4}, {"id": 5}])
+        with patched_conn(cur):
+            out = chat.list_messages("sleeper", "L1", after=3)
+        self.assertNotIn("DESC", cur.executed[0][0])
+        self.assertEqual([m["id"] for m in out], [4, 5])
+
     def test_delete_requires_author_or_moderator(self):
         msg = {"id": 3, "user_id": 5, "platform": "sleeper", "league_id": "L1", "deleted_at": None}
         # a plain member who is not the author
