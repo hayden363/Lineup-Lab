@@ -10,6 +10,7 @@ import secrets
 import time
 
 from . import db
+from . import sleeper as sleeper_layer
 
 MAX_BODY = 500
 PAGE_SIZE = 50
@@ -100,6 +101,27 @@ def consume_challenge(user_id, platform, league_id, token):
             (now, user_id, platform, league_id, token, now - CHALLENGE_TTL),
         )
         return c.fetchone() is not None
+
+
+def verify_sleeper_owner(user_id, league_id, token):
+    """Prove the caller owns a team in this Sleeper league: their one-time token
+    must appear in some member's team name. Sleeper has no login to check, so a
+    typed username would prove nothing — editing a team name needs the account.
+    Returns that Sleeper user's id (stored as external_id)."""
+    needle = (token or "").strip().lower()
+    if not needle:
+        raise ChatError("Put your code in your Sleeper team name first.", 400)
+    users = sleeper_layer.get_users(league_id, force=True)
+    match = next(
+        (u for u in users if needle in ((u.get("metadata") or {}).get("team_name") or "").lower()),
+        None,
+    )
+    if match is None:
+        raise ChatError("Couldn't find your code in any team name in that league. "
+                        "Save it in Sleeper, then try again.", 400)
+    if not consume_challenge(user_id, "sleeper", league_id, token.strip()):
+        raise ChatError("That code expired or isn't yours. Ask for a new one.", 400)
+    return str(match["user_id"])
 
 
 def post_message(user_id, platform, league_id, body):
