@@ -99,6 +99,10 @@
         <span class="nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="14" height="12" rx="1.5"/><path d="M6 7.5h8M6 10.5h8M6 13.5h5"/></svg></span>
         <span class="nav-label">News</span>
       </button>
+      <button class="nav-item" data-tab="chat">
+        <span class="nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h12a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H9l-4 3v-3H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/></svg></span>
+        <span class="nav-label">League Chat</span>
+      </button>
     </div>
 
     <div class="sidebar-middle">
@@ -359,6 +363,14 @@
       <div id="news-list" class="news-grid"></div>
     </section>
 
+    <section id="tab-chat" style="display:none">
+      <div class="page-header">
+        <h1>League Chat</h1>
+        <p>Talk with the other people in your Sleeper league who joined Lineup Lab.</p>
+      </div>
+      <div id="chat-body"></div>
+    </section>
+
     <section id="tab-settings" style="display:none">
       <div class="page-header">
         <h1>Settings</h1>
@@ -491,5 +503,6 @@
   </div>
 
   <script src="/app.js"></script>
+  <script src="/chat.js"></script>
 </body>
 </html>

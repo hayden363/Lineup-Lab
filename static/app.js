@@ -374,7 +374,7 @@ function scoringQS() {
 }
 
 // ---------------------------------------------------------------- tabs ----
-const TAB_IDS = ["board", "myteam", "draft", "startsit", "trade", "waivers", "news", "settings"];
+const TAB_IDS = ["board", "myteam", "draft", "startsit", "trade", "waivers", "news", "chat", "settings"];
 // The home/landing tab once the gate clears — My Team, not Big Board.
 const DEFAULT_TAB = "myteam";
 
@@ -405,6 +405,7 @@ function switchTab(tab) {
   void activeSection.offsetWidth; // force reflow so the animation replays every switch
   activeSection.classList.add("tab-fade-in");
   if (tab !== "draft") stopDraftPolling();
+  if (tab !== "chat") stopChatPolling();
   // The board used to load only after a pill/scoring/search change, so the
   // first visit to Big Board sat on "Loading real NFL data…" forever.
   if (tab === "board" && !state.boardLoaded) loadBoard();
@@ -413,6 +414,7 @@ function switchTab(tab) {
   if (tab === "draft") loadDraftTab();
   if (tab === "startsit") loadStartSitTab();
   if (tab === "news") loadNews();
+  if (tab === "chat") loadChatTab();
   if (tab === "trade") { loadTradeFinder(); loadTradeAnalyzer(); }
   if (tab === "settings") renderSettingsTab();
   closeMobileDrawer();
