@@ -9,6 +9,7 @@ node is installed.
     .venv/bin/python -m unittest tests.test_league_chat_ui -v
 """
 
+import json
 import re
 import shutil
 import subprocess
@@ -51,6 +52,12 @@ class ChatTabSafety(unittest.TestCase):
         self.assertIn("stopChatPolling()", switch)
         self.assertIn('tab === "chat"', switch)
 
+    def test_switching_tabs_cannot_throw_when_chat_js_failed_to_load(self):
+        switch = APP_JS[APP_JS.index("function switchTab"):]
+        switch = switch[:switch.index("function initTabs")]
+        self.assertIn('typeof stopChatPolling === "function"', switch)
+        self.assertIn('typeof loadChatTab === "function"', switch)
+
     def test_a_deleted_message_disappears_for_others_via_periodic_full_refresh(self):
         self.assertRegex(CHAT_JS, r"CHAT_FULL_REFRESH_EVERY\s*=\s*\d+")
 
@@ -81,6 +88,34 @@ class ChatTabWiring(unittest.TestCase):
     def test_styles_exist_for_the_chat_list_and_composer(self):
         for cls in (".chat-list", ".chat-msg", ".chat-composer"):
             self.assertIn(cls, CSS)
+
+    def diff(self, dom_ids, messages):
+        script = (
+            "const vm=require('vm'),fs=require('fs');"
+            "const ctx=vm.createContext({document:{addEventListener(){},hidden:false},state:{},setInterval(){},clearInterval(){}});"
+            "vm.runInContext(fs.readFileSync(process.argv[1],'utf8'),ctx);"
+            f"process.stdout.write(vm.runInContext('JSON.stringify(chatDiff({json.dumps(dom_ids)},{json.dumps([{'id': i} for i in messages])}))',ctx));"
+        )
+        r = subprocess.run(["node", "-e", script, str(STATIC / "chat.js")], capture_output=True, text=True)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        out = json.loads(r.stdout)
+        out["add"] = [m["id"] for m in out["add"]]  # chatDiff returns whole messages; compare by id
+        return out
+
+    @unittest.skipUnless(shutil.which("node"), "node not installed")
+    def test_refresh_only_adds_new_and_removes_deleted_messages(self):
+        self.assertEqual(self.diff([5, 6, 7], [5, 7]), {"remove": [6], "add": []})
+        self.assertEqual(self.diff([5, 7], [5, 6, 7]), {"remove": [], "add": [6]})
+        self.assertEqual(self.diff([], []), {"remove": [], "add": []})
+
+    @unittest.skipUnless(shutil.which("node"), "node not installed")
+    def test_refresh_keeps_older_history_that_is_outside_the_newest_page(self):
+        self.assertEqual(self.diff([1, 2, 3], [2, 3, 4]), {"remove": [], "add": [4]})
+
+    def test_a_refresh_never_clears_the_list(self):
+        refresh = CHAT_JS[CHAT_JS.index("async function pollChat"):]
+        refresh = refresh[:refresh.index("function chatMessageNode")]
+        self.assertNotIn("replaceChildren", refresh)
 
     @unittest.skipUnless(shutil.which("node"), "node not installed")
     def test_chat_js_parses(self):

@@ -9,6 +9,7 @@ can assert what was (and was not) written.
 
 import re
 import unittest
+import psycopg
 from contextlib import contextmanager
 from pathlib import Path
 from unittest import mock
@@ -19,13 +20,18 @@ MIGRATION = Path(__file__).resolve().parent.parent / "migrations" / "20261025000
 
 
 class FakeCursor:
-    def __init__(self, rows=(), all_rows=()):
+    def __init__(self, rows=(), all_rows=(), raise_on=None):
         self.rows = list(rows)
         self.all_rows = list(all_rows)
+        self.raise_on = raise_on or {}
         self.executed = []
 
     def execute(self, sql, params=()):
-        self.executed.append((" ".join(sql.split()), params))
+        text = " ".join(sql.split())
+        self.executed.append((text, params))
+        for fragment, exc in self.raise_on.items():
+            if fragment in text:
+                raise exc
 
     def fetchone(self):
         return self.rows.pop(0) if self.rows else None
@@ -65,6 +71,23 @@ class PostMessage(unittest.TestCase):
             self.assertEqual(inserted(cur, "league_messages"), [])
             self.assertEqual(chat.post_message(7, "sleeper", "L1", "x" * 500)["id"], 1)
 
+    def test_a_nul_character_is_rejected_before_the_database(self):
+        cur = FakeCursor()
+        with patched_conn(cur):
+            with self.assertRaises(chat.ChatError) as ctx:
+                chat.post_message(7, "sleeper", "L1", "a\x00b")
+        self.assertEqual(ctx.exception.status, 400)
+        self.assertEqual(cur.executed, [])
+
+    def test_a_body_of_only_invisible_characters_is_rejected(self):
+        cur = FakeCursor()
+        with patched_conn(cur):
+            for body in ("\u200b", "\u200b \u2060\ufeff", "\u200e\u200f"):
+                with self.assertRaises(chat.ChatError) as ctx:
+                    chat.post_message(7, "sleeper", "L1", body)
+                self.assertEqual(ctx.exception.status, 400)
+        self.assertEqual(cur.executed, [])
+
     def test_non_member_cannot_post(self):
         cur = FakeCursor(rows=[None])
         with patched_conn(cur):
@@ -90,6 +113,9 @@ class PostMessage(unittest.TestCase):
 
 
 class Membership(unittest.TestCase):
+    def member_insert(self, cur):
+        return [p for sql, p in cur.executed if sql.startswith("INSERT INTO league_chat_members")][0]
+
     def test_add_member_refuses_a_sleeper_user_already_claimed_by_someone_else(self):
         cur = FakeCursor(rows=[{"user_id": 99}])
         with patched_conn(cur):
@@ -98,22 +124,38 @@ class Membership(unittest.TestCase):
         self.assertEqual(ctx.exception.status, 409)
         self.assertEqual(inserted(cur, "league_chat_members"), [])
 
-    def test_first_member_of_a_league_becomes_moderator(self):
-        row = {"user_id": 7, "role": "moderator", "external_id": "s1"}
-        cur = FakeCursor(rows=[None, None, row])  # no conflict, league has no members yet, final read
+    def test_the_commissioner_becomes_a_moderator(self):
+        cur = FakeCursor(rows=[None, {"user_id": 7, "role": "moderator", "external_id": "s1"}])
+        with patched_conn(cur):
+            chat.add_member(7, "sleeper", "L1", "s1", "moderator")
+        self.assertIn("moderator", self.member_insert(cur))
+
+    def test_everyone_else_is_a_plain_member_even_when_first_to_join(self):
+        cur = FakeCursor(rows=[None, {"user_id": 8, "role": "member", "external_id": "s2"}])
+        with patched_conn(cur):
+            chat.add_member(8, "sleeper", "L1", "s2", "member")
+        params = self.member_insert(cur)
+        self.assertIn("member", params)
+        self.assertNotIn("moderator", params)
+
+    def test_an_unknown_role_is_stored_as_member(self):
+        cur = FakeCursor(rows=[None, {"user_id": 8, "role": "member", "external_id": "s2"}])
+        with patched_conn(cur):
+            chat.add_member(8, "sleeper", "L1", "s2", "owner")
+        self.assertNotIn("owner", self.member_insert(cur))
+
+    def test_joins_to_one_league_are_serialised_by_an_advisory_lock(self):
+        cur = FakeCursor(rows=[None, {"user_id": 7, "role": "member", "external_id": "s1"}])
         with patched_conn(cur):
             chat.add_member(7, "sleeper", "L1", "s1", "member")
-        insert_params = [p for s, p in cur.executed if s.startswith("INSERT INTO league_chat_members")][0]
-        self.assertIn("moderator", insert_params)
+        self.assertIn("pg_advisory_xact_lock", cur.executed[0][0])
 
-    def test_later_members_stay_plain_members(self):
-        row = {"user_id": 8, "role": "member", "external_id": "s2"}
-        cur = FakeCursor(rows=[None, {"one": 1}, row])
+    def test_a_simultaneous_claim_of_one_sleeper_user_is_a_409_not_a_500(self):
+        cur = FakeCursor(rows=[None], raise_on={"INSERT INTO league_chat_members": psycopg.errors.UniqueViolation()})
         with patched_conn(cur):
-            chat.add_member(8, "sleeper", "L1", "s2", "moderator")  # caller cannot self-promote
-        insert_params = [p for s, p in cur.executed if s.startswith("INSERT INTO league_chat_members")][0]
-        self.assertIn("member", insert_params)
-        self.assertNotIn("moderator", insert_params)
+            with self.assertRaises(chat.ChatError) as ctx:
+                chat.add_member(7, "sleeper", "L1", "s1", "member")
+        self.assertEqual(ctx.exception.status, 409)
 
 
 class Challenges(unittest.TestCase):

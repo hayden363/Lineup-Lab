@@ -17,7 +17,7 @@ from engine import chat
 
 USER = {"id": 7, "username": "sam", "email": "sam@example.com", "email_verified": True}
 MEMBER = {"role": "member", "muted_until": None, "external_id": "111"}
-LEAGUE = {"platform": "sleeper", "league_id": "L1"}
+LEAGUE = {"platform": "sleeper", "league_id": "1392639173193633792"}
 
 
 class ChatApi(unittest.TestCase):
@@ -62,7 +62,7 @@ class ChatApi(unittest.TestCase):
             r = self.client.get("/api/chat/messages", params={**LEAGUE, "after": "3"})
         self.assertEqual(r.status_code, 200)
         self.assertEqual(r.json(), {"messages": [{"id": 4, "body": "yo"}], "role": "member"})
-        listing.assert_called_once_with("sleeper", "L1", after=3)
+        listing.assert_called_once_with("sleeper", "1392639173193633792", after=3)
 
     def test_garbage_after_is_a_400_not_a_500(self):
         self.sign_in()
@@ -78,7 +78,7 @@ class ChatApi(unittest.TestCase):
                 mock.patch.object(chat, "list_messages", return_value=[]) as listing:
             r = self.client.get("/api/chat/messages", params={**LEAGUE, "after": "-9"})
         self.assertEqual(r.status_code, 200)
-        listing.assert_called_once_with("sleeper", "L1", after=0)
+        listing.assert_called_once_with("sleeper", "1392639173193633792", after=0)
 
     def test_the_eleventh_post_in_a_minute_is_429(self):
         self.sign_in()
@@ -114,18 +114,47 @@ class ChatApi(unittest.TestCase):
         with mock.patch.object(chat, "create_challenge", return_value="llab-ab12cd34") as create:
             r = self.client.post("/api/chat/challenge", json=LEAGUE)
         self.assertEqual(r.json(), {"token": "llab-ab12cd34", "expires_in": 900})
-        create.assert_called_once_with(7, "sleeper", "L1")
+        create.assert_called_once_with(7, "sleeper", "1392639173193633792")
 
     def test_join_verifies_ownership_before_adding_the_member(self):
         self.sign_in()
         calls = []
-        with mock.patch.object(chat, "verify_sleeper_owner", side_effect=lambda *a: calls.append("verify") or "111"), \
-                mock.patch.object(chat, "add_member", side_effect=lambda *a: calls.append("add") or {"role": "moderator"}) as add:
+        proof = {"external_id": "111", "is_commissioner": False}
+        with mock.patch.object(chat, "verify_sleeper_owner", side_effect=lambda *a: calls.append("verify") or proof), \
+                mock.patch.object(chat, "add_member", side_effect=lambda *a: calls.append("add") or {"role": "member"}) as add:
             r = self.client.post("/api/chat/join", json={**LEAGUE, "token": "llab-ab12cd34"})
         self.assertEqual(r.status_code, 200)
         self.assertEqual(calls, ["verify", "add"])
-        add.assert_called_once_with(7, "sleeper", "L1", "111", "member")
-        self.assertEqual(r.json(), {"member": {"role": "moderator"}})
+        add.assert_called_once_with(7, "sleeper", "1392639173193633792", "111", "member")
+        self.assertEqual(r.json(), {"member": {"role": "member"}})
+
+    def test_only_the_leagues_commissioner_is_made_a_moderator(self):
+        self.sign_in()
+        proof = {"external_id": "444", "is_commissioner": True}
+        with mock.patch.object(chat, "verify_sleeper_owner", return_value=proof), \
+                mock.patch.object(chat, "add_member", return_value={"role": "moderator"}) as add:
+            self.client.post("/api/chat/join", json={**LEAGUE, "token": "llab-0c0ffee0"})
+        add.assert_called_once_with(7, "sleeper", "1392639173193633792", "444", "moderator")
+
+    def test_a_role_in_the_request_body_is_ignored(self):
+        self.sign_in()
+        proof = {"external_id": "111", "is_commissioner": False}
+        with mock.patch.object(chat, "verify_sleeper_owner", return_value=proof), \
+                mock.patch.object(chat, "add_member", return_value={"role": "member"}) as add:
+            self.client.post("/api/chat/join", json={**LEAGUE, "token": "llab-ab12cd34", "role": "moderator"})
+        add.assert_called_once_with(7, "sleeper", "1392639173193633792", "111", "member")
+
+    def test_league_ids_that_are_not_plain_numbers_never_reach_sleeper(self):
+        self.sign_in()
+        for bad in ("../../x", "1/2", "12 34", "", "9" * 40, "abc"):
+            server._RATE_BUCKETS.clear()  # six bad ids would otherwise trip the 5-per-10-minutes challenge limit
+            with mock.patch.object(chat, "create_challenge") as create, \
+                    mock.patch.object(chat, "verify_sleeper_owner") as verify:
+                a = self.client.post("/api/chat/challenge", json={"platform": "sleeper", "league_id": bad})
+                b = self.client.post("/api/chat/join", json={"platform": "sleeper", "league_id": bad, "token": "llab-ab12cd34"})
+            self.assertEqual((a.status_code, b.status_code), (400, 400), bad)
+            create.assert_not_called()
+            verify.assert_not_called()
 
     def test_a_failed_verification_adds_nobody(self):
         self.sign_in()
@@ -145,7 +174,7 @@ class ChatApi(unittest.TestCase):
             self.assertEqual(self.client.post("/api/chat/mute", json={**LEAGUE, "user_id": 8, "minutes": 30}).status_code, 200)
         delete.assert_called_once_with(7, 5)
         report.assert_called_once_with(7, 5)
-        mute.assert_called_once_with(7, 8, "sleeper", "L1", 30)
+        mute.assert_called_once_with(7, 8, "sleeper", "1392639173193633792", 30)
 
     def test_deleting_a_missing_message_is_404(self):
         self.sign_in()

@@ -212,7 +212,9 @@ tab. Membership is proven, not claimed: the app issues a one-time code
 Sleeper team name, and the server re-reads the league's users from Sleeper and
 looks for it. (`connected_teams` accepts any roster ID, and Sleeper has no
 login to check, so neither is evidence of ownership.) One Sleeper user maps to
-one Lineup Lab account per league; the first member becomes the moderator.
+one Lineup Lab account per league; the league's commissioner (Sleeper's
+`is_owner` flag) becomes the moderator, so a league whose commissioner hasn't
+joined has no moderator yet.
 
 Text only, 500 characters, 10 posts a minute per user. Members can report a
 message; authors and moderators can delete it (soft delete); moderators can

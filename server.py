@@ -1254,6 +1254,13 @@ def _chat(fn, *args, **kwargs):
         raise HTTPException(e.status, str(e))
 
 
+def _valid_league_id(league_id: str):
+    """Sleeper league IDs are plain digits. This id goes into a Sleeper URL and a
+    cache filename, so anything else is refused before it gets there."""
+    if not re.fullmatch(r"\d{1,32}", league_id or ""):
+        raise HTTPException(400, "That doesn't look like a Sleeper league ID.")
+
+
 def _sleeper_only(platform: str):
     if platform != "sleeper":
         raise HTTPException(400, "League chat is Sleeper-only for now.")
@@ -1263,6 +1270,7 @@ def _sleeper_only(platform: str):
 def api_chat_challenge(req: ChatLeague, user=Depends(require_user)):
     """Step 1 of joining: a one-time code to paste into the user's Sleeper team name."""
     _sleeper_only(req.platform)
+    _valid_league_id(req.league_id)
     token = _chat(chat_layer.create_challenge, user["id"], req.platform, req.league_id)
     return {"token": token, "expires_in": chat_layer.CHALLENGE_TTL}
 
@@ -1271,8 +1279,10 @@ def api_chat_challenge(req: ChatLeague, user=Depends(require_user)):
 def api_chat_join(req: ChatJoin, user=Depends(require_user)):
     """Step 2: re-read the league from Sleeper, find the code in a team name, add the member."""
     _sleeper_only(req.platform)
-    external_id = _chat(chat_layer.verify_sleeper_owner, user["id"], req.league_id, req.token)
-    member = _chat(chat_layer.add_member, user["id"], req.platform, req.league_id, external_id, "member")
+    _valid_league_id(req.league_id)
+    proof = _chat(chat_layer.verify_sleeper_owner, user["id"], req.league_id, req.token)
+    role = "moderator" if proof["is_commissioner"] else "member"
+    member = _chat(chat_layer.add_member, user["id"], req.platform, req.league_id, proof["external_id"], role)
     return {"member": member}
 
 

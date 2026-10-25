@@ -405,7 +405,8 @@ function switchTab(tab) {
   void activeSection.offsetWidth; // force reflow so the animation replays every switch
   activeSection.classList.add("tab-fade-in");
   if (tab !== "draft") stopDraftPolling();
-  if (tab !== "chat") stopChatPolling();
+  // chat.js is a separate script: if it failed to load, navigation must still work
+  if (tab !== "chat" && typeof stopChatPolling === "function") stopChatPolling();
   // The board used to load only after a pill/scoring/search change, so the
   // first visit to Big Board sat on "Loading real NFL data…" forever.
   if (tab === "board" && !state.boardLoaded) loadBoard();
@@ -414,7 +415,7 @@ function switchTab(tab) {
   if (tab === "draft") loadDraftTab();
   if (tab === "startsit") loadStartSitTab();
   if (tab === "news") loadNews();
-  if (tab === "chat") loadChatTab();
+  if (tab === "chat" && typeof loadChatTab === "function") loadChatTab();
   if (tab === "trade") { loadTradeFinder(); loadTradeAnalyzer(); }
   if (tab === "settings") renderSettingsTab();
   closeMobileDrawer();

@@ -144,7 +144,7 @@ function showChat(panel, messages) {
 
   chatState.lastId = 0;
   chatState.polls = 0;
-  renderChatMessages(list, messages, true);
+  mergeChatMessages(list, messages, true, true);
 
   form.addEventListener("submit", async (ev) => {
     ev.preventDefault();
@@ -174,7 +174,7 @@ async function pollChat(full) {
     const res = await api(`/api/chat/messages?platform=sleeper&league_id=${encodeURIComponent(league)}&after=${after}`);
     if (chatState.leagueId !== league || $("#chat-list") !== list) return;
     chatState.role = res.role;
-    renderChatMessages(list, res.messages, refresh);
+    mergeChatMessages(list, res.messages, refresh, false);
   } catch (e) {
     if (e.status === 403) loadChatTab();
   } finally {
@@ -182,16 +182,40 @@ async function pollChat(full) {
   }
 }
 
-function renderChatMessages(list, messages, replace) {
-  const nearBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 80;
-  if (replace) list.replaceChildren();
-  if (replace && !messages.length) list.append(mk("p", "hint chat-empty", "No messages yet. Say hi."));
-  if (!replace && messages.length) list.querySelector(".chat-empty")?.remove();
-  messages.forEach((m) => {
-    list.append(chatMessageNode(m));
-    chatState.lastId = Math.max(chatState.lastId, m.id);
+// What a refresh must change: ids on screen that the server no longer returns
+// (deleted), and returned messages that are not on screen yet. History older
+// than the returned page stays where it is.
+function chatDiff(domIds, messages) {
+  const returned = new Set(messages.map((m) => m.id));
+  const onScreen = new Set(domIds);
+  const floor = messages.length ? Math.min(...returned) : 0;
+  return {
+    remove: domIds.filter((id) => id >= floor && !returned.has(id)),
+    add: messages.filter((m) => !onScreen.has(m.id)),
+  };
+}
+
+// Merge in place instead of rebuilding the list, so reading position, focus and
+// screen-reader announcements are not disturbed by a background refresh.
+function mergeChatMessages(list, messages, full, forceScroll) {
+  const nearBottom = forceScroll || list.scrollHeight - list.scrollTop - list.clientHeight < 80;
+  const nodes = [...list.querySelectorAll(".chat-msg")];
+  const diff = chatDiff(nodes.map((n) => Number(n.dataset.id)), messages);
+  if (full) {
+    const gone = new Set(diff.remove);
+    nodes.filter((n) => gone.has(Number(n.dataset.id))).forEach((n) => n.remove());
+  }
+  diff.add.forEach((m) => {
+    const node = chatMessageNode(m);
+    const later = [...list.querySelectorAll(".chat-msg")].find((n) => Number(n.dataset.id) > m.id);
+    if (later) list.insertBefore(node, later); else list.append(node);
   });
-  if (replace || nearBottom) list.scrollTop = list.scrollHeight;
+  messages.forEach((m) => { chatState.lastId = Math.max(chatState.lastId, m.id); });
+
+  const empty = list.querySelector(".chat-empty");
+  if (list.querySelector(".chat-msg")) { if (empty) empty.remove(); }
+  else if (!empty) list.append(mk("p", "hint chat-empty", "No messages yet. Say hi."));
+  if (nearBottom) list.scrollTop = list.scrollHeight;
 }
 
 function chatMessageNode(m) {

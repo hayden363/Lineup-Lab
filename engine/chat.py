@@ -6,8 +6,12 @@ the caller has already authenticated the user. Raises ChatError with the HTTP
 status the API should return.
 """
 
+import re
 import secrets
 import time
+
+import psycopg
+import requests
 
 from . import db
 from . import sleeper as sleeper_layer
@@ -16,6 +20,9 @@ MAX_BODY = 500
 PAGE_SIZE = 50
 CHALLENGE_TTL = 15 * 60
 MAX_MUTE_MINUTES = 7 * 24 * 60
+# zero-width and soft-hyphen characters that render as nothing; a body made only
+# of these (and whitespace) would post an invisible message
+_INVISIBLE = re.compile(r"[\s\u00ad\u200b-\u200f\u2060-\u2064\ufeff]")
 
 
 class ChatError(Exception):
@@ -47,9 +54,12 @@ def require_member(user_id, platform, league_id):
 
 
 def add_member(user_id, platform, league_id, external_id, role="member"):
-    """The first member of a league becomes its moderator; nobody can promote
-    themselves through `role` (it is ignored after the first member)."""
+    """Add a verified member. `role` is trusted — only server code calls this,
+    and it passes "moderator" solely for the league's commissioner as reported
+    by Sleeper. A per-league advisory lock serialises concurrent joins."""
+    role = role if role in ("member", "moderator") else "member"
     with db._conn() as c:
+        c.execute("SELECT pg_advisory_xact_lock(hashtext(%s))", (f"{platform}:{league_id}",))
         c.execute(
             "SELECT user_id FROM league_chat_members "
             "WHERE platform = %s AND league_id = %s AND external_id = %s",
@@ -58,17 +68,15 @@ def add_member(user_id, platform, league_id, external_id, role="member"):
         taken = c.fetchone()
         if taken and taken["user_id"] != user_id:
             raise ChatError("That Sleeper team is already linked to another Lineup Lab account.", 409)
-        c.execute(
-            "SELECT 1 FROM league_chat_members WHERE platform = %s AND league_id = %s LIMIT 1",
-            (platform, league_id),
-        )
-        assigned = "member" if c.fetchone() else "moderator"
-        c.execute(
-            "INSERT INTO league_chat_members (user_id, platform, league_id, external_id, role, joined_at) "
-            "VALUES (%s, %s, %s, %s, %s, %s) "
-            "ON CONFLICT (user_id, platform, league_id) DO NOTHING",
-            (user_id, platform, league_id, external_id, assigned, time.time()),
-        )
+        try:
+            c.execute(
+                "INSERT INTO league_chat_members (user_id, platform, league_id, external_id, role, joined_at) "
+                "VALUES (%s, %s, %s, %s, %s, %s) "
+                "ON CONFLICT (user_id, platform, league_id) DO NOTHING",
+                (user_id, platform, league_id, external_id, role, time.time()),
+            )
+        except psycopg.errors.UniqueViolation:
+            raise ChatError("That Sleeper team is already linked to another Lineup Lab account.", 409)
         c.execute(
             "SELECT user_id, role, external_id FROM league_chat_members "
             "WHERE user_id = %s AND platform = %s AND league_id = %s",
@@ -107,26 +115,35 @@ def verify_sleeper_owner(user_id, league_id, token):
     """Prove the caller owns a team in this Sleeper league: their one-time token
     must appear in some member's team name. Sleeper has no login to check, so a
     typed username would prove nothing — editing a team name needs the account.
-    Returns that Sleeper user's id (stored as external_id)."""
+    Returns {"external_id": the matched Sleeper user_id, "is_commissioner": bool}."""
     needle = (token or "").strip().lower()
     if not needle:
         raise ChatError("Put your code in your Sleeper team name first.", 400)
-    users = sleeper_layer.get_users(league_id, force=True)
-    match = next(
-        (u for u in users if needle in ((u.get("metadata") or {}).get("team_name") or "").lower()),
-        None,
-    )
+    try:
+        users = sleeper_layer.get_users(league_id, force=True)
+    except (requests.RequestException, OSError, ValueError):
+        users = None
+    if not isinstance(users, list):
+        raise ChatError("Couldn't reach Sleeper for that league. Try again in a minute.", 502)
+
+    def team_name(u):
+        name = (u.get("metadata") or {}).get("team_name")
+        return name.lower() if isinstance(name, str) else ""
+
+    match = next((u for u in users if needle in team_name(u)), None)
     if match is None:
         raise ChatError("Couldn't find your code in any team name in that league. "
                         "Save it in Sleeper, then try again.", 400)
     if not consume_challenge(user_id, "sleeper", league_id, token.strip()):
         raise ChatError("That code expired or isn't yours. Ask for a new one.", 400)
-    return str(match["user_id"])
+    return {"external_id": str(match["user_id"]), "is_commissioner": match.get("is_owner") is True}
 
 
 def post_message(user_id, platform, league_id, body):
     text = (body or "").strip()
-    if not text:
+    if "\x00" in text:
+        raise ChatError("That message has a character we can't send.", 400)
+    if not _INVISIBLE.sub("", text):
         raise ChatError("Write something first.", 400)
     if len(text) > MAX_BODY:
         raise ChatError(f"Messages are limited to {MAX_BODY} characters.", 400)
