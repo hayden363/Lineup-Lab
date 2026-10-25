@@ -1279,7 +1279,7 @@ def api_chat_join(req: ChatJoin, user=Depends(require_user)):
 @app.get("/api/chat/messages", dependencies=[Depends(chat_poll_limit)])
 def api_chat_messages(platform: str = "sleeper", league_id: str = Query(...), after: str = "0",
                       user=Depends(require_user)):
-    member = _chat(chat_layer._require_member, user["id"], platform, league_id)
+    member = _chat(chat_layer.require_member, user["id"], platform, league_id)
     try:
         after_id = max(0, int(after))
     except ValueError:

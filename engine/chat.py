@@ -39,7 +39,7 @@ def is_member(user_id, platform, league_id):
     return get_member(user_id, platform, league_id) is not None
 
 
-def _require_member(user_id, platform, league_id):
+def require_member(user_id, platform, league_id):
     member = get_member(user_id, platform, league_id)
     if member is None:
         raise ChatError("Join this league's chat first.", 403)
@@ -130,7 +130,7 @@ def post_message(user_id, platform, league_id, body):
         raise ChatError("Write something first.", 400)
     if len(text) > MAX_BODY:
         raise ChatError(f"Messages are limited to {MAX_BODY} characters.", 400)
-    member = _require_member(user_id, platform, league_id)
+    member = require_member(user_id, platform, league_id)
     if member["muted_until"] and member["muted_until"] > time.time():
         raise ChatError("You're muted in this chat for now.", 403)
     with db._conn() as c:
@@ -182,7 +182,7 @@ def delete_message(actor_id, message_id):
 
 def report_message(reporter_id, message_id):
     msg = _message_row(message_id)
-    _require_member(reporter_id, msg["platform"], msg["league_id"])
+    require_member(reporter_id, msg["platform"], msg["league_id"])
     with db._conn() as c:
         c.execute(
             "INSERT INTO league_message_reports (message_id, reporter_id, created_at) "
@@ -192,7 +192,7 @@ def report_message(reporter_id, message_id):
 
 
 def mute_member(actor_id, target_user_id, platform, league_id, minutes):
-    actor = _require_member(actor_id, platform, league_id)
+    actor = require_member(actor_id, platform, league_id)
     if actor["role"] != "moderator":
         raise ChatError("Only a moderator can mute.", 403)
     if not 1 <= minutes <= MAX_MUTE_MINUTES:
