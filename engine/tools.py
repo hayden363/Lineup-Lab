@@ -15,7 +15,7 @@ import pandas as pd
 
 from . import lineup as lineup_layer
 from . import profile
-from . import context, correlation, data, db, decision, kdef_model, play_prob, draft_runs, history, trade_engine, locks, trade_reasons, defense_scoring, kicker_scoring, role_baseline, sleeper, waivers
+from . import context, correlation, data, db, decision, kdef_model, schemas, play_prob, draft_runs, history, trade_engine, locks, trade_reasons, defense_scoring, kicker_scoring, role_baseline, sleeper, waivers
 from .board import (POSITIONS, build_board, load_bundle, rest_of_season_value,
                      project_vs)
 from .scoring import apply_scoring
@@ -114,6 +114,25 @@ def _team_on_bye(bundle, team, week):
     return byes.get(team) == int(week)
 
 
+def _head_to_head(gsis_id, opp, scoring, bundle, baseline):
+    """({"factor", "meetings", "avg", "season_avg"}) for his own record against `opp` over the last two seasons and
+    this one (engine/history.h2h_factor), or None with no usable history. The factor is small by design: see the
+    note on H2H_SHRINK in engine/history.py."""
+    season, wk = bundle.get("season"), bundle.get("wk")
+    if not opp or not gsis_id or season is None or not history.available():
+        return None
+    games = history.player_games(gsis_id, scoring, season)
+    mine = wk[wk["player_id"] == gsis_id] if wk is not None else []
+    if len(mine):
+        scored, _ = apply_scoring(mine, scoring)
+        games = games + [{"season": season, "week": int(r.week), "opponent": r.opponent_team, "points": float(r.fpts_active)}
+                         for r in scored.itertuples(index=False) if isinstance(getattr(r, "opponent_team", None), str)]
+    meet = history.versus(games, opp, current=season)
+    if not meet:
+        return None
+    return {"factor": history.h2h_factor(games, opp, baseline, current=season), "meetings": meet["games"], "avg": meet["avg"]}
+
+
 def _opponent_adjusted_proj_full(board, gsis_id, pos, bundle, scoring, week=None):
     """Same real computation as _opponent_adjusted_proj below, also
     returning the real injury-factor disclosure detail behind PROJ (None,
@@ -132,7 +151,9 @@ def _opponent_adjusted_proj_full(board, gsis_id, pos, bundle, scoring, week=None
         opp, _ = data.next_opponent(bundle["schedule"], recent_team, week)
     if opp:
         projected = project_vs(row, pos, opp, bundle=bundle, scoring=scoring)
-        proj = round(float(projected["PROJ"].iloc[0]), 1)
+        proj = float(projected["PROJ"].iloc[0])
+        h2h = _head_to_head(gsis_id, opp, scoring, bundle, proj)
+        proj = round(proj * (h2h["factor"] if h2h else 1.0), 1)
         detail = (_clean_num(projected["injury_factor"].iloc[0]), _clean_num(projected["injury_sample_n"].iloc[0]))
     else:
         proj = round(float(rest_of_season_value(row, pos, bundle=bundle, scoring=scoring).iloc[0]), 1)
@@ -524,15 +545,18 @@ def start_sit(player_ids, opponents=None, season=None, scoring=None, mode="balan
         # the projection and its floor/ceiling alike.
         ctx = context.game_context(bundle["schedule"], row.get("recent_team"), wk_no) if wk_no else None
         env_f, env_notes = context.environment_factor(pos, ctx, _clean_num(row.get("target_share")))
+        h2h = _head_to_head(pid, opp, scoring, bundle, proj) if opp and not on_bye else None
+        h2h_f = h2h["factor"] if h2h else 1.0
         base_proj = proj
-        proj = proj * env_f
+        proj = proj * env_f * h2h_f
         floor_v, ceil_v = _clean_num(row.get("floor")), _clean_num(row.get("ceiling"))
-        floor_v = floor_v * env_f if floor_v is not None else None
-        ceil_v = ceil_v * env_f if ceil_v is not None else None
+        floor_v = floor_v * env_f * h2h_f if floor_v is not None else None
+        ceil_v = ceil_v * env_f * h2h_f if ceil_v is not None else None
         usage = context.usage_trend(bundle["wk"], pid, pos)
         spread = (ceil_v - floor_v) if (floor_v is not None and ceil_v is not None) else None
         results.append({
             "base_proj": base_proj, "environment": {"factor": env_f, "notes": env_notes, "game": ctx},
+            "head_to_head": h2h,
             "usage": usage, "cv": (spread / proj if spread is not None and proj else None),
             "player_id": pid, "position": pos,
             "player_display_name": row.get("player_display_name"),
@@ -1853,8 +1877,11 @@ def _trade_setup(league_id, scoring=None, season=None):
 
 
 def _public_player(p):
-    return {k: p.get(k) for k in ("player_id", "name", "player_display_name", "position", "recent_team",
-                                  "headshot_url", "value", "trade", "tier", "injury_status", "bye")}
+    out = {k: p.get(k) for k in ("player_id", "name", "player_display_name", "position", "recent_team",
+                                 "headshot_url", "value", "trade", "tier", "injury_status", "bye")}
+    # `value` is projected points per game and `trade` is the 0-100 PVS-based trade value; say so by name
+    out.update(schemas.value_fields({"player_display_name": out["name"], "PROJ": p.get("value"), "PVS": p.get("trade")}))
+    return out
 
 
 def _trade_setup_espn(league_id, scoring=None, season=None, year=None, espn_s2=None, swid=None):

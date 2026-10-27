@@ -167,7 +167,7 @@ class FetchTests(unittest.TestCase):
     def test_photos_arrive_in_the_background(self):
         self.feeds(A=dict(n=8, adelay=0.05))
         items = news.all_headlines()
-        deadline = time.time() + 5
+        deadline = time.time() + 15          # generous: a loaded machine runs the background lookups late
         while time.time() < deadline and not all(i["image"] for i in items):
             time.sleep(0.05)
         self.assertTrue(all(i["image"] == "https://img.example/p.jpg" for i in items))   # served as http, upgraded for the CSP

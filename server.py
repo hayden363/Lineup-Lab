@@ -51,6 +51,7 @@ from engine import espn as espn_layer
 from engine import external_projections as external_projections_layer
 from engine import league_trades as league_trades_layer
 from engine import boxscore as boxscore_layer
+from engine import schemas
 from engine import live_scores as live_scores_layer
 from engine import locks
 from engine import waivers as waivers_layer
@@ -616,7 +617,7 @@ def _overall_board_response(limit, teams, superflex, scoring):
     board = overall_board(scoring=scoring, league=league)
     cols = [c for c in _OVERALL_COLUMNS if c in board.columns]
     out = board.head(limit)[cols].reset_index()
-    records = _clean(out.to_dict(orient="records"))
+    records = schemas.with_value_fields(_clean(out.to_dict(orient="records")))
     bundle = load_bundle()
     return {"season": bundle["season"], "week": upcoming_week(bundle["schedule"]),
             "position": "ALL", "count": len(records),
@@ -654,7 +655,7 @@ def api_board(
 
     board = board.head(limit).reset_index()
     board.insert(0, "rank", range(1, len(board) + 1))
-    records = _clean(board.to_dict(orient="records"))
+    records = schemas.with_value_fields(_clean(board.to_dict(orient="records")))
     return {"season": bundle["season"], "week": upcoming_week(bundle["schedule"]),
             "position": pos, "opponent": opp, "count": len(records),
             "matchup_breakdown": breakdown, "players": records}
