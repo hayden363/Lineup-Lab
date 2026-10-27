@@ -4527,50 +4527,85 @@ function initNews() {
 // Real publisher photos (RSS enclosure, or the article's own og:image —
 // see engine/news.py) — a headline whose image fails to load just drops
 // back to a text-only card instead of showing a broken image.
+function newsTagsHtml(it) {
+  if (it.match_kind === "team") {
+    return `<div class="news-matched"><span class="tag soft team">Team news</span>${(it.matched_teams || []).map((t) => `<span class="tag soft">${esc(t)}</span>`).join("")}</div>`;
+  }
+  return it.matched_players && it.matched_players.length
+    ? `<div class="news-matched">${it.matched_players.map((m) => `<span class="tag soft">${esc(m.name)}</span>`).join("")}</div>` : "";
+}
+
 function newsCardHtml(it, featured, i) {
+  // The story's own photo when we have it; until then (or when the feed has none) the headshot of the player it
+  // is about, else his team's logo, so every card has a picture on first paint.
+  const src = it.image || it.fallback_image;
+  const isFallback = !it.image && !!it.fallback_image;
   return `<a class="news-card${featured ? " featured" : ""}" href="${safeUrl(it.link)}" target="_blank" rel="noopener noreferrer" style="animation-delay:${Math.min(i, 8) * 50}ms">
-    <div class="news-img-wrap${it.image ? "" : " no-image"}">
-      ${it.image ? `<img src="${proxyImg(it.image)}" alt="" loading="lazy" data-fb-noimage-wrap="1">` : ""}
+    <div class="news-img-wrap${src ? "" : " no-image"}${isFallback ? " is-fallback" : ""}">
+      ${src ? `<img src="${proxyImg(src)}" alt="" loading="lazy" data-fb-noimage-wrap="1">` : ""}
       ${featured ? `<span class="news-badge">FEATURED</span>` : ""}
     </div>
     <div class="news-body">
       <div class="news-meta"><span>${esc(it.source)}</span><span>·</span><span>${esc(it.published)}</span></div>
-      ${it.matched_players && it.matched_players.length ? `<div class="news-matched">${it.matched_players.map((m) => `<span class="tag soft">${esc(m.name)}</span>`).join("")}</div>` : ""}
+      ${newsTagsHtml(it)}
       <div class="news-title">${esc(it.title)}</div>
       <div class="news-summary">${esc(it.summary)}</div>
     </div>
   </a>`;
 }
 
+function renderNews(data, scope) {
+  const list = $("#news-list");
+  const src = (data.sources || []).join(", ");
+  if (data.requires_team) {
+    $("#news-hint").textContent = `Sign in and connect a Sleeper team to see ${scope === "opponent" ? "opponent" : "your team's"} news.`;
+    list.innerHTML = `<div class="empty">Connect a league in Settings to unlock this tab.</div>`;
+    return;
+  }
+  if (scope === "team") {
+    $("#news-hint").textContent = `${data.team_name ? `"${data.team_name}"` : "Your roster"}: stories naming your players, then news about their teams${src ? ` (${src})` : ""}.`;
+  } else if (scope === "opponent") {
+    $("#news-hint").textContent = data.team_name ? `This week's opponent, "${data.team_name}"${src ? ` (${src})` : ""}.` : "This week's opponent.";
+  } else {
+    $("#news-hint").textContent = `Every headline from ${src || "the NFL feeds"}; ones about someone in your league come first.`;
+  }
+  if (data.message) { list.innerHTML = `<div class="empty">${esc(data.message)}</div>`; return; }
+  if (!data.items.length) {
+    list.innerHTML = `<div class="empty">No headlines about your players or their teams right now. Check back later.</div>`;
+    return;
+  }
+  // The big FEATURED slot is for a story's own photo; a stand-in headshot or logo would just be blown up.
+  list.innerHTML = data.items.map((it, i) => newsCardHtml(it, i === 0 && it.match_kind !== "team" && !!it.image, i)).join("");
+}
+
+// Last answer per tab, kept for a few minutes so switching tabs (or coming back) paints at once while a
+// fresh copy loads behind it.
+const NEWS_CLIENT_TTL = 5 * 60 * 1000;
+
 async function loadNews() {
   const list = $("#news-list");
   const scope = state.newsScope;
-  list.innerHTML = `<div class="loading">Loading headlines…</div>`;
+  // keyed by who is looking and at which team, so a sign-out or a league switch never shows someone else's stories
+  const t = (typeof activeTeam === "function" && activeTeam()) || {};
+  const key = `${state.user ? state.user.id : 0}|${t.league_id || ""}|${t.roster_id || ""}|${scope}`;
+  state.newsCache = state.newsCache || {};
+  const cached = state.newsCache[key] && Date.now() - state.newsCache[key].at < NEWS_CLIENT_TTL ? state.newsCache[key] : null;
+  if (cached) renderNews(cached.data, scope);
+  else list.innerHTML = `<div class="loading">Loading headlines…</div>`;
   try {
     const data = await api(`/api/news?scope=${scope}`);
-    if (data.requires_team) {
-      $("#news-hint").textContent = `Sign in and connect a Sleeper team to see ${scope === "opponent" ? "opponent" : "your team's"} news.`;
-      list.innerHTML = `<div class="empty">Connect a league in Settings to unlock this tab.</div>`;
-      return;
+    state.newsCache[key] = { at: Date.now(), data };
+    if (state.newsScope === scope) renderNews(data, scope);     // the user may have switched tabs meanwhile
+    // Photos are looked up in the background after the first download (engine/news.py), so on a cold server
+    // some cards still carry a stand-in headshot/logo. Look again once, a few seconds later, to swap in the real photos.
+    state.newsPhotoRetry = state.newsPhotoRetry || {};
+    const items = data.items || [];
+    if (items.filter((x) => !x.image).length >= Math.max(3, items.length * 0.2) && !state.newsPhotoRetry[key]) {
+      state.newsPhotoRetry[key] = true;
+      setTimeout(() => { if (state.tab === "news" && state.newsScope === scope) loadNews(); }, 6000);
     }
-    if (scope === "team") {
-      $("#news-hint").textContent = data.team_name ? `Filtered to "${data.team_name}".` : `Filtered to your roster.`;
-    } else if (scope === "opponent") {
-      $("#news-hint").textContent = data.team_name ? `Filtered to this week's opponent, "${data.team_name}".` : "This week's opponent.";
-    } else {
-      $("#news-hint").textContent = `Every real NFL headline from ESPN & CBS Sports RSS — ones about someone in your league are surfaced first.`;
-    }
-    if (data.message) {
-      list.innerHTML = `<div class="empty">${esc(data.message)}</div>`;
-      return;
-    }
-    if (!data.items.length) {
-      list.innerHTML = `<div class="empty">No matching headlines right now — check back later.</div>`;
-      return;
-    }
-    list.innerHTML = data.items.map((it, i) => newsCardHtml(it, i === 0, i)).join("");
   } catch (e) {
-    list.innerHTML = `<div class="empty">${esc(e.message)}</div>`;
+    if (!cached && state.newsScope === scope) list.innerHTML = `<div class="empty">${esc(e.message)}</div>`;
   }
 }
 

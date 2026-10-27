@@ -8,6 +8,8 @@ matchup-aware board is the single source of truth for every decision
 surface in the app.
 """
 
+import time
+
 import numpy as np
 import pandas as pd
 
@@ -1063,16 +1065,65 @@ def league_all_player_names(league_id, season=None, scoring=None):
     decide who's a real enough person to match a headline against."""
     snap = sleeper.league_snapshot(league_id)
     bundle = load_bundle(season)
-    name_by_pid = bundle["wk"].sort_values("week").groupby("player_id")["player_display_name"].last().to_dict()
+    cols = [c for c in ("player_display_name", "recent_team", "headshot_url") if c in bundle["wk"].columns]
+    last = bundle["wk"].sort_values("week").groupby("player_id")[cols].last()
+    names, teams = last["player_display_name"].to_dict(), last["recent_team"].to_dict()
+    shots = last["headshot_url"].to_dict() if "headshot_url" in last.columns else {}
     seen = {}
     for team in snap["teams"]:
         for pid in team["player_ids"]:
             if pid in seen:
                 continue
-            name = name_by_pid.get(pid)
+            name = names.get(pid)
             if name:
-                seen[pid] = {"player_id": pid, "player_display_name": name}
+                seen[pid] = {"player_id": pid, "player_display_name": name, "recent_team": teams.get(pid),
+                             "headshot_url": shots.get(pid)}
     return list(seen.values())
+
+
+_NEWS_ROSTER_CACHE = {}
+NEWS_ROSTER_TTL = 60
+
+
+def news_rosters(league_id, roster_id, week=None, season=None):
+    """My roster and this week's head-to-head opponent's, as just names and NFL teams: all the
+    news filter needs. my_team() answers the same question but also projects every player and
+    runs the matchup pipeline, which the Team and Opponent news tabs paid for on every tab
+    switch. Same week and opponent rules as my_team(); cached briefly per (league, roster, week)."""
+    key = (league_id, roster_id, week)
+    hit = _NEWS_ROSTER_CACHE.get(key)
+    if hit and time.time() - hit[0] < NEWS_ROSTER_TTL:
+        return hit[1]
+    snap = sleeper.league_snapshot(league_id)
+    by_roster = {t["roster_id"]: t for t in snap["teams"]}
+    mine = by_roster.get(roster_id)
+    if mine is None:
+        raise ValueError(f"roster_id {roster_id} not found in league {league_id}")
+    state = sleeper.get_nfl_state()
+    if week is None:
+        week = state.get("week") if state.get("season_type") in ("regular", "post") and state.get("week") else 1
+    opp = None
+    try:
+        for pair in sleeper.matchups_for_week(league_id, week):
+            if roster_id in pair["roster_ids"]:
+                others = [r for r in pair["roster_ids"] if r != roster_id]
+                opp = by_roster.get(others[0]) if others else None
+                break
+    except Exception:
+        opp = None
+    wk = load_bundle(season)["wk"]
+    cols = [c for c in ("player_display_name", "recent_team", "headshot_url") if c in wk.columns]
+    last = wk.sort_values("week").groupby("player_id")[cols].last()
+
+    def card(t):
+        return {"team_name": t["team_name"],
+                "players": [{"player_id": pid, "player_display_name": last.at[pid, "player_display_name"],
+                             "recent_team": last.at[pid, "recent_team"],
+                             "headshot_url": last.at[pid, "headshot_url"] if "headshot_url" in last.columns else None}
+                            for pid in t["player_ids"] if pid in last.index]}
+    out = {"nfl_week": week, "my_team": card(mine), "opponent": card(opp) if opp else None}
+    _NEWS_ROSTER_CACHE[key] = (time.time(), out)
+    return out
 
 
 def league_team_list(league_id):

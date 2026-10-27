@@ -4908,3 +4908,10 @@ button.live-score-card:hover { border-color: var(--accent-dim); }
 .gb-head { display: flex; justify-content: space-between; gap: 8px; font-weight: 600; font-size: 13px; }
 .gb-pts { color: var(--accent); font-family: var(--mono); }
 .gb-line { font-size: 12px; margin-top: 2px; }
+
+.news-matched .tag.team { opacity: 0.75; }
+
+/* A stand-in picture (player headshot or team logo) rather than the story's own photo: show the whole face / logo
+   instead of cropping it like a 16:9 article photo. */
+.news-card .news-img-wrap.is-fallback { background: radial-gradient(circle at 50% 30%, var(--panel-2), var(--panel)); }
+.news-card .news-img-wrap.is-fallback img { object-fit: contain; object-position: center bottom; padding: 6px 0 0; }
