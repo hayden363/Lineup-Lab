@@ -1671,6 +1671,13 @@ def _app_js():
     return FileResponse("static/app.js", media_type="text/javascript", headers={"Cache-Control": "no-cache"})
 
 
+# The theme files are correctness-critical on every load for the same reason: theme-boot.js runs before first paint.
+for _theme_js in ("team-themes.js", "theme-boot.js", "theme.js"):
+    def _theme_script(_f=_theme_js):
+        return FileResponse(f"static/{_f}", media_type="text/javascript", headers={"Cache-Control": "no-cache"})
+    app.add_api_route(f"/{_theme_js}", _theme_script, methods=["GET"], include_in_schema=False)
+
+
 @app.get("/style.css", include_in_schema=False)
 def _style_css():
     return FileResponse("static/style.css", media_type="text/css", headers={"Cache-Control": "no-cache"})

@@ -11,9 +11,9 @@
 // still updates the cache on every successful fetch, so offline mode
 // stays reasonably fresh too — it just never wins over a live network.
 
-const CACHE = "lineup-lab-shell-v5";
+const CACHE = "lineup-lab-shell-v6";
 const SHELL = [
-  "/", "/style.css", "/app.js", "/chat.js",
+  "/", "/style.css", "/app.js", "/chat.js", "/team-themes.js", "/theme-boot.js", "/theme.js",
   "/icons/icon-192.png", "/icons/icon-512.png", "/icons/apple-touch-icon.png",
 ];
 
