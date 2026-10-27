@@ -10,7 +10,7 @@ Each player is valued by the same win-condition lens Start/Sit uses
 (engine/decision.mode_value): the average for "balanced", mostly the 10th
 percentile for "safe", mostly the 90th for "upside". A player who is ruled out
 or on a bye is worth 0. Slots whose game has already kicked off keep their
-occupant, exactly as engine/lineup.best_lineup does.
+occupant.
 
 Honest limit: maximising the sum of these values is not the same as
 maximising the chance of winning your matchup. It ranks lineups by the lens
