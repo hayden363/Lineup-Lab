@@ -50,7 +50,6 @@ from engine import db
 from engine import espn as espn_layer
 from engine import external_projections as external_projections_layer
 from engine import league_trades as league_trades_layer
-from engine import lineup as lineup_layer
 from engine import boxscore as boxscore_layer
 from engine import live_scores as live_scores_layer
 from engine import locks
@@ -1347,7 +1346,7 @@ def api_my_team(week: Optional[int] = Query(None, ge=1, le=25),
     return _clean(result)
 
 
-# ------------------------------------------------------------- weekly lineup ----
+# --------------------------------------------------- lineup inputs (Start/Sit lineup advisor) ----
 def _lineup_inputs(result):
     """(slots, starter_ids, players_by_id) from a my_team() result."""
     roster = result["my_team"]["players"]
@@ -1357,58 +1356,6 @@ def _lineup_inputs(result):
                                 "team": p.get("recent_team"), "PROJ": p.get("PROJ") or 0.0,
                                 "injury_status": p.get("injury_status")} for p in roster}
     return slots, [p["player_id"] for p in starters], players
-
-
-def _lineup_response(result, lineup_result):
-    return {"week": result["nfl_week"], "league_name": result.get("league_name"), **lineup_result}
-
-
-@app.get("/api/lineup")
-def api_lineup(week: Optional[int] = Query(None, ge=1, le=25),
-               scoring: Optional[dict] = Depends(scoring_from_query), user=Depends(require_user)):
-    """This week's lineup with each slot's kickoff time, lock and bye state,
-    plus the bench so the page can offer swaps."""
-    _, result = _load_my_team(user, week, scoring)
-    slots, starter_ids, players = _lineup_inputs(result)
-    schedule = load_bundle()["schedule"]
-    wk = result["nfl_week"]
-    lineup = lineup_layer.build_lineup(slots, starter_ids, players, schedule, wk)
-    bench = []
-    for p in result["my_team"]["players"]:
-        if p.get("is_starter"):
-            continue
-        st = locks.lock_status(schedule, p.get("recent_team"), wk)
-        bench.append({"player_id": p["player_id"], "name": p.get("player_display_name"), "position": p.get("position"),
-                      "team": p.get("recent_team"), "PROJ": p.get("PROJ") or 0.0, "headshot_url": p.get("headshot_url"), **st})
-    return _clean({"week": wk, "league_name": result.get("league_name"), "lineup": lineup, "bench": bench,
-                   "total_proj": round(sum(r["PROJ"] for r in lineup), 1)})
-
-
-class LineupCheck(BaseModel):
-    week: Optional[int] = None
-    proposed: List[Optional[str]]
-    scoring: Optional[dict] = None
-
-
-@app.post("/api/lineup/check")
-def api_lineup_check(req: LineupCheck, user=Depends(require_user)):
-    """Validate a lineup you built here against the real kickoff locks."""
-    _, result = _load_my_team(user, req.week, req.scoring)
-    slots, starter_ids, players = _lineup_inputs(result)
-    schedule = load_bundle()["schedule"]
-    return _clean(_lineup_response(result, lineup_layer.validate(slots, req.proposed, starter_ids, players,
-                                                                 schedule, result["nfl_week"])))
-
-
-@app.get("/api/lineup/best")
-def api_lineup_best(week: Optional[int] = Query(None, ge=1, le=25),
-                    scoring: Optional[dict] = Depends(scoring_from_query), user=Depends(require_user)):
-    """The highest-projected legal lineup: locked slots stay, byes project 0."""
-    _, result = _load_my_team(user, week, scoring)
-    slots, starter_ids, players = _lineup_inputs(result)
-    schedule = load_bundle()["schedule"]
-    return _clean(_lineup_response(result, lineup_layer.best_lineup(slots, starter_ids, players, schedule,
-                                                                    result["nfl_week"])))
 
 
 @app.get("/api/league/trades")

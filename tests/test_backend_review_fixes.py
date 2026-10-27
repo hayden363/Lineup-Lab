@@ -34,16 +34,6 @@ class EspnSlotLabels(unittest.TestCase):
         self.assertTrue(L.eligible("D/ST", "DEF"))
         self.assertFalse(L.eligible("RB/WR/TE", "QB"))
 
-    def test_best_lineup_fills_an_espn_flex_slot(self):
-        sched = pd.DataFrame([{"week": 7, "game_type": "REG", "gameday": "2099-10-25", "gametime": "13:00",
-                               "home_team": "SF", "away_team": "WAS"}])
-        players = {"r1": {"name": "R1", "position": "RB", "team": "SF", "PROJ": 15},
-                   "w1": {"name": "W1", "position": "WR", "team": "WAS", "PROJ": 12},
-                   "d1": {"name": "SF D/ST", "position": "DEF", "team": "SF", "PROJ": 7}}
-        out = L.best_lineup(["RB", "RB/WR/TE", "D/ST"], [None, None, None], players, sched, 7)
-        self.assertTrue(out["ok"], out["errors"])
-        self.assertEqual([r["player_id"] for r in out["lineup"]], ["r1", "w1", "d1"])
-
 
 # ----------------------------------------------------- start/sit suggestions ----
 class FlexSuggestionLabels(unittest.TestCase):
