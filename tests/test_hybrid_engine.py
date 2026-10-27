@@ -20,6 +20,33 @@ def _wk(rows):
     return pd.DataFrame(rows, columns=["player_id", "position", "week", "targets", "carries", "fpts_active"])
 
 
+# ------------------------------------------------- My Team matches Start/Sit ----
+class MyTeamUsesTheGameEnvironment(unittest.TestCase):
+    """My Team's PROJ must be the number Start/Sit and the player page show: that includes the market view of the
+    game (implied team total, script, roof), which start_sit applies on top of the matchup projection."""
+
+    def proj(self, env_factor, schedule=object()):
+        row = pd.DataFrame({"recent_team": ["DET"], "injury_status": [None], "injury_report": [None]}, index=["arsb"])
+        projected = pd.DataFrame({"PROJ": [16.0], "injury_factor": [1.0], "injury_sample_n": [None]})
+        with mock.patch.object(tools, "project_vs", return_value=projected), \
+                mock.patch.object(tools.data, "next_opponent", return_value=("MIN", 8)), \
+                mock.patch.object(tools, "_head_to_head", return_value=None), \
+                mock.patch.object(tools.context, "game_context", return_value={"week": 8}) as gc, \
+                mock.patch.object(tools.context, "environment_factor", return_value=(env_factor, [])):
+            out = tools._opponent_adjusted_proj_full(row, "arsb", "WR", {"schedule": schedule}, None)[0]
+        return out, gc
+
+    def test_a_high_scoring_spot_lifts_the_projection(self):
+        self.assertEqual(self.proj(1.04)[0], 16.6)           # 16.0 x 1.04
+
+    def test_a_low_scoring_spot_lowers_it(self):
+        self.assertEqual(self.proj(0.95)[0], 15.2)
+
+    def test_the_games_week_comes_from_the_schedule_lookup(self):
+        _, gc = self.proj(1.0)
+        self.assertEqual(gc.call_args[0][2], 8)
+
+
 # ------------------------------------------------------------------ injuries ----
 class WeeklyInjuryProjection(unittest.TestCase):
     """Amon-Ra at 17.5 PPG against his real opponent, under each designation."""

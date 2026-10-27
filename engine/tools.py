@@ -144,16 +144,22 @@ def _opponent_adjusted_proj_full(board, gsis_id, pos, bundle, scoring, week=None
     endpoint) keeps getting a bare float and doesn't have to change."""
     row = board.loc[[gsis_id]]
     recent_team = row["recent_team"].iloc[0] if "recent_team" in row.columns else None
-    opp = None
+    opp, game_week = None, None
     if recent_team:
         if _team_on_bye(bundle, recent_team, week):
             return 0.0, (None, None)
-        opp, _ = data.next_opponent(bundle["schedule"], recent_team, week)
+        opp, game_week = data.next_opponent(bundle["schedule"], recent_team, week)
     if opp:
         projected = project_vs(row, pos, opp, bundle=bundle, scoring=scoring)
         proj = float(projected["PROJ"].iloc[0])
         h2h = _head_to_head(gsis_id, opp, scoring, bundle, proj)
-        proj = round(proj * (h2h["factor"] if h2h else 1.0), 1)
+        # The market view of his game (implied team total, script, roof), the same factor Start/Sit and the player
+        # page apply, so My Team shows the number they do.
+        env_f = 1.0
+        if game_week and bundle.get("schedule") is not None:
+            ctx = context.game_context(bundle["schedule"], recent_team, game_week)
+            env_f, _ = context.environment_factor(pos, ctx, _clean_num(row["target_share"].iloc[0]) if "target_share" in row.columns else None)
+        proj = round(proj * env_f * (h2h["factor"] if h2h else 1.0), 1)
         detail = (_clean_num(projected["injury_factor"].iloc[0]), _clean_num(projected["injury_sample_n"].iloc[0]))
     else:
         proj = round(float(rest_of_season_value(row, pos, bundle=bundle, scoring=scoring).iloc[0]), 1)
