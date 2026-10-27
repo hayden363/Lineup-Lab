@@ -404,6 +404,7 @@ function switchTab(tab) {
   activeSection.classList.remove("tab-fade-in");
   void activeSection.offsetWidth; // force reflow so the animation replays every switch
   activeSection.classList.add("tab-fade-in");
+  if (typeof ThemeFX !== "undefined") ThemeFX.tabWipe();
   if (tab !== "draft") stopDraftPolling();
   // chat.js is a separate script: if it failed to load, navigation must still work
   if (tab !== "chat" && typeof stopChatPolling === "function") stopChatPolling();

@@ -210,8 +210,49 @@
     window.setTimeout(function () { if (overlay === el) removeOverlay(); }, 800);   // an older timer never removes a newer overlay
   }
 
-  window.ThemeFX = { renderHero: renderHero, kickoff: kickoff };
+  var SURFACES = ".news-card, .lab-card, .myteam-card, .board-wrap, .tr-card";
+  var glowBound = false;
+
+  // A soft team-colored light that follows a mouse over the main card surfaces. Touch and pen never trigger it,
+  // and moves are coalesced to one update per frame.
+  function initGlow(root) {
+    var host = root || document;
+    if (glowBound || !host.addEventListener) return;
+    glowBound = true;
+    var pending = null;
+    host.addEventListener("pointermove", function (e) {
+      if (e.pointerType !== "mouse" || !TT().current()) return;
+      var el = e.target && e.target.closest ? e.target.closest(SURFACES) : null;
+      if (!el) return;
+      var first = !pending;
+      pending = { el: el, x: e.clientX, y: e.clientY };
+      if (!first) return;
+      window.requestAnimationFrame(function () {
+        var p = pending; pending = null;
+        var r = p.el.getBoundingClientRect();
+        p.el.style.setProperty("--mx", Math.round(p.x - r.left) + "px");
+        p.el.style.setProperty("--my", Math.round(p.y - r.top) + "px");
+      });
+    }, { passive: true });
+  }
+
+  var wipe = null;
+
+  // A 350 ms line across the top edge in the team color whenever the tab changes.
+  function tabWipe() {
+    if (!TT().current() || reduced()) return;
+    if (wipe) { if (wipe.remove) wipe.remove(); wipe = null; }
+    var el = document.createElement("div");
+    el.className = "th-wipe";
+    el.setAttribute("aria-hidden", "true");
+    document.body.appendChild(el);
+    wipe = el;
+    window.setTimeout(function () { if (wipe === el) { if (el.remove) el.remove(); wipe = null; } }, 400);
+  }
+
+  window.ThemeFX = { renderHero: renderHero, kickoff: kickoff, initGlow: initGlow, tabWipe: tabWipe };
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", renderHero);
   else renderHero();
+  initGlow();
 })();

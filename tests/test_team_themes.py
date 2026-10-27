@@ -460,6 +460,50 @@ class AtmosphereTests(unittest.TestCase):
         self.assertIn("th-kick", out["cls"])
 
 
+GLOW_SETUP = """window.__rafs = []; window.requestAnimationFrame = (fn) => { window.__rafs.push(fn); return window.__rafs.length; };
+const listeners = {}; document.addEventListener = (t, fn) => { (listeners[t] = listeners[t] || []).push(fn); };
+const surface = { style: { props: {}, setProperty(k, v) { this.props[k] = v; } }, getBoundingClientRect: () => ({ left: 100, top: 50 }) };
+const target = (hit) => ({ closest(sel) { return hit ? surface : null; } });
+const move = (hit, extra) => (listeners.pointermove || []).forEach((fn) => fn(Object.assign({ pointerType: "mouse", clientX: 130, clientY: 90, target: target(hit) }, extra || {})));
+const flush = () => { const q = window.__rafs; window.__rafs = []; q.forEach((fn) => fn()); };
+"""
+
+
+class InteractionTests(unittest.TestCase):
+    def test_glow_sets_position_vars_for_mouse_only(self):
+        out = run_fx(GLOW_SETUP + """TeamTheme.apply("DET"); ThemeFX.initGlow(); move(true); flush(); const mouse = Object.assign({}, surface.style.props);
+            surface.style.props = {}; move(true, { pointerType: "touch" }); move(true, { pointerType: "pen" }); flush();
+            return { mouse, other: surface.style.props, rafs: window.__rafs.length };""")
+        self.assertEqual(out["mouse"], {"--mx": "30px", "--my": "40px"})
+        self.assertEqual(out["other"], {})
+
+    def test_glow_is_throttled_to_one_frame(self):
+        out = run_fx(GLOW_SETUP + """TeamTheme.apply("DET"); ThemeFX.initGlow(); move(true); move(true, { clientX: 140 }); move(true, { clientX: 150 });
+            const queued = window.__rafs.length; flush(); const x = surface.style.props["--mx"]; move(true); return { queued, x, again: window.__rafs.length };""")
+        self.assertEqual((out["queued"], out["x"], out["again"]), (1, "50px", 1))
+
+    def test_glow_ignores_elements_outside_themed_surfaces(self):
+        out = run_fx(GLOW_SETUP + """TeamTheme.apply("DET"); ThemeFX.initGlow(); move(false); flush(); return { props: surface.style.props, rafs: window.__rafs.length };""")
+        self.assertEqual(out["props"], {})
+
+    def test_glow_does_nothing_without_a_team(self):
+        out = run_fx(GLOW_SETUP + """ThemeFX.initGlow(); move(true); flush(); return surface.style.props;""")
+        self.assertEqual(out, {})
+
+    def test_tab_wipe_is_a_noop_without_a_team_and_under_reduced_motion(self):
+        out = run_fx("""const n0 = document.body.children.length; ThemeFX.tabWipe(); const none = document.body.children.length;
+            TeamTheme.apply("DET"); window.__reduced = true; ThemeFX.tabWipe(); const reduced = document.body.children.length;
+            window.__reduced = false; ThemeFX.tabWipe(); const on = document.body.children.length; ThemeFX.tabWipe(); const twice = document.body.children.length;
+            window.__timers[window.__timers.length - 1].fn(); return { n0, none, reduced, on, twice, gone: document.body.children.length };""")
+        self.assertEqual((out["none"], out["reduced"], out["on"], out["twice"], out["gone"]), (0, 0, 1, 1, 0))
+
+    def test_switch_tab_calls_the_wipe(self):
+        with open(os.path.join(ROOT, "static/app.js")) as f:
+            js = f.read()
+        body = js[js.index("function switchTab"):]
+        self.assertTrue("ThemeFX.tabWipe" in body[:body.index("\n}\n")], "switchTab must call ThemeFX.tabWipe")
+
+
 class AtmosphereWiringTests(WiringTests):
     def test_hero_mount_is_at_the_top_of_the_app_above_every_tab(self):
         html = self.read("static/index.html")
