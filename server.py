@@ -80,6 +80,7 @@ async def lifespan(app: FastAPI):
     # needing a separate cron job/launchd plist. Cancelled cleanly on
     # shutdown rather than left to die mid-fetch.
     task = refresh_scheduler.start()
+    news_layer.warm()   # fill the news cache in the background so the first visitor isn't the one waiting
     try:
         yield
     finally:
@@ -686,7 +687,7 @@ def api_player_news(player_id: str, scoring: Optional[dict] = Depends(scoring_fr
     detail = player_detail(player_id, scoring=scoring)
     if detail is None:
         raise HTTPException(404, "player not found or not enough data")
-    items = news_layer.player_news(detail["player_display_name"], player_id=player_id)
+    items = news_layer.player_news(detail["player_display_name"], player_id=player_id, team=detail.get("recent_team"))
     summary = news_layer.ai_summary_for_player(
         detail["player_display_name"], items,
         position=detail.get("position"), injury_status=detail.get("injury_status"),
@@ -1580,10 +1581,10 @@ def api_news(scope: str = Query("team", pattern="^(team|opponent|league)$"), use
                         league_players = tools.league_all_player_names(active["league_id"])
                 except Exception as e:
                     print(f"[news] couldn't build league name list: {e}")
-        tagged_by_link = {it["link"]: it for it in news_layer.filter_for_players(items, league_players)}
-        ordered = [tagged_by_link.get(it["link"], it) for it in items]
-        ordered.sort(key=lambda it: "matched_players" not in it)  # featured (matched) first, stable otherwise
-        return {"scope": "league", "items": _clean(ordered[:30])}
+        matched = news_layer.filter_for_players(items, league_players)          # strongest match first
+        seen = {it["link"] for it in matched}
+        rest = sorted((it for it in items if it["link"] not in seen), key=lambda it: -(it.get("ts") or 0))
+        return {"scope": "league", "items": _clean((matched + rest)[:40]), "sources": list(news_layer.FEEDS)}
 
     if not user:
         return {"scope": scope, "items": [], "requires_team": True}
@@ -1598,7 +1599,8 @@ def api_news(scope: str = Query("team", pattern="^(team|opponent|league)$"), use
             espn_s2, swid = db.get_espn_secrets(user["id"])
             team = tools.my_team_espn(active["league_id"], int(active["roster_id"]), espn_s2=espn_s2, swid=swid)
         else:
-            team = tools.my_team(active["league_id"], int(active["roster_id"]))
+            # names and teams only; my_team() would project every player just to get these
+            team = tools.news_rosters(active["league_id"], int(active["roster_id"]))
     except Exception as e:
         raise HTTPException(400, str(e))
 
@@ -1606,11 +1608,13 @@ def api_news(scope: str = Query("team", pattern="^(team|opponent|league)$"), use
         if not team["opponent"]:
             return {"scope": "opponent", "team_name": None, "items": [],
                      "message": f"No head-to-head opponent set for week {team['nfl_week']} yet."}
-        filtered = news_layer.filter_for_players(items, team["opponent"]["players"])
-        return {"scope": "opponent", "team_name": team["opponent"]["team_name"], "items": _clean(filtered)}
+        filtered = news_layer.filter_for_players(items, team["opponent"]["players"], include_team_news=True)
+        return {"scope": "opponent", "team_name": team["opponent"]["team_name"], "items": _clean(filtered),
+                "sources": list(news_layer.FEEDS)}
 
-    filtered = news_layer.filter_for_players(items, team["my_team"]["players"])
-    return {"scope": "team", "team_name": team["my_team"]["team_name"], "items": _clean(filtered)}
+    filtered = news_layer.filter_for_players(items, team["my_team"]["players"], include_team_news=True)
+    return {"scope": "team", "team_name": team["my_team"]["team_name"], "items": _clean(filtered),
+            "sources": list(news_layer.FEEDS)}
 
 
 @app.get("/api/live-scores")

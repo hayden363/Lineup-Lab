@@ -4900,3 +4900,5 @@ tr.kbd-click:focus-visible { outline-offset: -2px; }
 .chat-composer { display: flex; gap: 8px; margin-top: 10px; }
 .chat-composer input { flex: 1; padding: 10px 12px; background: var(--panel-2); color: var(--text); border: 1px solid var(--border); border-radius: 6px; font: inherit; }
 .chat-empty { margin: 12px 0; }
+
+.news-matched .tag.team { opacity: 0.75; }
