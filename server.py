@@ -1596,6 +1596,23 @@ def api_news(scope: str = Query("team", pattern="^(team|opponent|league|favorite
             "sources": list(news_layer.FEEDS)}
 
 
+team_rate_limit = rate_limit("team", limit=60, window_seconds=60)
+
+
+@app.get("/api/team/{code}", dependencies=[Depends(team_rate_limit)])
+def api_team(code: str, scoring: Optional[dict] = Depends(scoring_from_query)):
+    """One NFL team's page (engine/team_page.py): record, week-by-week results, next game outlook,
+    team stats, and the roster with next-game projections. Public."""
+    code = code.upper()
+    if code not in news_layer.TEAM_CODES:
+        raise HTTPException(404, "unknown team")
+    page = tools.team_profile(code, scoring=scoring)
+    if page is None:
+        raise HTTPException(404, "unknown team")
+    page["logo"] = news_layer.team_logo(code)
+    return _clean(page)
+
+
 @app.get("/api/live-scores")
 def api_live_scores():
     """Real in-game NFL scores for the current week (see engine/live_scores.py)

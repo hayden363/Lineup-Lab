@@ -27,6 +27,7 @@ import pandas as pd
 import requests
 
 from . import consensus
+from . import news as news_layer
 from .scoring import ScoringSettings, compute_fantasy_points
 
 SUMMARY_URL = "https://site.api.espn.com/apis/site/v2/sports/football/nfl/summary"
@@ -35,6 +36,9 @@ CACHE_MAX = 64            # games kept; the oldest is dropped past this
 _CACHE = {}               # game_id -> (fetched_at, parsed)
 
 SKILL = ("QB", "RB", "WR", "TE")
+GROUP_ORDER = {"QB": 0, "RB": 1, "FB": 1, "WR": 2, "TE": 3, "K": 4, "PK": 4}   # everyone else (defense, line) follows
+_LINE_ORDER = {"QB": ("Passing", "Rushing"), "RB": ("Rushing", "Receiving"), "FB": ("Rushing", "Receiving"),
+               "WR": ("Receiving", "Rushing"), "TE": ("Receiving", "Rushing"), "K": ("Kicking",), "PK": ("Kicking",)}
 _TEAM_ALIAS = {"WSH": "WAS", "LAR": "LA", "JAC": "JAX", "OAK": "LV", "SD": "LAC", "STL": "LA"}
 _GAME_ID = re.compile(r"^\d{6,12}$")
 
@@ -102,6 +106,7 @@ def parse_summary(js):
                 p["stats"].setdefault(cname, {}).update(
                     {k: _num(v) for k, v in _pairs(cat.get("keys"), a.get("stats"))})
         teams.append({"abbr": abbr, "name": t.get("shortDisplayName") or t.get("displayName"),
+                      "logo": news_layer.team_logo(_team(abbr)) or t.get("logo"),
                       "players": list(by_id.values())})
     return {"teams": teams}
 
@@ -150,6 +155,8 @@ def _line(p):
         out.append(("Defense", f"{c.get('totalTackles', 0):.0f} tkl, {c.get('sacks', 0):g} sk"))
     if "fumbles" in s and s["fumbles"].get("fumblesLost"):
         out.append(("Fumbles", f"{s['fumbles']['fumblesLost']:.0f} lost"))
+    pref = _LINE_ORDER.get(p.get("position"), ())
+    out.sort(key=lambda ab: pref.index(ab[0]) if ab[0] in pref else len(pref))     # stable: the rest keep feed order
     return [{"label": a, "text": b} for a, b in out]
 
 
@@ -182,8 +189,9 @@ def annotate(parsed, roster, scoring=None):
                 mine_count += 1
                 mine_points += p["fantasy_points"] or 0.0
             p.pop("stats", None)
-        t["players"].sort(key=lambda p: (not p["mine"], -(p["fantasy_points"] if p["fantasy_points"] is not None else -1e9),
-                                         p.get("name") or ""))
+        # QBs, then RBs, WRs, TEs, kickers, then the rest; best fantasy day first inside each group
+        t["players"].sort(key=lambda p: (GROUP_ORDER.get(p.get("position"), 9),
+                                         -(p["fantasy_points"] if p["fantasy_points"] is not None else -1e9), p.get("name") or ""))
     return {"teams": parsed["teams"], "mine_points": round(mine_points, 1), "mine_count": mine_count}
 
 

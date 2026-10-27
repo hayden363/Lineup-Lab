@@ -4902,12 +4902,25 @@ button.live-score-card:hover { border-color: var(--accent-dim); }
 }
 .gb-teams { display: grid; grid-template-columns: 1fr; gap: 16px; }
 @media (min-width: 640px) { .gb-teams { grid-template-columns: 1fr 1fr; } }
-.gb-player { padding: 8px 10px; border-radius: 8px; border: 1px solid transparent; }
+.gb-team-head { width: 100%; background: none; border-width: 0 0 2px; border-style: solid; color: inherit; font-family: inherit; cursor: pointer; text-align: left; display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 15px; padding: 0 0 8px; border-color: var(--accent-dim); }
+.gb-team-head:hover { border-color: var(--accent); }
+.gb-go { margin-left: auto; color: var(--muted); }
+.gb-teamlogo { width: 32px; height: 32px; object-fit: contain; }
+.gb-group { margin: 14px 0 6px; font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.gb-player { display: flex; gap: 10px; padding: 8px 10px; border-radius: 10px; border: 1px solid transparent; }
 .gb-player + .gb-player { margin-top: 4px; }
-.gb-player.mine { background: rgba(52, 211, 153, 0.10); border-color: var(--accent-dim); }
+.gb-player.mine { background: rgba(52, 211, 153, 0.10); background: color-mix(in srgb, var(--accent) 12%, transparent); border-color: var(--accent-dim); box-shadow: inset 3px 0 0 var(--accent); }
+.gb-photo { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; object-position: top; background: var(--panel-2); flex: none; }
+.gb-main { flex: 1; min-width: 0; }
 .gb-head { display: flex; justify-content: space-between; gap: 8px; font-weight: 600; font-size: 13px; }
-.gb-pts { color: var(--accent); font-family: var(--mono); }
-.gb-line { font-size: 12px; margin-top: 2px; }
+.gb-star { color: var(--accent); }
+.gb-pts { color: var(--accent); font-family: var(--mono); font-size: 15px; }
+.gb-sub { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--muted); margin-top: 1px; }
+.gb-tlogo { width: 14px; height: 14px; object-fit: contain; }
+.gb-line { font-size: 12px; margin-top: 3px; }
+.gb-lbl { display: inline-block; min-width: 62px; margin-right: 4px; font-size: 10px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.gb-rest { margin-top: 12px; }
+.gb-rest summary { cursor: pointer; font-size: 12px; color: var(--muted); padding: 4px 0; }
 
 .news-matched .tag.team { opacity: 0.75; }
 
@@ -4947,27 +4960,26 @@ button.live-score-card:hover { border-color: var(--accent-dim); }
 
 /* ---- team atmosphere (hero band, backdrop, kickoff sweep): only present when a team is chosen ---- */
 #team-hero:empty { display: none; }
-#team-hero { margin: 0 0 16px; }
-.th-band { position: relative; overflow: hidden; border-radius: var(--radius-lg); border: 1px solid var(--border-bright);
-  background: linear-gradient(120deg, var(--panel), var(--panel-2)); box-shadow: var(--shadow-glow); }
-.th-art { position: absolute; inset: -40% -20%; will-change: transform; animation: thDrift 16s ease-in-out infinite alternate;
-  background: linear-gradient(115deg, transparent 18%, rgba(var(--tm-rgb), 0.28) 42%, color-mix(in srgb, var(--team-secondary) 22%, transparent) 58%, transparent 82%); }
-.th-lines { position: absolute; inset: 0; pointer-events: none;
-  background: repeating-linear-gradient(90deg, rgba(255,255,255,0.04) 0 2px, transparent 2px 38px);
-  -webkit-mask-image: linear-gradient(90deg, transparent, #000 25%, #000 75%, transparent);
-  mask-image: linear-gradient(90deg, transparent, #000 25%, #000 75%, transparent); }
-.th-body { position: relative; display: flex; align-items: center; gap: 16px; padding: 14px 20px; }
-.th-logo { width: 56px; height: 56px; object-fit: contain; filter: drop-shadow(0 6px 14px rgba(0,0,0,0.45)); }
-.th-abbr { display: inline-flex; align-items: center; justify-content: center; width: 56px; height: 56px; border-radius: 14px;
+#team-hero { margin: 0 0 10px; }
+/* a small, quiet pill: logo, team name and a link to the team page */
+.th-band { position: relative; display: inline-flex; font: inherit; color: inherit; cursor: pointer; padding: 0; border-radius: 999px;
+  border: 1px solid var(--border-bright); background: var(--panel); transition: border-color .15s ease, background .15s ease; }
+.th-band:hover { border-color: var(--accent); background: var(--panel-2); }
+.th-band:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.th-art, .th-lines { display: none; }
+.th-body { display: flex; align-items: center; gap: 10px; padding: 5px 14px 5px 8px; }
+.th-logo { width: 28px; height: 28px; object-fit: contain; }
+.th-abbr { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 8px; font-size: 11px;
   font-family: var(--mono); font-weight: 800; background: var(--accent); color: var(--on-accent, #0e1b15); }
-.th-text { display: flex; flex-direction: column; line-height: 1.05; }
-.th-city { font-family: var(--mono); font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--muted); }
-.th-name { font-size: 28px; font-weight: 800; color: var(--accent); letter-spacing: 0.01em; }
+.th-text { display: flex; align-items: baseline; gap: 6px; line-height: 1; }
+.th-city { font-family: var(--mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+.th-name { font-size: 14px; font-weight: 700; color: var(--accent); }
+.th-go { font-size: 11px; color: var(--muted); margin-left: 4px; }
 @keyframes thDrift { from { transform: translateX(-4%); } to { transform: translateX(4%); } }
 
 html[data-team] body::before { content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
-  background: radial-gradient(900px 520px at 88% -8%, rgba(var(--tm-rgb), 0.16), transparent 62%),
-              radial-gradient(760px 460px at -8% 108%, color-mix(in srgb, var(--team-secondary) 10%, transparent), transparent 58%); }
+  background: radial-gradient(900px 520px at 88% -8%, rgba(var(--tm-rgb), 0.09), transparent 62%),
+              radial-gradient(760px 460px at -8% 108%, color-mix(in srgb, var(--team-secondary) 6%, transparent), transparent 58%); }
 
 .th-kick { position: fixed; inset: 0; z-index: 9999; pointer-events: none;
   background: linear-gradient(115deg, var(--k1) 0 50%, var(--k2) 50% 100%);
@@ -4978,13 +4990,8 @@ html[data-team] body::before { content: ""; position: fixed; inset: 0; z-index: 
   100% { clip-path: polygon(130% 0, 130% 0, 150% 100%, 100% 100%); opacity: 0; }
 }
 
-@media (max-width: 559px) {
-  .th-body { padding: 8px 14px; gap: 10px; }
-  .th-logo, .th-abbr { width: 32px; height: 32px; }
-  .th-name { font-size: 18px; }
-  .th-city { font-size: 9px; }
-  .th-art, .th-lines { display: none; }
-}
+@media (max-width: 559px) { .th-city, .th-go { display: none; } }
+
 @media (prefers-reduced-motion: reduce) { .th-art { animation: none; } .th-kick { display: none; } }
 
 /* ---- team interactions: cursor glow + tab wipe (themed only) ---- */
@@ -4997,3 +5004,30 @@ html[data-team] .news-card:hover::after, html[data-team] .lab-card:hover::after,
 .th-wipe { position: fixed; top: 0; left: 0; right: 0; height: 3px; z-index: 9998; pointer-events: none; background: linear-gradient(90deg, transparent, var(--accent), var(--team-secondary, var(--accent)), transparent); transform-origin: left; animation: thWipe .35s ease-out forwards; }
 @keyframes thWipe { from { transform: scaleX(0); opacity: 1; } to { transform: scaleX(1); opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .th-wipe { display: none; } html[data-team] .news-card::after, html[data-team] .lab-card::after, html[data-team] .myteam-card::after, html[data-team] .board-wrap::after, html[data-team] .tr-card::after { transition: none; } }
+
+/* ---- team page modal ---- */
+.tp-modal { max-width: 720px; }
+.tp-head { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
+.tp-head h2 { margin: 0; }
+.tp-logo { width: 56px; height: 56px; object-fit: contain; }
+.tp-next { padding: 12px 14px; border-radius: 12px; background: var(--panel-2); border: 1px solid var(--border-bright); margin-bottom: 12px; }
+.tp-next-title { font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.tp-next-main { font-size: 20px; margin: 2px 0; }
+.tp-next-meta { font-size: 12px; color: var(--muted); }
+.tp-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 8px; }
+.tp-stat { padding: 8px; border-radius: 10px; background: var(--panel-2); text-align: center; }
+.tp-stat b { display: block; font-family: var(--mono); font-size: 16px; color: var(--accent); }
+.tp-stat span { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+.tp-games { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; }
+.tp-game { display: grid; grid-template-columns: auto 1fr auto auto; gap: 8px; align-items: center; padding: 6px 10px; border-radius: 8px; background: var(--panel-2); font-size: 12px; border-left: 3px solid var(--border); }
+.tp-game.res-w { border-left-color: var(--pos); } .tp-game.res-l { border-left-color: var(--neg); } .tp-game.res-t { border-left-color: var(--avg); }
+.tp-wk { color: var(--muted); } .tp-score { font-family: var(--mono); }
+.tp-res { font-weight: 800; width: 14px; text-align: center; }
+.res-w .tp-res { color: var(--pos); } .res-l .tp-res { color: var(--neg); } .res-t .tp-res { color: var(--avg); }
+.tp-players { display: grid; gap: 4px; }
+.tp-player { display: flex; align-items: center; gap: 10px; width: 100%; padding: 6px 10px; border-radius: 10px; border: 1px solid transparent; background: var(--panel-2); color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.tp-player:hover { border-color: var(--accent); }
+.tp-photo { width: 34px; height: 34px; border-radius: 50%; flex: none; }
+.tp-pname { flex: 1; font-weight: 600; font-size: 13px; } .tp-pname small { display: block; font-weight: 400; color: var(--muted); font-size: 11px; }
+.tp-pnum { text-align: right; min-width: 42px; } .tp-pnum b { display: block; font-family: var(--mono); font-size: 14px; } .tp-pnum small { font-size: 10px; color: var(--muted); }
+@media (max-width: 559px) { .tp-stats { grid-template-columns: repeat(2, 1fr); } }

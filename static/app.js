@@ -4447,11 +4447,32 @@ async function loadLiveScores() {
   }
 }
 
-function gamePlayerHtml(p) {
+const GB_GROUPS = [["QB", "Quarterbacks"], ["RB", "Running backs"], ["WR", "Wide receivers"], ["TE", "Tight ends"], ["K", "Kickers"]];
+const GB_GROUP_OF = { QB: "QB", RB: "RB", FB: "RB", WR: "WR", TE: "TE", K: "K", PK: "K" };
+
+function gamePlayerHtml(p, team) {
   const pts = p.fantasy_points == null ? "" : `<b class="gb-pts">${FMT.d1(p.fantasy_points)}</b>`;
+  const fb = initialsAvatarUri(p.name);
+  const photo = p.headshot ? `<img class="gb-photo" src="${proxyImg(p.headshot)}" data-fb="${fb}" alt="" loading="lazy">` : `<img class="gb-photo" src="${fb}" alt="">`;
+  const logo = team && team.logo ? `<img class="gb-tlogo" src="${proxyImg(team.logo)}" data-fb-hide="1" alt="">` : "";
   return `<div class="gb-player${p.mine ? " mine" : ""}">
-    <div class="gb-head"><span class="gb-name">${p.mine ? "★ " : ""}${esc(p.name)} <span class="muted">${esc(p.position || "")}</span></span>${pts}</div>
-    ${(p.lines || []).map((l) => `<div class="gb-line"><span class="muted">${esc(l.label)}</span> ${esc(l.text)}</div>`).join("")}
+    ${photo}
+    <div class="gb-main">
+      <div class="gb-head"><span class="gb-name">${p.mine ? '<span class="gb-star" title="On your team">★</span> ' : ""}${esc(p.name)}</span>${pts}</div>
+      <div class="gb-sub">${logo}<span>${esc(p.position || "")} · ${esc(p.team || (team && team.abbr) || "")}</span></div>
+      ${(p.lines || []).map((l) => `<div class="gb-line"><span class="gb-lbl">${esc(l.label)}</span>${esc(l.text)}</div>`).join("")}
+    </div>
+  </div>`;
+}
+
+function gameTeamHtml(t) {
+  const groups = GB_GROUPS.map(([code, label]) => [label, (t.players || []).filter((p) => GB_GROUP_OF[p.position] === code)]).filter(([, ps]) => ps.length);
+  const rest = (t.players || []).filter((p) => !GB_GROUP_OF[p.position]);
+  const logo = t.logo ? `<img class="gb-teamlogo" src="${proxyImg(t.logo)}" data-fb-hide="1" alt="">` : "";
+  return `<div class="gb-team">
+    <button type="button" class="gb-team-head" data-team-page="${esc(t.abbr)}">${logo}<span>${esc(t.name || t.abbr)}</span><span class="gb-go" aria-hidden="true">›</span></button>
+    ${groups.map(([label, ps]) => `<div class="gb-group">${esc(label)}</div>${ps.map((p) => gamePlayerHtml(p, t)).join("")}`).join("") || `<div class="muted">No stats yet.</div>`}
+    ${rest.length ? `<details class="gb-rest"><summary>Defense &amp; other (${rest.length})</summary>${rest.map((p) => gamePlayerHtml(p, t)).join("")}</details>` : ""}
   </div>`;
 }
 
@@ -4461,11 +4482,79 @@ function gameBodyHtml(box) {
   const mineLine = box.mine_count
     ? `<div class="gb-mine-summary">Your players in this game: <b>${box.mine_count}</b> · <b>${FMT.d1(box.mine_points)}</b> fantasy pts</div>`
     : "";
-  return mineLine + `<div class="gb-teams">${teams.map((t) => `<div class="gb-team">
-    <div class="section-label">${esc(t.name || t.abbr)}</div>
-    ${t.players.map(gamePlayerHtml).join("") || `<div class="muted">No stats yet.</div>`}
-  </div>`).join("")}</div>`;
+  return mineLine + `<div class="gb-teams">${teams.map(gameTeamHtml).join("")}</div>`;
 }
+
+// ---- team page: record, next game outlook, weekly results, stats and a roster of clickable player profiles ----
+function teamGameRowHtml(g) {
+  const res = g.result;
+  const score = res ? `${g.team_score}–${g.opp_score}` : "—";
+  return `<div class="tp-game ${res ? "res-" + res.toLowerCase() : "res-pending"}">
+    <span class="tp-wk">Wk ${g.week}</span>
+    <span class="tp-opp">${g.home ? "vs" : "@"} ${esc(g.opponent)}</span>
+    <span class="tp-score">${score}</span>
+    <span class="tp-res">${res || "·"}</span>
+  </div>`;
+}
+
+function teamPageHtml(d) {
+  const th = TeamTheme.get(d.team) || {};
+  const n = d.next_game;
+  const when = (iso) => { const t = new Date(iso + "T12:00:00"); return isNaN(t) ? iso : t.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" }); };
+  const fav = n && n.spread != null ? (n.spread < 0 ? `${esc(d.team)} favored by ${Math.abs(n.spread)}` : n.spread > 0 ? `${esc(n.opponent)} favored by ${n.spread}` : "Pick'em") : "";
+  const outlook = n ? `<div class="tp-next">
+      <div class="tp-next-title">Next game · Week ${n.week} · ${esc(when(n.date))}</div>
+      <div class="tp-next-main">${n.home ? "vs" : "@"} <b>${esc(n.opponent)}</b></div>
+      ${n.implied_total != null ? `<div class="tp-next-meta">${fav ? fav + " · " : ""}Expected score ${FMT.d1(n.implied_total)}–${FMT.d1(n.opp_implied_total)} (total ${FMT.d1(n.total)})</div>` : ""}
+    </div>` : `<div class="tp-next"><div class="tp-next-title">Next game</div><div class="muted">No upcoming game on the schedule.</div></div>`;
+  const s = d.stats || {};
+  const stat = (label, v) => `<div class="tp-stat"><b>${v == null ? "–" : FMT.d1(v)}</b><span>${label}</span></div>`;
+  const players = (d.players || []).map((p) => `<button type="button" class="tp-player" data-player="${esc(p.player_id)}"${n ? ` data-opp="${esc(n.opponent)}"` : ""}>
+      <img class="tp-photo" src="${initialsAvatarUri(p.name)}" alt="">
+      <span class="tp-pname">${esc(p.name)}<small>${esc(p.position)}${p.injury_status ? ` · ${esc(p.injury_status)}` : ""}</small></span>
+      <span class="tp-pnum"><b>${p.proj != null ? FMT.d1(p.proj) : "–"}</b><small>proj</small></span>
+      <span class="tp-pnum"><b>${FMT.d1(p.ppg)}</b><small>avg</small></span>
+    </button>`).join("");
+  return `<div class="tp-head">
+      ${d.logo ? `<img class="tp-logo" src="${proxyImg(d.logo)}" data-fb-hide="1" alt="">` : ""}
+      <div><h2>${esc(th.city || "")} ${esc(th.name || d.team)}</h2>
+        <div class="muted">${esc(th.division || "")} · <b>${esc(d.record.text)}</b> · ${d.points_for} PF / ${d.points_against} PA</div></div>
+    </div>
+    ${outlook}
+    <div class="tp-stats">${stat("Points / game", s.points_for_pg)}${stat("Allowed / game", s.points_against_pg)}${stat("Pass yds / game", s.pass_yds_pg)}${stat("Rush yds / game", s.rush_yds_pg)}</div>
+    <div class="section-label">Weekly results</div>
+    <div class="tp-games">${(d.games || []).map(teamGameRowHtml).join("") || `<div class="muted">No games yet.</div>`}</div>
+    <div class="section-label">Players${n ? ` · projected for Week ${n.week}` : ""}</div>
+    <div class="tp-players">${players || `<div class="muted">No player data yet.</div>`}</div>`;
+}
+
+async function openTeamModal(code) {
+  const root = $("#modal-root");
+  root.innerHTML = `<div class="modal-backdrop"><div class="modal tp-modal"><div class="modal-header"><div></div><button class="modal-close" aria-label="Close">✕</button></div>
+    <div id="tp-body"><div class="loading">Loading team…</div></div></div></div>`;
+  syncModalScrollLock();
+  root.querySelector(".modal-backdrop").addEventListener("click", (e) => {
+    if (e.target.classList.contains("modal-backdrop")) closeModal();
+    const pl = e.target.closest(".tp-player");
+    if (pl) openPlayerModal(pl.dataset.player, pl.dataset.opp);
+  });
+  root.querySelector(".modal-close").addEventListener("click", closeModal);
+  try {
+    const qs = scoringQS().replace(/^&/, "");
+    const d = await api(`/api/team/${encodeURIComponent(code)}${qs ? "?" + qs : ""}`);
+    const body = $("#tp-body");
+    if (body) body.innerHTML = teamPageHtml(d);
+  } catch (e) {
+    const body = $("#tp-body");
+    if (body) body.innerHTML = `<div class="empty">Couldn't load this team. Try again in a moment.</div>`;
+  }
+}
+
+// one delegated listener: the theme pill and any team name/logo marked data-team-page open the team page
+document.addEventListener("click", (e) => {
+  const el = e.target.closest ? e.target.closest("[data-team-page]") : null;
+  if (el && el.dataset.teamPage) openTeamModal(el.dataset.teamPage);
+});
 
 let gameModalTimer = null;
 

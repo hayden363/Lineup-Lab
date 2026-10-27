@@ -68,14 +68,42 @@ class AnnotateTest(unittest.TestCase):
         # Goff: 250 yds, 2 TD, 1 INT, -3 rush -> 10 + 8 - 2 - 0.3 = 15.7
         self.assertEqual(pts(ppr, "Jared Goff"), 15.7)
 
-    def test_mine_flagged_summed_and_listed_first(self):
+    def test_mine_flagged_and_summed(self):
         out = B.annotate(B.parse_summary(SUMMARY), self.ROSTER, None)
         det = next(t for t in out["teams"] if t["abbr"] == "DET")["players"]
-        self.assertEqual({p["name"] for p in det[:2]}, {"Amon-Ra St. Brown", "Jahmyr Gibbs"})
-        self.assertTrue(all(p["mine"] for p in det[:2]) and not any(p["mine"] for p in det[2:]))
+        self.assertEqual({p["name"] for p in det if p["mine"]}, {"Amon-Ra St. Brown", "Jahmyr Gibbs"})
         self.assertEqual(out["mine_count"], 2)
         # Gibbs: 90 + 20 yds -> 11, 1 TD -> 6, 3 rec -> 3 = 20.0 ; plus Amon-Ra 22
         self.assertEqual(out["mine_points"], 42.0)
+
+    def test_players_are_grouped_qb_rb_wr_te_k_then_best_fantasy_points_first(self):
+        s = copy.deepcopy(SUMMARY)
+        det = s["boxscore"]["players"][0]["statistics"]
+        det[0]["athletes"].append({"athlete": {"id": "11", "displayName": "Backup QB", "position": {"abbreviation": "QB"}},
+                                   "stats": ["3/4", "20", "5.0", "0", "0", "0-0"]})
+        det[1]["athletes"].extend([
+            {"athlete": {"id": "12", "displayName": "RB Two", "position": {"abbreviation": "RB"}}, "stats": ["4", "10", "2.5", "0", "5"]},
+            {"athlete": {"id": "13", "displayName": "RB Three", "position": {"abbreviation": "RB"}}, "stats": ["20", "120", "6.0", "1", "40"]}])
+        out = B.annotate(B.parse_summary(s), [], None)
+        names = [p["name"] for p in next(t for t in out["teams"] if t["abbr"] == "DET")["players"]]
+        self.assertEqual(names, ["Jared Goff", "Backup QB", "Jahmyr Gibbs", "RB Three", "RB Two", "Amon-Ra St. Brown", "Jake Bates"])
+
+    def test_stat_lines_lead_with_the_positions_main_category(self):
+        out = B.annotate(B.parse_summary(SUMMARY), [], None)
+        by = {p["name"]: [l["label"] for l in p["lines"]] for t in out["teams"] for p in t["players"]}
+        self.assertEqual(by["Jahmyr Gibbs"], ["Rushing", "Receiving"])
+        self.assertEqual(by["Jared Goff"], ["Passing", "Rushing"])
+        self.assertEqual(by["Amon-Ra St. Brown"][0], "Receiving")
+
+    def test_players_and_teams_carry_logo_and_headshot(self):
+        s = copy.deepcopy(SUMMARY)
+        s["boxscore"]["players"][0]["statistics"][0]["athletes"][0]["athlete"]["headshot"] = {"href": "https://a.espncdn.com/x.png"}
+        s["boxscore"]["players"][0]["team"]["logo"] = "https://a.espncdn.com/i/teamlogos/nfl/500/det.png"
+        out = B.annotate(B.parse_summary(s), [], None)
+        det = next(t for t in out["teams"] if t["abbr"] == "DET")
+        self.assertTrue(det["logo"].endswith("/det.png"))
+        self.assertEqual(det["players"][0]["headshot"], "https://a.espncdn.com/x.png")
+        self.assertEqual(det["players"][0]["team"], "DET")
 
     def test_wrong_team_is_not_mine(self):
         roster = [{"player_display_name": "Christian Watson", "position": "WR", "recent_team": "DET"}]
@@ -163,7 +191,7 @@ class EndpointTest(unittest.TestCase):
                 mock.patch.object(self.server, "_effective_scoring", return_value=None):
             body = self.client.get("/api/live-scores/401772510").json()
         self.assertEqual(body["mine_count"], 1)
-        self.assertEqual(body["teams"][0]["players"][0]["name"], "Jahmyr Gibbs")
+        self.assertEqual([p["name"] for t in body["teams"] for p in t["players"] if p["mine"]], ["Jahmyr Gibbs"])
 
     def test_roster_failure_still_returns_the_box_score(self):
         self.server.app.dependency_overrides[self.server.current_user] = lambda: {"id": 1, "username": "t"}

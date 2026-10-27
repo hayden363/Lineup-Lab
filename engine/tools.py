@@ -1109,6 +1109,31 @@ _NEWS_ROSTER_CACHE = {}
 NEWS_ROSTER_TTL = 60
 
 
+def team_profile(code, scoring=None, season=None, projected=10):
+    """engine/team_page.build on the live data, plus next-game projections (matchup-adjusted, the same numbers
+    Start/Sit shows) for the team's `projected` best fantasy players."""
+    from . import team_page
+    bundle = load_bundle(season)
+    page = team_page.build(code, bundle["schedule"], bundle["wk"])
+    if page is None:
+        return None
+    nxt = page["next_game"]
+    top = page["players"][:projected]
+    if nxt and top:
+        try:
+            res = start_sit([p["player_id"] for p in top], opponents={p["player_id"]: nxt["opponent"] for p in top},
+                            season=season, scoring=scoring)
+            proj = {r["player_id"]: r for r in res.get("players", []) if not r.get("error")}
+            for p in top:
+                r = proj.get(p["player_id"])
+                if r:
+                    p["proj"] = None if r.get("on_bye") or (r.get("outcomes") or {}).get("out") else round(float(r["PROJ"]), 1)
+                    p["injury_status"] = r.get("injury_status")
+        except Exception as e:
+            print(f"[team] projections for {code} unavailable: {e}")
+    return page
+
+
 def team_player_roster(team, season=None):
     """Names, teams and headshots of the players whose latest game was with NFL `team`: lets the favorite-team
     news tab say which player a story is about."""

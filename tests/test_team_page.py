@@ -1,0 +1,109 @@
+"""engine.team_page: a team's record, weekly results, next game outlook, team stats and roster. No network."""
+import unittest
+
+import pandas as pd
+
+from engine import team_page as T
+
+
+def sched():
+    rows = [  # week, away, home, away_score, home_score, spread_line (home favored when positive), total_line, gameday
+        (1, "GB", "DET", 20, 27, 3.0, 48.0, "2026-09-13"),
+        (2, "DET", "TB", 17, 24, -2.0, 46.0, "2026-09-20"),
+        (3, "DET", "GB", 21, 21, 1.0, 45.0, "2026-09-27"),
+        (4, "MIN", "DET", None, None, 6.5, 50.0, "2026-10-04"),
+        (5, "DET", "CHI", None, None, -3.0, 44.0, "2026-10-11"),
+        (1, "NE", "NYJ", 10, 13, 1.0, 40.0, "2026-09-13"),
+    ]
+    return pd.DataFrame(rows, columns=["week", "away_team", "home_team", "away_score", "home_score", "spread_line", "total_line", "gameday"])
+
+
+def weekly():
+    rows = []
+    for wk in (1, 2, 3):
+        rows += [dict(player_id="q", player_display_name="Jared Goff", position="QB", recent_team="DET", week=wk, passing_yards=250, rushing_yards=0, receiving_yards=0, fantasy_points_ppr=18.0),
+                 dict(player_id="r", player_display_name="Jahmyr Gibbs", position="RB", recent_team="DET", week=wk, passing_yards=0, rushing_yards=80, receiving_yards=20, fantasy_points_ppr=17.0),
+                 dict(player_id="w", player_display_name="Amon-Ra St. Brown", position="WR", recent_team="DET", week=wk, passing_yards=0, rushing_yards=0, receiving_yards=90, fantasy_points_ppr=20.0),
+                 dict(player_id="x", player_display_name="Other Guy", position="WR", recent_team="GB", week=wk, passing_yards=0, rushing_yards=0, receiving_yards=50, fantasy_points_ppr=9.0)]
+    return pd.DataFrame(rows)
+
+
+class TeamPageTest(unittest.TestCase):
+    def setUp(self):
+        self.p = T.build("DET", sched(), weekly())
+
+    def test_record_and_points_come_from_played_games(self):
+        self.assertEqual(self.p["record"], {"wins": 1, "losses": 1, "ties": 1, "text": "1-1-1"})
+        self.assertEqual((self.p["points_for"], self.p["points_against"]), (65, 65))
+
+    def test_weekly_results_list_every_game_with_w_l_t_and_scores(self):
+        g = self.p["games"]
+        self.assertEqual([(x["week"], x["opponent"], x["home"], x["result"]) for x in g[:3]], [(1, "GB", True, "W"), (2, "TB", False, "L"), (3, "GB", False, "T")])
+        self.assertEqual((g[0]["team_score"], g[0]["opp_score"]), (27, 20))
+        self.assertEqual(g[3]["result"], None)            # not played yet
+
+    def test_next_game_has_opponent_date_and_betting_outlook(self):
+        n = self.p["next_game"]
+        self.assertEqual((n["week"], n["opponent"], n["home"]), (4, "MIN", True))
+        self.assertEqual(n["spread"], -6.5)               # negative = this team favored
+        self.assertEqual(n["implied_total"], 28.2)        # (50 + 6.5) / 2 for the home side, rounded
+        self.assertEqual(n["opp_implied_total"], 21.8)
+
+    def test_team_stats_are_per_game_from_player_lines(self):
+        s = self.p["stats"]
+        self.assertEqual((s["points_for_pg"], s["points_against_pg"]), (21.7, 21.7))
+        self.assertEqual((s["pass_yds_pg"], s["rush_yds_pg"]), (250.0, 80.0))
+
+    def test_roster_is_this_teams_players_best_first_with_season_ppg(self):
+        r = self.p["players"]
+        self.assertEqual([x["name"] for x in r], ["Amon-Ra St. Brown", "Jared Goff", "Jahmyr Gibbs"])
+        self.assertEqual(r[0]["ppg"], 20.0)
+        self.assertEqual(r[0]["player_id"], "w")
+
+    def test_a_team_with_no_games_or_players_still_builds(self):
+        p = T.build("DET", sched().iloc[0:0], weekly().iloc[0:0])
+        self.assertEqual((p["games"], p["players"], p["next_game"]), ([], [], None))
+        self.assertEqual(p["record"]["text"], "0-0")
+
+    def test_unknown_team_is_none(self):
+        self.assertIsNone(T.build("XYZ", sched(), weekly()))
+
+
+if __name__ == "__main__":
+    unittest.main()
+
+
+class EndpointTest(unittest.TestCase):
+    def setUp(self):
+        from unittest import mock
+        from fastapi.testclient import TestClient
+        import server
+        self.server, self.mock = server, mock
+        self.client = TestClient(server.app)
+
+    def test_team_endpoint_returns_the_page_with_a_logo(self):
+        page = T.build("DET", sched(), weekly())
+        with self.mock.patch.object(self.server.tools, "team_profile", return_value=page) as m:
+            body = self.client.get("/api/team/det").json()
+        self.assertEqual(body["team"], "DET")
+        self.assertTrue(body["logo"].endswith("/det.png"))
+        self.assertEqual(m.call_args[0][0], "DET")
+
+    def test_unknown_team_is_404(self):
+        self.assertEqual(self.client.get("/api/team/XYZ").status_code, 404)
+
+    def test_projections_attach_for_the_top_players_and_failure_degrades(self):
+        from engine import tools
+        bundle = {"schedule": sched(), "wk": weekly()}
+        res = {"players": [{"player_id": "w", "PROJ": 18.34, "injury_status": None, "outcomes": {}},
+                           {"player_id": "q", "PROJ": 15.0, "outcomes": {"out": True}}]}
+        with self.mock.patch.object(tools, "load_bundle", return_value=bundle), \
+                self.mock.patch.object(tools, "start_sit", return_value=res) as ss:
+            page = tools.team_profile("DET")
+        self.assertEqual(ss.call_args.kwargs["opponents"]["w"], "MIN")
+        by = {p["player_id"]: p for p in page["players"]}
+        self.assertEqual(by["w"]["proj"], 18.3)
+        self.assertIsNone(by["q"]["proj"])                 # ruled out
+        with self.mock.patch.object(tools, "load_bundle", return_value=bundle), \
+                self.mock.patch.object(tools, "start_sit", side_effect=RuntimeError("boom")):
+            self.assertEqual(len(tools.team_profile("DET")["players"]), 3)

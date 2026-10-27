@@ -182,9 +182,10 @@
     if (!el) return;
     var t = TT().get(TT().current());
     if (!t) { el.innerHTML = ""; return; }
-    el.innerHTML = '<div class="th-band"><div class="th-art" aria-hidden="true"></div><div class="th-lines" aria-hidden="true"></div>' +
-      '<div class="th-body"><img class="th-logo" src="' + esc("/api/img?url=" + encodeURIComponent(t.logo)) + '" alt="" width="56" height="56" data-logo="' + esc(t.code) + '">' +
-      '<div class="th-text"><span class="th-city">' + esc(t.city) + '</span><span class="th-name">' + esc(t.name) + "</span></div></div></div>";
+    el.innerHTML = '<button type="button" class="th-band" data-team-page="' + esc(t.code) + '" aria-label="Open the ' + esc(t.city + " " + t.name) + ' team page">' +
+      '<span class="th-art" aria-hidden="true"></span><span class="th-lines" aria-hidden="true"></span>' +
+      '<span class="th-body"><img class="th-logo" src="' + esc("/api/img?url=" + encodeURIComponent(t.logo)) + '" alt="" width="28" height="28" data-logo="' + esc(t.code) + '">' +
+      '<span class="th-text"><span class="th-city">' + esc(t.city) + '</span><span class="th-name">' + esc(t.name) + '</span></span><span class="th-go" aria-hidden="true">Team page ›</span></span></button>';
     if (!el._tpBound) {
       el._tpBound = true;
       el.addEventListener("error", function (e) { var img = e.target; if (img && img.dataset && img.dataset.logo) swapLogo(img); }, true);   // error does not bubble
