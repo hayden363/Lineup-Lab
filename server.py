@@ -51,6 +51,7 @@ from engine import espn as espn_layer
 from engine import external_projections as external_projections_layer
 from engine import league_trades as league_trades_layer
 from engine import lineup as lineup_layer
+from engine import boxscore as boxscore_layer
 from engine import live_scores as live_scores_layer
 from engine import locks
 from engine import waivers as waivers_layer
@@ -1619,6 +1620,34 @@ def api_live_scores():
     — public data, no sign-in required, cached for 20s server-side so a
     room full of open tabs doesn't turn into a request per tab."""
     return {"games": live_scores_layer.live_scoreboard()}
+
+
+boxscore_rate_limit = rate_limit("boxscore", limit=60, window_seconds=60)
+
+
+@app.get("/api/live-scores/{game_id}", dependencies=[Depends(boxscore_rate_limit)])
+def api_game_boxscore(game_id: str, scoring: Optional[dict] = Depends(scoring_from_query),
+                      user=Depends(current_user)):
+    """Both teams' player stat lines for one game (engine/boxscore.py). Public;
+    when the caller is signed in with a connected league, their players are
+    flagged `mine` and every skill player carries fantasy points under that
+    league's scoring. A roster that can't be loaded just means no highlights."""
+    if not boxscore_layer.valid_game_id(game_id):
+        raise HTTPException(400, "bad game id")
+    parsed = boxscore_layer.game_boxscore(game_id)
+    roster = None
+    if user:
+        try:
+            _, team = _load_my_team(user, None, scoring)
+            roster = team["my_team"]["players"]
+        except Exception as e:
+            print(f"[boxscore] no roster to highlight: {e}")
+    try:
+        pts_scoring = _effective_scoring(scoring, user)
+    except Exception as e:   # settings store down: show default-PPR points rather than failing public data
+        print(f"[boxscore] scoring settings unavailable, using default: {e}")
+        pts_scoring = scoring
+    return _clean(boxscore_layer.annotate(parsed, roster, pts_scoring))
 
 
 # ---- image proxy ----
