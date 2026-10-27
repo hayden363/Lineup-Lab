@@ -63,7 +63,7 @@ class TestPVS(unittest.TestCase):
         self.assertGreater(out["PVS"].max(), 70.0)
         worst = out.sort_values("PVS").iloc[0]
         self.assertLess(worst["PVS"], out["PVS"].max() / 2)
-        self.assertIn(worst["PVS_tier"], ("Replacement", "Bench stash"))
+        self.assertIn(worst["PVS_tier"], ("Bench depth", "Flex / matchup play"))
 
     def test_one_outlier_does_not_flatten_the_rest(self):
         out = _scored()
@@ -121,10 +121,10 @@ class TestPVS(unittest.TestCase):
         self.assertTrue(pvs.add_pvs(pd.DataFrame()).empty)
 
     def test_tier_bands(self):
-        for score, name in [(100, "Legendary"), (90, "Legendary"), (89.9, "Cornerstone"), (80, "Cornerstone"),
-                            (79.9, "Every-week starter"), (68, "Every-week starter"), (67.9, "Matchup / flex play"),
-                            (52, "Matchup / flex play"), (51.9, "Bench stash"), (32, "Bench stash"),
-                            (31.9, "Replacement"), (0, "Replacement")]:
+        for score, name in [(100, "Elite cornerstone"), (80, "Elite cornerstone"), (79.9, "High-end starter"),
+                            (60, "High-end starter"), (59.9, "Every-week starter"), (40, "Every-week starter"),
+                            (39.9, "Flex / matchup play"), (25, "Flex / matchup play"), (24.9, "Bench depth"),
+                            (0, "Bench depth")]:
             self.assertEqual(pvs.tier_label(score), name, score)
         self.assertIsNone(pvs.tier_label(float("nan")))
 
@@ -136,9 +136,10 @@ class TestReorder(unittest.TestCase):
         self.assertEqual(list(out["overall_rank"]), list(range(1, len(out) + 1)))
         self.assertEqual(list(out["our_rank"]), [float(i) for i in range(1, len(out) + 1)])
         self.assertTrue(out["tier"].is_monotonic_increasing)
-        self.assertGreaterEqual(out["tier"].iloc[-1], 5)
+        self.assertGreaterEqual(out["tier"].iloc[-1], 4)
         self.assertEqual(pvs.tier_number(92), 1)
-        self.assertEqual(pvs.tier_number(55), 4)
+        self.assertEqual(pvs.tier_number(55), 3)
+        self.assertEqual(pvs.tier_number(30), 4)
 
 
 if __name__ == "__main__":

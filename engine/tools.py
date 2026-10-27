@@ -623,6 +623,8 @@ def _attach_decisions(valid, bundle, get_board, scoring, mode):
             pid, pos, wk, snaps.get(pid) or {}, dict(zip(mine_x["week"].astype(int), mine_x["xfp"])),
             {int(w): int(n) for (_, w), n in rz_by[rz_by.index.get_level_values(0) == pid].items()})
         rate, comps = decision.rating(r, usage_pct, ctx, split, mrank, recent)
+        if r["outcomes"].get("out"):   # on a bye or ruled out: he scores 0, so the rating must not read as a start
+            rate = 0.0
         mg, mb = decision.matchup_flags(pos, opp, factors) if opp else ([], [])
         pg, pb = decision.player_flags(r, ctx, split, xfp, td_share, snap_trend)
         if r.get("on_bye"):
@@ -1732,6 +1734,20 @@ def _next_unplayed_week(schedule):
     return int(s["week"].min()) if len(s) else None
 
 
+def _league_pvs(scoring, shape):
+    """{player_id: PVS} for this league's team count, slots and scoring, so the
+    trade value moves with the format (superflex, deep benches, custom points).
+    None if the board can't be built; trade_values then falls back to its own
+    scale rather than failing the whole analyzer."""
+    try:
+        from .board import overall_board
+        league = {"teams": shape["teams"], "slots": shape["slots"]}
+        return overall_board(scoring=scoring, league=league)["PVS"].to_dict()
+    except Exception as e:
+        print(f"[trade] league PVS unavailable, using fallback values: {e}")
+        return None
+
+
 def _trade_setup(league_id, scoring=None, season=None):
     """Everything the trade engine needs for one Sleeper league: valued
     rosters (with records, weaknesses, usage, byes) and the league context."""
@@ -1746,7 +1762,7 @@ def _trade_setup(league_id, scoring=None, season=None):
     cw = sleeper.id_crosswalk()
     rostered = {cw.get(str(x)) for r in raw for x in (r.get("players") or [])} - {None}
     shape = trade_engine.league_shape(roster_positions, len(raw))
-    values = trade_engine.trade_values(pool, shape, rostered)
+    values = trade_engine.trade_values(pool, shape, rostered, pvs_by_id=_league_pvs(scoring, shape))
 
     def _f(v, scale=1.0):
         return None if v is None or pd.isna(v) else round(float(v) * scale, 1)
@@ -1781,7 +1797,7 @@ def _trade_setup_espn(league_id, scoring=None, season=None, year=None, espn_s2=N
     cw = espn_layer.id_crosswalk()
     rostered = {cw.get(str(p.playerId)) for t in league.teams for p in t.roster} - {None}
     shape = trade_engine.league_shape(roster_positions, len(league.teams))
-    values = trade_engine.trade_values(pool, shape, rostered)
+    values = trade_engine.trade_values(pool, shape, rostered, pvs_by_id=_league_pvs(scoring, shape))
 
     def _f(v, scale=1.0):
         return None if v is None or pd.isna(v) else round(float(v) * scale, 1)
