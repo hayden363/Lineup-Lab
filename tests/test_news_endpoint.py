@@ -95,6 +95,23 @@ class ApiNewsTests(unittest.TestCase):
         self.assertEqual([i["link"] for i in body["items"]], ["a", "d", "c", "b"])    # match, then the rest newest-first
         self.assertNotIn("match_kind", body["items"][1])
 
+    def test_team_scope_needs_no_sign_in_and_lists_only_that_teams_stories_newest_first(self):
+        server.app.dependency_overrides[server.current_user] = lambda: None
+        body = self.client.get("/api/news?scope=favorite&team=DAL").json()
+        self.assertEqual([i["link"] for i in body["items"]], ["b"])                     # the Lamb story names no team word, the Cowboys notebook does
+        self.assertEqual(body["team"], "DAL")
+
+    def test_favorite_scope_matches_city_and_nickname_and_ignores_other_teams(self):
+        self.items.append(item("Seattle signs a corner", "e", 500))
+        body = self.client.get("/api/news?scope=favorite&team=SEA").json()
+        self.assertEqual([i["link"] for i in body["items"]], ["e", "c"])
+        self.assertTrue(all(i["match_kind"] == "team" for i in body["items"]))
+        self.assertTrue(body["items"][0]["fallback_image"].endswith("/sea.png"))
+
+    def test_favorite_scope_rejects_a_missing_or_unknown_team(self):
+        self.assertEqual(self.client.get("/api/news?scope=favorite").status_code, 422)
+        self.assertEqual(self.client.get("/api/news?scope=favorite&team=XYZ").status_code, 422)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -4561,7 +4561,11 @@ function renderNews(data, scope) {
     list.innerHTML = `<div class="empty">Connect a league in Settings to unlock this tab.</div>`;
     return;
   }
-  if (scope === "team") {
+  if (scope === "favorite") {
+    const t = TeamTheme.get(data.team);
+    $("#news-hint").textContent = `Every headline about the ${t ? t.city + " " + t.name : "team"}${src ? ` (${src})` : ""}.`;
+    if (!data.items.length) { list.innerHTML = `<div class="empty">No headlines about the ${esc(t ? t.name : "team")} right now. Check back later.</div>`; return; }
+  } else if (scope === "team") {
     $("#news-hint").textContent = `${data.team_name ? `"${data.team_name}"` : "Your roster"}: stories naming your players, then news about their teams${src ? ` (${src})` : ""}.`;
   } else if (scope === "opponent") {
     $("#news-hint").textContent = data.team_name ? `This week's opponent, "${data.team_name}"${src ? ` (${src})` : ""}.` : "This week's opponent.";
@@ -4581,18 +4585,31 @@ function renderNews(data, scope) {
 // fresh copy loads behind it.
 const NEWS_CLIENT_TTL = 5 * 60 * 1000;
 
+// The favorite-team tab: shown (labelled with the team's name) only while a team theme is chosen. First time News opens
+// with a team set it becomes the selected tab; choosing the default theme again drops back to My Team.
+function syncNewsFavTab() {
+  const btn = $("#news-fav-tab");
+  const t = TeamTheme.get(TeamTheme.current());
+  if (btn) { btn.hidden = !t; if (t) btn.textContent = t.name; }
+  if (t && !state.newsFavSeen) { state.newsFavSeen = true; state.newsScope = "favorite"; }
+  if (!t && state.newsScope === "favorite") state.newsScope = "team";
+  $("#news-scope-tabs").querySelectorAll("button[data-scope]").forEach((x) => x.classList.toggle("active", x.dataset.scope === state.newsScope));
+}
+
 async function loadNews() {
   const list = $("#news-list");
+  syncNewsFavTab();
   const scope = state.newsScope;
+  const fav = TeamTheme.current();
   // keyed by who is looking and at which team, so a sign-out or a league switch never shows someone else's stories
   const t = (typeof activeTeam === "function" && activeTeam()) || {};
-  const key = `${state.user ? state.user.id : 0}|${t.league_id || ""}|${t.roster_id || ""}|${scope}`;
+  const key = `${state.user ? state.user.id : 0}|${t.league_id || ""}|${t.roster_id || ""}|${scope}|${scope === "favorite" ? fav : ""}`;
   state.newsCache = state.newsCache || {};
   const cached = state.newsCache[key] && Date.now() - state.newsCache[key].at < NEWS_CLIENT_TTL ? state.newsCache[key] : null;
   if (cached) renderNews(cached.data, scope);
   else list.innerHTML = `<div class="loading">Loading headlines…</div>`;
   try {
-    const data = await api(`/api/news?scope=${scope}`);
+    const data = await api(`/api/news?scope=${scope}${scope === "favorite" ? "&team=" + encodeURIComponent(fav) : ""}`);
     state.newsCache[key] = { at: Date.now(), data };
     if (state.newsScope === scope) renderNews(data, scope);     // the user may have switched tabs meanwhile
     // Photos are looked up in the background after the first download (engine/news.py), so on a cold server

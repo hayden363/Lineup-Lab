@@ -359,6 +359,7 @@
         <p id="news-hint">Real NFL headlines from ESPN &amp; CBS Sports RSS feeds.</p>
       </div>
       <div class="auth-tabs news-scope-tabs" id="news-scope-tabs" role="group" aria-label="Which headlines">
+        <button class="auth-tab-btn" data-scope="favorite" id="news-fav-tab" hidden></button>
         <button class="auth-tab-btn active" data-scope="team">My Team</button>
         <button class="auth-tab-btn" data-scope="league">League</button>
         <button class="auth-tab-btn" data-scope="opponent">Opponent</button>
@@ -379,7 +380,6 @@
         <h1>Settings</h1>
         <p>Account, leagues, scoring, and data — all in one place.</p>
       </div>
-      <div id="team-picker" class="settings-block team-picker"></div>
       <div id="settings-logged-out" class="gate-card" style="display:none">
         <div class="gate-icon">◈</div>
         <div class="gate-title">Sign in to manage your account</div>
@@ -474,6 +474,7 @@
         </div>
       </div>
 
+      <div id="team-picker" class="settings-block team-picker"></div>
       <div class="settings-block">
         <div class="settings-block-title">About Lineup Lab</div>
         <p>A from-scratch fantasy valuation engine. Every number here is computed from free, public NFL data — nothing scraped from a paid service.</p>

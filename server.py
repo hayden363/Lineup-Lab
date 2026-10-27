@@ -1522,8 +1522,10 @@ def api_trade_roster(roster_id: int = Query(...), scoring: Optional[dict] = Depe
 
 # --------------------------------------------------------------------- news ----
 @app.get("/api/news")
-def api_news(scope: str = Query("team", pattern="^(team|opponent|league)$"), user=Depends(current_user)):
-    """Three tabs, one feed underneath:
+def api_news(scope: str = Query("team", pattern="^(team|opponent|league|favorite)$"),
+             team: Optional[str] = Query(None, max_length=3), user=Depends(current_user)):
+    """Four tabs, one feed underneath:
+      - favorite: every headline naming the favorite NFL team in `team` (public, no roster needed)
       - team: headlines matched to your own roster
       - opponent: headlines matched to this week's real head-to-head opponent
       - league: every headline, with ones matching anyone rostered in your
@@ -1531,6 +1533,13 @@ def api_news(scope: str = Query("team", pattern="^(team|opponent|league)$"), use
         whether or not the whole feed is filtered to it — tells the client
         which player a given headline is about)."""
     items = news_layer.all_headlines()
+
+    if scope == "favorite":
+        code = (team or "").upper()
+        if code not in news_layer.TEAM_CODES:
+            raise HTTPException(422, "team must be an NFL team code")
+        return {"scope": "favorite", "team": code, "items": _clean(news_layer.team_headlines(items, code)),
+                "sources": list(news_layer.FEEDS)}
 
     if scope == "league":
         league_players = []

@@ -379,8 +379,10 @@ class PickerWiringTests(WiringTests):
         html = self.read("static/index.html")
         self.assertLess(html.index('src="/theme.js"'), html.index('src="/app.js"'))
         mount = html.index('id="team-picker"')
-        self.assertLess(mount, html.index('id="settings-logged-out"'))
-        self.assertGreater(mount, html.index('id="tab-settings"'))
+        self.assertGreater(mount, html.index('id="settings-logged-in"'))        # settings content comes first; the picker is lower down
+        self.assertFalse(html[html.index('id="settings-logged-in"'):mount].count("</div>") < html[html.index('id="settings-logged-in"'):mount].count("<div"),
+                         "the picker must sit outside the signed-in block")
+        self.assertLess(mount, html.index('About Lineup Lab'))
 
     def test_app_js_hands_the_account_theme_to_the_picker_and_renders_it_in_settings(self):
         js = self.read("static/app.js")
