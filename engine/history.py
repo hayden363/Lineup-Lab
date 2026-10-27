@@ -35,6 +35,7 @@ from .scoring import ScoringSettings, apply_scoring
 
 HISTORY_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "history_data")
 LOOKBACK = 3
+REG_SEASON_LAST_WEEK = 18   # history is regular-season games; playoff rows (weeks 19-22) are dropped on load
 SEASON_WEIGHTS = {1: 1.0, 2: 0.7, 3: 0.5}   # years before the current season -> weight
 
 BASE_K = 3.0          # prior's weight in games with no history (matches board.SHRINK_GAMES)
@@ -64,7 +65,11 @@ def _frames():
         for name in ("skill", "kicker", "defense"):
             path = os.path.join(HISTORY_DIR, f"{name}_weekly.parquet")
             try:
-                _FRAMES[name] = pd.read_parquet(path)
+                df = pd.read_parquet(path)
+                # The kicker and defense tables were built from play-by-play with the playoffs still in
+                # them (the skill table never had them). A playoff game is by a better-than-average team
+                # and would lift next season's prior for exactly those teams.
+                _FRAMES[name] = df[df["week"] <= REG_SEASON_LAST_WEEK].reset_index(drop=True)
             except Exception as e:
                 print(f"[history] {name} unavailable ({e}); projections run without it")
                 _FRAMES[name] = pd.DataFrame()

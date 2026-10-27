@@ -65,10 +65,12 @@ def build(seasons):
         print(f"[history] {s}: play-by-play (kickers, defenses)")
         pbp = data.load_pbp(s)
         k = kicker_scoring.build_kicker_weekly(pbp)
+        k = k[k["week"] <= 18]          # regular season only, as the docstring promises (pbp includes the playoffs)
         k["season"] = s
         kick.append(k)
         d = defense_scoring.build_defense_weekly(pbp, data.load_schedule(s))
         d = d.reset_index() if "defteam" not in d.columns else d
+        d = d[d["week"] <= 18]
         d["season"] = s
         deff.append(d)
 
