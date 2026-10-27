@@ -318,6 +318,7 @@ _TEAMS = {
     "SEA": (("seahawks",), ("seattle",)), "TB": (("buccaneers", "bucs"), ("tampa bay",)),
     "TEN": (("titans",), ("tennessee",)), "WAS": (("commanders",), ()),
 }
+TEAM_CODES = frozenset(_TEAMS)   # the 32 nflverse team codes: the one list the favorite-team setting is validated against
 _TEAM_ALIAS = {"WSH": "WAS", "LAR": "LA", "JAC": "JAX", "OAK": "LV", "SD": "LAC", "STL": "LA", "ARZ": "ARI"}
 TEAM_NEWS_CAP = 10
 

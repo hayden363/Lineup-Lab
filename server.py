@@ -41,7 +41,7 @@ from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Query, Req
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse, PlainTextResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 from engine import chat as chat_layer
 from engine import correlation
@@ -486,6 +486,22 @@ class SettingsUpdate(BaseModel):
     espn_s2: Optional[str] = None
     scoring_preset: Optional[str] = None
     theme: Optional[str] = None
+
+    @field_validator("theme", mode="before")
+    @classmethod
+    def _theme_is_a_team_code(cls, v):
+        """The favorite-team theme: one of the 32 team codes, or empty to clear. Nothing else is stored, because the
+        value is later used to look up a palette and must never carry free text."""
+        if v is None:
+            return None
+        if not isinstance(v, str):
+            raise ValueError("theme must be a team code")
+        v = v.strip().upper()
+        if not v:
+            return None
+        if v not in news_layer.TEAM_CODES:
+            raise ValueError("unknown team")
+        return v
 
 
 @app.get("/api/settings")
