@@ -111,7 +111,7 @@ if (!prefersReducedMotion) {
 // they're built), and Escape closes whatever floats on top — a dropdown
 // first, then the player/compare/swap modal, then the auth modal.
 document.addEventListener("keydown", (e) => {
-  if ((e.key === "Enter" || e.key === " ") && e.target instanceof Element && e.target.matches(".kbd-click")) {
+  if ((e.key === "Enter" || e.key === " ") && e.target instanceof Element && e.target.matches(".kbd-click, [data-team-page][role='link']")) {
     e.preventDefault();
     e.target.click();
     return;
@@ -983,6 +983,8 @@ function syncModalScrollLock() {
 }
 
 function closeModal() {
+  clearInterval(gameModalTimer);      // a closed box score must stop polling
+  teamModalSeq++;                     // and a team page still loading must not paint into the next modal
   $("#modal-root").innerHTML = "";
   syncModalScrollLock();
 }
@@ -3964,6 +3966,7 @@ async function loadMyTeam(week) {
     html += leagueMatchupsHtml(data.league_matchups, data.my_team.roster_id);
     html += `<div id="trades-panel"></div>`;
     content.innerHTML = html;
+    countUpTotals(content, `${data.nfl_week}|${data.my_team.roster_id}`);
     loadTradesPanel();
     content.querySelectorAll(".myteam-roster-row:not(.unscored)").forEach((row) => {
       row.addEventListener("click", (e) => { if (!e.target.closest("[data-team-page]")) openPlayerModal(row.dataset.pid); });
@@ -3973,6 +3976,25 @@ async function loadMyTeam(week) {
     gate.style.display = "";
     gate.querySelector(".gate-sub").textContent = e.message || "Connect a league in Settings first.";
   }
+}
+
+// The two team totals count up from zero the first time a week is shown; background refreshes and week-arrow
+// returns to a week already seen stay still. Skipped under reduced motion.
+const countedWeeks = new Set();
+function countUpTotals(root, key) {
+  if (prefersReducedMotion || countedWeeks.has(key)) return;
+  countedWeeks.add(key);
+  root.querySelectorAll(".mt-total").forEach((el) => {
+    const to = parseFloat(el.textContent);
+    if (!isFinite(to) || to <= 0) return;
+    const t0 = performance.now(), ms = 700;
+    const tick = (now) => {
+      const k = Math.min(1, (now - t0) / ms);
+      el.textContent = (to * (1 - Math.pow(1 - k, 3))).toFixed(1);
+      if (k < 1) requestAnimationFrame(tick); else el.textContent = to.toFixed(1);
+    };
+    requestAnimationFrame(tick);
+  });
 }
 
 // ------------------------------------------------------------ league trades ----
@@ -4079,7 +4101,10 @@ function renderDraftBoard(d) {
     </div>`;
   }
 
+  const listScroll = content.querySelector(".board-wrap")?.scrollTop || 0;     // the 6 s refresh must not snap the list back to the top
   content.innerHTML = html;
+  const list = content.querySelector(".board-wrap");
+  if (list && listScroll) list.scrollTop = listScroll;
   content.querySelectorAll(".myteam-roster-row").forEach((row) => {
     row.addEventListener("click", () => openPlayerModal(row.dataset.pid));
   });
@@ -4095,6 +4120,7 @@ async function loadDraftBoard(draftId) {
     stopDraftPolling();
     if (!d.is_complete) {
       draftPollHandle = setInterval(async () => {
+        if (document.hidden) return;                 // no point polling a background tab
         try { renderDraftBoard(await api(`/api/draft/${draftId}?${scoringQS().replace(/^&/, "")}`)); }
         catch (e) { stopDraftPolling(); }
       }, 6000);
@@ -4411,7 +4437,7 @@ function liveScoreCardHtml(g) {
     ? `<span class="muted">vs</span>`
     : `${g.away.score}–${g.home.score}`;
   const mine = myPlayersInGame(g);
-  return `<button type="button" class="live-score-card${isLive ? " live" : ""}${isFinal ? " final" : ""}${mine ? " has-mine" : ""}" data-game="${esc(g.game_id)}" title="Open box score">
+  return `<button type="button" class="live-score-card${isLive ? " live" : ""}${isFinal ? " final" : ""}${mine ? " has-mine" : ""}${g.flash ? " score-flash" : ""}" data-game="${esc(g.game_id)}" title="Open box score">
     ${isLive ? `<span class="live-dot"></span>` : ""}
     <div class="lsc-teams">
       <span class="${g.away.winner ? "lsc-winner" : ""}">${esc(g.away.abbr)}</span>
@@ -4438,8 +4464,11 @@ async function loadLiveScores() {
     const data = await api("/api/live-scores");
     const games = data.games || [];
     if (!games.length) { strip.style.display = "none"; return; }
+    const before = new Map((state.liveGames || []).map((g) => [String(g.game_id), `${g.away.score}-${g.home.score}`]));
+    games.forEach((g) => { const b = before.get(String(g.game_id)); g.flash = b != null && g.state === "in" && b !== `${g.away.score}-${g.home.score}`; });
     state.liveGames = games;
     strip.innerHTML = games.map(liveScoreCardHtml).join("");
+    if (games.some((g) => g.flash)) setTimeout(() => { games.forEach((g) => { g.flash = false; }); strip.querySelectorAll(".score-flash").forEach((c) => c.classList.remove("score-flash")); }, 2200);
     strip.style.display = "flex";
   } catch (e) {
     // a scoreboard hiccup shouldn't be loud — just leave whatever was
@@ -4529,9 +4558,10 @@ function teamPageHtml(d) {
 }
 
 async function openTeamModal(code) {
+  const seq = ++teamModalSeq;
   const root = $("#modal-root");
   root.innerHTML = `<div class="modal-backdrop"><div class="modal tp-modal"><div class="modal-header"><div></div><button class="modal-close" aria-label="Close">✕</button></div>
-    <div id="tp-body"><div class="loading">Loading team…</div></div></div></div>`;
+    <div id="tp-body">${skeletonRows(6, 2)}</div></div></div>`;
   syncModalScrollLock();
   root.querySelector(".modal-backdrop").addEventListener("click", (e) => {
     if (e.target.classList.contains("modal-backdrop")) closeModal();
@@ -4543,10 +4573,10 @@ async function openTeamModal(code) {
     const qs = scoringQS().replace(/^&/, "");
     const d = await api(`/api/team/${encodeURIComponent(code)}${qs ? "?" + qs : ""}`);
     const body = $("#tp-body");
-    if (body) body.innerHTML = teamPageHtml(d);
+    if (body && seq === teamModalSeq) body.innerHTML = teamPageHtml(d);
   } catch (e) {
     const body = $("#tp-body");
-    if (body) body.innerHTML = `<div class="empty">Couldn't load this team. Try again in a moment.</div>`;
+    if (body && seq === teamModalSeq) body.innerHTML = `<div class="empty">Couldn't load this team. Try again in a moment.</div>`;
   }
 }
 
@@ -4556,7 +4586,8 @@ document.addEventListener("click", (e) => {
   if (el && el.dataset.teamPage) openTeamModal(el.dataset.teamPage);
 });
 
-let gameModalTimer = null;
+var gameModalTimer = null;
+var teamModalSeq = 0;
 
 async function openGameModal(gameId) {
   const g = (state.liveGames || []).find((x) => String(x.game_id) === String(gameId));
@@ -4568,7 +4599,7 @@ async function openGameModal(gameId) {
     <div class="modal-header"><div><h2>${esc(g.away.abbr)} ${score} ${esc(g.home.abbr)}</h2>
       <div class="muted" id="gb-status">${esc(live ? `Q${g.period} · ${g.display_clock}` : g.status_detail)}</div></div>
       <button class="modal-close" aria-label="Close">✕</button></div>
-    <div id="gb-body"><div class="loading">Loading box score…</div></div>
+    <div id="gb-body">${skeletonRows(8, 2)}</div>
   </div></div>`;
   syncModalScrollLock();
   root.querySelector(".modal-backdrop").addEventListener("click", (e) => { if (e.target.classList.contains("modal-backdrop")) closeModal(); });
@@ -4696,7 +4727,7 @@ async function loadNews() {
   state.newsCache = state.newsCache || {};
   const cached = state.newsCache[key] && Date.now() - state.newsCache[key].at < NEWS_CLIENT_TTL ? state.newsCache[key] : null;
   if (cached) renderNews(cached.data, scope);
-  else list.innerHTML = `<div class="loading">Loading headlines…</div>`;
+  else list.innerHTML = Array.from({ length: 6 }, () => `<div class="news-card news-skel" aria-hidden="true"><div class="skel news-skel-img"></div><div class="news-body"><div class="skel skel-line short"></div><div class="skel skel-line" style="max-width:none"></div><div class="skel skel-line" style="max-width:70%"></div></div></div>`).join("");
   try {
     const data = await api(`/api/news?scope=${scope}${scope === "favorite" ? "&team=" + encodeURIComponent(fav) : ""}`);
     state.newsCache[key] = { at: Date.now(), data };
