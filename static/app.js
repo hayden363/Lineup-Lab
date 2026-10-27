@@ -4541,9 +4541,13 @@ function newsTagsHtml(it) {
 }
 
 function newsCardHtml(it, featured, i) {
+  // The story's own photo when we have it; until then (or when the feed has none) the headshot of the player it
+  // is about, else his team's logo, so every card has a picture on first paint.
+  const src = it.image || it.fallback_image;
+  const isFallback = !it.image && !!it.fallback_image;
   return `<a class="news-card${featured ? " featured" : ""}" href="${safeUrl(it.link)}" target="_blank" rel="noopener noreferrer" style="animation-delay:${Math.min(i, 8) * 50}ms">
-    <div class="news-img-wrap${it.image ? "" : " no-image"}">
-      ${it.image ? `<img src="${proxyImg(it.image)}" alt="" loading="lazy" data-fb-noimage-wrap="1">` : ""}
+    <div class="news-img-wrap${src ? "" : " no-image"}${isFallback ? " is-fallback" : ""}">
+      ${src ? `<img src="${proxyImg(src)}" alt="" loading="lazy" data-fb-noimage-wrap="1">` : ""}
       ${featured ? `<span class="news-badge">FEATURED</span>` : ""}
     </div>
     <div class="news-body">
@@ -4575,7 +4579,8 @@ function renderNews(data, scope) {
     list.innerHTML = `<div class="empty">No headlines about your players or their teams right now. Check back later.</div>`;
     return;
   }
-  list.innerHTML = data.items.map((it, i) => newsCardHtml(it, i === 0 && it.match_kind !== "team", i)).join("");
+  // The big FEATURED slot is for a story's own photo; a stand-in headshot or logo would just be blown up.
+  list.innerHTML = data.items.map((it, i) => newsCardHtml(it, i === 0 && it.match_kind !== "team" && !!it.image, i)).join("");
 }
 
 // Last answer per tab, kept for a few minutes so switching tabs (or coming back) paints at once while a
@@ -4597,10 +4602,10 @@ async function loadNews() {
     state.newsCache[key] = { at: Date.now(), data };
     if (state.newsScope === scope) renderNews(data, scope);     // the user may have switched tabs meanwhile
     // Photos are looked up in the background after the first download (engine/news.py), so on a cold server
-    // most cards arrive text-only. Look again once, a few seconds later, to pick them up.
+    // some cards still carry a stand-in headshot/logo. Look again once, a few seconds later, to swap in the real photos.
     state.newsPhotoRetry = state.newsPhotoRetry || {};
     const items = data.items || [];
-    if (items.length >= 6 && items.filter((x) => !x.image).length > items.length / 2 && !state.newsPhotoRetry[key]) {
+    if (items.filter((x) => !x.image).length >= Math.max(3, items.length * 0.2) && !state.newsPhotoRetry[key]) {
       state.newsPhotoRetry[key] = true;
       setTimeout(() => { if (state.tab === "news" && state.newsScope === scope) loadNews(); }, 6000);
     }

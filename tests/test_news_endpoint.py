@@ -9,10 +9,10 @@ import server
 from engine import news, tools
 
 WK = pd.DataFrame([
-    {"player_id": "g1", "week": 1, "player_display_name": "Kenneth Walker III", "recent_team": "SEA"},
-    {"player_id": "g1", "week": 2, "player_display_name": "Kenneth Walker III", "recent_team": "SEA"},
-    {"player_id": "g2", "week": 2, "player_display_name": "CeeDee Lamb", "recent_team": "DAL"},
-    {"player_id": "g3", "week": 2, "player_display_name": "Josh Allen", "recent_team": "BUF"},
+    {"player_id": "g1", "week": 1, "player_display_name": "Kenneth Walker III", "recent_team": "SEA", "headshot_url": "http://h/old.png"},
+    {"player_id": "g1", "week": 2, "player_display_name": "Kenneth Walker III", "recent_team": "SEA", "headshot_url": "http://h/walker.png"},
+    {"player_id": "g2", "week": 2, "player_display_name": "CeeDee Lamb", "recent_team": "DAL", "headshot_url": "http://h/lamb.png"},
+    {"player_id": "g3", "week": 2, "player_display_name": "Josh Allen", "recent_team": "BUF", "headshot_url": "http://h/allen.png"},
 ])
 SNAP = {"teams": [{"roster_id": 1, "team_name": "Mine", "player_ids": ["g1", "gX"]},
                   {"roster_id": 2, "team_name": "Theirs", "player_ids": ["g2", "g3"]}]}
@@ -35,7 +35,8 @@ class NewsRostersTests(unittest.TestCase):
         out = tools.news_rosters("L1", 1)
         self.assertEqual(out["nfl_week"], 7)
         self.assertEqual(out["my_team"]["team_name"], "Mine")
-        self.assertEqual(out["my_team"]["players"], [{"player_id": "g1", "player_display_name": "Kenneth Walker III", "recent_team": "SEA"}])
+        self.assertEqual(out["my_team"]["players"], [{"player_id": "g1", "player_display_name": "Kenneth Walker III",
+                                                      "recent_team": "SEA", "headshot_url": "http://h/walker.png"}])
         self.assertEqual(out["opponent"]["team_name"], "Theirs")
         self.assertEqual({(p["player_display_name"], p["recent_team"]) for p in out["opponent"]["players"]},
                          {("CeeDee Lamb", "DAL"), ("Josh Allen", "BUF")})
@@ -61,8 +62,8 @@ class ApiNewsTests(unittest.TestCase):
         self.items = [item("CeeDee Lamb scores twice", "a", 100), item("Cowboys notebook", "b", 200),
                       item("Seahawks: Walker questionable", "c", 300), item("Packers sign a punter", "d", 400)]
         team = {"nfl_week": 7, "my_team": {"team_name": "Mine", "players": [
-            {"player_id": "g1", "player_display_name": "Kenneth Walker III", "recent_team": "SEA"},
-            {"player_id": "g2", "player_display_name": "CeeDee Lamb", "recent_team": "DAL"}]},
+            {"player_id": "g1", "player_display_name": "Kenneth Walker III", "recent_team": "SEA", "headshot_url": "http://h/walker.png"},
+            {"player_id": "g2", "player_display_name": "CeeDee Lamb", "recent_team": "DAL", "headshot_url": "http://h/lamb.png"}]},
             "opponent": {"team_name": "Theirs", "players": [{"player_id": "g3", "player_display_name": "Josh Allen", "recent_team": "BUF"}]}}
         for p in (mock.patch.object(server.news_layer, "all_headlines", return_value=self.items),
                   mock.patch.object(server.db, "get_active_team", return_value={"platform": "sleeper", "league_id": "L1", "roster_id": 1}),
@@ -76,6 +77,10 @@ class ApiNewsTests(unittest.TestCase):
         self.assertEqual([i["match_kind"] for i in body["items"]], ["name", "surname", "team"])
         self.assertEqual(body["team_name"], "Mine")
         self.assertEqual(body["sources"], list(news.FEEDS))
+        # every card has a stand-in picture before its own photo is known: headshot for a player, logo for team news
+        self.assertEqual(body["items"][0]["fallback_image"], "http://h/lamb.png")
+        self.assertEqual(body["items"][1]["fallback_image"], "http://h/walker.png")
+        self.assertTrue(body["items"][2]["fallback_image"].endswith("/dal.png"))
 
     def test_opponent_scope_only_shows_opponent_matches(self):
         body = self.client.get("/api/news?scope=opponent").json()

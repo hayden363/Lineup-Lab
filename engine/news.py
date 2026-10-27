@@ -12,9 +12,11 @@ downloads, and usually waits on none:
     publisher can't stall the tab;
   * the cache is stale-while-revalidate: past its TTL we keep serving the last good copy
     instantly and refresh in a background thread (warm() fills it at startup);
-  * article photos are never fetched inside a request. Feeds that attach one (CBS) show
-    it at once; for the rest a small background pool reads each article's og:image and
-    the photo appears on the next load.
+  * article photos are never fetched inside a request. Most feeds already carry one (an
+    enclosure, media:thumbnail/content, or an <img> in the item body) and that costs nothing;
+    for the rest a background pool reads just the <head> of each article for its og:image.
+    Until that lands every story still gets a picture: the headshot of the player it is about,
+    else his team's logo.
 The old version downloaded the feeds one after another and then, for every ESPN item,
 fetched the article page itself (up to 40 serial requests, 4 s timeout each) before it
 could answer.
@@ -82,7 +84,8 @@ TTL_SECONDS = 20 * 60
 FEED_TIMEOUT = (3, 6)          # (connect, read) seconds for one feed download
 BLOCK_TIMEOUT = 8.0            # the most a request waits on a COLD cache, all feeds in parallel
 IMAGE_TIMEOUT = 3
-IMAGE_SCRAPE_LIMIT = 24        # newest items per feed that get a background photo lookup
+IMAGE_SCRAPE_LIMIT = 40        # items per feed that get a background photo lookup
+IMAGE_HEAD_BYTES = 96 * 1024   # an og:image lives in <head>; never read more of the page than this
 IMAGE_TTL_SECONDS = 6 * 60 * 60
 IMAGE_RETRY_SECONDS = 15 * 60  # a lookup that found nothing (or failed) is retried after this
 USER_AGENT = "Mozilla/5.0 (compatible; LineupLab/1.0)"
@@ -91,35 +94,83 @@ _FEED_CACHE = {}               # feed name -> {"at": epoch, "items": [...]}
 _IMAGE_CACHE = {}              # article url -> (epoch, image url or None)
 _INFLIGHT = {}                 # feed name -> the Future refreshing it right now
 _LOCK = threading.Lock()
+_GENERATION = 0                # bumped by clear_cache(); a refresh that started before it must not store its result
 _FEED_POOL = ThreadPoolExecutor(max_workers=8, thread_name_prefix="news-feed")
-_IMAGE_POOL = ThreadPoolExecutor(max_workers=4, thread_name_prefix="news-img")
+_IMAGE_POOL = ThreadPoolExecutor(max_workers=12, thread_name_prefix="news-img")
 _AI_SUMMARY_CACHE = {}   # (player_id, tuple of matched article links) -> summary text
 AI_SUMMARY_TTL_SECONDS = 60 * 60
 
-_OG_IMAGE_RE = re.compile(r'<meta[^>]+property=["\']og:image["\'][^>]+content=["\']([^"\']+)["\']', re.IGNORECASE)
+_OG_IMAGE_RES = (
+    re.compile(r'<meta[^>]+property=["\']og:image(?::secure_url)?["\'][^>]+content=["\']([^"\']+)["\']', re.IGNORECASE),
+    re.compile(r'<meta[^>]+content=["\']([^"\']+)["\'][^>]+property=["\']og:image["\']', re.IGNORECASE),
+)
+_IMG_TAG_RE = re.compile(r'<img\b[^>]*>', re.IGNORECASE)
+_ATTR_RE = {k: re.compile(rf'\b{k}\s*=\s*["\']([^"\']*)["\']', re.IGNORECASE) for k in ("src", "width", "height")}
+_JUNK_IMAGE = re.compile(r"pixel|tracking|beacon|feedburner|gravatar|spacer|blank\.|1x1|/ads?/", re.IGNORECASE)
 
 
-# ----------------------------------------------------------------- fetching ----
+def _usable_image(url):
+    """An https image URL worth showing, else None (data: URIs, trackers, relative paths)."""
+    url = (url or "").strip()
+    if url.startswith("//"):
+        url = "https:" + url
+    if not url.lower().startswith(("http://", "https://")) or _JUNK_IMAGE.search(url):
+        return None
+    # The app's Content-Security-Policy is `img-src 'self' https: data:`, so a plain-http photo would be blocked by
+    # the browser and the card would lose its picture. Publishers' CDNs serve the same path over https.
+    return "https://" + url[len("http://"):] if url.lower().startswith("http://") else url
+
+
 def _enclosure_image(entry):
-    """Some feeds (CBS Sports) attach the article's real photo directly as
-    an RSS enclosure link — free, no extra request."""
+    """The article's photo straight from the feed, with no extra request. Checks, in order: an RSS
+    enclosure, media:thumbnail / media:content, then the first real <img> in the item body (WordPress
+    feeds such as Pro Football Rumors and ProFootballTalk usually carry it there). Tiny images
+    and tracking pixels are skipped."""
     for link in entry.get("links", []) or []:
         if link.get("rel") == "enclosure" and str(link.get("type", "")).startswith("image"):
-            return link.get("href")
+            u = _usable_image(link.get("href"))
+            if u:
+                return u
+    for key in ("media_thumbnail", "media_content"):
+        for m in entry.get(key) or []:
+            kind = f"{m.get('medium', '')} {m.get('type', '')}".strip()
+            if key == "media_content" and kind and "image" not in kind:
+                continue                                     # a video or audio file
+            u = _usable_image(m.get("url"))
+            if u:
+                return u
+    html = " ".join([c.get("value", "") for c in entry.get("content") or []] + [entry.get("summary", "") or ""])
+    for tag in _IMG_TAG_RE.findall(html):
+        attrs = {k: (r.search(tag).group(1) if r.search(tag) else "") for k, r in _ATTR_RE.items()}
+        if any(attrs[d].isdigit() and int(attrs[d]) < 50 for d in ("width", "height")):
+            continue
+        u = _usable_image(attrs["src"])
+        if u:
+            return u
     return None
 
 
 def _scrape_og_image(article_url):
-    """The article's own <meta property="og:image"> — the real photo the publisher
-    put on the page. Best effort with a short timeout; never raises."""
+    """The article's own <meta property="og:image">: the real photo the publisher put on the page.
+    Reads only the start of the page (the tag is in <head>), so a heavy article costs the same as a
+    light one. Best effort with a short timeout; never raises."""
     try:
-        resp = requests.get(article_url, timeout=IMAGE_TIMEOUT, headers={"User-Agent": USER_AGENT})
-        if resp.status_code != 200:
-            return None
-        m = _OG_IMAGE_RE.search(resp.text)
-        return m.group(1) if m else None
+        with requests.get(article_url, timeout=IMAGE_TIMEOUT, headers={"User-Agent": USER_AGENT}, stream=True) as resp:
+            if resp.status_code != 200:
+                return None
+            raw = b""
+            for chunk in resp.iter_content(8192):
+                raw += chunk
+                text = raw.decode("utf-8", "ignore")
+                for rx in _OG_IMAGE_RES:
+                    m = rx.search(text)
+                    if m:
+                        return _usable_image(m.group(1))
+                if len(raw) >= IMAGE_HEAD_BYTES or "</head>" in text.lower():
+                    return None
     except Exception:
         return None
+    return None
 
 
 def _fill_image(item):
@@ -176,11 +227,14 @@ def _download_feed(name, url):
 def _refresh_feed(name, url):
     """Download one feed into the cache. Returns True if it landed. A failure keeps the
     previous copy, so a flaky publisher never blanks the tab."""
+    generation = _GENERATION
     try:
         items = _download_feed(name, url)
-        _schedule_images(items)
         with _LOCK:
+            if generation != _GENERATION:
+                return False
             _FEED_CACHE[name] = {"at": time.time(), "items": items}
+        _schedule_images(items)
         return True
     except Exception as e:
         print(f"[news] couldn't fetch {name}: {e}")
@@ -232,12 +286,13 @@ def all_headlines(force=False):
 
 def clear_cache():
     """Forget every cached feed and photo and drop queued photo lookups (used by tests)."""
-    global _IMAGE_POOL
+    global _IMAGE_POOL, _GENERATION
     with _LOCK:
+        _GENERATION += 1
         _FEED_CACHE.clear()
         _IMAGE_CACHE.clear()
         _INFLIGHT.clear()
-        old, _IMAGE_POOL = _IMAGE_POOL, ThreadPoolExecutor(max_workers=4, thread_name_prefix="news-img")
+        old, _IMAGE_POOL = _IMAGE_POOL, ThreadPoolExecutor(max_workers=12, thread_name_prefix="news-img")
     old.shutdown(wait=False, cancel_futures=True)
 
 
@@ -271,6 +326,16 @@ def _team_key(team):
     t = str(team or "").upper()
     t = _TEAM_ALIAS.get(t, t)
     return t if t in _TEAMS else None
+
+
+_LOGO_CODE = {"LA": "lar", "WAS": "wsh"}      # ESPN's logo file names differ from nflverse's for these two
+
+
+def team_logo(team):
+    """ESPN's public CDN logo for an NFL team code, or None. a.espncdn.com is on the image proxy's allowlist,
+    and a logo that fails to load just drops the card back to text only."""
+    t = _team_key(team)
+    return f"https://a.espncdn.com/i/teamlogos/nfl/500/{_LOGO_CODE.get(t, (t or '').lower())}.png" if t else None
 
 
 def _norm(text):
@@ -309,7 +374,7 @@ def _prepare(players):
         last = toks[-1] if len(toks) > 1 and len(toks[-1]) >= 4 else None
         team = _team_key(p.get("recent_team") or p.get("team"))
         prepared.append({"player_id": p["player_id"], "name": name, "full": " " + " ".join(toks) + " ",
-                         "last": f" {last} " if last else None, "team": team})
+                         "last": f" {last} " if last else None, "team": team, "headshot": p.get("headshot_url")})
     counts = Counter((r["last"], r["team"]) for r in prepared if r["last"] and r["team"])
     for r in prepared:
         if r["last"] and (not r["team"] or counts[(r["last"], r["team"])] > 1):
@@ -318,10 +383,11 @@ def _prepare(players):
 
 
 def filter_for_players(items, players, include_team_news=False):
-    """players: [{player_id, player_display_name, recent_team?}, ...]. Returns copies of the
+    """players: [{player_id, player_display_name, recent_team?, headshot_url?}, ...]. Returns copies of the
     items that match, each with `matched_players` ([{player_id, name}]), `match_kind`
-    ("name" | "surname" | "team") and `relevance`, strongest first and newest first within a
-    strength (feed order when there is no timestamp).
+    ("name" | "surname" | "team"), `relevance`, and a `fallback_image` (the matched player's
+    headshot, else his team's logo) for the UI to show until the story's own photo is known,
+    strongest first and newest first within a strength (feed order when there is no timestamp).
 
       name     the full name (suffix/punctuation folded) appears in the title or summary
       surname  the surname AND that player's team appear in the same text
@@ -338,7 +404,7 @@ def filter_for_players(items, players, include_team_news=False):
     for item in items:
         title_n = _norm(item.get("title", ""))
         hay = _norm(f"{item.get('title', '')} {item.get('summary', '')}")
-        matched, kind, in_title = [], None, False
+        matched, kind, in_title, fallback = [], None, False, None
         teams_in_text = {t for t, phrases in team_phrases.items() if any(ph in hay for ph in phrases)}
         for r in prepared:
             if r["full"] in hay:
@@ -348,6 +414,7 @@ def filter_for_players(items, players, include_team_news=False):
             else:
                 continue
             matched.append({"player_id": r["player_id"], "name": r["name"]})
+            fallback = fallback or r["headshot"] or team_logo(r["team"])
             if strength == "name":
                 kind = "name"
                 in_title = in_title or r["full"] in title_n
@@ -355,10 +422,12 @@ def filter_for_players(items, players, include_team_news=False):
                 kind = "surname"
         if matched:
             rel = (3.0 if kind == "name" else 2.0) + (0.5 if in_title else 0.0)
-            out.append({**item, "matched_players": matched, "match_kind": kind, "relevance": rel})
+            out.append({**item, "matched_players": matched, "match_kind": kind, "relevance": rel,
+                        **({"fallback_image": fallback} if fallback else {})})
         elif include_team_news and teams_in_text:
             team_items.append({**item, "matched_players": [], "match_kind": "team", "relevance": 1.0,
-                               "matched_teams": sorted(teams_in_text)})
+                               "matched_teams": sorted(teams_in_text),
+                               "fallback_image": team_logo(sorted(teams_in_text)[0])})
     out.sort(key=lambda it: (-it["relevance"], -(it.get("ts") or 0)))
     team_items.sort(key=lambda it: -(it.get("ts") or 0))
     return out + team_items[:TEAM_NEWS_CAP]

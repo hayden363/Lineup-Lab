@@ -166,3 +166,26 @@ class TeamNewsTests(unittest.TestCase):
     def test_nothing_from_other_teams(self):
         out = filter_for_players([item("Packers beat the Bears")], [P(1, "CeeDee Lamb", "DAL")], include_team_news=True)
         self.assertEqual(out, [])
+
+
+class FallbackImageTests(unittest.TestCase):
+    def test_headshot_for_a_named_player_logo_when_there_is_no_headshot_and_none_without_either(self):
+        with_shot = P(1, "CeeDee Lamb", "DAL"); with_shot["headshot_url"] = "http://h/lamb.png"
+        out = filter_for_players([item("CeeDee Lamb scores")], [with_shot])
+        self.assertEqual(out[0]["fallback_image"], "http://h/lamb.png")
+        out = filter_for_players([item("CeeDee Lamb scores")], [P(1, "CeeDee Lamb", "DAL")])
+        self.assertEqual(out[0]["fallback_image"], "https://a.espncdn.com/i/teamlogos/nfl/500/dal.png")
+        self.assertNotIn("fallback_image", filter_for_players([item("CeeDee Lamb scores")], [P(1, "CeeDee Lamb")])[0])
+
+    def test_surname_match_and_team_news(self):
+        walker = P(1, "Kenneth Walker III", "SEA"); walker["headshot_url"] = "http://h/walker.png"
+        out = filter_for_players([item("Seahawks: Walker out"), item("Seahawks sign a punter")], [walker], include_team_news=True)
+        self.assertEqual([o["fallback_image"] for o in out], ["http://h/walker.png", "https://a.espncdn.com/i/teamlogos/nfl/500/sea.png"])
+
+    def test_logo_codes_follow_espn_not_nflverse_for_la_and_washington(self):
+        from engine.news import team_logo
+        self.assertTrue(team_logo("LA").endswith("/lar.png"))
+        self.assertTrue(team_logo("WAS").endswith("/wsh.png"))
+        self.assertTrue(team_logo("WSH").endswith("/wsh.png"))     # Sleeper's spelling
+        self.assertIsNone(team_logo("XYZ"))
+        self.assertIsNone(team_logo(None))

@@ -4902,3 +4902,8 @@ tr.kbd-click:focus-visible { outline-offset: -2px; }
 .chat-empty { margin: 12px 0; }
 
 .news-matched .tag.team { opacity: 0.75; }
+
+/* A stand-in picture (player headshot or team logo) rather than the story's own photo: show the whole face / logo
+   instead of cropping it like a 16:9 article photo. */
+.news-card .news-img-wrap.is-fallback { background: radial-gradient(circle at 50% 30%, var(--panel-2), var(--panel)); }
+.news-card .news-img-wrap.is-fallback img { object-fit: contain; object-position: center bottom; padding: 6px 0 0; }

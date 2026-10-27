@@ -1040,8 +1040,10 @@ def league_all_player_names(league_id, season=None, scoring=None):
     decide who's a real enough person to match a headline against."""
     snap = sleeper.league_snapshot(league_id)
     bundle = load_bundle(season)
-    last = bundle["wk"].sort_values("week").groupby("player_id")[["player_display_name", "recent_team"]].last()
+    cols = [c for c in ("player_display_name", "recent_team", "headshot_url") if c in bundle["wk"].columns]
+    last = bundle["wk"].sort_values("week").groupby("player_id")[cols].last()
     names, teams = last["player_display_name"].to_dict(), last["recent_team"].to_dict()
+    shots = last["headshot_url"].to_dict() if "headshot_url" in last.columns else {}
     seen = {}
     for team in snap["teams"]:
         for pid in team["player_ids"]:
@@ -1049,7 +1051,8 @@ def league_all_player_names(league_id, season=None, scoring=None):
                 continue
             name = names.get(pid)
             if name:
-                seen[pid] = {"player_id": pid, "player_display_name": name, "recent_team": teams.get(pid)}
+                seen[pid] = {"player_id": pid, "player_display_name": name, "recent_team": teams.get(pid),
+                             "headshot_url": shots.get(pid)}
     return list(seen.values())
 
 
@@ -1083,12 +1086,16 @@ def news_rosters(league_id, roster_id, week=None, season=None):
                 break
     except Exception:
         opp = None
-    last = load_bundle(season)["wk"].sort_values("week").groupby("player_id")[["player_display_name", "recent_team"]].last()
+    wk = load_bundle(season)["wk"]
+    cols = [c for c in ("player_display_name", "recent_team", "headshot_url") if c in wk.columns]
+    last = wk.sort_values("week").groupby("player_id")[cols].last()
 
     def card(t):
         return {"team_name": t["team_name"],
                 "players": [{"player_id": pid, "player_display_name": last.at[pid, "player_display_name"],
-                             "recent_team": last.at[pid, "recent_team"]} for pid in t["player_ids"] if pid in last.index]}
+                             "recent_team": last.at[pid, "recent_team"],
+                             "headshot_url": last.at[pid, "headshot_url"] if "headshot_url" in last.columns else None}
+                            for pid in t["player_ids"] if pid in last.index]}
     out = {"nfl_week": week, "my_team": card(mine), "opponent": card(opp) if opp else None}
     _NEWS_ROSTER_CACHE[key] = (time.time(), out)
     return out

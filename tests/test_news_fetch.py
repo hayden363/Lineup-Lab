@@ -3,6 +3,7 @@ A local fake publisher stands in for ESPN/CBS/PFR/PFT, so there's no network."""
 import threading
 import time
 import unittest
+import unittest.mock
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
@@ -57,6 +58,86 @@ class Publisher:
         self.server.shutdown()
 
 
+RSS = """<?xml version="1.0"?><rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/"
+ xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel><title>t</title>{items}</channel></rss>"""
+
+
+def entries(xml_items):
+    import feedparser
+    return feedparser.parse(RSS.format(items=xml_items)).entries
+
+
+class FeedImageExtractionTests(unittest.TestCase):
+    """The photo comes out of the feed itself, with no request to the article."""
+
+    def img(self, xml_item):
+        return news._enclosure_image(entries(f"<item><title>x</title>{xml_item}</item>")[0])
+
+    def test_enclosure(self):
+        self.assertEqual(self.img('<enclosure url="https://cdn.x/a.jpg" type="image/jpeg" length="1"/>'), "https://cdn.x/a.jpg")
+
+    def test_media_thumbnail_and_media_content(self):
+        self.assertEqual(self.img('<media:thumbnail url="https://cdn.x/t.jpg"/>'), "https://cdn.x/t.jpg")
+        self.assertEqual(self.img('<media:content url="https://cdn.x/c.jpg" medium="image"/>'), "https://cdn.x/c.jpg")
+
+    def test_a_video_media_content_is_not_a_photo(self):
+        self.assertIsNone(self.img('<media:content url="https://cdn.x/v.mp4" medium="video" type="video/mp4"/>'))
+
+    def test_first_real_img_in_the_body_skipping_pixels_and_tiny_images(self):
+        body = ('<description><![CDATA[<img src="https://stats.x/pixel.gif" width="1" height="1">'
+                '<img src="https://cdn.x/tiny.png" width="20" height="20">'
+                '<img src="https://cdn.x/hero.jpg" width="600"> text]]></description>')
+        self.assertEqual(self.img(body), "https://cdn.x/hero.jpg")
+        self.assertEqual(self.img('<content:encoded><![CDATA[<p><img src="//cdn.x/p.jpg"></p>]]></content:encoded>'), "https://cdn.x/p.jpg")
+
+    def test_plain_http_photos_are_upgraded_because_the_csp_blocks_them(self):
+        # server.py sends `img-src 'self' https: data:`; an http:// image would never render
+        self.assertEqual(self.img('<enclosure url="http://cdn.x/a.jpg" type="image/jpeg" length="1"/>'), "https://cdn.x/a.jpg")
+        self.assertEqual(self.img('<media:thumbnail url="http://cdn.x/t.jpg"/>'), "https://cdn.x/t.jpg")
+        self.assertEqual(self.img('<description><![CDATA[<img src="http://cdn.x/b.jpg" width="400">]]></description>'), "https://cdn.x/b.jpg")
+
+    def test_data_uris_and_relative_paths_are_ignored_and_none_when_nothing(self):
+        self.assertIsNone(self.img('<description><![CDATA[<img src="data:image/png;base64,AAAA"><img src="/rel.jpg">]]></description>'))
+        self.assertIsNone(self.img("<description>just words</description>"))
+
+    def test_download_keeps_the_photo_and_strips_the_tags_from_the_summary(self):
+        pub = Publisher()
+        self.addCleanup(pub.close)
+        item = news._download_feed("t", pub.url("/feed", tag="t", n=1))[0]            # feed has no photo -> None
+        self.assertIsNone(item["image"])
+        xml = RSS.format(items='<item><title>T</title><link>http://l</link><description><![CDATA[<img src="https://cdn.x/h.jpg" width="500"> Hello]]></description></item>')
+        with unittest.mock.patch.object(news.requests, "get") as g:
+            g.return_value.content = xml.encode(); g.return_value.raise_for_status = lambda: None
+            got = news._download_feed("t", "http://feed")[0]
+        self.assertEqual((got["image"], got["summary"].strip()), ("https://cdn.x/h.jpg", "Hello"))
+
+
+class HeadOnlyScrapeTests(unittest.TestCase):
+    def setUp(self):
+        self.pub = Publisher()
+        self.addCleanup(self.pub.close)
+
+    def test_finds_og_image_in_either_attribute_order_and_stops_reading_early(self):
+        import http.server
+        big = b"<html><head><meta content='https://cdn.x/rev.jpg' property='og:image'></head><body>" + b"x" * 5_000_000
+        class H(http.server.BaseHTTPRequestHandler):
+            def log_message(self, *a): pass
+            def do_GET(self):
+                self.send_response(200); self.send_header("Content-Length", str(len(big))); self.end_headers()
+                try: self.wfile.write(big)
+                except Exception: pass
+        srv = http.server.ThreadingHTTPServer(("127.0.0.1", 0), H)
+        threading.Thread(target=srv.serve_forever, daemon=True).start()
+        self.addCleanup(srv.shutdown)
+        t = time.time()
+        self.assertEqual(news._scrape_og_image(f"http://127.0.0.1:{srv.server_address[1]}/a"), "https://cdn.x/rev.jpg")
+        self.assertLess(time.time() - t, 1.0)
+
+    def test_page_without_the_tag_gives_up_at_the_end_of_head(self):
+        self.assertIsNone(news._scrape_og_image(self.pub.url("/missing")))        # 404
+        self.assertIsNone(news._scrape_og_image("http://127.0.0.1:1/x"))          # refused, never raises
+
+
 class FetchTests(unittest.TestCase):
     def setUp(self):
         self.pub = Publisher()
@@ -89,7 +170,7 @@ class FetchTests(unittest.TestCase):
         deadline = time.time() + 5
         while time.time() < deadline and not all(i["image"] for i in items):
             time.sleep(0.05)
-        self.assertTrue(all(i["image"] == "http://img.example/p.jpg" for i in items))
+        self.assertTrue(all(i["image"] == "https://img.example/p.jpg" for i in items))   # served as http, upgraded for the CSP
         self.assertEqual(sum(v for k, v in self.pub.hits.items() if k.startswith("/article")), 8)
 
     def test_warm_cache_is_instant_and_a_stale_one_refreshes_behind_the_request(self):
