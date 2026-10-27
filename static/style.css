@@ -4900,3 +4900,24 @@ tr.kbd-click:focus-visible { outline-offset: -2px; }
 .chat-composer { display: flex; gap: 8px; margin-top: 10px; }
 .chat-composer input { flex: 1; padding: 10px 12px; background: var(--panel-2); color: var(--text); border: 1px solid var(--border); border-radius: 6px; font: inherit; }
 .chat-empty { margin: 12px 0; }
+
+
+/* ---- live game box score (opens from a live-scores card) ---- */
+button.live-score-card { font: inherit; color: inherit; cursor: pointer; }
+button.live-score-card:hover { border-color: var(--accent-dim); }
+.live-score-card.has-mine { border-color: var(--accent-dim); }
+.lsc-mine { margin-top: 3px; font-size: 10px; font-weight: 700; color: var(--accent); white-space: nowrap; }
+
+.gb-modal { max-width: 760px; }
+.gb-mine-summary {
+  margin: 4px 0 14px; padding: 10px 12px; border-radius: 10px;
+  background: rgba(52, 211, 153, 0.10); border: 1px solid var(--accent-dim); font-size: 13px;
+}
+.gb-teams { display: grid; grid-template-columns: 1fr; gap: 16px; }
+@media (min-width: 640px) { .gb-teams { grid-template-columns: 1fr 1fr; } }
+.gb-player { padding: 8px 10px; border-radius: 8px; border: 1px solid transparent; }
+.gb-player + .gb-player { margin-top: 4px; }
+.gb-player.mine { background: rgba(52, 211, 153, 0.10); border-color: var(--accent-dim); }
+.gb-head { display: flex; justify-content: space-between; gap: 8px; font-weight: 600; font-size: 13px; }
+.gb-pts { color: var(--accent); font-family: var(--mono); }
+.gb-line { font-size: 12px; margin-top: 2px; }

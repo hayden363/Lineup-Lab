@@ -3950,6 +3950,8 @@ async function loadMyTeam(week) {
     const data = await api(`/api/myteam?${(scoringQS() + weekQS).replace(/^&/, "")}`);
     renderMyTeamWeekSelector(data);
     state.notifications = computeInjuryNotifications(data.my_team);
+    state.myTeamAbbrs = rosterTeamCounts(data.my_team);
+    markLiveScoreCards();
     renderNotifBell();
     const onLiveWeek = data.live_week && data.live_week === data.nfl_week;
     let html = `<div class="hint">Week ${esc(data.nfl_week)}${onLiveWeek ? " · in progress" : ""} · ${esc(data.league_name)}</div>`;
@@ -4479,13 +4481,33 @@ function initTradeFinder() {
 // — free, public, no key. Lives on My Team since that's the home tab;
 // polls on a short interval only while that tab is actually the one
 // showing, so it isn't hammering ESPN's endpoint from a background tab.
+// ESPN and nflverse spell a few teams differently (TEAM_ALIAS, above); fold
+// both to one key so a roster team lines up with a scoreboard team.
+const teamKey = (t) => { const a = String(t || "").toUpperCase(); return TEAM_ALIAS[a] || a; };
+
+// {team: how many of your players are on it}, from a My Team card.
+function rosterTeamCounts(team) {
+  const out = {};
+  ((team && team.players) || []).forEach((p) => {
+    const k = teamKey(p.recent_team);
+    if (k) out[k] = (out[k] || 0) + 1;
+  });
+  return out;
+}
+
+function myPlayersInGame(g) {
+  const m = state.myTeamAbbrs || {};
+  return (m[teamKey(g.away.abbr)] || 0) + (m[teamKey(g.home.abbr)] || 0);
+}
+
 function liveScoreCardHtml(g) {
   const isLive = g.state === "in";
   const isFinal = g.state === "post";
   const scoreLine = g.state === "pre"
     ? `<span class="muted">vs</span>`
     : `${g.away.score}–${g.home.score}`;
-  return `<div class="live-score-card${isLive ? " live" : ""}${isFinal ? " final" : ""}">
+  const mine = myPlayersInGame(g);
+  return `<button type="button" class="live-score-card${isLive ? " live" : ""}${isFinal ? " final" : ""}${mine ? " has-mine" : ""}" data-game="${esc(g.game_id)}" title="Open box score">
     ${isLive ? `<span class="live-dot"></span>` : ""}
     <div class="lsc-teams">
       <span class="${g.away.winner ? "lsc-winner" : ""}">${esc(g.away.abbr)}</span>
@@ -4493,7 +4515,16 @@ function liveScoreCardHtml(g) {
       <span class="${g.home.winner ? "lsc-winner" : ""}">${esc(g.home.abbr)}</span>
     </div>
     <div class="lsc-status">${esc(isLive ? `Q${g.period} · ${g.display_clock}` : g.status_detail)}</div>
-  </div>`;
+    ${mine ? `<div class="lsc-mine">★ ${mine} of yours</div>` : ""}
+  </button>`;
+}
+
+// Re-flag the strip's cards once My Team's roster is known (the strip can
+// finish loading before the roster does).
+function markLiveScoreCards() {
+  const strip = $("#live-scores-strip");
+  if (!strip || !state.liveGames) return;
+  strip.innerHTML = state.liveGames.map(liveScoreCardHtml).join("");
 }
 
 async function loadLiveScores() {
@@ -4503,6 +4534,7 @@ async function loadLiveScores() {
     const data = await api("/api/live-scores");
     const games = data.games || [];
     if (!games.length) { strip.style.display = "none"; return; }
+    state.liveGames = games;
     strip.innerHTML = games.map(liveScoreCardHtml).join("");
     strip.style.display = "flex";
   } catch (e) {
@@ -4511,7 +4543,65 @@ async function loadLiveScores() {
   }
 }
 
+function gamePlayerHtml(p) {
+  const pts = p.fantasy_points == null ? "" : `<b class="gb-pts">${FMT.d1(p.fantasy_points)}</b>`;
+  return `<div class="gb-player${p.mine ? " mine" : ""}">
+    <div class="gb-head"><span class="gb-name">${p.mine ? "★ " : ""}${esc(p.name)} <span class="muted">${esc(p.position || "")}</span></span>${pts}</div>
+    ${(p.lines || []).map((l) => `<div class="gb-line"><span class="muted">${esc(l.label)}</span> ${esc(l.text)}</div>`).join("")}
+  </div>`;
+}
+
+function gameBodyHtml(box) {
+  const teams = box.teams || [];
+  if (!teams.length) return `<div class="empty">No box score yet. It appears once the game kicks off.</div>`;
+  const mineLine = box.mine_count
+    ? `<div class="gb-mine-summary">Your players in this game: <b>${box.mine_count}</b> · <b>${FMT.d1(box.mine_points)}</b> fantasy pts</div>`
+    : "";
+  return mineLine + `<div class="gb-teams">${teams.map((t) => `<div class="gb-team">
+    <div class="section-label">${esc(t.name || t.abbr)}</div>
+    ${t.players.map(gamePlayerHtml).join("") || `<div class="muted">No stats yet.</div>`}
+  </div>`).join("")}</div>`;
+}
+
+let gameModalTimer = null;
+
+async function openGameModal(gameId) {
+  const g = (state.liveGames || []).find((x) => String(x.game_id) === String(gameId));
+  if (!g) return;
+  const root = $("#modal-root");
+  const live = g.state === "in";
+  const score = g.state === "pre" ? "vs" : `${g.away.score}–${g.home.score}`;
+  root.innerHTML = `<div class="modal-backdrop"><div class="modal gb-modal">
+    <div class="modal-header"><div><h2>${esc(g.away.abbr)} ${score} ${esc(g.home.abbr)}</h2>
+      <div class="muted" id="gb-status">${esc(live ? `Q${g.period} · ${g.display_clock}` : g.status_detail)}</div></div>
+      <button class="modal-close" aria-label="Close">✕</button></div>
+    <div id="gb-body"><div class="loading">Loading box score…</div></div>
+  </div></div>`;
+  syncModalScrollLock();
+  root.querySelector(".modal-backdrop").addEventListener("click", (e) => { if (e.target.classList.contains("modal-backdrop")) closeModal(); });
+  root.querySelector(".modal-close").addEventListener("click", closeModal);
+
+  clearInterval(gameModalTimer);
+  const refresh = async () => {
+    const body = $("#gb-body");
+    if (!body) { clearInterval(gameModalTimer); return; }   // modal was closed
+    try {
+      const qs = scoringQS().replace(/^&/, "");
+      body.innerHTML = gameBodyHtml(await api(`/api/live-scores/${encodeURIComponent(gameId)}${qs ? "?" + qs : ""}`));
+    } catch (e) {
+      if (!body.querySelector(".gb-teams")) body.innerHTML = `<div class="empty">Couldn't load this box score. Try again in a moment.</div>`;
+    }
+  };
+  await refresh();
+  if (live) gameModalTimer = setInterval(refresh, 20000);
+}
+
 function initLiveScores() {
+  const strip = $("#live-scores-strip");
+  if (strip) strip.addEventListener("click", (e) => {
+    const card = e.target.closest(".live-score-card[data-game]");
+    if (card) openGameModal(card.dataset.game);
+  });
   loadLiveScores();
   setInterval(() => {
     if (state.tab === "myteam" && document.visibilityState === "visible") loadLiveScores();
