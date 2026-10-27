@@ -5,12 +5,14 @@ Every proposal (from the finder or typed into the analyzer) runs the same
 pipeline. All numbers are real: rest-of-season projections (points per game)
 and a market value built from the expert consensus rank plus our own rank.
 
-Market value (0-100 trade chart)
-    Players are ranked by points/game over the best player nobody in the
-    league rosters at their position, that rank is averaged with the expert
-    consensus rank, and the result is put on a trade-chart curve:
-    value = 100 * exp(-(rank - 1) / 45). Tiers: 1 = 80-100, 2 = 55-79,
-    3 = 30-54, 4 = under 30.
+Market value (0-100, the league's own PVS)
+    value = PVS (engine/pvs.py) computed for THIS league's team count, starting
+    slots and scoring, so a superflex league re-prices quarterbacks and a deep
+    league re-prices its bench. It keeps the real gaps between players (a 0.1
+    point gap is not priced like a 2 point gap). The expert consensus rank nudges
+    it by 30%: that rank is turned into the PVS of whoever sits at that spot on
+    our list, then blended 70/30. Tiers are the one shared set of PVS bands
+    (engine/pvs.TIER_BANDS): 1 = 80+, 2 = 60+, 3 = 40+, 4 = 25+, 5 = below.
 
 1. Starting Lineup Delta
     dSL = best legal starting lineup after - before (points/game, the league's
@@ -32,7 +34,7 @@ Market value (0-100 trade chart)
 
 Gates (fail fast, in order)
     G1 tier break: a tier-1 player can't go out for a package unless it holds
-       a tier-2+ player; never for only tier-3/4 pieces.
+       a tier-2+ player; never for only tier-3 or lower pieces.
     G2 lineups: they must gain >= +1.5 starting points/game; you must gain
        >= +0.5 (no trade is "viable" if your own lineup doesn't improve).
     G3 roster fit: no 3-for-1 in 8- or 10-team leagues; every extra body
@@ -51,11 +53,10 @@ import itertools
 
 import numpy as np
 
-from . import consensus, lineup as lineup_layer, optimizer, sleeper, value as value_layer
+from . import consensus, lineup as lineup_layer, optimizer, pvs as pvs_layer, sleeper, value as value_layer
 
 POSITIONS = ("QB", "RB", "WR", "TE")
-CURVE_SCALE = 45.0
-TIERS = ((80, 1), (55, 2), (30, 3), (0, 4))
+ECR_WEIGHT = 0.30   # the same expert-rank nudge the board uses (engine/value.ECR_WEIGHT)
 OPP_MIN_DSL = 1.5
 MY_MIN_DSL = 0.5
 CANDIDATES_PER_SIDE = 9
@@ -63,12 +64,9 @@ THROW_IN = 8.0
 
 
 # --------------------------------------------------------------- values ----
-def rank_value(rank):
-    return 100.0 * float(np.exp(-(rank - 1) / CURVE_SCALE))
-
-
 def tier(v):
-    return next(t for floor, t in TIERS if v >= floor)
+    """1 (elite cornerstone) ... 5 (bench depth): the shared PVS tier bands."""
+    return pvs_layer.tier_number(v)
 
 
 def league_shape(roster_positions, teams):
@@ -107,23 +105,39 @@ def waiver_levels(pool, rostered_ids, league):
     return out
 
 
-def trade_values(pool, league, rostered_ids=None, ecr=None):
-    """{player_id: {over_waiver, our_rank, ecr, rank, trade, tier}}."""
+def trade_values(pool, league, rostered_ids=None, ecr=None, pvs_by_id=None):
+    """{player_id: {over_waiver, our_rank, ecr, rank, trade, tier}}.
+
+    `pvs_by_id` is {player_id: PVS} for this league (tools._league_pvs). With
+    it, `trade` is that PVS nudged toward the expert rank. Without it (tests,
+    or the PVS build failed) the fallback scales each player's edge over the
+    waiver wire against the best player's, which keeps the gaps too."""
     levels = waiver_levels(pool, set(rostered_ids or []), league)
     ours = {pid: float(r["value"]) - levels.get(r["position"], 0.0) for pid, r in pool.iterrows()}
-    our_rank = {pid: i + 1 for i, pid in enumerate(sorted(ours, key=lambda k: -ours[k]))}
+    if pvs_by_id:
+        base = {pid: pvs_by_id.get(pid) for pid in pool.index}
+        base = {pid: float(v) if v is not None and v == v else None for pid, v in base.items()}
+    else:
+        base = {pid: None for pid in pool.index}
+    ref = max(max(ours.values(), default=0.0), 1e-9)
+    for pid in base:
+        if base[pid] is None:
+            base[pid] = 100.0 * float(np.clip(ours[pid] / ref, 0.0, 1.0))
+    our_rank = {pid: i + 1 for i, pid in enumerate(sorted(base, key=lambda k: -base[k]))}
+    ladder = sorted(base.values(), reverse=True)   # the PVS found at each overall rank
     ecr = ecr if ecr is not None else consensus.overall_lookup()
-    blend, ecr_rank = {}, {}
+    ecr_rank, val = {}, {}
     for pid, r in pool.iterrows():
         info = ecr.get(consensus.match_key(r["player_display_name"], r["position"])) if ecr else None
         e = info.get("ecr") if info else None
         e = int(e) if e is not None and e == e else None
         ecr_rank[pid] = e
-        blend[pid] = our_rank[pid] if e is None else 0.5 * our_rank[pid] + 0.5 * e
-    final = {pid: i + 1 for i, pid in enumerate(sorted(blend, key=lambda k: blend[k]))}
+        val[pid] = base[pid] if e is None else \
+            (1 - ECR_WEIGHT) * base[pid] + ECR_WEIGHT * ladder[min(e, len(ladder)) - 1]
+    final = {pid: i + 1 for i, pid in enumerate(sorted(val, key=lambda k: -val[k]))}
     out = {}
     for pid in pool.index:
-        v = round(rank_value(final[pid]), 1)
+        v = round(val[pid], 1)
         out[pid] = {"over_waiver": round(ours[pid], 2), "our_rank": our_rank[pid], "ecr": ecr_rank[pid],
                     "rank": final[pid], "trade": v, "tier": tier(v)}
     return out
@@ -386,8 +400,8 @@ def assess(give, get, me, opp, ctx, full=True, fair=False):
 
     # G4 incentives
     o_arch = archetype(opp.get("record"))
-    opp_best_out = min((tier(p["trade"]) for p in get), default=4)
-    opp_best_in = min((tier(p["trade"]) for p in give), default=4)
+    opp_best_out = min((tier(p["trade"]) for p in get), default=5)
+    opp_best_in = min((tier(p["trade"]) for p in give), default=5)
     if o_arch == "Contender" and opp_best_out <= 2 and (len(give) > len(get) or opp_best_in > opp_best_out):
         gate["incentive_passed"] = False
         fails.append("contender")

@@ -38,6 +38,7 @@ Pillars, each 0-1:
 Differences from the pasted spec, on purpose:
   * The spec lists matchup as a 10% weight in its table but as a multiplier in
     its Step 3. Using both counts it twice, so it is the 10% pillar only.
+  * Tier bands are the spec's 80 / 60 / 40 / 25 (see TIER_BANDS).
   * No power curve. The spec stretches the elite tier (^1.30; its header says
     1.25); on real data that made one back 100 and the next elite receiver 81.
     Instead the VORP and ceiling pillars saturate at the top-ten average, so
@@ -57,11 +58,13 @@ LEAGUE_AVG_ITT = 22.0
 SNAP_FULL = 0.70     # at or above this snap share = full marks, as the spec's route% rule
 HVT_FULL_PG = 7.0    # high-value touches per game that count as full marks (spec: "7+")
 
-# Fixed score bands (the spec's, shifted down to fit the absolute scale); a tier
-# is a statement about the score, not a rank.
+# The one set of tier bands in the app (spec: 80 / 60 / 40 / 25). The Big Board's
+# tier column, the player-card label and the trade engine's tier-break gate
+# all read these, so "tier 1" means the same player everywhere. A tier is a
+# statement about the score, not a rank.
 TIER_BANDS = [
-    (90, "Legendary"), (80, "Cornerstone"), (68, "Every-week starter"),
-    (52, "Matchup / flex play"), (32, "Bench stash"), (0, "Replacement"),
+    (80, "Elite cornerstone"), (60, "High-end starter"), (40, "Every-week starter"),
+    (25, "Flex / matchup play"), (0, "Bench depth"),
 ]
 # Efficiency columns that exist on the boards, per position (higher = better).
 EFFICIENCY = {
@@ -73,7 +76,7 @@ EFFICIENCY = {
 
 
 def tier_number(pvs):
-    """1 (Legendary) ... 6 (Replacement), the position of the PVS band."""
+    """1 (Elite cornerstone) ... 5 (Bench depth), the position of the PVS band."""
     for i, (floor, _) in enumerate(TIER_BANDS, start=1):
         if pvs is not None and not pd.isna(pvs) and pvs >= floor:
             return i
@@ -197,8 +200,8 @@ def add_pvs(allp, league=None, matchup=None):
 
 def reorder(df):
     """Big Board order: by PVS, best first, with ties broken by VOR. Re-numbers
-    overall_rank, our_rank, ecr_gap and the tier number (1 = Legendary ... 6 =
-    Replacement, the fixed PVS bands) so every column agrees with the order shown. The
+    overall_rank, our_rank, ecr_gap and the tier number (1 = Elite cornerstone ...
+    5 = Bench depth, the fixed PVS bands) so every column agrees with the order shown. The
     expert rank is kept as a comparison; it no longer moves a player."""
     if df is None or df.empty or "PVS" not in df.columns:
         return df

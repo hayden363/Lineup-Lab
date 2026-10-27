@@ -24,6 +24,7 @@ class ByeStartSitTests(unittest.TestCase):
         self.assertTrue(byp["on_bye"])
         self.assertTrue(byp["outcomes"]["out"])
         self.assertEqual(byp["outcomes"]["reason"], "bye")
+        self.assertEqual(byp["decision"]["rating"], 0.0)   # a bye must not read as a strong start
         self.assertEqual(byp["week"], slate)
         self.assertIsNone(byp["opponent"])
         self.assertNotEqual(res["decision"]["pick"], on_bye.index[0])
