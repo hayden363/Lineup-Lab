@@ -57,6 +57,7 @@ uvicorn server:app --reload --port 8420
 | Weekly-refresh automation | [engine/refresh_scheduler.py](engine/refresh_scheduler.py) | An in-process background task — no separate cron job — that force-refreshes the board on a timer (`REFRESH_INTERVAL_HOURS`, default 24) so it's never stale and a newly published season is picked up without a restart. |
 | API | [server.py](server.py) | FastAPI JSON API (see below) that also serves the frontend, plus the security middleware/rate-limiting described below. |
 | Frontend | [static/](static/) | Vanilla JS/HTML/CSS (no build step) — a collapsible left sidebar nav (icon rail ↔ full, mobile drawer) across Big Board, My Team (with a week selector — browse any week's real matchup), Draft, Start/Sit, Trade, Waivers, News, and Settings. Full design system: soft glass cards, layered shadows, micro-interactions, entrance animations, skeleton loaders — all in one installable PWA. |
+| Team theme | [static/team-themes.js](static/team-themes.js), [theme.js](static/theme.js) | Settings → Favorite team re-skins the whole app in one of the 32 NFL teams' colors (CSS variables remapped on `html[data-team]`; win/loss/projection colors are never themed), with a team hero band, a kickoff sweep, a cursor glow and a tab wipe (all off under reduced motion). Saved in `localStorage` and in the account (`theme`). `node scripts/check_team_themes.js` drives all 32 teams in a real browser against a running app. |
 
 ## API
 
