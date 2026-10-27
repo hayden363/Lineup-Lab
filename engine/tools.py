@@ -13,7 +13,7 @@ import pandas as pd
 
 from . import lineup as lineup_layer
 from . import profile
-from . import context, correlation, data, db, decision, play_prob, draft_runs, history, trade_engine, locks, trade_reasons, defense_scoring, kicker_scoring, role_baseline, sleeper, waivers
+from . import context, correlation, data, db, decision, kdef_model, play_prob, draft_runs, history, trade_engine, locks, trade_reasons, defense_scoring, kicker_scoring, role_baseline, sleeper, waivers
 from .board import (POSITIONS, build_board, load_bundle, rest_of_season_value,
                      project_vs)
 from .scoring import apply_scoring
@@ -270,6 +270,31 @@ def _role_rank_row(raw_id, unscored, rank_baselines, is_starter, slot):
     }
 
 
+def _pool_rate(board):
+    """League-wide average projection rate of a K or DEF board: the 'pool' kdef_model scales against."""
+    col = "rate" if "rate" in board.columns else "fpts_per_game"
+    m = board[col].mean()
+    return float(m) if m == m else 0.0
+
+
+def _defense_proj(row, def_board, bundle, team_code, week=None):
+    """PROJ for a DEF/ST: shrunk rate adjusted by the betting market's implied total for the offense
+    it faces (engine/kdef_model.py). Falls back to neutral when there's no schedule/line."""
+    ctx = None
+    if bundle is not None:
+        ctx = kdef_model.game_context(bundle["schedule"], defense_scoring.to_nflverse_team(team_code), week)
+    return kdef_model.defense_projection(_row_rate(row), _pool_rate(def_board), (ctx or {}).get("itt_opp"))
+
+
+def _kicker_proj(rate, k_pool, bundle, team_code, week=None):
+    """PROJ for a kicker: shrunk rate adjusted by his offense's implied total and a roof
+    (engine/kdef_model.py). Neutral when there's no schedule/line."""
+    ctx = None
+    if bundle is not None and team_code:
+        ctx = kdef_model.game_context(bundle["schedule"], defense_scoring.to_nflverse_team(team_code), week)
+    return kdef_model.kicker_projection(rate, k_pool, (ctx or {}).get("itt"), (ctx or {}).get("indoor"))
+
+
 def _defense_row(raw_id, unscored, def_board, is_starter, slot, bundle=None, fragility=None, week=None):
     """A real SCORE/FORM/PROJ row for a DEF slot, or None if this team
     isn't in the board (shouldn't happen for a real NFL team code, but a
@@ -285,11 +310,7 @@ def _defense_row(raw_id, unscored, def_board, is_starter, slot, bundle=None, fra
     row = defense_scoring.resolve_defense_row(raw_id, def_board)
     if row is None:
         return None
-    matchup_factor = 1.0
-    if bundle is not None:
-        opp = _defense_opponent(bundle, raw_id, week)
-        matchup_factor = defense_scoring.defense_matchup_factor(opp, fragility)
-    proj = round(_row_rate(row) * (1 + row["FORM"] / 100.0) * matchup_factor, 1)
+    proj = _defense_proj(row, def_board, bundle, raw_id, week)
     return {
         "player_id": raw_id, "position": "DEF",
         "player_display_name": unscored["player_display_name"],
@@ -300,7 +321,7 @@ def _defense_row(raw_id, unscored, def_board, is_starter, slot, bundle=None, fra
     }
 
 
-def _kicker_row(gsis_id, unscored, k_board, team_baseline, is_starter, slot):
+def _kicker_row(gsis_id, unscored, k_board, team_baseline, is_starter, slot, bundle=None, week=None):
     """A real SCORE/FORM/PROJ row for a K slot, keyed by the gsis_id the
     crosswalk already resolved for this Sleeper id.
 
@@ -315,7 +336,7 @@ def _kicker_row(gsis_id, unscored, k_board, team_baseline, is_starter, slot):
     valuation, and shouldn't be presented as one."""
     if k_board is not None and gsis_id is not None and gsis_id in k_board.index:
         row = k_board.loc[gsis_id].to_dict()
-        proj = round(_row_rate(row) * (1 + row["FORM"] / 100.0), 1)
+        proj = _kicker_proj(_row_rate(row), _pool_rate(k_board), bundle, unscored.get("recent_team"), week)
         return {
             "player_id": gsis_id, "position": "K",
             "player_display_name": unscored["player_display_name"],
@@ -332,7 +353,8 @@ def _kicker_row(gsis_id, unscored, k_board, team_baseline, is_starter, slot):
                 "player_display_name": unscored["player_display_name"],
                 "recent_team": unscored["recent_team"], "headshot_url": unscored.get("headshot_url"),
                 "SCORE": None, "FORM": None, "fpts_per_game": None,
-                "PROJ": round(float(team_baseline.loc[team]), 1),
+                "PROJ": _kicker_proj(float(team_baseline.loc[team]), float(team_baseline.mean()), bundle,
+                                     unscored.get("recent_team"), week),
                 "injury_status": None, "is_starter": is_starter, "slot": slot,
             }
     return None
@@ -892,7 +914,8 @@ def _roster_players(raw_ids, bundle, get_board, scoring, crosswalk=None, starter
                 if def_row:
                     return def_row
             elif unscored["position"] == "K":
-                k_row = _kicker_row(gsis_id, unscored, k_board, k_team_baseline, is_starter, slot)
+                k_row = _kicker_row(gsis_id, unscored, k_board, k_team_baseline, is_starter, slot,
+                                        bundle=bundle, week=week)
                 if k_row:
                     return k_row
             elif unscored["position"] in role_baseline.RANK_POSITIONS:
@@ -983,9 +1006,7 @@ def _team_total(raw_ids, bundle, get_board, scoring, crosswalk=None, starters=No
                     if done is not None:
                         total += done
                         continue
-                    matchup_factor = defense_scoring.defense_matchup_factor(
-                        _defense_opponent(bundle, raw_id, week), fragility)
-                    total += _row_rate(def_row) * (1 + def_row["FORM"] / 100.0) * matchup_factor
+                    total += _defense_proj(def_row, def_board, bundle, raw_id, week)
                     continue
             if k_board is not None and gsis_id is not None and gsis_id in k_board.index:
                 k_row = k_board.loc[gsis_id]
@@ -993,7 +1014,8 @@ def _team_total(raw_ids, bundle, get_board, scoring, crosswalk=None, starters=No
                 if done is not None:
                     total += done
                     continue
-                total += _row_rate(k_row) * (1 + k_row["FORM"] / 100.0)
+                total += _kicker_proj(_row_rate(k_row), _pool_rate(k_board), bundle,
+                                      (sleeper.resolve_unscored_player(raw_id) or {}).get("recent_team"), week)
                 continue
             if k_team_baseline is not None or rank_baselines is not None:
                 unscored = sleeper.resolve_unscored_player(raw_id)
@@ -1002,7 +1024,8 @@ def _team_total(raw_ids, bundle, get_board, scoring, crosswalk=None, starters=No
                     team = (defense_scoring.SLEEPER_TO_NFLVERSE_TEAM.get(recent_team, recent_team)
                             if recent_team is not None else None)
                     if team in k_team_baseline.index:
-                        total += float(k_team_baseline.loc[team])
+                        total += _kicker_proj(float(k_team_baseline.loc[team]), float(k_team_baseline.mean()),
+                                              bundle, recent_team, week)
                 elif unscored and unscored["position"] in role_baseline.RANK_POSITIONS and rank_baselines is not None:
                     proj = role_baseline.resolve_role_rank_projection(
                         unscored.get("recent_team"), unscored.get("depth_chart_order"),
@@ -1100,7 +1123,8 @@ def roster_player_list(league_id, roster_id, season=None, scoring=None):
                 special_row = _defense_row(raw_id, unscored, def_board, is_starter=None, slot=None,
                                             bundle=bundle, fragility=fragility)
             elif unscored["position"] == "K":
-                special_row = _kicker_row(gsis_id, unscored, k_board, k_team_baseline, is_starter=None, slot=None)
+                special_row = _kicker_row(gsis_id, unscored, k_board, k_team_baseline, is_starter=None, slot=None,
+                                           bundle=bundle)
             elif unscored["position"] in role_baseline.RANK_POSITIONS:
                 special_row = _role_rank_row(raw_id, unscored, rank_baselines, is_starter=None, slot=None)
             if special_row:

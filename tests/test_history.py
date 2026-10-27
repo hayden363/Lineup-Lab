@@ -111,6 +111,11 @@ class ShippedDataTests(unittest.TestCase):
         seasons = set(H._frames()["skill"]["season"].unique())
         self.assertEqual(seasons, {2023, 2024, 2025})
 
+    def test_no_playoff_games_in_any_history_table(self):
+        # kicker/defense rows used to include weeks 19-22, lifting next season's prior for good teams
+        for name, df in H._frames().items():
+            self.assertTrue(df.empty or int(df["week"].max()) <= H.REG_SEASON_LAST_WEEK, name)
+
     def test_ppr_career_matches_stored_ppr_column(self):
         """With default scoring the recomputed points reproduce nflverse's own PPR number."""
         df = H._frames()["skill"]
