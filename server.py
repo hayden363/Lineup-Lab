@@ -1538,7 +1538,12 @@ def api_news(scope: str = Query("team", pattern="^(team|opponent|league|favorite
         code = (team or "").upper()
         if code not in news_layer.TEAM_CODES:
             raise HTTPException(422, "team must be an NFL team code")
-        return {"scope": "favorite", "team": code, "items": _clean(news_layer.team_headlines(items, code)),
+        try:
+            players = tools.team_player_roster(code)
+        except Exception as e:
+            print(f"[news] couldn't load {code} players: {e}")
+            players = []
+        return {"scope": "favorite", "team": code, "items": _clean(news_layer.team_headlines(items, code, players=players)),
                 "sources": list(news_layer.FEEDS)}
 
     if scope == "league":

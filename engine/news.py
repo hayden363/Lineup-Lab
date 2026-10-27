@@ -383,9 +383,9 @@ def _prepare(players):
     return prepared
 
 
-def team_headlines(items, team, limit=40):
+def team_headlines(items, team, limit=40, players=None):
     """Every headline whose title or summary names `team` (nickname or city, word-bounded), newest first.
-    Unlike filter_for_players this needs no roster: it is the favorite-team feed."""
+    Needs no roster; given `players` (that team's), each story also carries the players it names."""
     key = _team_key(team)
     if not key:
         return []
@@ -398,7 +398,11 @@ def team_headlines(items, team, limit=40):
             out.append({**item, "matched_players": [], "match_kind": "team", "relevance": 1.0,
                         "matched_teams": [key], **({"fallback_image": logo} if logo else {})})
     out.sort(key=lambda it: -(it.get("ts") or 0))
-    return out[:limit]
+    out = out[:limit]
+    if players:                                # name the player(s) each story is about, with the headshot as its stand-in picture
+        hits = {m["link"]: m for m in filter_for_players(out, players)}
+        out = [hits.get(it["link"], it) for it in out]
+    return out
 
 
 def filter_for_players(items, players, include_team_news=False):

@@ -68,6 +68,7 @@ class ApiNewsTests(unittest.TestCase):
         for p in (mock.patch.object(server.news_layer, "all_headlines", return_value=self.items),
                   mock.patch.object(server.db, "get_active_team", return_value={"platform": "sleeper", "league_id": "L1", "roster_id": 1}),
                   mock.patch.object(server.tools, "news_rosters", return_value=team),
+                  mock.patch.object(server.tools, "team_player_roster", return_value=[]),
                   mock.patch.object(server.tools, "my_team", side_effect=AssertionError("my_team is too heavy for news"))):
             p.start(); self.addCleanup(p.stop)
 
@@ -111,6 +112,23 @@ class ApiNewsTests(unittest.TestCase):
     def test_favorite_scope_rejects_a_missing_or_unknown_team(self):
         self.assertEqual(self.client.get("/api/news?scope=favorite").status_code, 422)
         self.assertEqual(self.client.get("/api/news?scope=favorite&team=XYZ").status_code, 422)
+
+    def test_favorite_scope_names_the_player_each_story_is_about(self):
+        self.items[:] = [item("Cowboys: CeeDee Lamb scores twice", "a", 100), item("Cowboys notebook", "b", 200)]
+        roster = [{"player_id": "g2", "player_display_name": "CeeDee Lamb", "recent_team": "DAL", "headshot_url": "http://h/lamb.png"}]
+        with mock.patch.object(server.tools, "team_player_roster", return_value=roster):
+            body = self.client.get("/api/news?scope=favorite&team=DAL").json()
+        by = {i["link"]: i for i in body["items"]}
+        self.assertEqual([m["name"] for m in by["a"]["matched_players"]], ["CeeDee Lamb"])
+        self.assertEqual(by["a"]["match_kind"], "name")
+        self.assertEqual(by["a"]["fallback_image"], "http://h/lamb.png")
+        self.assertEqual(by["b"]["matched_players"], [])
+        self.assertEqual(by["b"]["match_kind"], "team")
+
+    def test_favorite_scope_survives_a_roster_lookup_failure(self):
+        with mock.patch.object(server.tools, "team_player_roster", side_effect=RuntimeError("no data")):
+            body = self.client.get("/api/news?scope=favorite&team=DAL").json()
+        self.assertEqual([i["link"] for i in body["items"]], ["b"])
 
 
 if __name__ == "__main__":

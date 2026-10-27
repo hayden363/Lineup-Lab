@@ -1109,6 +1109,18 @@ _NEWS_ROSTER_CACHE = {}
 NEWS_ROSTER_TTL = 60
 
 
+def team_player_roster(team, season=None):
+    """Names, teams and headshots of the players whose latest game was with NFL `team`: lets the favorite-team
+    news tab say which player a story is about."""
+    wk = load_bundle(season)["wk"]
+    cols = [c for c in ("player_display_name", "recent_team", "headshot_url") if c in wk.columns]
+    last = wk.sort_values("week").groupby("player_id")[cols].last()
+    last = last[last["recent_team"] == team]
+    return [{"player_id": pid, "player_display_name": r["player_display_name"], "recent_team": r["recent_team"],
+             "headshot_url": r["headshot_url"] if "headshot_url" in last.columns else None}
+            for pid, r in last.iterrows()]
+
+
 def news_rosters(league_id, roster_id, week=None, season=None):
     """My roster and this week's head-to-head opponent's, as just names and NFL teams: all the
     news filter needs. my_team() answers the same question but also projects every player and
