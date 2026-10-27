@@ -4943,3 +4943,46 @@ button.live-score-card:hover { border-color: var(--accent-dim); }
 @media (min-width: 640px) { .tp-default { grid-column: auto; max-width: 220px; } }
 .tp-live { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 @media (prefers-reduced-motion: reduce) { .tp-chip { transition: none; } .tp-chip:hover, .tp-chip:focus-visible { transform: none; } }
+
+
+/* ---- team atmosphere (hero band, backdrop, kickoff sweep): only present when a team is chosen ---- */
+#team-hero:empty { display: none; }
+#team-hero { margin: 0 0 16px; }
+.th-band { position: relative; overflow: hidden; border-radius: var(--radius-lg); border: 1px solid var(--border-bright);
+  background: linear-gradient(120deg, var(--panel), var(--panel-2)); box-shadow: var(--shadow-glow); }
+.th-art { position: absolute; inset: -40% -20%; will-change: transform; animation: thDrift 16s ease-in-out infinite alternate;
+  background: linear-gradient(115deg, transparent 18%, rgba(var(--tm-rgb), 0.28) 42%, color-mix(in srgb, var(--team-secondary) 22%, transparent) 58%, transparent 82%); }
+.th-lines { position: absolute; inset: 0; pointer-events: none;
+  background: repeating-linear-gradient(90deg, rgba(255,255,255,0.04) 0 2px, transparent 2px 38px);
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 25%, #000 75%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 25%, #000 75%, transparent); }
+.th-body { position: relative; display: flex; align-items: center; gap: 16px; padding: 14px 20px; }
+.th-logo { width: 56px; height: 56px; object-fit: contain; filter: drop-shadow(0 6px 14px rgba(0,0,0,0.45)); }
+.th-abbr { display: inline-flex; align-items: center; justify-content: center; width: 56px; height: 56px; border-radius: 14px;
+  font-family: var(--mono); font-weight: 800; background: var(--accent); color: var(--on-accent, #0e1b15); }
+.th-text { display: flex; flex-direction: column; line-height: 1.05; }
+.th-city { font-family: var(--mono); font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--muted); }
+.th-name { font-size: 28px; font-weight: 800; color: var(--accent); letter-spacing: 0.01em; }
+@keyframes thDrift { from { transform: translateX(-4%); } to { transform: translateX(4%); } }
+
+html[data-team] body::before { content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  background: radial-gradient(900px 520px at 88% -8%, rgba(var(--tm-rgb), 0.16), transparent 62%),
+              radial-gradient(760px 460px at -8% 108%, color-mix(in srgb, var(--team-secondary) 10%, transparent), transparent 58%); }
+
+.th-kick { position: fixed; inset: 0; z-index: 9999; pointer-events: none;
+  background: linear-gradient(115deg, var(--k1) 0 50%, var(--k2) 50% 100%);
+  animation: thKick 700ms cubic-bezier(0.7, 0, 0.2, 1) forwards; }
+@keyframes thKick {
+  0%   { clip-path: polygon(-30% 0, -30% 0, -50% 100%, -50% 100%); opacity: 0.95; }
+  50%  { clip-path: polygon(0 0, 130% 0, 100% 100%, -30% 100%); opacity: 0.95; }
+  100% { clip-path: polygon(130% 0, 130% 0, 150% 100%, 100% 100%); opacity: 0; }
+}
+
+@media (max-width: 559px) {
+  .th-body { padding: 8px 14px; gap: 10px; }
+  .th-logo, .th-abbr { width: 32px; height: 32px; }
+  .th-name { font-size: 18px; }
+  .th-city { font-size: 9px; }
+  .th-art, .th-lines { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { .th-art { animation: none; } .th-kick { display: none; } }

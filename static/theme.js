@@ -158,3 +158,60 @@
   window.ThemePicker = { configure: configure, init: init, choose: choose, preview: preview, endPreview: endPreview,
     syncFromAccount: syncFromAccount, render: render, chipsHtml: chipsHtml };
 })();
+
+
+/* ---- atmosphere: the team hero band and the kickoff sweep --------------------------------------------------- */
+(function () {
+  "use strict";
+  var overlay = null;
+
+  function TT() { return window.TeamTheme; }
+  function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+  function reduced() { return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches); }
+
+  function swapLogo(img) {                       // same fallback as the picker: the team letters on the team color
+    var span = document.createElement("span");
+    span.className = "th-abbr";
+    span.textContent = img.dataset.logo;
+    if (img.replaceWith) img.replaceWith(span);
+  }
+
+  // Fills #team-hero for the current team, or empties it for the default theme.
+  function renderHero() {
+    var el = document.getElementById ? document.getElementById("team-hero") : null;
+    if (!el) return;
+    var t = TT().get(TT().current());
+    if (!t) { el.innerHTML = ""; return; }
+    el.innerHTML = '<div class="th-band"><div class="th-art" aria-hidden="true"></div><div class="th-lines" aria-hidden="true"></div>' +
+      '<div class="th-body"><img class="th-logo" src="' + esc("/api/img?url=" + encodeURIComponent(t.logo)) + '" alt="" width="56" height="56" data-logo="' + esc(t.code) + '">' +
+      '<div class="th-text"><span class="th-city">' + esc(t.city) + '</span><span class="th-name">' + esc(t.name) + "</span></div></div></div>";
+    if (!el._tpBound) {
+      el._tpBound = true;
+      el.addEventListener("error", function (e) { var img = e.target; if (img && img.dataset && img.dataset.logo) swapLogo(img); }, true);   // error does not bubble
+    }
+  }
+
+  function removeOverlay() {
+    if (overlay) { if (overlay.remove) overlay.remove(); overlay = null; }
+  }
+
+  // One diagonal wipe in the team's two colors, about 0.7 s. Never replays for the default theme or under reduced motion.
+  function kickoff(code) {
+    var t = TT().get(code);
+    if (!t || reduced()) return;
+    removeOverlay();
+    var el = document.createElement("div");
+    el.className = "th-kick";
+    el.setAttribute("aria-hidden", "true");
+    el.style.setProperty("--k1", t.primary);
+    el.style.setProperty("--k2", t.secondary);
+    document.body.appendChild(el);
+    overlay = el;
+    window.setTimeout(function () { if (overlay === el) removeOverlay(); }, 800);   // an older timer never removes a newer overlay
+  }
+
+  window.ThemeFX = { renderHero: renderHero, kickoff: kickoff };
+
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", renderHero);
+  else renderHero();
+})();

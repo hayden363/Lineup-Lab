@@ -50,7 +50,7 @@ const ctx = vm.createContext({{ window, document, console }});
 {setup}
 vm.runInContext(fs.readFileSync({json.dumps(THEMES_JS)}, "utf8"), ctx);
 {extra}
-const TeamTheme = window.TeamTheme, ThemePicker = window.ThemePicker;
+const TeamTheme = window.TeamTheme, ThemePicker = window.ThemePicker, ThemeFX = window.ThemeFX;
 process.on("unhandledRejection", (e) => {{ console.error("UNHANDLED REJECTION " + e); process.exit(3); }});
 Promise.resolve((() => {{ {body} }})()).then((out) => console.log(JSON.stringify(out)));
 """
@@ -238,8 +238,14 @@ window.localStorage = {
   setItem: (k, v) => { if (window.__fail) throw new Error("blocked"); window.__store[k] = String(v); },
   removeItem: (k) => { if (window.__fail) throw new Error("blocked"); delete window.__store[k]; },
 };
-window.ThemeFX = { kickoff: (c) => window.__fx.push("kickoff:" + c), renderHero: () => window.__fx.push("hero") };
-document.createElement = (tag) => ({ tag, className: "", textContent: "" });
+document.createElement = (tag) => ({ tag, className: "", textContent: "", style: { setProperty(k, v) { this[k] = v; } }, attrs: {}, setAttribute(k, v) { this.attrs[k] = v; },
+  remove() { const b = document.body; b.children = b.children.filter((c) => c !== this); this.removed = true; } });
+document.body = { children: [], appendChild(n) { this.children.push(n); return n; } };
+window.__timers = []; window.__reduced = false;
+window.setTimeout = (fn, ms) => { window.__timers.push({ fn, ms }); return window.__timers.length; };
+window.clearTimeout = () => {};
+window.matchMedia = () => ({ matches: window.__reduced });
+document.getElementById = (id) => (id === "team-hero" ? window.__hero || null : null);
 """
 PICKER_AFTER = """
 ThemePicker.configure({ isSignedIn: () => window.__signed,
@@ -247,9 +253,18 @@ ThemePicker.configure({ isSignedIn: () => window.__signed,
 """
 
 
-def run_picker(body):
-    """Runs `body` with the palette + engine + picker loaded in the stub browser (storage, ThemeFX and account saving stubbed)."""
-    return run_js(PICKER_AFTER + body, setup=PICKER_SETUP, files=(THEME_JS,))
+FX_STUB = """window.ThemeFX = { kickoff: (c) => window.__fx.push("kickoff:" + c), renderHero: () => window.__fx.push("hero") };
+"""
+
+
+def run_picker(body, real_fx=False):
+    """Runs `body` with the palette + engine + theme.js loaded in the stub browser (storage and account saving stubbed).
+    The picker tests record ThemeFX calls with a stub installed after load; real_fx=True keeps the real ThemeFX."""
+    return run_js(PICKER_AFTER + ("" if real_fx else FX_STUB) + body, setup=PICKER_SETUP, files=(THEME_JS,))
+
+
+def run_fx(body):
+    return run_picker(body, real_fx=True)
 
 
 def fake_host():
@@ -377,6 +392,87 @@ class PickerWiringTests(WiringTests):
         css = self.read("static/style.css")
         for sel in (".tp-grid", ".tp-chip", ".tp-chip[aria-pressed=\"true\"]", ".tp-abbr", ".tp-div-h"):
             self.assertTrue(sel in css, f"style.css lacks {sel}")
+
+
+HERO_HOST = """const hh = {}; const hero = { innerHTML: "", _tpBound: false,
+      addEventListener(t, fn, cap) { (hh[t + (cap ? ":capture" : "")] = hh[t + (cap ? ":capture" : "")] || []).push(fn); } };
+    window.__hero = hero;"""
+
+
+class AtmosphereTests(unittest.TestCase):
+    def test_hero_is_empty_without_a_team(self):
+        out = run_fx(HERO_HOST + 'hero.innerHTML = "stale"; ThemeFX.renderHero(); return { html: hero.innerHTML };')
+        self.assertEqual(out["html"], "")
+
+    def test_hero_shows_logo_city_and_name_for_a_team(self):
+        t = load_themes()["DET"]
+        out = run_fx(HERO_HOST + 'TeamTheme.apply("DET"); ThemeFX.renderHero(); return { html: hero.innerHTML };')
+        html = out["html"]
+        self.assertIn("Detroit", html)
+        self.assertIn("Lions", html)
+        self.assertIn("/api/img?url=" + t["logo"].replace(":", "%3A").replace("/", "%2F"), html)
+        self.assertIn('data-logo="DET"', html)
+        self.assertIn("th-band", html)
+        self.assertNotRegex(html, r"\son[a-z]+\s*=")
+
+    def test_hero_follows_the_current_team_and_clears_back_to_default(self):
+        out = run_fx(HERO_HOST + """TeamTheme.apply("GB"); ThemeFX.renderHero(); const gb = hero.innerHTML;
+            TeamTheme.apply("KC"); ThemeFX.renderHero(); const kc = hero.innerHTML; TeamTheme.clear(); ThemeFX.renderHero();
+            return { gb: gb.includes("Packers"), kc: kc.includes("Chiefs") && !kc.includes("Packers"), cleared: hero.innerHTML };""")
+        self.assertEqual((out["gb"], out["kc"], out["cleared"]), (True, True, ""))
+
+    def test_hero_logo_error_falls_back_to_the_abbreviation(self):
+        out = run_fx(HERO_HOST + """TeamTheme.apply("DET"); ThemeFX.renderHero();
+            const img = { dataset: { logo: "DET" }, replaceWith(n) { this.replaced = n; } };
+            (hh["error:capture"] || []).forEach((fn) => fn({ type: "error", target: img }));
+            return { text: img.replaced && img.replaced.textContent, cls: img.replaced && img.replaced.className, bound: (hh["error:capture"] || []).length };""")
+        self.assertEqual((out["text"], out["bound"]), ("DET", 1))
+        self.assertIn("th-abbr", out["cls"])
+
+    def test_hero_binds_its_error_listener_once_however_often_it_renders(self):
+        out = run_fx(HERO_HOST + 'TeamTheme.apply("DET"); for (let i = 0; i < 5; i++) ThemeFX.renderHero(); return { n: (hh["error:capture"] || []).length };')
+        self.assertEqual(out["n"], 1)
+
+    def test_a_missing_hero_mount_is_not_an_error(self):
+        run_fx('window.__hero = null; TeamTheme.apply("DET"); ThemeFX.renderHero(); return 1;')
+
+    def test_kickoff_adds_an_overlay_that_removes_itself(self):
+        out = run_fx("""ThemeFX.kickoff("DET"); const during = document.body.children.length; const t = window.__timers[window.__timers.length - 1];
+            t.fn(); return { during, after: document.body.children.length, ms: t.ms, cls: null };""")
+        self.assertEqual((out["during"], out["after"]), (1, 0))
+        self.assertGreaterEqual(out["ms"], 700)
+
+    def test_kickoff_is_skipped_for_reduced_motion_and_for_unknown_teams(self):
+        out = run_fx("""window.__reduced = true; ThemeFX.kickoff("DET"); const a = document.body.children.length;
+            window.__reduced = false; ThemeFX.kickoff("XYZ"); ThemeFX.kickoff(""); return { a, b: document.body.children.length };""")
+        self.assertEqual((out["a"], out["b"]), (0, 0))
+
+    def test_kickoff_called_twice_leaves_one_overlay_at_most(self):
+        out = run_fx("""ThemeFX.kickoff("DET"); ThemeFX.kickoff("GB"); ThemeFX.kickoff("KC");
+            const n = document.body.children.length; const stale = window.__timers[0]; stale.fn();     // an old timer firing must not remove the new overlay
+            return { n, still: document.body.children.length };""")
+        self.assertEqual((out["n"], out["still"]), (1, 1))
+
+    def test_kickoff_colors_come_from_the_palette(self):
+        t = load_themes()["GB"]
+        out = run_fx('ThemeFX.kickoff("GB"); const el = document.body.children[0]; return { a: el.style["--k1"], b: el.style["--k2"], cls: el.className };')
+        self.assertEqual((out["a"], out["b"]), (t["primary"], t["secondary"]))
+        self.assertIn("th-kick", out["cls"])
+
+
+class AtmosphereWiringTests(WiringTests):
+    def test_hero_mount_is_at_the_top_of_the_app_above_every_tab(self):
+        html = self.read("static/index.html")
+        self.assertLess(html.index('id="team-hero"'), html.index('id="tab-board"'))
+        self.assertGreater(html.index('id="team-hero"'), html.index('id="app"'))
+
+    def test_atmosphere_styles_exist_and_reduced_motion_is_honoured(self):
+        css = self.read("static/style.css")
+        for sel in (".th-band", ".th-art", ".th-lines", ".th-logo", ".th-name", ".th-kick", "html[data-team] body::before", "#team-hero:empty"):
+            self.assertTrue(sel in css, f"style.css lacks {sel}")
+        block = css[css.index("/* ---- team atmosphere"):]
+        self.assertIn("prefers-reduced-motion", block)
+        self.assertRegex(block, r"@media \(max-width: 5\d\dpx\)")      # the phone layout collapses the band
 
 
 if __name__ == "__main__":
