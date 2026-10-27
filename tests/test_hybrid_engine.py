@@ -34,6 +34,7 @@ class WeeklyInjuryProjection(unittest.TestCase):
         projected = pd.DataFrame({"PROJ": [self.BASE], "injury_factor": [1.0], "injury_sample_n": [None]})
         with mock.patch.object(tools, "project_vs", return_value=projected), \
                 mock.patch.object(tools.data, "next_opponent", return_value=("MIN", 8)), \
+                mock.patch.object(tools, "_head_to_head", return_value=None), \
                 mock.patch.object(play_prob, "date", FixedFriday):
             return tools._opponent_adjusted_proj_full(row, "arsb", "WR", {"schedule": None}, None)[0]
 
@@ -85,6 +86,69 @@ class RestOfSeasonValueIsNotTheWeeklyMultiplier(unittest.TestCase):
 
     def test_a_season_ending_return_date_zeroes_it(self):
         self.assertEqual(self.value("IR", {"return_date": "2027-02-15"}), 0.0)
+
+
+# ------------------------------------------------------------ head-to-head ----
+class HeadToHeadInTheProjection(unittest.TestCase):
+    """His own record against this week's opponent, over the last two seasons and this one, enters the projection
+    as a small multiplier (engine/history.py explains why it is small)."""
+    PRIOR = ([{"season": 2024, "week": 7, "opponent": "MIN", "points": 25.2}, {"season": 2024, "week": 18, "opponent": "MIN", "points": 13.7},
+              {"season": 2023, "week": 16, "opponent": "MIN", "points": 28.6}, {"season": 2023, "week": 18, "opponent": "MIN", "points": 27.4}]
+             + [{"season": 2024, "week": w, "opponent": "GB", "points": 19.0} for w in range(1, 7)])
+
+    def bundle(self, current):
+        wk = pd.DataFrame([{"player_id": "arsb", "week": w, "opponent_team": o, "fantasy_points_ppr": p}
+                           for w, o, p in current])
+        return {"season": 2026, "wk": wk}
+
+    def h2h(self, current, prior=None):
+        with mock.patch.object(tools.history, "available", return_value=True), \
+                mock.patch.object(tools.history, "player_games", return_value=self.PRIOR if prior is None else prior):
+            return tools._head_to_head("arsb", "MIN", None, self.bundle(current), 18.0)
+
+    def test_only_the_last_two_seasons_and_this_one_count(self):
+        # 2023 is outside the window: just the two 2024 meetings (25.2, 13.7) against his ~19 norm
+        out = self.h2h([(1, "GB", 19.0), (2, "GB", 19.0)])
+        self.assertEqual(out["meetings"], 2)
+        self.assertAlmostEqual(out["avg"], 19.45, delta=0.06)
+
+    def test_this_seasons_earlier_meeting_counts_too(self):
+        out = self.h2h([(2, "MIN", 30.0), (3, "GB", 19.0)])
+        self.assertEqual(out["meetings"], 3)
+
+    def test_no_meetings_or_no_history_is_none_and_neutral(self):
+        self.assertIsNone(self.h2h([(1, "GB", 19.0)], prior=[]))
+        with mock.patch.object(tools.history, "available", return_value=False):
+            self.assertIsNone(tools._head_to_head("arsb", "MIN", None, self.bundle([]), 18.0))
+        self.assertIsNone(tools._head_to_head("arsb", None, None, self.bundle([]), 18.0))
+
+    def test_the_factor_is_small_and_signed_by_his_record(self):
+        strong = self.h2h([(1, "MIN", 40.0), (2, "MIN", 38.0), (3, "GB", 10.0), (4, "GB", 10.0), (5, "GB", 10.0)])
+        weak = self.h2h([(1, "MIN", 2.0), (2, "MIN", 3.0), (3, "GB", 25.0), (4, "GB", 25.0), (5, "GB", 25.0)])
+        self.assertGreater(strong["factor"], 1.0)
+        self.assertLess(weak["factor"], 1.0)
+        self.assertLessEqual(strong["factor"], 1.05 + 1e-9)
+        self.assertGreaterEqual(weak["factor"], 0.95 - 1e-9)
+
+    def test_it_multiplies_the_weekly_projection_before_the_injury_weighting(self):
+        row = pd.DataFrame({"recent_team": ["DET"], "injury_status": ["Questionable"], "injury_report": [None]}, index=["arsb"])
+        projected = pd.DataFrame({"PROJ": [17.5], "injury_factor": [1.0], "injury_sample_n": [None]})
+        with mock.patch.object(tools, "project_vs", return_value=projected), \
+                mock.patch.object(tools.data, "next_opponent", return_value=("MIN", 8)), \
+                mock.patch.object(tools, "_head_to_head", return_value={"factor": 1.04, "meetings": 4, "avg": 20.0}):
+            q = tools._opponent_adjusted_proj_full(row, "arsb", "WR", {"schedule": None}, None)[0]
+            row.loc["arsb", "injury_status"] = None
+            healthy = tools._opponent_adjusted_proj_full(row, "arsb", "WR", {"schedule": None}, None)[0]
+        self.assertEqual(healthy, 18.2)            # 17.5 x 1.04
+        self.assertEqual(q, 16.4)                  # then x 0.90 for Questionable
+
+    def test_no_head_to_head_leaves_the_projection_alone(self):
+        row = pd.DataFrame({"recent_team": ["DET"], "injury_status": [None], "injury_report": [None]}, index=["arsb"])
+        projected = pd.DataFrame({"PROJ": [17.5], "injury_factor": [1.0], "injury_sample_n": [None]})
+        with mock.patch.object(tools, "project_vs", return_value=projected), \
+                mock.patch.object(tools.data, "next_opponent", return_value=("MIN", 8)), \
+                mock.patch.object(tools, "_head_to_head", return_value=None):
+            self.assertEqual(tools._opponent_adjusted_proj_full(row, "arsb", "WR", {"schedule": None}, None)[0], 17.5)
 
 
 # ------------------------------------------------------------------- recency ----

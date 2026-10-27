@@ -44,8 +44,15 @@ HIST_FULL = 24.0      # weighted games that count as a "full" history
 K_HIST_K = 1.5        # kickers and defenses repeat less year to year: lower ceiling
 DEF_HIST_K = 1.5
 
-H2H_SHRINK = 12.0     # games against one opponent needed to trust it half way
-H2H_CAP = 0.08        # head-to-head factor stays within +/-8%
+# Head-to-head: how he has scored against THIS opponent. scripts/backtest_h2h.py measured how much that adds
+# beyond the projection and the opponent's general defense: slope +0.03 +/- 0.04 on 2025 (two prior seasons of
+# history, 2,139 games), -0.11 +/- 0.04 on 2024 (one prior season). Where 1.0 means the raw split is fully real and
+# 0 means noise, the data says close to 0, so the factor is deliberately tiny: n meetings earn a weight of
+# n/(n+H2H_SHRINK), about 5% at two meetings and 10% at four. It is counted because a player's own record against a
+# team is something a manager reasonably wants weighed, not because it has been shown to predict much.
+H2H_SEASONS = 2       # previous seasons whose meetings count (earlier meetings this season count too)
+H2H_SHRINK = 38.0
+H2H_CAP = 0.05        # head-to-head factor stays within +/-5%
 H2H_MIN_GAMES = 2
 
 _LOCK = threading.Lock()
@@ -286,9 +293,17 @@ def tag_games(games, position, scoring, current, tier_fn):
     return out
 
 
-def versus(games, opponent):
-    """How he has scored against one team across prior seasons."""
-    mine = [g for g in games if g["opponent"] == opponent]
+def _recent(games, current):
+    """The games inside the head-to-head window: the last H2H_SEASONS seasons plus this one."""
+    if current is None:
+        return games
+    return [g for g in games if g["season"] >= int(current) - H2H_SEASONS]
+
+
+def versus(games, opponent, current=None):
+    """How he has scored against one team: across all the games given, or, with `current`, only the last
+    H2H_SEASONS seasons and this one."""
+    mine = [g for g in _recent(games, current) if g["opponent"] == opponent]
     if not mine:
         return None
     pts = [g["points"] for g in mine]
@@ -297,13 +312,14 @@ def versus(games, opponent):
             "last": {"season": mine[-1]["season"], "week": mine[-1]["week"], "points": mine[-1]["points"]}}
 
 
-def h2h_factor(games, opponent, baseline_ppg):
+def h2h_factor(games, opponent, baseline_ppg, current=None):
     """Multiplier for one opponent from his own history against them.
 
-    His average vs that team over his average across the same seasons, pulled
-    hard toward 1.0 by how few games there are (H2H_SHRINK) and capped at
-    +/-H2H_CAP. One or zero meetings return 1.0. A coordinator or scheme
-    change makes this weaker evidence than it looks, which is why it is small."""
+    His average vs that team over his average across the same seasons (only the last H2H_SEASONS and this
+    one when `current` is given), pulled hard toward 1.0 by how few games there are (H2H_SHRINK) and capped at
+    +/-H2H_CAP. One or zero meetings return 1.0. A coordinator or scheme change makes this weaker evidence
+    than it looks, which is why it is small."""
+    games = _recent(games, current)
     mine = [g for g in games if g["opponent"] == opponent]
     if len(mine) < H2H_MIN_GAMES or not baseline_ppg or baseline_ppg <= 0:
         return 1.0
