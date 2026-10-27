@@ -603,10 +603,12 @@ def _injury_multiplier_col(board, position):
 
 
 def _availability_col(board, schedule):
-    if "injury_report" not in board.columns:
+    """Share of his team's remaining games he is expected to play (injuries.availability): the discount on
+    rest-of-season value. Asked for every player with a status, report or not: an IR player ESPN has no
+    return date for still misses at least the IR minimum."""
+    if "injury_status" not in board.columns:
         return pd.Series(1.0, index=board.index)
-    return pd.Series([injuries.availability(r, schedule) if isinstance(r.get("injury_report"), dict) else 1.0
-                      for _, r in board.iterrows()], index=board.index)
+    return pd.Series([injuries.availability(r, schedule) for _, r in board.iterrows()], index=board.index)
 
 
 def _injury_sample_col(board, position):
@@ -695,7 +697,7 @@ def project_vs(board, position, opp, bundle=None, season=None, scoring=None):
     bundle = bundle or load_bundle(season)
     factor = matchup_multiplier(position, opp, bundle)
     breakdown = defense_layer.matchup_breakdown(position, opp, bundle["defense_factors"]) if opp in bundle["defense_factors"].index else []
-    form_mult = 1 + form_pct(board) / 100.0
+    form_mult = projmodel.capped_form_multiplier(_rate(board), form_pct(board))
     injury_mult = _injury_multiplier_col(board, position)
     injury_n = _injury_sample_col(board, position)
     board = board.copy()
@@ -717,7 +719,7 @@ def rest_of_season_value(board, position, bundle=None, season=None, scoring=None
     need one number, not a per-opponent one."""
     bundle = bundle or load_bundle(season)
     avg_factor = defense_layer.league_average_composite(position, bundle["defense_factors"])
-    form_mult = 1 + form_pct(board) / 100.0
+    form_mult = projmodel.capped_form_multiplier(_rate(board), form_pct(board))
     injury_mult = _injury_multiplier_col(board, position)
     # Games he is expected to miss (ESPN's return date) cut his rest-of-season
     # value: a season-ending injury is worth nothing.

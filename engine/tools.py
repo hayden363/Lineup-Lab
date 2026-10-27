@@ -15,7 +15,7 @@ import pandas as pd
 
 from . import lineup as lineup_layer
 from . import profile
-from . import context, correlation, data, db, decision, kdef_model, play_prob, draft_runs, history, trade_engine, locks, trade_reasons, defense_scoring, kicker_scoring, role_baseline, sleeper, waivers
+from . import context, correlation, data, db, decision, kdef_model, schemas, play_prob, draft_runs, history, trade_engine, locks, trade_reasons, defense_scoring, kicker_scoring, role_baseline, sleeper, waivers
 from .board import (POSITIONS, build_board, load_bundle, rest_of_season_value,
                      project_vs)
 from .scoring import apply_scoring
@@ -1853,8 +1853,11 @@ def _trade_setup(league_id, scoring=None, season=None):
 
 
 def _public_player(p):
-    return {k: p.get(k) for k in ("player_id", "name", "player_display_name", "position", "recent_team",
-                                  "headshot_url", "value", "trade", "tier", "injury_status", "bye")}
+    out = {k: p.get(k) for k in ("player_id", "name", "player_display_name", "position", "recent_team",
+                                 "headshot_url", "value", "trade", "tier", "injury_status", "bye")}
+    # `value` is projected points per game and `trade` is the 0-100 PVS-based trade value; say so by name
+    out.update(schemas.value_fields({"player_display_name": out["name"], "PROJ": p.get("value"), "PVS": p.get("trade")}))
+    return out
 
 
 def _trade_setup_espn(league_id, scoring=None, season=None, year=None, espn_s2=None, swid=None):
