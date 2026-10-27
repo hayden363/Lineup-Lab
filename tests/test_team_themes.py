@@ -23,6 +23,7 @@ def load_themes():
 
 
 BOOT_JS = os.path.join(ROOT, "static", "theme-boot.js")
+THEME_JS = os.path.join(ROOT, "static", "theme.js")
 NODE = shutil.which("node")
 SEMANTIC = {"--pos", "--neg", "--avg", "--tough", "--soft"}
 VAR_KEYS = {"--accent", "--accent-dim", "--accent-glow", "--brand", "--border-bright", "--bg", "--panel", "--panel-2",
@@ -49,9 +50,9 @@ const ctx = vm.createContext({{ window, document, console }});
 {setup}
 vm.runInContext(fs.readFileSync({json.dumps(THEMES_JS)}, "utf8"), ctx);
 {extra}
-const TeamTheme = window.TeamTheme;
-const out = (() => {{ {body} }})();
-console.log(JSON.stringify(out));
+const TeamTheme = window.TeamTheme, ThemePicker = window.ThemePicker;
+process.on("unhandledRejection", (e) => {{ console.error("UNHANDLED REJECTION " + e); process.exit(3); }});
+Promise.resolve((() => {{ {body} }})()).then((out) => console.log(JSON.stringify(out)));
 """
     r = subprocess.run([NODE, "-e", script], capture_output=True, text=True, timeout=30)
     if r.returncode:
@@ -228,6 +229,154 @@ class WiringTests(unittest.TestCase):
             r = client.get(f)
             self.assertEqual(r.status_code, 200, f)
             self.assertEqual(r.headers.get("cache-control"), "no-cache", f)
+
+
+PICKER_SETUP = """
+window.__store = {}; window.__fail = false; window.__posts = []; window.__fx = []; window.__signed = false; window.__post_fails = false;
+window.localStorage = {
+  getItem: (k) => { if (window.__fail) throw new Error("blocked"); return k in window.__store ? window.__store[k] : null; },
+  setItem: (k, v) => { if (window.__fail) throw new Error("blocked"); window.__store[k] = String(v); },
+  removeItem: (k) => { if (window.__fail) throw new Error("blocked"); delete window.__store[k]; },
+};
+window.ThemeFX = { kickoff: (c) => window.__fx.push("kickoff:" + c), renderHero: () => window.__fx.push("hero") };
+document.createElement = (tag) => ({ tag, className: "", textContent: "" });
+"""
+PICKER_AFTER = """
+ThemePicker.configure({ isSignedIn: () => window.__signed,
+  saveToAccount: (c) => { window.__posts.push(c); return window.__post_fails ? Promise.reject(new Error("offline")) : Promise.resolve(); } });
+"""
+
+
+def run_picker(body):
+    """Runs `body` with the palette + engine + picker loaded in the stub browser (storage, ThemeFX and account saving stubbed)."""
+    return run_js(PICKER_AFTER + body, setup=PICKER_SETUP, files=(THEME_JS,))
+
+
+def fake_host():
+    return """const handlers = {}; const host = { innerHTML: "", _bound: false,
+      addEventListener(t, fn, cap) { (handlers[t + (cap ? ":capture" : "")] = handlers[t + (cap ? ":capture" : "")] || []).push(fn); },
+      querySelectorAll() { return []; }, querySelector() { return null; }, contains() { return false; } };
+    const fire = (type, el, extra) => { (handlers[type] || []).forEach((fn) => fn(Object.assign({ type, target: el, relatedTarget: null, preventDefault() {} }, extra || {}))); };
+    const chip = (code) => ({ dataset: code === "" ? { default: "1" } : { team: code }, closest(sel) { return (sel.includes("data-team") && code !== "") || (sel.includes("data-default") && code === "") ? this : null; } });"""
+
+
+class PickerTests(unittest.TestCase):
+    def test_choose_applies_stores_posts_when_signed_in_and_plays_the_kickoff(self):
+        out = run_picker("""window.__signed = true; ThemePicker.choose("DET");
+            return { cur: TeamTheme.current(), store: window.__store.eb_team, posts: window.__posts, fx: window.__fx, team: root.getAttribute("data-team") };""")
+        self.assertEqual((out["cur"], out["store"], out["posts"], out["team"]), ("DET", "DET", ["DET"], "DET"))
+        self.assertEqual(out["fx"], ["kickoff:DET", "hero"])
+
+    def test_signed_out_choose_never_posts(self):
+        out = run_picker('ThemePicker.choose("GB"); return { posts: window.__posts, store: window.__store.eb_team, cur: TeamTheme.current() };')
+        self.assertEqual((out["posts"], out["store"], out["cur"]), ([], "GB", "GB"))
+
+    def test_blocked_storage_still_applies_for_the_session_and_does_not_throw(self):
+        out = run_picker("""window.__fail = true; ThemePicker.choose("KC"); const a = TeamTheme.current();
+            ThemePicker.syncFromAccount("GB"); ThemePicker.choose(""); return { a, after: TeamTheme.current() };""")
+        self.assertEqual((out["a"], out["after"]), ("KC", ""))
+
+    def test_a_failing_account_save_is_swallowed(self):
+        out = run_picker("""window.__signed = true; window.__post_fails = true; ThemePicker.choose("DET");
+            await_ = new Promise((r) => setTimeout(r, 20)); return await_.then(() => ({ cur: TeamTheme.current() }));""")
+        self.assertEqual(out["cur"], "DET")
+
+    def test_sync_from_account_applies_only_when_the_browser_has_no_valid_team(self):
+        out = run_picker("""ThemePicker.syncFromAccount("GB"); const fresh = { cur: TeamTheme.current(), store: window.__store.eb_team };
+            ThemePicker.syncFromAccount("KC"); const second = TeamTheme.current(); return { fresh, second };""")
+        self.assertEqual(out["fresh"], {"cur": "GB", "store": "GB"})
+        self.assertEqual(out["second"], "GB")                     # the browser now has a team: the account no longer overrides it
+
+    def test_browser_choice_beats_the_account_value(self):
+        out = run_picker('window.__store.eb_team = "KC"; ThemePicker.syncFromAccount("DET"); return { cur: TeamTheme.current(), store: window.__store.eb_team };')
+        self.assertEqual(out, {"cur": "", "store": "KC"})          # sync never overrides; the boot script is what applied KC
+
+    def test_a_valid_browser_team_applied_by_boot_wins_over_the_account(self):
+        out = run_picker('TeamTheme.apply("KC"); window.__store.eb_team = "KC"; ThemePicker.init(); ThemePicker.syncFromAccount("DET"); return { cur: TeamTheme.current() };')
+        self.assertEqual(out["cur"], "KC")
+
+    def test_unknown_account_theme_is_ignored(self):
+        out = run_picker('for (const bad of ["XYZ", "", null, undefined, 5, "<b>"]) ThemePicker.syncFromAccount(bad); return { cur: TeamTheme.current(), store: window.__store.eb_team || null };')
+        self.assertEqual(out, {"cur": "", "store": None})
+
+    def test_unknown_codes_are_ignored_by_choose_and_preview(self):
+        out = run_picker('ThemePicker.choose("XYZ"); ThemePicker.preview("XYZ"); return { cur: TeamTheme.current(), store: window.__store.eb_team || null, posts: window.__posts, fx: window.__fx };')
+        self.assertEqual(out, {"cur": "", "store": None, "posts": [], "fx": []})
+
+    def test_preview_then_end_preview_restores_the_committed_team(self):
+        out = run_picker("""ThemePicker.choose("DET"); const seen = [];
+            for (const c of ["GB", "KC", "SEA", "GB", "NE"]) { ThemePicker.preview(c); seen.push(TeamTheme.current()); }
+            ThemePicker.endPreview(); const a = { cur: TeamTheme.current(), team: root.getAttribute("data-team") };
+            ThemePicker.endPreview(); return { seen, a, again: TeamTheme.current(), store: window.__store.eb_team };""")
+        self.assertEqual(out["seen"], ["GB", "KC", "SEA", "GB", "NE"])
+        self.assertEqual((out["a"], out["again"], out["store"]), ({"cur": "DET", "team": "DET"}, "DET", "DET"))   # previews never persist
+
+    def test_preview_with_nothing_committed_returns_to_the_default_theme(self):
+        out = run_picker('ThemePicker.preview("GB"); ThemePicker.endPreview(); return { cur: TeamTheme.current(), team: root.getAttribute("data-team") };')
+        self.assertEqual(out, {"cur": "", "team": None})
+
+    def test_rapid_hover_across_chips_then_a_click_commits_exactly_the_clicked_team(self):
+        out = run_picker(fake_host() + """ThemePicker.render(host);
+            for (const c of ["GB", "KC", "SEA"]) fire("pointerover", chip(c));
+            fire("click", chip("NE")); const committed = { cur: TeamTheme.current(), store: window.__store.eb_team };
+            fire("pointerover", chip("GB")); fire("pointerleave", host);
+            return { committed, afterLeave: TeamTheme.current() };""")
+        self.assertEqual(out["committed"], {"cur": "NE", "store": "NE"})
+        self.assertEqual(out["afterLeave"], "NE")
+
+    def test_the_default_chip_clears_the_team_everywhere(self):
+        out = run_picker("""window.__signed = true; ThemePicker.choose("DET"); window.__fx.length = 0; ThemePicker.choose("");
+            return { cur: TeamTheme.current(), team: root.getAttribute("data-team"), store: window.__store.eb_team || null, posts: window.__posts, fx: window.__fx };""")
+        self.assertEqual((out["cur"], out["team"], out["store"]), ("", None, None))
+        self.assertEqual(out["posts"], ["DET", None])
+        self.assertEqual(out["fx"], ["hero"])                       # the hero empties; there is no kickoff for the default theme
+
+    def test_choosing_the_team_that_is_already_chosen_does_not_replay_the_kickoff(self):
+        out = run_picker('ThemePicker.choose("DET"); window.__fx.length = 0; ThemePicker.choose("DET"); return { fx: window.__fx };')
+        self.assertEqual(out["fx"], ["hero"])
+
+    def test_a_logo_that_fails_to_load_becomes_the_abbreviation(self):
+        out = run_picker(fake_host() + """ThemePicker.render(host);
+            const img = { dataset: { logo: "DET" }, tagName: "IMG", replaced: null, replaceWith(n) { this.replaced = n; }, closest() { return null; } };
+            fire("error", img, {}); (handlers["error:capture"] || []).forEach((fn) => fn({ type: "error", target: img }));
+            return { cls: img.replaced && img.replaced.className, text: img.replaced && img.replaced.textContent };""")
+        self.assertEqual(out["text"], "DET")
+        self.assertIn("tp-abbr", out["cls"])
+
+    def test_chips_html_has_every_team_the_default_chip_and_no_inline_handlers(self):
+        out = run_picker('return { html: ThemePicker.chipsHtml("GB") };')
+        html = out["html"]
+        self.assertEqual(html.count("data-team="), 32)
+        self.assertEqual(html.count("data-default="), 1)
+        self.assertEqual(html.count("tp-div-h"), 8)
+        self.assertEqual(html.count('aria-pressed="true"'), 1)
+        self.assertRegex(html, r'data-team="GB"[^>]*aria-pressed="true"')
+        self.assertNotRegex(html, r"\son[a-z]+\s*=")            # the CSP forbids inline handlers
+        self.assertIn("/api/img?url=", html)                      # logos go through the same-origin image proxy
+        self.assertIn("AFC East", html)
+        self.assertIn("NFC West", html)
+        default_pressed = run_picker('return { html: ThemePicker.chipsHtml("") };')["html"]
+        self.assertRegex(default_pressed, r'data-default="1"[^>]*aria-pressed="true"')
+
+
+class PickerWiringTests(WiringTests):
+    def test_theme_js_loads_before_app_js_and_the_picker_mount_is_outside_the_login_gates(self):
+        html = self.read("static/index.html")
+        self.assertLess(html.index('src="/theme.js"'), html.index('src="/app.js"'))
+        mount = html.index('id="team-picker"')
+        self.assertLess(mount, html.index('id="settings-logged-out"'))
+        self.assertGreater(mount, html.index('id="tab-settings"'))
+
+    def test_app_js_hands_the_account_theme_to_the_picker_and_renders_it_in_settings(self):
+        js = self.read("static/app.js")
+        for needle in ("ThemePicker.syncFromAccount(", "ThemePicker.render(", "ThemePicker.configure(", "TeamTheme.get("):
+            self.assertTrue(needle in js, f"app.js does not call {needle}")
+        self.assertFalse("const TEAM_COLORS" in js, "the player-card tint must read the one palette table")
+
+    def test_picker_styles_exist(self):
+        css = self.read("static/style.css")
+        for sel in (".tp-grid", ".tp-chip", ".tp-chip[aria-pressed=\"true\"]", ".tp-abbr", ".tp-div-h"):
+            self.assertTrue(sel in css, f"style.css lacks {sel}")
 
 
 if __name__ == "__main__":

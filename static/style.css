@@ -4915,3 +4915,31 @@ button.live-score-card:hover { border-color: var(--accent-dim); }
    instead of cropping it like a 16:9 article photo. */
 .news-card .news-img-wrap.is-fallback { background: radial-gradient(circle at 50% 30%, var(--panel-2), var(--panel)); }
 .news-card .news-img-wrap.is-fallback img { object-fit: contain; object-position: center bottom; padding: 6px 0 0; }
+
+
+/* ---- favorite-team picker (Settings) ---- */
+.team-picker { margin-bottom: 20px; }
+.tp-grid { display: grid; gap: 14px; margin-top: 12px; }
+.tp-div { display: grid; gap: 8px; }
+.tp-div-h { margin: 0; font-family: var(--mono); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+.tp-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+@media (min-width: 640px) { .tp-row { grid-template-columns: repeat(4, 96px); } }
+.tp-chip {
+  position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+  min-height: 74px; padding: 8px 6px; border-radius: 12px; cursor: pointer; font: inherit; color: var(--text);
+  background: var(--panel-2); border: 1px solid var(--border);
+  transition: transform 180ms var(--ease), border-color 180ms var(--ease), box-shadow 180ms var(--ease), background 180ms var(--ease);
+}
+.tp-chip:hover, .tp-chip:focus-visible { transform: translateY(-2px); border-color: var(--c, var(--accent)); box-shadow: 0 10px 22px -12px var(--c, var(--accent)); outline: none; }
+.tp-chip:focus-visible { outline: 2px solid var(--c, var(--accent)); outline-offset: 2px; }
+.tp-chip[aria-pressed="true"] { border-color: var(--c, var(--accent)); background: linear-gradient(160deg, color-mix(in srgb, var(--c, var(--accent)) 22%, var(--panel-2)), var(--panel-2)); box-shadow: 0 0 0 1px var(--c, var(--accent)) inset; }
+.tp-logo { width: 36px; height: 36px; object-fit: contain; display: block; }
+.tp-code { font-family: var(--mono); font-size: 11px; font-weight: 700; letter-spacing: 0.06em; color: var(--muted); }
+.tp-chip[aria-pressed="true"] .tp-code { color: var(--text); }
+.tp-abbr { display: inline-flex; align-items: center; justify-content: center; min-width: 36px; height: 36px; padding: 0 6px; border-radius: 10px; font-family: var(--mono); font-weight: 800; font-size: 12px; background: var(--c, var(--accent)); color: var(--on, var(--on-accent, #0e1b15)); }
+.tp-default { grid-column: 1 / -1; flex-direction: row; justify-content: flex-start; gap: 10px; min-height: 48px; }
+.tp-default .tp-abbr { background: var(--panel); color: var(--text); border: 1px solid var(--border); }
+.tp-sub { font-size: 12px; color: var(--muted); }
+@media (min-width: 640px) { .tp-default { grid-column: auto; max-width: 220px; } }
+.tp-live { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+@media (prefers-reduced-motion: reduce) { .tp-chip { transition: none; } .tp-chip:hover, .tp-chip:focus-visible { transform: none; } }

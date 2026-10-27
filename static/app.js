@@ -1171,23 +1171,21 @@ function ngsHtml(p) {
 }
 
 // ---- Team theme -------------------------------------------------------
-// One display color per team, tuned to read on the dark UI (a navy or black
-// primary is swapped for the team's brighter color). The card only uses it
-// as a tint, so it stays a slight cue rather than a re-skin.
-const TEAM_COLORS = {
-  ARI: "#E4313F", ATL: "#E03A3E", BAL: "#8E64D6", BUF: "#3C7BE8", CAR: "#1B9BD8", CHI: "#E8602C", CIN: "#FB4F14", CLE: "#FF5A1F",
-  DAL: "#4C7FE0", DEN: "#F26B2A", DET: "#1B9BE0", GB: "#FFB612", HOU: "#D4263F", IND: "#3E7BE0", JAX: "#1AAFC0", KC: "#E31837",
-  LV: "#A5ACAF", LAC: "#1E9BE8", LA: "#3D78E8", MIA: "#1CB5BA", MIN: "#8E64D6", NE: "#D1243F", NO: "#D8BE82", NYG: "#3F6FD9",
-  NYJ: "#2FA676", PHI: "#1FA58F", PIT: "#FFB612", SF: "#D83A3E", SEA: "#6CC24A", TB: "#E0352F", TEN: "#4B92DB", WAS: "#C8434F",
-};
+// The player card tints itself with the team's accent. The colors come from the one palette table
+// (static/team-themes.js), the same one the favorite-team theme uses, so the two can never disagree.
 const TEAM_ALIAS = { LAR: "LA", JAC: "JAX", WSH: "WAS", OAK: "LV", SD: "LAC", STL: "LA", ARZ: "ARI", BLT: "BAL", CLV: "CLE", HST: "HOU", SL: "LA" };
 function teamThemeStyle(team) {
-  const key = TEAM_ALIAS[team] || team;
-  const hex = TEAM_COLORS[key];
-  if (!hex) return "";
-  const n = parseInt(hex.slice(1), 16);
-  return `--tm:${hex};--tm-rgb:${(n >> 16) & 255},${(n >> 8) & 255},${n & 255}`;
+  const palette = TeamTheme.get(TEAM_ALIAS[team] || team);
+  if (!palette) return "";
+  const n = parseInt(palette.primary.slice(1), 16);
+  return `--tm:${palette.primary};--tm-rgb:${(n >> 16) & 255},${(n >> 8) & 255},${n & 255}`;
 }
+
+// The Settings picker (static/theme.js) saves the choice to the account through the same settings endpoint as everything else.
+ThemePicker.configure({
+  isSignedIn: () => !!state.user,
+  saveToAccount: (code) => api("/api/settings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ theme: code }) }),
+});
 
 // ---- Scouting ---------------------------------------------------------
 // The same real Next Gen percentiles as ngsHtml, but as a read, a shape and
@@ -5000,6 +4998,7 @@ async function loadSettingsIntoState() {
   if (!state.user) { state.settings = null; state.teams = []; state.leagueScoringDict = null; refreshScoringLeagueOption(); return; }
   try {
     state.settings = await api("/api/settings");
+    ThemePicker.syncFromAccount(state.settings.theme);     // a new device picks up the account's team; a device with one keeps it
     const teamsRes = await api("/api/teams");
     state.teams = teamsRes.teams;
     const active = activeTeam();
@@ -5102,6 +5101,7 @@ function handleUrlRedirects() {
 }
 
 function renderSettingsTab() {
+  ThemePicker.render($("#team-picker"));
   const out = $("#settings-logged-out");
   const inArea = $("#settings-logged-in");
   if (!state.user) {
