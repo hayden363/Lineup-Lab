@@ -897,6 +897,20 @@ def trade_analyzer(side_a_ids, side_b_ids, season=None, scoring=None, league_ctx
     }
 
 
+def _row_range(row, proj, pos, status, report, pid, pos_cv=0.55):
+    """{floor, ceiling, p_play} for a My Team row: the 10th/90th percentile of his score around `proj` (the same
+    outcome model Start/Sit uses), and the chance he plays when he's Questionable/Doubtful. `proj` already includes
+    the play chance, so it is divided back out to get his score if he plays. {} for someone ruled out or at zero."""
+    if status in decision.WONT_PLAY or not proj or proj <= 0:
+        return {}
+    pp = play_prob.play_probability(pos, status, report)
+    p_play = pp["p_play"] if pp else 1.0
+    cv = decision.shrunk_cv(row.get("cv"), row.get("games"), pos_cv)
+    seed = int("".join(ch for ch in str(pid) if ch.isdigit()) or 0) % (2 ** 32)
+    o = decision.outcomes(proj / p_play if p_play else proj, cv, seed, p_play)
+    return {"floor": o["p10"], "ceiling": o["p90"], "p_play": round(p_play, 2) if pp else None}
+
+
 def _roster_players(raw_ids, bundle, get_board, scoring, crosswalk=None, starters=None,
                      slot_labels=None, def_board=None, k_board=None, k_team_baseline=None,
                      rank_baselines=None, resolve_unscored=None, week=None, fragility=None, actuals=None):
@@ -987,6 +1001,7 @@ def _roster_players(raw_ids, bundle, get_board, scoring, crosswalk=None, starter
             "recent_team": row.get("recent_team"), "headshot_url": row.get("headshot_url"),
             "SCORE": row.get("SCORE"), "PVS": row.get("PVS"), "FORM": row.get("FORM"),
             "fpts_per_game": row.get("fpts_per_game"), "PROJ": proj,
+            **_row_range(row, proj, pos, row.get("injury_status"), row.get("injury_report"), gsis_id),
             "injury_status": _clean_num(row.get("injury_status")),
             "injury_body_part": _clean_num(row.get("injury_body_part")),
             "injury_factor": injury_factor, "injury_sample_n": injury_sample_n,
@@ -1005,7 +1020,9 @@ def _roster_players(raw_ids, bundle, get_board, scoring, crosswalk=None, starter
         if row is None or actuals is None:
             return row
         pts = actuals.points(row)
-        return row if pts is None else {**row, "PROJ": pts, "final": True}
+        if pts is None:
+            return row
+        return {**{k: v for k, v in row.items() if k not in ("floor", "ceiling", "p_play")}, "PROJ": pts, "final": True}
 
     starter_set = set(starters)
     rows, total = [], 0.0

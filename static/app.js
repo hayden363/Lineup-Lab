@@ -3821,7 +3821,7 @@ function rosterRowHtml(p, isBench) {
     <img ${headshotAttrs(p)} alt="">
     <span class="pos-badge">${esc(p.slot || p.position)}</span>
     <span>${esc(p.player_display_name)}${statusFlagsHtml(p)}${p.on_bye ? ' <span class="bye-tag" title="Team is on a bye this week">BYE</span>' : ""}</span>
-    <span class="proj-num tabular">${FMT.d1(p.PROJ)}</span>
+    <span class="proj-num tabular">${FMT.d1(p.PROJ)}${p.floor != null && p.ceiling != null ? `<small class="proj-range" title="Typical range (10th to 90th percentile)${p.p_play != null ? `; ${Math.round(p.p_play * 100)}% chance to play` : ""}">${FMT.int(p.floor)}–${FMT.int(p.ceiling)}${p.p_play != null ? ` · ${Math.round(p.p_play * 100)}% to play` : ""}</small>` : ""}</span>
   </div>`;
 }
 

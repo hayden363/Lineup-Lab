@@ -250,3 +250,36 @@ class CappedFormMultiplier(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class MyTeamRowRange(unittest.TestCase):
+    """Each scored My Team row carries the range around his projection and, when he's Questionable/Doubtful, the chance he plays."""
+
+    def rng(self, proj, status=None, cv=0.5, games=8):
+        row = {"cv": cv, "games": games}
+        return tools._row_range(row, proj, "WR", status, None, "p123")
+
+    def test_healthy_player_has_a_floor_below_and_a_ceiling_above_his_projection(self):
+        r = self.rng(17.3)
+        self.assertLess(r["floor"], 17.3)
+        self.assertGreater(r["ceiling"], 17.3)
+        self.assertIsNone(r["p_play"])
+
+    def test_the_range_is_deterministic(self):
+        self.assertEqual(self.rng(17.3), self.rng(17.3))
+
+    def test_questionable_keeps_the_ceiling_and_loses_the_floor_and_shows_the_chance(self):
+        healthy = self.rng(17.3)
+        q = self.rng(15.6, "Questionable")                  # row PROJ is already x0.90
+        self.assertGreaterEqual(q["p_play"], 0.5)
+        self.assertLess(q["p_play"], 1.0)
+        self.assertLess(q["floor"], healthy["floor"] + 0.01)
+        self.assertGreater(q["ceiling"], 17.3 * 0.9)
+
+    def test_out_players_and_zero_projections_have_no_range(self):
+        self.assertEqual(self.rng(0.0, "Out"), {})
+        self.assertEqual(self.rng(0.0), {})
+
+    def test_missing_cv_falls_back_to_the_position_default(self):
+        r = tools._row_range({"cv": float("nan"), "games": 0}, 12.0, "RB", None, None, "x1")
+        self.assertLess(r["floor"], 12.0)
