@@ -43,7 +43,7 @@ to data.
 
 import pandas as pd
 
-from . import context, contingency, decision, play_prob, history, waivers
+from . import context, contingency, decision, play_prob, history, projmodel, waivers
 from .scoring import apply_scoring
 from .board import (_injury_multiplier_col, _rate, build_board, load_bundle, matchup_multiplier)
 
@@ -223,8 +223,8 @@ def player_ros(player_id, scoring=None, season=None, max_games=None):
     row = board.loc[player_id]
     team = row.get("recent_team")
     form = row.get("FORM_ADJ", row.get("FORM"))     # 0 when the fitted model's rate already holds his form
-    form_mult = 1 + float(form) / 100.0 if pd.notna(form) else 1.0
-    rate = float(_rate(board.loc[[player_id]]).iloc[0]) * form_mult
+    base_rate = float(_rate(board.loc[[player_id]]).iloc[0])
+    rate = base_rate * (projmodel.capped_form_multiplier(base_rate, form) if pd.notna(form) else 1.0)
 
     xfp_t = None
     xf_mine = None
@@ -277,8 +277,8 @@ def player_ros(player_id, scoring=None, season=None, max_games=None):
         m_v, notes = context.environment_factor(pos, ctx, target_share)
         m_d = clamp_defense(matchup_multiplier(pos, opp, bundle)) if opp else 1.0
         m_i = injury if i == 0 else 1.0
-        meet = history.versus(all_games, opp) if opp else None
-        m_h = history.h2h_factor(all_games, opp, baseline) if opp else 1.0
+        meet = history.versus(all_games, opp, current=season_now) if opp else None
+        m_h = history.h2h_factor(all_games, opp, baseline, current=season_now) if opp else 1.0
         extra = mates_pts if i == 0 else 0.0     # the next game only: later weeks assume the teammate is back
         proj = combine(baseline + extra, m_v, m_d, m_h, m_i)
         out = decision.ruled_out() if (i == 0 and row.get("injury_status") in decision.WONT_PLAY) \

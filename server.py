@@ -50,7 +50,8 @@ from engine import db
 from engine import espn as espn_layer
 from engine import external_projections as external_projections_layer
 from engine import league_trades as league_trades_layer
-from engine import lineup as lineup_layer
+from engine import boxscore as boxscore_layer
+from engine import schemas
 from engine import live_scores as live_scores_layer
 from engine import locks
 from engine import waivers as waivers_layer
@@ -80,6 +81,7 @@ async def lifespan(app: FastAPI):
     # needing a separate cron job/launchd plist. Cancelled cleanly on
     # shutdown rather than left to die mid-fetch.
     task = refresh_scheduler.start()
+    news_layer.warm()   # fill the news cache in the background so the first visitor isn't the one waiting
     try:
         yield
     finally:
@@ -615,7 +617,7 @@ def _overall_board_response(limit, teams, superflex, scoring):
     board = overall_board(scoring=scoring, league=league)
     cols = [c for c in _OVERALL_COLUMNS if c in board.columns]
     out = board.head(limit)[cols].reset_index()
-    records = _clean(out.to_dict(orient="records"))
+    records = schemas.with_value_fields(_clean(out.to_dict(orient="records")))
     bundle = load_bundle()
     return {"season": bundle["season"], "week": upcoming_week(bundle["schedule"]),
             "position": "ALL", "count": len(records),
@@ -653,7 +655,7 @@ def api_board(
 
     board = board.head(limit).reset_index()
     board.insert(0, "rank", range(1, len(board) + 1))
-    records = _clean(board.to_dict(orient="records"))
+    records = schemas.with_value_fields(_clean(board.to_dict(orient="records")))
     return {"season": bundle["season"], "week": upcoming_week(bundle["schedule"]),
             "position": pos, "opponent": opp, "count": len(records),
             "matchup_breakdown": breakdown, "players": records}
@@ -686,7 +688,7 @@ def api_player_news(player_id: str, scoring: Optional[dict] = Depends(scoring_fr
     detail = player_detail(player_id, scoring=scoring)
     if detail is None:
         raise HTTPException(404, "player not found or not enough data")
-    items = news_layer.player_news(detail["player_display_name"], player_id=player_id)
+    items = news_layer.player_news(detail["player_display_name"], player_id=player_id, team=detail.get("recent_team"))
     summary = news_layer.ai_summary_for_player(
         detail["player_display_name"], items,
         position=detail.get("position"), injury_status=detail.get("injury_status"),
@@ -1346,7 +1348,7 @@ def api_my_team(week: Optional[int] = Query(None, ge=1, le=25),
     return _clean(result)
 
 
-# ------------------------------------------------------------- weekly lineup ----
+# --------------------------------------------------- lineup inputs (Start/Sit lineup advisor) ----
 def _lineup_inputs(result):
     """(slots, starter_ids, players_by_id) from a my_team() result."""
     roster = result["my_team"]["players"]
@@ -1356,58 +1358,6 @@ def _lineup_inputs(result):
                                 "team": p.get("recent_team"), "PROJ": p.get("PROJ") or 0.0,
                                 "injury_status": p.get("injury_status")} for p in roster}
     return slots, [p["player_id"] for p in starters], players
-
-
-def _lineup_response(result, lineup_result):
-    return {"week": result["nfl_week"], "league_name": result.get("league_name"), **lineup_result}
-
-
-@app.get("/api/lineup")
-def api_lineup(week: Optional[int] = Query(None, ge=1, le=25),
-               scoring: Optional[dict] = Depends(scoring_from_query), user=Depends(require_user)):
-    """This week's lineup with each slot's kickoff time, lock and bye state,
-    plus the bench so the page can offer swaps."""
-    _, result = _load_my_team(user, week, scoring)
-    slots, starter_ids, players = _lineup_inputs(result)
-    schedule = load_bundle()["schedule"]
-    wk = result["nfl_week"]
-    lineup = lineup_layer.build_lineup(slots, starter_ids, players, schedule, wk)
-    bench = []
-    for p in result["my_team"]["players"]:
-        if p.get("is_starter"):
-            continue
-        st = locks.lock_status(schedule, p.get("recent_team"), wk)
-        bench.append({"player_id": p["player_id"], "name": p.get("player_display_name"), "position": p.get("position"),
-                      "team": p.get("recent_team"), "PROJ": p.get("PROJ") or 0.0, "headshot_url": p.get("headshot_url"), **st})
-    return _clean({"week": wk, "league_name": result.get("league_name"), "lineup": lineup, "bench": bench,
-                   "total_proj": round(sum(r["PROJ"] for r in lineup), 1)})
-
-
-class LineupCheck(BaseModel):
-    week: Optional[int] = None
-    proposed: List[Optional[str]]
-    scoring: Optional[dict] = None
-
-
-@app.post("/api/lineup/check")
-def api_lineup_check(req: LineupCheck, user=Depends(require_user)):
-    """Validate a lineup you built here against the real kickoff locks."""
-    _, result = _load_my_team(user, req.week, req.scoring)
-    slots, starter_ids, players = _lineup_inputs(result)
-    schedule = load_bundle()["schedule"]
-    return _clean(_lineup_response(result, lineup_layer.validate(slots, req.proposed, starter_ids, players,
-                                                                 schedule, result["nfl_week"])))
-
-
-@app.get("/api/lineup/best")
-def api_lineup_best(week: Optional[int] = Query(None, ge=1, le=25),
-                    scoring: Optional[dict] = Depends(scoring_from_query), user=Depends(require_user)):
-    """The highest-projected legal lineup: locked slots stay, byes project 0."""
-    _, result = _load_my_team(user, week, scoring)
-    slots, starter_ids, players = _lineup_inputs(result)
-    schedule = load_bundle()["schedule"]
-    return _clean(_lineup_response(result, lineup_layer.best_lineup(slots, starter_ids, players, schedule,
-                                                                    result["nfl_week"])))
 
 
 @app.get("/api/league/trades")
@@ -1580,10 +1530,10 @@ def api_news(scope: str = Query("team", pattern="^(team|opponent|league)$"), use
                         league_players = tools.league_all_player_names(active["league_id"])
                 except Exception as e:
                     print(f"[news] couldn't build league name list: {e}")
-        tagged_by_link = {it["link"]: it for it in news_layer.filter_for_players(items, league_players)}
-        ordered = [tagged_by_link.get(it["link"], it) for it in items]
-        ordered.sort(key=lambda it: "matched_players" not in it)  # featured (matched) first, stable otherwise
-        return {"scope": "league", "items": _clean(ordered[:30])}
+        matched = news_layer.filter_for_players(items, league_players)          # strongest match first
+        seen = {it["link"] for it in matched}
+        rest = sorted((it for it in items if it["link"] not in seen), key=lambda it: -(it.get("ts") or 0))
+        return {"scope": "league", "items": _clean((matched + rest)[:40]), "sources": list(news_layer.FEEDS)}
 
     if not user:
         return {"scope": scope, "items": [], "requires_team": True}
@@ -1598,7 +1548,8 @@ def api_news(scope: str = Query("team", pattern="^(team|opponent|league)$"), use
             espn_s2, swid = db.get_espn_secrets(user["id"])
             team = tools.my_team_espn(active["league_id"], int(active["roster_id"]), espn_s2=espn_s2, swid=swid)
         else:
-            team = tools.my_team(active["league_id"], int(active["roster_id"]))
+            # names and teams only; my_team() would project every player just to get these
+            team = tools.news_rosters(active["league_id"], int(active["roster_id"]))
     except Exception as e:
         raise HTTPException(400, str(e))
 
@@ -1606,11 +1557,13 @@ def api_news(scope: str = Query("team", pattern="^(team|opponent|league)$"), use
         if not team["opponent"]:
             return {"scope": "opponent", "team_name": None, "items": [],
                      "message": f"No head-to-head opponent set for week {team['nfl_week']} yet."}
-        filtered = news_layer.filter_for_players(items, team["opponent"]["players"])
-        return {"scope": "opponent", "team_name": team["opponent"]["team_name"], "items": _clean(filtered)}
+        filtered = news_layer.filter_for_players(items, team["opponent"]["players"], include_team_news=True)
+        return {"scope": "opponent", "team_name": team["opponent"]["team_name"], "items": _clean(filtered),
+                "sources": list(news_layer.FEEDS)}
 
-    filtered = news_layer.filter_for_players(items, team["my_team"]["players"])
-    return {"scope": "team", "team_name": team["my_team"]["team_name"], "items": _clean(filtered)}
+    filtered = news_layer.filter_for_players(items, team["my_team"]["players"], include_team_news=True)
+    return {"scope": "team", "team_name": team["my_team"]["team_name"], "items": _clean(filtered),
+            "sources": list(news_layer.FEEDS)}
 
 
 @app.get("/api/live-scores")
@@ -1619,6 +1572,34 @@ def api_live_scores():
     — public data, no sign-in required, cached for 20s server-side so a
     room full of open tabs doesn't turn into a request per tab."""
     return {"games": live_scores_layer.live_scoreboard()}
+
+
+boxscore_rate_limit = rate_limit("boxscore", limit=60, window_seconds=60)
+
+
+@app.get("/api/live-scores/{game_id}", dependencies=[Depends(boxscore_rate_limit)])
+def api_game_boxscore(game_id: str, scoring: Optional[dict] = Depends(scoring_from_query),
+                      user=Depends(current_user)):
+    """Both teams' player stat lines for one game (engine/boxscore.py). Public;
+    when the caller is signed in with a connected league, their players are
+    flagged `mine` and every skill player carries fantasy points under that
+    league's scoring. A roster that can't be loaded just means no highlights."""
+    if not boxscore_layer.valid_game_id(game_id):
+        raise HTTPException(400, "bad game id")
+    parsed = boxscore_layer.game_boxscore(game_id)
+    roster = None
+    if user:
+        try:
+            _, team = _load_my_team(user, None, scoring)
+            roster = team["my_team"]["players"]
+        except Exception as e:
+            print(f"[boxscore] no roster to highlight: {e}")
+    try:
+        pts_scoring = _effective_scoring(scoring, user)
+    except Exception as e:   # settings store down: show default-PPR points rather than failing public data
+        print(f"[boxscore] scoring settings unavailable, using default: {e}")
+        pts_scoring = scoring
+    return _clean(boxscore_layer.annotate(parsed, roster, pts_scoring))
 
 
 # ---- image proxy ----

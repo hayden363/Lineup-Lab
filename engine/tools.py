@@ -8,12 +8,14 @@ matchup-aware board is the single source of truth for every decision
 surface in the app.
 """
 
+import time
+
 import numpy as np
 import pandas as pd
 
 from . import lineup as lineup_layer
 from . import profile
-from . import context, correlation, data, db, decision, play_prob, draft_runs, history, trade_engine, locks, trade_reasons, defense_scoring, kicker_scoring, role_baseline, sleeper, waivers
+from . import context, correlation, data, db, decision, kdef_model, schemas, play_prob, draft_runs, history, trade_engine, locks, trade_reasons, defense_scoring, kicker_scoring, role_baseline, sleeper, waivers
 from .board import (POSITIONS, build_board, load_bundle, rest_of_season_value,
                      project_vs)
 from .scoring import apply_scoring
@@ -112,6 +114,25 @@ def _team_on_bye(bundle, team, week):
     return byes.get(team) == int(week)
 
 
+def _head_to_head(gsis_id, opp, scoring, bundle, baseline):
+    """({"factor", "meetings", "avg", "season_avg"}) for his own record against `opp` over the last two seasons and
+    this one (engine/history.h2h_factor), or None with no usable history. The factor is small by design: see the
+    note on H2H_SHRINK in engine/history.py."""
+    season, wk = bundle.get("season"), bundle.get("wk")
+    if not opp or not gsis_id or season is None or not history.available():
+        return None
+    games = history.player_games(gsis_id, scoring, season)
+    mine = wk[wk["player_id"] == gsis_id] if wk is not None else []
+    if len(mine):
+        scored, _ = apply_scoring(mine, scoring)
+        games = games + [{"season": season, "week": int(r.week), "opponent": r.opponent_team, "points": float(r.fpts_active)}
+                         for r in scored.itertuples(index=False) if isinstance(getattr(r, "opponent_team", None), str)]
+    meet = history.versus(games, opp, current=season)
+    if not meet:
+        return None
+    return {"factor": history.h2h_factor(games, opp, baseline, current=season), "meetings": meet["games"], "avg": meet["avg"]}
+
+
 def _opponent_adjusted_proj_full(board, gsis_id, pos, bundle, scoring, week=None):
     """Same real computation as _opponent_adjusted_proj below, also
     returning the real injury-factor disclosure detail behind PROJ (None,
@@ -130,7 +151,9 @@ def _opponent_adjusted_proj_full(board, gsis_id, pos, bundle, scoring, week=None
         opp, _ = data.next_opponent(bundle["schedule"], recent_team, week)
     if opp:
         projected = project_vs(row, pos, opp, bundle=bundle, scoring=scoring)
-        proj = round(float(projected["PROJ"].iloc[0]), 1)
+        proj = float(projected["PROJ"].iloc[0])
+        h2h = _head_to_head(gsis_id, opp, scoring, bundle, proj)
+        proj = round(proj * (h2h["factor"] if h2h else 1.0), 1)
         detail = (_clean_num(projected["injury_factor"].iloc[0]), _clean_num(projected["injury_sample_n"].iloc[0]))
     else:
         proj = round(float(rest_of_season_value(row, pos, bundle=bundle, scoring=scoring).iloc[0]), 1)
@@ -270,6 +293,31 @@ def _role_rank_row(raw_id, unscored, rank_baselines, is_starter, slot):
     }
 
 
+def _pool_rate(board):
+    """League-wide average projection rate of a K or DEF board: the 'pool' kdef_model scales against."""
+    col = "rate" if "rate" in board.columns else "fpts_per_game"
+    m = board[col].mean()
+    return float(m) if m == m else 0.0
+
+
+def _defense_proj(row, def_board, bundle, team_code, week=None):
+    """PROJ for a DEF/ST: shrunk rate adjusted by the betting market's implied total for the offense
+    it faces (engine/kdef_model.py). Falls back to neutral when there's no schedule/line."""
+    ctx = None
+    if bundle is not None:
+        ctx = kdef_model.game_context(bundle["schedule"], defense_scoring.to_nflverse_team(team_code), week)
+    return kdef_model.defense_projection(_row_rate(row), _pool_rate(def_board), (ctx or {}).get("itt_opp"))
+
+
+def _kicker_proj(rate, k_pool, bundle, team_code, week=None):
+    """PROJ for a kicker: shrunk rate adjusted by his offense's implied total and a roof
+    (engine/kdef_model.py). Neutral when there's no schedule/line."""
+    ctx = None
+    if bundle is not None and team_code:
+        ctx = kdef_model.game_context(bundle["schedule"], defense_scoring.to_nflverse_team(team_code), week)
+    return kdef_model.kicker_projection(rate, k_pool, (ctx or {}).get("itt"), (ctx or {}).get("indoor"))
+
+
 def _defense_row(raw_id, unscored, def_board, is_starter, slot, bundle=None, fragility=None, week=None):
     """A real SCORE/FORM/PROJ row for a DEF slot, or None if this team
     isn't in the board (shouldn't happen for a real NFL team code, but a
@@ -285,11 +333,7 @@ def _defense_row(raw_id, unscored, def_board, is_starter, slot, bundle=None, fra
     row = defense_scoring.resolve_defense_row(raw_id, def_board)
     if row is None:
         return None
-    matchup_factor = 1.0
-    if bundle is not None:
-        opp = _defense_opponent(bundle, raw_id, week)
-        matchup_factor = defense_scoring.defense_matchup_factor(opp, fragility)
-    proj = round(_row_rate(row) * (1 + row["FORM"] / 100.0) * matchup_factor, 1)
+    proj = _defense_proj(row, def_board, bundle, raw_id, week)
     return {
         "player_id": raw_id, "position": "DEF",
         "player_display_name": unscored["player_display_name"],
@@ -300,7 +344,7 @@ def _defense_row(raw_id, unscored, def_board, is_starter, slot, bundle=None, fra
     }
 
 
-def _kicker_row(gsis_id, unscored, k_board, team_baseline, is_starter, slot):
+def _kicker_row(gsis_id, unscored, k_board, team_baseline, is_starter, slot, bundle=None, week=None):
     """A real SCORE/FORM/PROJ row for a K slot, keyed by the gsis_id the
     crosswalk already resolved for this Sleeper id.
 
@@ -315,7 +359,7 @@ def _kicker_row(gsis_id, unscored, k_board, team_baseline, is_starter, slot):
     valuation, and shouldn't be presented as one."""
     if k_board is not None and gsis_id is not None and gsis_id in k_board.index:
         row = k_board.loc[gsis_id].to_dict()
-        proj = round(_row_rate(row) * (1 + row["FORM"] / 100.0), 1)
+        proj = _kicker_proj(_row_rate(row), _pool_rate(k_board), bundle, unscored.get("recent_team"), week)
         return {
             "player_id": gsis_id, "position": "K",
             "player_display_name": unscored["player_display_name"],
@@ -332,7 +376,8 @@ def _kicker_row(gsis_id, unscored, k_board, team_baseline, is_starter, slot):
                 "player_display_name": unscored["player_display_name"],
                 "recent_team": unscored["recent_team"], "headshot_url": unscored.get("headshot_url"),
                 "SCORE": None, "FORM": None, "fpts_per_game": None,
-                "PROJ": round(float(team_baseline.loc[team]), 1),
+                "PROJ": _kicker_proj(float(team_baseline.loc[team]), float(team_baseline.mean()), bundle,
+                                     unscored.get("recent_team"), week),
                 "injury_status": None, "is_starter": is_starter, "slot": slot,
             }
     return None
@@ -500,15 +545,18 @@ def start_sit(player_ids, opponents=None, season=None, scoring=None, mode="balan
         # the projection and its floor/ceiling alike.
         ctx = context.game_context(bundle["schedule"], row.get("recent_team"), wk_no) if wk_no else None
         env_f, env_notes = context.environment_factor(pos, ctx, _clean_num(row.get("target_share")))
+        h2h = _head_to_head(pid, opp, scoring, bundle, proj) if opp and not on_bye else None
+        h2h_f = h2h["factor"] if h2h else 1.0
         base_proj = proj
-        proj = proj * env_f
+        proj = proj * env_f * h2h_f
         floor_v, ceil_v = _clean_num(row.get("floor")), _clean_num(row.get("ceiling"))
-        floor_v = floor_v * env_f if floor_v is not None else None
-        ceil_v = ceil_v * env_f if ceil_v is not None else None
+        floor_v = floor_v * env_f * h2h_f if floor_v is not None else None
+        ceil_v = ceil_v * env_f * h2h_f if ceil_v is not None else None
         usage = context.usage_trend(bundle["wk"], pid, pos)
         spread = (ceil_v - floor_v) if (floor_v is not None and ceil_v is not None) else None
         results.append({
             "base_proj": base_proj, "environment": {"factor": env_f, "notes": env_notes, "game": ctx},
+            "head_to_head": h2h,
             "usage": usage, "cv": (spread / proj if spread is not None and proj else None),
             "player_id": pid, "position": pos,
             "player_display_name": row.get("player_display_name"),
@@ -623,6 +671,8 @@ def _attach_decisions(valid, bundle, get_board, scoring, mode):
             pid, pos, wk, snaps.get(pid) or {}, dict(zip(mine_x["week"].astype(int), mine_x["xfp"])),
             {int(w): int(n) for (_, w), n in rz_by[rz_by.index.get_level_values(0) == pid].items()})
         rate, comps = decision.rating(r, usage_pct, ctx, split, mrank, recent)
+        if r["outcomes"].get("out"):   # on a bye or ruled out: he scores 0, so the rating must not read as a start
+            rate = 0.0
         mg, mb = decision.matchup_flags(pos, opp, factors) if opp else ([], [])
         pg, pb = decision.player_flags(r, ctx, split, xfp, td_share, snap_trend)
         if r.get("on_bye"):
@@ -892,7 +942,8 @@ def _roster_players(raw_ids, bundle, get_board, scoring, crosswalk=None, starter
                 if def_row:
                     return def_row
             elif unscored["position"] == "K":
-                k_row = _kicker_row(gsis_id, unscored, k_board, k_team_baseline, is_starter, slot)
+                k_row = _kicker_row(gsis_id, unscored, k_board, k_team_baseline, is_starter, slot,
+                                        bundle=bundle, week=week)
                 if k_row:
                     return k_row
             elif unscored["position"] in role_baseline.RANK_POSITIONS:
@@ -983,9 +1034,7 @@ def _team_total(raw_ids, bundle, get_board, scoring, crosswalk=None, starters=No
                     if done is not None:
                         total += done
                         continue
-                    matchup_factor = defense_scoring.defense_matchup_factor(
-                        _defense_opponent(bundle, raw_id, week), fragility)
-                    total += _row_rate(def_row) * (1 + def_row["FORM"] / 100.0) * matchup_factor
+                    total += _defense_proj(def_row, def_board, bundle, raw_id, week)
                     continue
             if k_board is not None and gsis_id is not None and gsis_id in k_board.index:
                 k_row = k_board.loc[gsis_id]
@@ -993,7 +1042,8 @@ def _team_total(raw_ids, bundle, get_board, scoring, crosswalk=None, starters=No
                 if done is not None:
                     total += done
                     continue
-                total += _row_rate(k_row) * (1 + k_row["FORM"] / 100.0)
+                total += _kicker_proj(_row_rate(k_row), _pool_rate(k_board), bundle,
+                                      (sleeper.resolve_unscored_player(raw_id) or {}).get("recent_team"), week)
                 continue
             if k_team_baseline is not None or rank_baselines is not None:
                 unscored = sleeper.resolve_unscored_player(raw_id)
@@ -1002,7 +1052,8 @@ def _team_total(raw_ids, bundle, get_board, scoring, crosswalk=None, starters=No
                     team = (defense_scoring.SLEEPER_TO_NFLVERSE_TEAM.get(recent_team, recent_team)
                             if recent_team is not None else None)
                     if team in k_team_baseline.index:
-                        total += float(k_team_baseline.loc[team])
+                        total += _kicker_proj(float(k_team_baseline.loc[team]), float(k_team_baseline.mean()),
+                                              bundle, recent_team, week)
                 elif unscored and unscored["position"] in role_baseline.RANK_POSITIONS and rank_baselines is not None:
                     proj = role_baseline.resolve_role_rank_projection(
                         unscored.get("recent_team"), unscored.get("depth_chart_order"),
@@ -1038,16 +1089,65 @@ def league_all_player_names(league_id, season=None, scoring=None):
     decide who's a real enough person to match a headline against."""
     snap = sleeper.league_snapshot(league_id)
     bundle = load_bundle(season)
-    name_by_pid = bundle["wk"].sort_values("week").groupby("player_id")["player_display_name"].last().to_dict()
+    cols = [c for c in ("player_display_name", "recent_team", "headshot_url") if c in bundle["wk"].columns]
+    last = bundle["wk"].sort_values("week").groupby("player_id")[cols].last()
+    names, teams = last["player_display_name"].to_dict(), last["recent_team"].to_dict()
+    shots = last["headshot_url"].to_dict() if "headshot_url" in last.columns else {}
     seen = {}
     for team in snap["teams"]:
         for pid in team["player_ids"]:
             if pid in seen:
                 continue
-            name = name_by_pid.get(pid)
+            name = names.get(pid)
             if name:
-                seen[pid] = {"player_id": pid, "player_display_name": name}
+                seen[pid] = {"player_id": pid, "player_display_name": name, "recent_team": teams.get(pid),
+                             "headshot_url": shots.get(pid)}
     return list(seen.values())
+
+
+_NEWS_ROSTER_CACHE = {}
+NEWS_ROSTER_TTL = 60
+
+
+def news_rosters(league_id, roster_id, week=None, season=None):
+    """My roster and this week's head-to-head opponent's, as just names and NFL teams: all the
+    news filter needs. my_team() answers the same question but also projects every player and
+    runs the matchup pipeline, which the Team and Opponent news tabs paid for on every tab
+    switch. Same week and opponent rules as my_team(); cached briefly per (league, roster, week)."""
+    key = (league_id, roster_id, week)
+    hit = _NEWS_ROSTER_CACHE.get(key)
+    if hit and time.time() - hit[0] < NEWS_ROSTER_TTL:
+        return hit[1]
+    snap = sleeper.league_snapshot(league_id)
+    by_roster = {t["roster_id"]: t for t in snap["teams"]}
+    mine = by_roster.get(roster_id)
+    if mine is None:
+        raise ValueError(f"roster_id {roster_id} not found in league {league_id}")
+    state = sleeper.get_nfl_state()
+    if week is None:
+        week = state.get("week") if state.get("season_type") in ("regular", "post") and state.get("week") else 1
+    opp = None
+    try:
+        for pair in sleeper.matchups_for_week(league_id, week):
+            if roster_id in pair["roster_ids"]:
+                others = [r for r in pair["roster_ids"] if r != roster_id]
+                opp = by_roster.get(others[0]) if others else None
+                break
+    except Exception:
+        opp = None
+    wk = load_bundle(season)["wk"]
+    cols = [c for c in ("player_display_name", "recent_team", "headshot_url") if c in wk.columns]
+    last = wk.sort_values("week").groupby("player_id")[cols].last()
+
+    def card(t):
+        return {"team_name": t["team_name"],
+                "players": [{"player_id": pid, "player_display_name": last.at[pid, "player_display_name"],
+                             "recent_team": last.at[pid, "recent_team"],
+                             "headshot_url": last.at[pid, "headshot_url"] if "headshot_url" in last.columns else None}
+                            for pid in t["player_ids"] if pid in last.index]}
+    out = {"nfl_week": week, "my_team": card(mine), "opponent": card(opp) if opp else None}
+    _NEWS_ROSTER_CACHE[key] = (time.time(), out)
+    return out
 
 
 def league_team_list(league_id):
@@ -1100,7 +1200,8 @@ def roster_player_list(league_id, roster_id, season=None, scoring=None):
                 special_row = _defense_row(raw_id, unscored, def_board, is_starter=None, slot=None,
                                             bundle=bundle, fragility=fragility)
             elif unscored["position"] == "K":
-                special_row = _kicker_row(gsis_id, unscored, k_board, k_team_baseline, is_starter=None, slot=None)
+                special_row = _kicker_row(gsis_id, unscored, k_board, k_team_baseline, is_starter=None, slot=None,
+                                           bundle=bundle)
             elif unscored["position"] in role_baseline.RANK_POSITIONS:
                 special_row = _role_rank_row(raw_id, unscored, rank_baselines, is_starter=None, slot=None)
             if special_row:
@@ -1732,6 +1833,20 @@ def _next_unplayed_week(schedule):
     return int(s["week"].min()) if len(s) else None
 
 
+def _league_pvs(scoring, shape):
+    """{player_id: PVS} for this league's team count, slots and scoring, so the
+    trade value moves with the format (superflex, deep benches, custom points).
+    None if the board can't be built; trade_values then falls back to its own
+    scale rather than failing the whole analyzer."""
+    try:
+        from .board import overall_board
+        league = {"teams": shape["teams"], "slots": shape["slots"]}
+        return overall_board(scoring=scoring, league=league)["PVS"].to_dict()
+    except Exception as e:
+        print(f"[trade] league PVS unavailable, using fallback values: {e}")
+        return None
+
+
 def _trade_setup(league_id, scoring=None, season=None):
     """Everything the trade engine needs for one Sleeper league: valued
     rosters (with records, weaknesses, usage, byes) and the league context."""
@@ -1746,7 +1861,7 @@ def _trade_setup(league_id, scoring=None, season=None):
     cw = sleeper.id_crosswalk()
     rostered = {cw.get(str(x)) for r in raw for x in (r.get("players") or [])} - {None}
     shape = trade_engine.league_shape(roster_positions, len(raw))
-    values = trade_engine.trade_values(pool, shape, rostered)
+    values = trade_engine.trade_values(pool, shape, rostered, pvs_by_id=_league_pvs(scoring, shape))
 
     def _f(v, scale=1.0):
         return None if v is None or pd.isna(v) else round(float(v) * scale, 1)
@@ -1762,8 +1877,11 @@ def _trade_setup(league_id, scoring=None, season=None):
 
 
 def _public_player(p):
-    return {k: p.get(k) for k in ("player_id", "name", "player_display_name", "position", "recent_team",
-                                  "headshot_url", "value", "trade", "tier", "injury_status", "bye")}
+    out = {k: p.get(k) for k in ("player_id", "name", "player_display_name", "position", "recent_team",
+                                 "headshot_url", "value", "trade", "tier", "injury_status", "bye")}
+    # `value` is projected points per game and `trade` is the 0-100 PVS-based trade value; say so by name
+    out.update(schemas.value_fields({"player_display_name": out["name"], "PROJ": p.get("value"), "PVS": p.get("trade")}))
+    return out
 
 
 def _trade_setup_espn(league_id, scoring=None, season=None, year=None, espn_s2=None, swid=None):
@@ -1781,7 +1899,7 @@ def _trade_setup_espn(league_id, scoring=None, season=None, year=None, espn_s2=N
     cw = espn_layer.id_crosswalk()
     rostered = {cw.get(str(p.playerId)) for t in league.teams for p in t.roster} - {None}
     shape = trade_engine.league_shape(roster_positions, len(league.teams))
-    values = trade_engine.trade_values(pool, shape, rostered)
+    values = trade_engine.trade_values(pool, shape, rostered, pvs_by_id=_league_pvs(scoring, shape))
 
     def _f(v, scale=1.0):
         return None if v is None or pd.isna(v) else round(float(v) * scale, 1)

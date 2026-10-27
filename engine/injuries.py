@@ -256,19 +256,41 @@ def report_for(player_id, row, schedule, today=None):
 LONG_ABSENCE_GAMES = 4   # the NFL's own IR minimum
 
 
+# Games he is assumed to miss when ESPN gives no return date: a plain Out is the next game;
+# IR and PUP are at least the NFL's own IR minimum. Anything else (Sus, NA, Questionable...)
+# has no safe default length, so it gets no discount.
+ASSUMED_GAMES_OUT = {"Out": 1, "IR": LONG_ABSENCE_GAMES, "PUP": LONG_ABSENCE_GAMES}
+
+
+def _games_left(schedule, team):
+    s = schedule
+    if "game_type" in s.columns:
+        s = s[s["game_type"] == "REG"]
+    s = s[(s["home_team"] == team) | (s["away_team"] == team)]
+    if "home_score" in s.columns:
+        s = s[s["home_score"].isna()]
+    return int(len(s))
+
+
 def availability(row, schedule, today=None):
-    """Share of his team's remaining regular-season games he is expected to
-    play, from ESPN's estimated return date: 0.0 for a season-ending injury,
-    1.0 when there is no return date to go on (a plain 'Out' is one game,
-    handled by the week-level checks)."""
+    """Share of his team's remaining regular-season games he is expected to play: the discount on
+    his rest-of-season (trade) value. From ESPN's estimated return date when there is one (0.0 for a
+    season-ending injury); without one, from the assumed minimum for his status (ASSUMED_GAMES_OUT);
+    1.0 when neither applies."""
     status = row.get("injury_status")
+    if not isinstance(status, str):
+        return 1.0
     rec = row.get("injury_report")
-    if not isinstance(status, str) or not isinstance(rec, dict) or not rec.get("return_date"):
+    if isinstance(rec, dict) and rec.get("return_date"):
+        tl = timeline(rec["return_date"], schedule, row.get("recent_team"), today)
+        if not tl["games_left"]:
+            return 1.0
+        return max(0.0, 1.0 - tl["games_out"] / tl["games_left"])
+    out = ASSUMED_GAMES_OUT.get(status)
+    left = _games_left(schedule, row.get("recent_team")) if out else 0
+    if not out or not left:
         return 1.0
-    tl = timeline(rec["return_date"], schedule, row.get("recent_team"), today)
-    if not tl["games_left"]:
-        return 1.0
-    return max(0.0, 1.0 - tl["games_out"] / tl["games_left"])
+    return max(0.0, 1.0 - min(out, left) / left)
 
 
 def out_long(row, schedule, today=None):

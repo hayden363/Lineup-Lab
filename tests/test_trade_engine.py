@@ -18,9 +18,11 @@ def team(players, wins=2, losses=2, weak=None):
 
 
 class MathTest(unittest.TestCase):
-    def test_curve_and_tiers(self):
-        self.assertEqual(T.rank_value(1), 100.0)
-        self.assertEqual([T.tier(v) for v in (95, 60, 40, 10)], [1, 2, 3, 4])
+    def test_tiers_are_the_shared_pvs_bands(self):
+        from engine import pvs
+        self.assertEqual([T.tier(v) for v in (95, 80, 79.9, 60, 45, 30, 10)], [1, 1, 2, 2, 3, 4, 5])
+        for v in range(0, 101, 5):
+            self.assertEqual(T.tier(v), pvs.tier_number(v))
 
     def test_package_weights_by_league_depth(self):
         self.assertEqual(T.package_weights(2, "standard"), [1.0, 0.8])
@@ -122,3 +124,56 @@ class FinderTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TradeValueTest(unittest.TestCase):
+    """trade_values() must keep real gaps between players and follow the league's PVS."""
+
+    @staticmethod
+    def _pool():
+        import pandas as pd
+        rows = [("a", "RB", 20.0), ("b", "RB", 19.9), ("c", "WR", 14.0), ("d", "WR", 13.9), ("e", "QB", 18.0),
+                ("f", "TE", 8.0),
+                ("xr", "RB", 6.0), ("xw", "WR", 6.0), ("xq", "QB", 6.0), ("xt", "TE", 3.0)]   # free agents
+        return pd.DataFrame({"player_display_name": [f"{r[0]} Player" for r in rows],
+                             "position": [r[1] for r in rows], "value": [r[2] for r in rows]},
+                            index=[r[0] for r in rows])
+
+    ROSTERED = {"a", "b", "c", "d", "e", "f"}
+    SHAPE = {"teams": 12, "slots": {"QB": 1, "RB": 2, "WR": 2, "TE": 1, "FLEX": 1, "SUPERFLEX": 0}}
+
+    def test_fallback_keeps_gaps_instead_of_flat_rank_steps(self):
+        v = T.trade_values(self._pool(), self.SHAPE, self.ROSTERED, ecr={})
+        # 0.1 PPG apart is nearly the same price, 6 PPG apart is not (a rank curve would charge the same step for both)
+        self.assertLess(v["a"]["trade"] - v["b"]["trade"], 3)
+        self.assertGreater(v["b"]["trade"] - v["c"]["trade"], 10)
+
+    def test_uses_league_pvs_when_given(self):
+        pvs = {"a": 90.0, "b": 70.0, "c": 50.0, "d": 30.0, "e": 85.0, "f": 10.0, "xr": 5.0, "xw": 4.0, "xq": 3.0, "xt": 2.0}
+        v = T.trade_values(self._pool(), self.SHAPE, self.ROSTERED, ecr={}, pvs_by_id=pvs)
+        self.assertEqual({k: x["trade"] for k, x in v.items()}, pvs)
+        self.assertEqual(v["e"]["tier"], 1)
+        self.assertEqual(v["f"]["tier"], 5)
+        self.assertEqual(v["e"]["rank"], 2)
+
+    def test_superflex_pvs_changes_the_quarterback_price(self):
+        one_qb = T.trade_values(self._pool(), self.SHAPE, None, ecr={}, pvs_by_id={"a": 90, "b": 70, "c": 50, "d": 30, "e": 40, "f": 10, "xr": 5, "xw": 4, "xq": 3, "xt": 2})
+        superflex = T.trade_values(self._pool(), self.SHAPE, None, ecr={}, pvs_by_id={"a": 90, "b": 70, "c": 50, "d": 30, "e": 75, "f": 10, "xr": 5, "xw": 4, "xq": 3, "xt": 2})
+        self.assertGreater(superflex["e"]["trade"], one_qb["e"]["trade"])
+        self.assertLess(superflex["e"]["rank"], one_qb["e"]["rank"])
+
+    def test_missing_pvs_for_a_player_falls_back_not_crashes(self):
+        v = T.trade_values(self._pool(), self.SHAPE, self.ROSTERED, ecr={}, pvs_by_id={"a": 90.0})
+        self.assertEqual(set(v), {"a", "b", "c", "d", "e", "f", "xr", "xw", "xq", "xt"})
+        self.assertTrue(all(0 <= x["trade"] <= 100 for x in v.values()))
+
+    def test_expert_rank_nudges_by_thirty_percent(self):
+        import pandas as pd
+        pool = self._pool()
+        pvs = {"a": 90.0, "b": 70.0, "c": 50.0, "d": 30.0, "e": 20.0, "f": 10.0, "xr": 5.0, "xw": 4.0, "xq": 3.0, "xt": 2.0}
+        from engine import consensus
+        key = consensus.match_key("f Player", "TE")
+        v = T.trade_values(pool, self.SHAPE, self.ROSTERED, ecr={key: {"ecr": 1}}, pvs_by_id=pvs)
+        # experts have him 1st -> blends toward the top slot's PVS (90): 0.7*10 + 0.3*90
+        self.assertAlmostEqual(v["f"]["trade"], 34.0, places=1)
+        self.assertEqual(v["a"]["trade"], 90.0)

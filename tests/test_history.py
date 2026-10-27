@@ -87,6 +87,38 @@ class HeadToHeadTests(unittest.TestCase):
         six = H.h2h_factor(self._games(20, 15, 6), "DET", 15)
         self.assertGreater(six, two)
 
+    def test_the_window_is_the_last_two_seasons_plus_this_one(self):
+        old = [{"season": 2023, "week": i + 1, "opponent": "DET", "points": 40} for i in range(3)]
+        recent = [{"season": 2025, "week": i + 1, "opponent": "DET", "points": 10} for i in range(2)]
+        rest = [{"season": 2025, "week": 10 + i, "opponent": "GB", "points": 15} for i in range(8)]
+        games = old + recent + rest
+        # judged against 2026: 2023 is outside "the last two seasons", so only the two weak 2025 meetings count
+        self.assertLess(H.h2h_factor(games, "DET", 15, current=2026), 1.0)
+        self.assertEqual(H.versus(games, "DET", current=2026)["games"], 2)
+        self.assertEqual(H.versus(games, "DET", current=2026)["avg"], 10.0)
+        # with no window the 2023 blowouts count and swamp it
+        self.assertGreater(H.h2h_factor(games, "DET", 15), 1.0)
+        self.assertEqual(H.versus(games, "DET")["games"], 5)
+
+    def test_a_season_older_than_the_window_alone_gives_no_factor(self):
+        games = [{"season": 2023, "week": i + 1, "opponent": "DET", "points": 40} for i in range(4)] + \
+                [{"season": 2023, "week": 10 + i, "opponent": "GB", "points": 10} for i in range(6)]
+        self.assertEqual(H.h2h_factor(games, "DET", 15, current=2026), 1.0)
+        self.assertIsNone(H.versus(games, "DET", current=2026))
+
+    def test_this_seasons_earlier_meeting_counts(self):
+        games = [{"season": 2025, "week": 3, "opponent": "DET", "points": 30},
+                 {"season": 2026, "week": 2, "opponent": "DET", "points": 28}] + \
+                [{"season": 2026, "week": 10 + i, "opponent": "GB", "points": 12} for i in range(6)]
+        self.assertGreater(H.h2h_factor(games, "DET", 15, current=2026), 1.0)
+
+    def test_the_factor_is_deliberately_tiny(self):
+        # calibrated to scripts/backtest_h2h.py (slope ~0.03): even four huge meetings move a projection under 5%
+        f = H.h2h_factor(self._games(60, 10, 4), "DET", 15)
+        self.assertLessEqual(f, 1.05 + 1e-9)
+        two = H.h2h_factor(self._games(25, 15, 2), "DET", 15)
+        self.assertLess(two - 1.0, 0.03)
+
     def test_versus_summary(self):
         v = H.versus(self._games(18, 10, 3), "DET")
         self.assertEqual((v["games"], v["avg"], v["best"]), (3, 18.0, 18))
@@ -110,6 +142,11 @@ class ShippedDataTests(unittest.TestCase):
         self.assertTrue(H.available())
         seasons = set(H._frames()["skill"]["season"].unique())
         self.assertEqual(seasons, {2023, 2024, 2025})
+
+    def test_no_playoff_games_in_any_history_table(self):
+        # kicker/defense rows used to include weeks 19-22, lifting next season's prior for good teams
+        for name, df in H._frames().items():
+            self.assertTrue(df.empty or int(df["week"].max()) <= H.REG_SEASON_LAST_WEEK, name)
 
     def test_ppr_career_matches_stored_ppr_column(self):
         """With default scoring the recomputed points reproduce nflverse's own PPR number."""

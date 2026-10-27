@@ -14,10 +14,13 @@ class PlayerCardWiringTests(unittest.TestCase):
         for sel in (".pcd-chip.beat.up", ".scs-grade"):
             self.assertIn(sel, css)
 
-    def test_lineup_panel_reports_best_lineup_gain(self):
-        js = open("static/app.js").read()
-        self.assertIn("L.bestNote", js)
-        self.assertIn("lu-best-note", open("static/style.css").read())
+    def test_weekly_lineup_panel_is_gone(self):
+        # the My Team "Set your lineup" panel and its /api/lineup endpoints were removed on purpose
+        js, css = open("static/app.js").read(), open("static/style.css").read()
+        for needle in ("loadLineupPanel", "renderLineupPanel", "lineup-panel", "/api/lineup/"):
+            self.assertNotIn(needle, js)
+        self.assertNotIn(".lu-row", css)
+        self.assertIn("lk-open", css)   # the league-trades NEW badge still needs it
 
     def test_league_scoring_is_platform_aware(self):
         js = open("static/app.js").read()

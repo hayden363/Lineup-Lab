@@ -3950,6 +3950,8 @@ async function loadMyTeam(week) {
     const data = await api(`/api/myteam?${(scoringQS() + weekQS).replace(/^&/, "")}`);
     renderMyTeamWeekSelector(data);
     state.notifications = computeInjuryNotifications(data.my_team);
+    state.myTeamAbbrs = rosterTeamCounts(data.my_team);
+    markLiveScoreCards();
     renderNotifBell();
     const onLiveWeek = data.live_week && data.live_week === data.nfl_week;
     let html = `<div class="hint">Week ${esc(data.nfl_week)}${onLiveWeek ? " · in progress" : ""} · ${esc(data.league_name)}</div>`;
@@ -3961,9 +3963,8 @@ async function loadMyTeam(week) {
     </div>`;
     if (data.opponent) html += matchupBarHtml(data.my_team, data.opponent);
     html += leagueMatchupsHtml(data.league_matchups, data.my_team.roster_id);
-    html += `<div id="lineup-panel"></div><div id="trades-panel"></div>`;
+    html += `<div id="trades-panel"></div>`;
     content.innerHTML = html;
-    loadLineupPanel(data.nfl_week);
     loadTradesPanel();
     content.querySelectorAll(".myteam-roster-row:not(.unscored)").forEach((row) => {
       row.addEventListener("click", () => openPlayerModal(row.dataset.pid));
@@ -3975,101 +3976,7 @@ async function loadMyTeam(week) {
   }
 }
 
-// ------------------------------------------------- weekly lineup + trades ----
-// Slots freeze at each player's own kickoff (engine/locks.py). Sleeper's API is
-// read-only, so this builds and checks a lineup here; it can't push to Sleeper.
-const SLOT_OK = {
-  QB: ["QB"], RB: ["RB"], WR: ["WR"], TE: ["TE"], FLEX: ["RB", "WR", "TE"], WRRB_FLEX: ["RB", "WR"],
-  REC_FLEX: ["WR", "TE"], SUPER_FLEX: ["QB", "RB", "WR", "TE"], K: ["K"], DEF: ["DEF"],
-};
-const slotAllows = (slot, pos) => (SLOT_OK[slot] || [slot]).includes(pos);
-const fmtKick = (iso) => iso ? new Date(iso).toLocaleString([], { weekday: "short", hour: "numeric", minute: "2-digit" }) : "";
-
-function lockBadgeHtml(r) {
-  if (r.inactive) return `<span class="lk lk-none">No team</span>`;
-  if (r.bye) return `<span class="lk lk-bye">BYE</span>`;
-  if (r.locked) return `<span class="lk lk-locked" title="Kicked off ${esc(fmtKick(r.kickoff))}">🔒 Locked</span>`;
-  return r.kickoff ? `<span class="lk lk-open">Locks ${esc(fmtKick(r.kickoff))}</span>` : "";
-}
-
-async function loadLineupPanel(week) {
-  const host = $("#lineup-panel");
-  if (!host) return;
-  host.innerHTML = `${secHeadHtml("lineup", "Set your lineup", "")}<div class="loading">Loading lineup…</div>`;
-  try {
-    const data = await api(`/api/lineup?week=${week}${scoringQS()}`);
-    state.lineup = { week: data.week, slots: data.lineup, bench: data.bench, original: data.lineup.map((r) => r.player_id), proposed: data.lineup.map((r) => r.player_id) };
-    renderLineupPanel();
-  } catch (e) {
-    host.innerHTML = `${secHeadHtml("lineup", "Set your lineup", "")}<div class="empty">${esc(e.message)}</div>`;
-  }
-}
-
-function lineupPool() {
-  const L = state.lineup;
-  const byId = {};
-  [...L.slots, ...L.bench].forEach((r) => { if (r.player_id) byId[r.player_id] = r; });
-  return byId;
-}
-
-function renderLineupPanel(check) {
-  const host = $("#lineup-panel");
-  const L = state.lineup;
-  if (!host || !L) return;
-  const pool = lineupPool();
-  const rows = L.slots.map((slot, i) => {
-    const cur = pool[L.proposed[i]];
-    const originallyLocked = L.slots[i].locked;
-    const used = new Set(L.proposed.filter((x, j) => x && j !== i));
-    const options = Object.values(pool)
-      .filter((p) => slotAllows(slot.slot, p.position) && !used.has(p.player_id) && (p.player_id === L.proposed[i] || !p.locked))
-      .sort((a, b) => (b.PROJ || 0) - (a.PROJ || 0))
-      .map((p) => `<option value="${esc(p.player_id)}"${p.player_id === L.proposed[i] ? " selected" : ""}>${esc(p.name)} (${esc(p.team || "—")}) ${FMT.d1(p.PROJ)}</option>`).join("");
-    const changed = L.proposed[i] !== L.original[i];
-    return `<div class="lu-row${originallyLocked ? " is-locked" : ""}${changed ? " is-changed" : ""}">
-      <span class="lu-slot">${esc(slot.slot)}</span>
-      <select class="lu-pick" data-i="${i}" ${originallyLocked ? "disabled" : ""}>${options || `<option value="">— empty —</option>`}</select>
-      <span class="lu-proj tabular">${cur ? FMT.d1(cur.bye || cur.inactive ? 0 : cur.PROJ) : "—"}</span>
-      ${cur ? lockBadgeHtml(cur) : ""}
-    </div>`;
-  }).join("");
-  const total = L.proposed.reduce((t, pid) => { const p = pool[pid]; return t + (p && !p.bye && !p.inactive ? (p.PROJ || 0) : 0); }, 0);
-  const msgs = check ? [...check.errors.map((e) => `<li class="bad">${esc(e)}</li>`), ...check.warnings.map((w) => `<li class="warn">${esc(w)}</li>`)].join("") : "";
-  host.innerHTML = `${secHeadHtml("lineup", `Week ${esc(L.week)} lineup`, "Each slot locks at that player's own kickoff. Build it here, then set it in Sleeper.")}
-    <div class="lu-panel">${rows}
-      <div class="lu-foot"><span>Projected <b class="tabular">${FMT.d1(total)}</b></span>
-        <span class="lu-actions"><button class="pill" id="lu-best">Best lineup</button><button class="pill" id="lu-reset">Reset</button><button class="pill active" id="lu-check">Check</button></span></div>
-      ${msgs ? `<ul class="lu-msgs">${msgs}</ul>` : check ? `<div class="lu-ok">✓ Legal lineup</div>` : ""}
-      ${L.bestNote ? `<div class="lu-best-note">${esc(L.bestNote)}</div>` : ""}
-      <div class="muted small">Sleeper can't be edited from outside its app. Set this lineup there; locked slots here match the real kickoffs.</div>
-    </div>`;
-  host.querySelectorAll(".lu-pick").forEach((sel) => sel.addEventListener("change", () => {
-    L.proposed[+sel.dataset.i] = sel.value || null;
-    L.bestNote = null;
-    renderLineupPanel();
-  }));
-  $("#lu-reset").addEventListener("click", () => { L.proposed = L.original.slice(); L.bestNote = null; renderLineupPanel(); });
-  $("#lu-check").addEventListener("click", async () => {
-    try {
-      const r = await api("/api/lineup/check", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ week: L.week, proposed: L.proposed, scoring: scoringDict() }) });
-      renderLineupPanel(r);
-    } catch (e) { showToast(e.message, "error"); }
-  });
-  $("#lu-best").addEventListener("click", async () => {
-    try {
-      const r = await api(`/api/lineup/best?week=${L.week}${scoringQS()}`);
-      const before = total;
-      const after = r.total_proj != null ? r.total_proj : before;
-      const gain = after - before;
-      L.bestNote = gain >= 0.05
-        ? `Best lineup adds ${gain.toFixed(1)} pts: ${FMT.d1(before)} → ${FMT.d1(after)}. It tries every legal arrangement of your roster, flex slots included, so no better lineup exists.`
-        : `Your lineup is already the best possible (${FMT.d1(after)} pts). No legal swap beats it.`;
-      L.proposed = r.lineup.map((x) => x.player_id);
-      renderLineupPanel(r);
-    } catch (e) { showToast(e.message, "error"); }
-  });
-}
-
+// ------------------------------------------------------------ league trades ----
 async function loadTradesPanel() {
   const host = $("#trades-panel");
   if (!host) return;
@@ -4479,13 +4386,33 @@ function initTradeFinder() {
 // — free, public, no key. Lives on My Team since that's the home tab;
 // polls on a short interval only while that tab is actually the one
 // showing, so it isn't hammering ESPN's endpoint from a background tab.
+// ESPN and nflverse spell a few teams differently (TEAM_ALIAS, above); fold
+// both to one key so a roster team lines up with a scoreboard team.
+const teamKey = (t) => { const a = String(t || "").toUpperCase(); return TEAM_ALIAS[a] || a; };
+
+// {team: how many of your players are on it}, from a My Team card.
+function rosterTeamCounts(team) {
+  const out = {};
+  ((team && team.players) || []).forEach((p) => {
+    const k = teamKey(p.recent_team);
+    if (k) out[k] = (out[k] || 0) + 1;
+  });
+  return out;
+}
+
+function myPlayersInGame(g) {
+  const m = state.myTeamAbbrs || {};
+  return (m[teamKey(g.away.abbr)] || 0) + (m[teamKey(g.home.abbr)] || 0);
+}
+
 function liveScoreCardHtml(g) {
   const isLive = g.state === "in";
   const isFinal = g.state === "post";
   const scoreLine = g.state === "pre"
     ? `<span class="muted">vs</span>`
     : `${g.away.score}–${g.home.score}`;
-  return `<div class="live-score-card${isLive ? " live" : ""}${isFinal ? " final" : ""}">
+  const mine = myPlayersInGame(g);
+  return `<button type="button" class="live-score-card${isLive ? " live" : ""}${isFinal ? " final" : ""}${mine ? " has-mine" : ""}" data-game="${esc(g.game_id)}" title="Open box score">
     ${isLive ? `<span class="live-dot"></span>` : ""}
     <div class="lsc-teams">
       <span class="${g.away.winner ? "lsc-winner" : ""}">${esc(g.away.abbr)}</span>
@@ -4493,7 +4420,16 @@ function liveScoreCardHtml(g) {
       <span class="${g.home.winner ? "lsc-winner" : ""}">${esc(g.home.abbr)}</span>
     </div>
     <div class="lsc-status">${esc(isLive ? `Q${g.period} · ${g.display_clock}` : g.status_detail)}</div>
-  </div>`;
+    ${mine ? `<div class="lsc-mine">★ ${mine} of yours</div>` : ""}
+  </button>`;
+}
+
+// Re-flag the strip's cards once My Team's roster is known (the strip can
+// finish loading before the roster does).
+function markLiveScoreCards() {
+  const strip = $("#live-scores-strip");
+  if (!strip || !state.liveGames) return;
+  strip.innerHTML = state.liveGames.map(liveScoreCardHtml).join("");
 }
 
 async function loadLiveScores() {
@@ -4503,6 +4439,7 @@ async function loadLiveScores() {
     const data = await api("/api/live-scores");
     const games = data.games || [];
     if (!games.length) { strip.style.display = "none"; return; }
+    state.liveGames = games;
     strip.innerHTML = games.map(liveScoreCardHtml).join("");
     strip.style.display = "flex";
   } catch (e) {
@@ -4511,7 +4448,65 @@ async function loadLiveScores() {
   }
 }
 
+function gamePlayerHtml(p) {
+  const pts = p.fantasy_points == null ? "" : `<b class="gb-pts">${FMT.d1(p.fantasy_points)}</b>`;
+  return `<div class="gb-player${p.mine ? " mine" : ""}">
+    <div class="gb-head"><span class="gb-name">${p.mine ? "★ " : ""}${esc(p.name)} <span class="muted">${esc(p.position || "")}</span></span>${pts}</div>
+    ${(p.lines || []).map((l) => `<div class="gb-line"><span class="muted">${esc(l.label)}</span> ${esc(l.text)}</div>`).join("")}
+  </div>`;
+}
+
+function gameBodyHtml(box) {
+  const teams = box.teams || [];
+  if (!teams.length) return `<div class="empty">No box score yet. It appears once the game kicks off.</div>`;
+  const mineLine = box.mine_count
+    ? `<div class="gb-mine-summary">Your players in this game: <b>${box.mine_count}</b> · <b>${FMT.d1(box.mine_points)}</b> fantasy pts</div>`
+    : "";
+  return mineLine + `<div class="gb-teams">${teams.map((t) => `<div class="gb-team">
+    <div class="section-label">${esc(t.name || t.abbr)}</div>
+    ${t.players.map(gamePlayerHtml).join("") || `<div class="muted">No stats yet.</div>`}
+  </div>`).join("")}</div>`;
+}
+
+let gameModalTimer = null;
+
+async function openGameModal(gameId) {
+  const g = (state.liveGames || []).find((x) => String(x.game_id) === String(gameId));
+  if (!g) return;
+  const root = $("#modal-root");
+  const live = g.state === "in";
+  const score = g.state === "pre" ? "vs" : `${g.away.score}–${g.home.score}`;
+  root.innerHTML = `<div class="modal-backdrop"><div class="modal gb-modal">
+    <div class="modal-header"><div><h2>${esc(g.away.abbr)} ${score} ${esc(g.home.abbr)}</h2>
+      <div class="muted" id="gb-status">${esc(live ? `Q${g.period} · ${g.display_clock}` : g.status_detail)}</div></div>
+      <button class="modal-close" aria-label="Close">✕</button></div>
+    <div id="gb-body"><div class="loading">Loading box score…</div></div>
+  </div></div>`;
+  syncModalScrollLock();
+  root.querySelector(".modal-backdrop").addEventListener("click", (e) => { if (e.target.classList.contains("modal-backdrop")) closeModal(); });
+  root.querySelector(".modal-close").addEventListener("click", closeModal);
+
+  clearInterval(gameModalTimer);
+  const refresh = async () => {
+    const body = $("#gb-body");
+    if (!body) { clearInterval(gameModalTimer); return; }   // modal was closed
+    try {
+      const qs = scoringQS().replace(/^&/, "");
+      body.innerHTML = gameBodyHtml(await api(`/api/live-scores/${encodeURIComponent(gameId)}${qs ? "?" + qs : ""}`));
+    } catch (e) {
+      if (!body.querySelector(".gb-teams")) body.innerHTML = `<div class="empty">Couldn't load this box score. Try again in a moment.</div>`;
+    }
+  };
+  await refresh();
+  if (live) gameModalTimer = setInterval(refresh, 20000);
+}
+
 function initLiveScores() {
+  const strip = $("#live-scores-strip");
+  if (strip) strip.addEventListener("click", (e) => {
+    const card = e.target.closest(".live-score-card[data-game]");
+    if (card) openGameModal(card.dataset.game);
+  });
   loadLiveScores();
   setInterval(() => {
     if (state.tab === "myteam" && document.visibilityState === "visible") loadLiveScores();
@@ -4532,50 +4527,85 @@ function initNews() {
 // Real publisher photos (RSS enclosure, or the article's own og:image —
 // see engine/news.py) — a headline whose image fails to load just drops
 // back to a text-only card instead of showing a broken image.
+function newsTagsHtml(it) {
+  if (it.match_kind === "team") {
+    return `<div class="news-matched"><span class="tag soft team">Team news</span>${(it.matched_teams || []).map((t) => `<span class="tag soft">${esc(t)}</span>`).join("")}</div>`;
+  }
+  return it.matched_players && it.matched_players.length
+    ? `<div class="news-matched">${it.matched_players.map((m) => `<span class="tag soft">${esc(m.name)}</span>`).join("")}</div>` : "";
+}
+
 function newsCardHtml(it, featured, i) {
+  // The story's own photo when we have it; until then (or when the feed has none) the headshot of the player it
+  // is about, else his team's logo, so every card has a picture on first paint.
+  const src = it.image || it.fallback_image;
+  const isFallback = !it.image && !!it.fallback_image;
   return `<a class="news-card${featured ? " featured" : ""}" href="${safeUrl(it.link)}" target="_blank" rel="noopener noreferrer" style="animation-delay:${Math.min(i, 8) * 50}ms">
-    <div class="news-img-wrap${it.image ? "" : " no-image"}">
-      ${it.image ? `<img src="${proxyImg(it.image)}" alt="" loading="lazy" data-fb-noimage-wrap="1">` : ""}
+    <div class="news-img-wrap${src ? "" : " no-image"}${isFallback ? " is-fallback" : ""}">
+      ${src ? `<img src="${proxyImg(src)}" alt="" loading="lazy" data-fb-noimage-wrap="1">` : ""}
       ${featured ? `<span class="news-badge">FEATURED</span>` : ""}
     </div>
     <div class="news-body">
       <div class="news-meta"><span>${esc(it.source)}</span><span>·</span><span>${esc(it.published)}</span></div>
-      ${it.matched_players && it.matched_players.length ? `<div class="news-matched">${it.matched_players.map((m) => `<span class="tag soft">${esc(m.name)}</span>`).join("")}</div>` : ""}
+      ${newsTagsHtml(it)}
       <div class="news-title">${esc(it.title)}</div>
       <div class="news-summary">${esc(it.summary)}</div>
     </div>
   </a>`;
 }
 
+function renderNews(data, scope) {
+  const list = $("#news-list");
+  const src = (data.sources || []).join(", ");
+  if (data.requires_team) {
+    $("#news-hint").textContent = `Sign in and connect a Sleeper team to see ${scope === "opponent" ? "opponent" : "your team's"} news.`;
+    list.innerHTML = `<div class="empty">Connect a league in Settings to unlock this tab.</div>`;
+    return;
+  }
+  if (scope === "team") {
+    $("#news-hint").textContent = `${data.team_name ? `"${data.team_name}"` : "Your roster"}: stories naming your players, then news about their teams${src ? ` (${src})` : ""}.`;
+  } else if (scope === "opponent") {
+    $("#news-hint").textContent = data.team_name ? `This week's opponent, "${data.team_name}"${src ? ` (${src})` : ""}.` : "This week's opponent.";
+  } else {
+    $("#news-hint").textContent = `Every headline from ${src || "the NFL feeds"}; ones about someone in your league come first.`;
+  }
+  if (data.message) { list.innerHTML = `<div class="empty">${esc(data.message)}</div>`; return; }
+  if (!data.items.length) {
+    list.innerHTML = `<div class="empty">No headlines about your players or their teams right now. Check back later.</div>`;
+    return;
+  }
+  // The big FEATURED slot is for a story's own photo; a stand-in headshot or logo would just be blown up.
+  list.innerHTML = data.items.map((it, i) => newsCardHtml(it, i === 0 && it.match_kind !== "team" && !!it.image, i)).join("");
+}
+
+// Last answer per tab, kept for a few minutes so switching tabs (or coming back) paints at once while a
+// fresh copy loads behind it.
+const NEWS_CLIENT_TTL = 5 * 60 * 1000;
+
 async function loadNews() {
   const list = $("#news-list");
   const scope = state.newsScope;
-  list.innerHTML = `<div class="loading">Loading headlines…</div>`;
+  // keyed by who is looking and at which team, so a sign-out or a league switch never shows someone else's stories
+  const t = (typeof activeTeam === "function" && activeTeam()) || {};
+  const key = `${state.user ? state.user.id : 0}|${t.league_id || ""}|${t.roster_id || ""}|${scope}`;
+  state.newsCache = state.newsCache || {};
+  const cached = state.newsCache[key] && Date.now() - state.newsCache[key].at < NEWS_CLIENT_TTL ? state.newsCache[key] : null;
+  if (cached) renderNews(cached.data, scope);
+  else list.innerHTML = `<div class="loading">Loading headlines…</div>`;
   try {
     const data = await api(`/api/news?scope=${scope}`);
-    if (data.requires_team) {
-      $("#news-hint").textContent = `Sign in and connect a Sleeper team to see ${scope === "opponent" ? "opponent" : "your team's"} news.`;
-      list.innerHTML = `<div class="empty">Connect a league in Settings to unlock this tab.</div>`;
-      return;
+    state.newsCache[key] = { at: Date.now(), data };
+    if (state.newsScope === scope) renderNews(data, scope);     // the user may have switched tabs meanwhile
+    // Photos are looked up in the background after the first download (engine/news.py), so on a cold server
+    // some cards still carry a stand-in headshot/logo. Look again once, a few seconds later, to swap in the real photos.
+    state.newsPhotoRetry = state.newsPhotoRetry || {};
+    const items = data.items || [];
+    if (items.filter((x) => !x.image).length >= Math.max(3, items.length * 0.2) && !state.newsPhotoRetry[key]) {
+      state.newsPhotoRetry[key] = true;
+      setTimeout(() => { if (state.tab === "news" && state.newsScope === scope) loadNews(); }, 6000);
     }
-    if (scope === "team") {
-      $("#news-hint").textContent = data.team_name ? `Filtered to "${data.team_name}".` : `Filtered to your roster.`;
-    } else if (scope === "opponent") {
-      $("#news-hint").textContent = data.team_name ? `Filtered to this week's opponent, "${data.team_name}".` : "This week's opponent.";
-    } else {
-      $("#news-hint").textContent = `Every real NFL headline from ESPN & CBS Sports RSS — ones about someone in your league are surfaced first.`;
-    }
-    if (data.message) {
-      list.innerHTML = `<div class="empty">${esc(data.message)}</div>`;
-      return;
-    }
-    if (!data.items.length) {
-      list.innerHTML = `<div class="empty">No matching headlines right now — check back later.</div>`;
-      return;
-    }
-    list.innerHTML = data.items.map((it, i) => newsCardHtml(it, i === 0, i)).join("");
   } catch (e) {
-    list.innerHTML = `<div class="empty">${esc(e.message)}</div>`;
+    if (!cached && state.newsScope === scope) list.innerHTML = `<div class="empty">${esc(e.message)}</div>`;
   }
 }
 
