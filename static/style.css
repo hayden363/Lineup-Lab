@@ -5034,3 +5034,5 @@ html[data-team] .news-card:hover::after, html[data-team] .lab-card:hover::after,
 
 .myteam-roster-row .proj-num { text-align: right; }
 .proj-num .proj-range { display: block; font-family: var(--sans); font-size: 10px; font-weight: 400; color: var(--muted); white-space: nowrap; }
+.mt-team { font-size: 10px; font-family: var(--mono); color: var(--muted); border: 1px solid var(--border); border-radius: 6px; padding: 0 5px; margin-left: 4px; cursor: pointer; }
+.mt-team:hover { color: var(--accent); border-color: var(--accent); }

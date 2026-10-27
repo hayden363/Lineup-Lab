@@ -3820,7 +3820,7 @@ function rosterRowHtml(p, isBench) {
   return `<div class="myteam-roster-row${isBench ? " bench" : ""}${unscored ? " unscored" : " kbd-click"}" data-pid="${esc(p.player_id)}" ${unscored ? 'data-unscored="1"' : 'role="button" tabindex="0"'}>
     <img ${headshotAttrs(p)} alt="">
     <span class="pos-badge">${esc(p.slot || p.position)}</span>
-    <span>${esc(p.player_display_name)}${statusFlagsHtml(p)}${p.on_bye ? ' <span class="bye-tag" title="Team is on a bye this week">BYE</span>' : ""}</span>
+    <span>${esc(p.player_display_name)}${p.recent_team ? ` <span class="mt-team" data-team-page="${esc(p.recent_team)}" role="link" tabindex="0" title="Open the ${esc(p.recent_team)} team page">${esc(p.recent_team)}</span>` : ""}${statusFlagsHtml(p)}${p.on_bye ? ' <span class="bye-tag" title="Team is on a bye this week">BYE</span>' : ""}</span>
     <span class="proj-num tabular">${FMT.d1(p.PROJ)}${p.floor != null && p.ceiling != null ? `<small class="proj-range" title="Typical range (10th to 90th percentile)${p.p_play != null ? `; ${Math.round(p.p_play * 100)}% chance to play` : ""}">${FMT.int(p.floor)}–${FMT.int(p.ceiling)}${p.p_play != null ? ` · ${Math.round(p.p_play * 100)}% to play` : ""}</small>` : ""}</span>
   </div>`;
 }
@@ -3966,7 +3966,7 @@ async function loadMyTeam(week) {
     content.innerHTML = html;
     loadTradesPanel();
     content.querySelectorAll(".myteam-roster-row:not(.unscored)").forEach((row) => {
-      row.addEventListener("click", () => openPlayerModal(row.dataset.pid));
+      row.addEventListener("click", (e) => { if (!e.target.closest("[data-team-page]")) openPlayerModal(row.dataset.pid); });
     });
   } catch (e) {
     content.style.display = "none";
