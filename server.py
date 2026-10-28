@@ -1340,11 +1340,18 @@ def api_chat_mute(req: ChatMute, user=Depends(require_user)):
     return {"ok": True}
 
 
-def _load_my_team(user, week, scoring):
-    """my_team()/my_team_espn() for the user's active connected league."""
+def _load_my_team(user, week, scoring, refresh=False):
+    """my_team()/my_team_espn() for the user's active connected league. `refresh` drops the cached rosters and
+    lineups first, so a player just added or dropped on the league site shows up now."""
     active = db.get_active_team(user["id"])
     if not active:
         raise HTTPException(400, "connect a league in Settings first")
+    if refresh:
+        tools._NEWS_ROSTER_CACHE.clear()
+        if active.get("platform") == "espn":
+            espn_layer.clear_league_cache()
+        else:
+            sleeper_layer.clear_league_caches(active["league_id"])
     scoring = _effective_scoring(scoring, user)
     try:
         if active.get("platform") == "espn":
@@ -1359,9 +1366,9 @@ def _load_my_team(user, week, scoring):
 
 
 @app.get("/api/myteam")
-def api_my_team(week: Optional[int] = Query(None, ge=1, le=25),
+def api_my_team(week: Optional[int] = Query(None, ge=1, le=25), refresh: bool = Query(False),
                  scoring: Optional[dict] = Depends(scoring_from_query), user=Depends(require_user)):
-    _, result = _load_my_team(user, week, scoring)
+    _, result = _load_my_team(user, week, scoring, refresh=refresh)
     return _clean(result)
 
 

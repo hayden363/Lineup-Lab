@@ -965,7 +965,12 @@ def _roster_players(raw_ids, bundle, get_board, scoring, crosswalk=None, starter
         if pos is None:
             unscored = resolve_unscored(raw_id)
             if not unscored:
-                return None  # genuinely unresolvable — skip rather than show garbage
+                # Sleeper has no record of him (even after a refresh): keep a row so the roster count is right and
+                # the owner can see a slot is unrecognised, rather than a player silently vanishing.
+                return {"player_id": raw_id, "position": "?", "player_display_name": f"Unknown player ({raw_id})",
+                        "recent_team": None, "headshot_url": None, "SCORE": None, "FORM": None, "fpts_per_game": None,
+                        "PROJ": 0.0, "injury_status": None, "injury_body_part": None, "injury_factor": None,
+                        "injury_sample_n": None, "is_starter": is_starter, "slot": slot, "unresolved": True}
             if unscored["position"] == "DEF":
                 def_row = _defense_row(raw_id, unscored, def_board, is_starter, slot,
                                         bundle=bundle, fragility=fragility, week=week)

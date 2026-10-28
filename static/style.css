@@ -5161,3 +5161,7 @@ html[data-team] .news-card:hover::after, html[data-team] .lab-card:hover::after,
   .sb-card.has-mine, .sb-live i, .fld-ball, .fld-rz, .fld-rzbadge, .pbp-row, .lv-grid.lv-enter .sb-card { animation: none; }
   .sb-card, .odds-bar i, .fld-wrap { transition: none; }
 }
+
+.mt-hint { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.mt-refresh { background: var(--panel-2); border: 1px solid var(--border-bright); color: var(--text); border-radius: 8px; padding: 4px 10px; font: inherit; font-size: 12px; cursor: pointer; }
+.mt-refresh:hover:not(:disabled) { border-color: var(--accent); } .mt-refresh:disabled { opacity: .6; cursor: progress; }

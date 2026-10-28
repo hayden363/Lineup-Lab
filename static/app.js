@@ -3935,7 +3935,7 @@ function renderMyTeamWeekSelector(data) {
   $("#myteam-week-controls").style.display = "flex";
 }
 
-async function loadMyTeam(week) {
+async function loadMyTeam(week, refresh) {
   const gate = $("#myteam-gate");
   const content = $("#myteam-content");
   gate.style.display = "none";
@@ -3951,14 +3951,17 @@ async function loadMyTeam(week) {
   content.innerHTML = `<div class="loading">Loading your team…</div>`;
   content.style.display = "";
   try {
-    const weekQS = week ? `&week=${week}` : "";
+    const weekQS = (week ? `&week=${week}` : "") + (refresh ? "&refresh=1" : "");
     const data = await api(`/api/myteam?${(scoringQS() + weekQS).replace(/^&/, "")}`);
     renderMyTeamWeekSelector(data);
     state.notifications = computeInjuryNotifications(data.my_team);
     state.myTeamAbbrs = rosterTeamCounts(data.my_team);
     renderNotifBell();
     const onLiveWeek = data.live_week && data.live_week === data.nfl_week;
-    let html = `<div class="hint">Week ${esc(data.nfl_week)}${onLiveWeek ? " · in progress" : ""} · ${esc(data.league_name)}</div>`;
+    const unknown = [...data.my_team.players].filter((p) => p.unresolved).length;
+    let html = `<div class="hint mt-hint">Week ${esc(data.nfl_week)}${onLiveWeek ? " · in progress" : ""} · ${esc(data.league_name)}
+      <button type="button" class="mt-refresh" id="mt-refresh" title="Fetch your roster from ${esc(activeTeam() && activeTeam().platform === "espn" ? "ESPN" : "Sleeper")} again">↻ Refresh roster</button></div>
+      ${unknown ? `<div class="form-msg error">${unknown} player${unknown === 1 ? "" : "s"} on your roster couldn't be identified yet. Tap Refresh roster; if it stays, the league site hasn't published them.</div>` : ""}`;
     html += `<div class="myteam-summary">
       ${teamCardHtml(data.my_team, "mine")}
       ${matchupCenterHtml(data.my_team, data.opponent)}
@@ -3969,6 +3972,11 @@ async function loadMyTeam(week) {
     html += leagueMatchupsHtml(data.league_matchups, data.my_team.roster_id);
     html += `<div id="trades-panel"></div>`;
     content.innerHTML = html;
+    $("#mt-refresh").addEventListener("click", async (e) => {
+      e.currentTarget.disabled = true; e.currentTarget.textContent = "Refreshing…";
+      await loadMyTeam(data.nfl_week, true);
+      showToast("Roster refreshed from the league site.");
+    });
     countUpTotals(content, `${data.nfl_week}|${data.my_team.roster_id}`);
     loadTradesPanel();
     content.querySelectorAll(".myteam-roster-row:not(.unscored)").forEach((row) => {

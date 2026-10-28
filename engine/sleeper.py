@@ -28,7 +28,9 @@ from .scoring import ScoringSettings
 
 SLEEPER_BASE = "https://api.sleeper.app/v1"
 AVATAR_BASE = "https://sleepercdn.com/avatars/thumbs"
-JSON_TTL = 15 * 60         # league/roster data: refresh every 15 min
+JSON_TTL = 15 * 60         # league settings and users: refresh every 15 min
+ROSTER_TTL = 60            # rosters and weekly lineups change on every add, drop and lineup save: look again each minute
+PLAYERS_MISS_REFETCH = 60 * 60   # a rostered id missing from the cached player list refetches it, at most hourly
 CROSSWALK_TTL = 24 * 60 * 60  # id crosswalk: refresh daily
 TRENDING_TTL = 30 * 60     # trending adds/drops: refresh every 30 min
 PLAYERS_TTL = 24 * 60 * 60    # full player list (~5-15MB): Sleeper asks for at most once/day
@@ -94,7 +96,7 @@ def get_league(league_id, force=False):
 
 
 def get_rosters(league_id, force=False):
-    return _cached_get(f"{SLEEPER_BASE}/league/{league_id}/rosters", f"rosters_{league_id}", JSON_TTL, force)
+    return _cached_get(f"{SLEEPER_BASE}/league/{league_id}/rosters", f"rosters_{league_id}", ROSTER_TTL, force)
 
 
 TRADE_TTL = 120   # trades should show up within a couple of minutes
@@ -152,11 +154,25 @@ def build_pick_order(draft):
     return order
 
 
+def clear_league_caches(league_id):
+    """Forget the cached rosters and weekly lineups for one league, so the next read refetches them."""
+    prefixes = (f"rosters_{league_id}", f"matchups_{league_id}_")
+    for name in [k for k in _MEM if k.startswith(prefixes)]:
+        _MEM.pop(name, None)
+    try:
+        import glob
+        for pre in prefixes:
+            for f in glob.glob(os.path.join(CACHE_DIR, f"sleeper_{pre}*.json")):
+                os.remove(f)
+    except OSError as e:
+        print(f"[sleeper] couldn't clear cached files for league {league_id}: {e}")
+
+
 def get_matchups(league_id, week, force=False):
     """Head-to-head fantasy matchups for one week: a list of per-roster
     entries sharing a matchup_id with their opponent."""
     return _cached_get(f"{SLEEPER_BASE}/league/{league_id}/matchups/{week}",
-                        f"matchups_{league_id}_{week}", JSON_TTL, force)
+                        f"matchups_{league_id}_{week}", ROSTER_TTL, force)
 
 
 def get_trending(kind="add", lookback_hours=48, limit=50, force=False):
@@ -411,6 +427,15 @@ def raw_roster_players(league_id, force=False):
     return {r.get("roster_id"): (r.get("players") or []) for r in rosters}
 
 
+def _players_cache_age():
+    """Seconds since the cached Sleeper player list was fetched (infinite when there is none)."""
+    mem = _MEM.get("all_players")
+    if mem:
+        return time.time() - mem[0]
+    path = _json_cache_path("all_players")
+    return time.time() - os.path.getmtime(path) if os.path.exists(path) else float("inf")
+
+
 def resolve_unscored_player(sleeper_id, force=False):
     """Name/team/photo for a roster slot our own stat engine can't price —
     defenses (Sleeper's own id for a D/ST is just the team code, e.g.
@@ -429,6 +454,13 @@ def resolve_unscored_player(sleeper_id, force=False):
     a person (kicker or otherwise)."""
     players = all_players(force=force)
     p = players.get(sleeper_id)
+    if not p and not force and _players_cache_age() > PLAYERS_MISS_REFETCH:
+        # A player who just signed or was added can be on a roster before our cached copy of Sleeper's player list
+        # (kept a day, because Sleeper asks for the full list rarely) knows him: refetch it once, at most hourly.
+        try:
+            p = all_players(force=True).get(sleeper_id)
+        except Exception as e:
+            print(f"[sleeper] couldn't refresh the player list for {sleeper_id}: {e}")
     if not p:
         return None
     pos = p.get("position") or "?"

@@ -127,6 +127,12 @@ def resolve_year():
         return datetime.date.today().year
 
 
+def clear_league_cache():
+    """Forget every cached ESPN league, so the next read refetches rosters."""
+    with _LEAGUE_LOCK:
+        _LEAGUE_CACHE.clear()
+
+
 LEAGUE_TTL = 120
 _LEAGUE_CACHE = {}
 _LEAGUE_LOCK = threading.Lock()
