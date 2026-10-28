@@ -283,3 +283,25 @@ class MyTeamRowRange(unittest.TestCase):
     def test_missing_cv_falls_back_to_the_position_default(self):
         r = tools._row_range({"cv": float("nan"), "games": 0}, 12.0, "RB", None, None, "x1")
         self.assertLess(r["floor"], 12.0)
+
+
+class MyTeamRowMatchupInfo(unittest.TestCase):
+    """Rows carry the opponent and matchup read so the Start/Sit swap drawer can show difficulty."""
+
+    def test_info_out_param_is_filled_with_the_opponent_and_matchup_tag(self):
+        row = pd.DataFrame({"recent_team": ["DET"], "injury_status": [None], "injury_report": [None]}, index=["arsb"])
+        projected = pd.DataFrame({"PROJ": [16.0], "injury_factor": [1.0], "injury_sample_n": [None], "matchup_tag": ["soft"], "matchup_factor": [1.08]})
+        info = {}
+        with mock.patch.object(tools, "project_vs", return_value=projected), \
+                mock.patch.object(tools.data, "next_opponent", return_value=("MIN", 8)), \
+                mock.patch.object(tools, "_head_to_head", return_value=None):
+            tools._opponent_adjusted_proj_full(row, "arsb", "WR", {"schedule": None}, None, info=info)
+        self.assertEqual(info, {"opponent": "MIN", "matchup_tag": "soft", "matchup_factor": 1.08})
+
+    def test_no_info_argument_is_fine(self):
+        row = pd.DataFrame({"recent_team": ["DET"], "injury_status": [None], "injury_report": [None]}, index=["arsb"])
+        projected = pd.DataFrame({"PROJ": [16.0], "injury_factor": [1.0], "injury_sample_n": [None]})
+        with mock.patch.object(tools, "project_vs", return_value=projected), \
+                mock.patch.object(tools.data, "next_opponent", return_value=("MIN", 8)), \
+                mock.patch.object(tools, "_head_to_head", return_value=None):
+            self.assertEqual(tools._opponent_adjusted_proj_full(row, "arsb", "WR", {"schedule": None}, None)[0], 16.0)

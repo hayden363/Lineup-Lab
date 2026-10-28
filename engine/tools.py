@@ -133,7 +133,7 @@ def _head_to_head(gsis_id, opp, scoring, bundle, baseline):
     return {"factor": history.h2h_factor(games, opp, baseline, current=season), "meetings": meet["games"], "avg": meet["avg"]}
 
 
-def _opponent_adjusted_proj_full(board, gsis_id, pos, bundle, scoring, week=None):
+def _opponent_adjusted_proj_full(board, gsis_id, pos, bundle, scoring, week=None, info=None):
     """Same real computation as _opponent_adjusted_proj below, also
     returning the real injury-factor disclosure detail behind PROJ (None,
     None when there isn't any — no live Questionable/Doubtful match, or
@@ -153,6 +153,10 @@ def _opponent_adjusted_proj_full(board, gsis_id, pos, bundle, scoring, week=None
         projected = project_vs(row, pos, opp, bundle=bundle, scoring=scoring)
         proj = float(projected["PROJ"].iloc[0])
         h2h = _head_to_head(gsis_id, opp, scoring, bundle, proj)
+        if info is not None:       # out-param: the opponent and matchup read, for rows that want to show them
+            info.update({"opponent": opp,
+                         "matchup_tag": projected["matchup_tag"].iloc[0] if "matchup_tag" in projected.columns else None,
+                         "matchup_factor": _clean_num(projected["matchup_factor"].iloc[0]) if "matchup_factor" in projected.columns else None})
         # The market view of his game (implied team total, script, roof), the same factor Start/Sit and the player
         # page apply, so My Team shows the number they do.
         env_f = 1.0
@@ -994,8 +998,10 @@ def _roster_players(raw_ids, bundle, get_board, scoring, crosswalk=None, starter
                 return None  # genuinely no real games logged this season at all
             board = raw_board
         row = board.loc[gsis_id].to_dict()
-        proj, (injury_factor, injury_sample_n) = _opponent_adjusted_proj_full(board, gsis_id, pos, bundle, scoring, week=week)
+        match_info = {}
+        proj, (injury_factor, injury_sample_n) = _opponent_adjusted_proj_full(board, gsis_id, pos, bundle, scoring, week=week, info=match_info)
         return {
+            **match_info,
             "player_id": gsis_id, "position": pos,
             "player_display_name": row.get("player_display_name"),
             "recent_team": row.get("recent_team"), "headshot_url": row.get("headshot_url"),

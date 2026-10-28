@@ -510,6 +510,7 @@ function renderSidebarTeams() {
       state.shopRoster = [];           // stale roster for the old team — refetch on next Trade/Start-Sit tab visit
       state.shopSelected = new Set();
       state.startsit = [];
+      if (window.SSTeam) SSTeam.reset();
       state.tradeA = []; state.tradeB = [];
       state.leagueScoringDict = await fetchLeagueScoring(active);
       if (state.scoring === "league" && !state.leagueScoringDict) { state.scoring = ""; saveScoring(); }
@@ -2927,6 +2928,7 @@ async function loadStartSitTab() {
   loadTrackRecord();
   loadStartSitSuggestions();
   renderLineupAdvisor();
+  if (window.SSTeam) SSTeam.load();
 }
 
 // ------------------------------------------------ whole-lineup advisor ----
@@ -3092,6 +3094,7 @@ function initSSScoringToggle() {
       if (sel) sel.value = state.scoring;
       sync();
       if (state.tab === "board") loadBoard();
+      if (window.SSTeam && state.tab === "startsit") SSTeam.load();
       if (state.startsit.length >= 2 && $("#startsit-results .ss-hero")) runStartSit();
     });
   });
