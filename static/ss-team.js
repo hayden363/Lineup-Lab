@@ -63,6 +63,26 @@
       .sort(function (a, b) { return (+b.player.PROJ || 0) - (+a.player.PROJ || 0); });
   }
 
+  // The lineup stacked top to bottom in football order, with running backs and receivers side by side in one row.
+  // Rows: QB, SKILL (RBs left, WRs right), TE, FLEX, K, DEF. A slot belongs to the row its label names; any flex-type
+  // label (FLEX, SUPER_FLEX, WRRB_FLEX, REC_FLEX, RB/WR/TE, OP...) goes in the FLEX row.
+  function slotGroup(p) {
+    var slot = String(p.slot || p.position || "").toUpperCase();
+    if (slot === "QB" || slot === "RB" || slot === "WR" || slot === "TE" || slot === "K" || slot === "DEF") return slot;
+    if (slot === "D/ST" || slot === "DST") return "DEF";
+    return "FLEX";
+  }
+
+  function layout(players) {
+    var by = { QB: [], RB: [], WR: [], TE: [], FLEX: [], K: [], DEF: [] };
+    starters(players).forEach(function (p) { by[slotGroup(p)].push(p); });
+    var rows = [];
+    if (by.QB.length) rows.push({ key: "QB", cols: [by.QB] });
+    if (by.RB.length || by.WR.length) rows.push({ key: "SKILL", cols: [by.RB, by.WR].filter(function (c) { return c.length; }) });
+    ["TE", "FLEX", "K", "DEF"].forEach(function (k) { if (by[k].length) rows.push({ key: k, cols: [by[k]] }); });
+    return rows;
+  }
+
   // For every starter who cannot play (bye, OUT, IR, PUP), the best bench players who can take his slot.
   function replacements(players, n) {
     return starters(players).filter(unavailable).map(function (s) {
@@ -93,7 +113,7 @@
   }
 
   var SSTeam = { eligible: eligible, total: total, variance: variance, winProb: winProb, status: status,
-    candidates: candidates, replacements: replacements, swap: swap, applyLineup: applyLineup, unavailable: unavailable };
+    candidates: candidates, replacements: replacements, layout: layout, swap: swap, applyLineup: applyLineup, unavailable: unavailable };
   if (typeof window !== "undefined") window.SSTeam = SSTeam;
   if (typeof module !== "undefined") module.exports = SSTeam;
   if (typeof document === "undefined" || typeof window === "undefined" || !window.document.getElementById) return;
@@ -179,7 +199,11 @@
         '<button type="button" class="sst-btn" data-solve="safe" title="Favorite mode: favors fewer duds">Safe floor</button>' +
         '<span class="sst-msg" id="sst-msg" aria-live="polite"></span></div>' +
       needAlert(mine) +
-      '<div class="sst-lineup">' + starters(mine).map(starterCard).join("") + "</div>" +
+      '<div class="sst-lineup">' + layout(mine).map(function (row) {
+        return '<div class="sst-row sst-row-' + row.key.toLowerCase() + '" data-cols="' + row.cols.length + '">' +
+          row.cols.map(function (col) { return '<div class="sst-col">' + col.map(starterCard).join("") + "</div>"; }).join("") + "</div>";
+      }).join("") +
+      "</div>" +
       (bench.length ? '<div class="sst-bench-head">Bench</div><div class="sst-bench">' + bench.map(benchChip).join("") + "</div>" : "");
     if (first) {          // count up and fill the bar on first paint
       tween($("#sst-me"), me, 700);

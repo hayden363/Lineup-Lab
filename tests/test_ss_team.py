@@ -139,3 +139,39 @@ class MyTeamBannerTests(unittest.TestCase):
         self.assertIn("can't play this week. Start", js)
         self.assertIn('id="rb-go"', js)
         self.assertIn('switchTab("startsit")', js[js.index('$("#rb-go")'):][:80])
+
+
+class LayoutTests(unittest.TestCase):
+    ROSTER = ('const me = [P("q","QB","QB",20,true), P("r1","RB","RB",15,true), P("r2","RB","RB",12,true), P("w1","WR","WR",17,true), P("w2","WR","WR",14,true), P("w3","WR","WR",9,true),'
+              ' P("t","TE","TE",8,true), P("f","FLEX","WR",10,true), P("sf","SUPER_FLEX","QB",18,true), P("k","K","K",7,true), P("d","DEF","DEF",6,true), P("bn",null,"RB",5,false)];')
+
+    def test_rows_stack_vertically_in_football_order(self):
+        out = run(self.ROSTER + "return S.layout(me).map(r => r.key);")
+        self.assertEqual(out, ["QB", "SKILL", "TE", "FLEX", "K", "DEF"])
+
+    def test_running_backs_and_receivers_sit_side_by_side_in_one_row(self):
+        out = run(self.ROSTER + 'const row = S.layout(me).filter(r => r.key === "SKILL")[0]; return row.cols.map(c => c.map(p => p.player_id));')
+        self.assertEqual(out, [["r1", "r2"], ["w1", "w2", "w3"]])
+
+    def test_flex_and_superflex_slots_share_the_flex_row(self):
+        out = run(self.ROSTER + 'return S.layout(me).filter(r => r.key === "FLEX")[0].cols[0].map(p => p.player_id);')
+        self.assertEqual(out, ["f", "sf"])
+
+    def test_empty_groups_are_skipped_and_bench_players_never_appear(self):
+        out = run('const me = [P("q","QB","QB",20,true), P("bn",null,"RB",9,false)]; return S.layout(me).map(r => r.key);')
+        self.assertEqual(out, ["QB"])
+
+    def test_only_rbs_or_only_wrs_still_form_a_row(self):
+        out = run('const me = [P("r","RB","RB",20,true)]; return S.layout(me).map(r => [r.key, r.cols.length]);')
+        self.assertEqual(out, [["SKILL", 1]])
+
+    def test_espn_slot_labels_group_correctly(self):
+        out = run('const me = [P("a","RB/WR/TE","WR",10,true), P("b","D/ST","DEF",5,true), P("c","OP","QB",12,true)]; return S.layout(me).map(r => r.key);')
+        self.assertEqual(out, ["FLEX", "DEF"])
+
+    def test_the_lineup_renders_with_the_layout_and_the_cursor_glow_is_off_on_start_sit(self):
+        ss = open(os.path.join(ROOT, "static/ss-team.js")).read()
+        self.assertIn("layout(mine)", ss)
+        self.assertIn("sst-row", ss)
+        css = open(os.path.join(ROOT, "static/style.css")).read()
+        self.assertIn("#tab-startsit .lab-card::after", css)

@@ -29,10 +29,6 @@ class PureTests(unittest.TestCase):
         out = run(GAME + 'return [L.scoreChange("10-17", G({away:{score:13}})), L.scoreChange("10-17", G({home:{score:24}})), L.scoreChange("10-17", G()), L.scoreChange(undefined, G()), L.scoreChange("10-14", G({state:"post"}))];')
         self.assertEqual(out, ["away", "home", None, None, None])
 
-    def test_countdown_formats(self):
-        out = run("return [L.countdown(3*3600e3+125e3), L.countdown(2*86400e3+5*3600e3+60e3*7), L.countdown(0), L.countdown(NaN)];")
-        self.assertEqual(out, ["03:02:05", "2d 5h 7m", "Kickoff", "Kickoff"])
-
     def test_field_x_maps_yards_into_the_field_between_the_end_zones(self):
         self.assertEqual(run("return [L.fieldX(0), L.fieldX(50), L.fieldX(100)];"), [100, 500, 900])
 
@@ -129,6 +125,34 @@ class PureTests(unittest.TestCase):
         out = run(GAME + 'return L.liveTeamKeys([G(), G({state:"pre", home:{abbr:"KC"}, away:{abbr:"BUF"}}), G({home:{abbr:"WSH"}, away:{abbr:"NYJ"}})]);')
         self.assertEqual(sorted(out), ["DET", "GB", "NYJ", "WAS"])
 
+    def test_a_favorite_team_game_gets_the_crest_ribbon_and_the_fav_class(self):
+        out = run(GAME + 'return [L.scorebugHtml(G(), 0, null, null, "DET"), L.scorebugHtml(G(), 0, null, null, "KC")];')
+        self.assertIn("sb-fav", out[0])
+        self.assertIn("YOUR TEAM", out[0])
+        self.assertNotIn("sb-fav", out[1])
+
+    def test_the_favorite_team_row_is_highlighted_inside_the_card(self):
+        out = run(GAME + 'return L.scorebugHtml(G(), 0, null, null, "DET");')
+        self.assertIn("sb-team fav", out)
+
+    def test_cards_show_records_and_the_line(self):
+        out = run(GAME + 'return L.scorebugHtml(G({state:"pre", home:{abbr:"DET", name:"Lions", score:null, record:"4-2"}, away:{abbr:"GB", name:"Packers", score:null, record:"3-3"}, odds:{favorite:"DET", spread:3.5, total:48}}), 0);')
+        for needle in ("4-2", "3-3", "DET -3.5", "O/U 48"):
+            self.assertIn(needle, out)
+
+    def test_a_final_card_says_whether_the_favorite_covered(self):
+        out = run(GAME + 'return [L.scorebugHtml(G({state:"post", home:{abbr:"DET", score:27, winner:true, record:"5-2"}, away:{abbr:"GB", score:20, winner:false, record:"3-4"}, odds:{favorite:"DET", spread:3.5, total:48}}), 0), L.scorebugHtml(G({state:"post", home:{abbr:"DET", score:21, winner:true}, away:{abbr:"GB", score:20}, odds:{favorite:"DET", spread:3.5, total:48}}), 0)];')
+        self.assertIn("DET covered", out[0])
+        self.assertIn("GB covered", out[1])
+
+    def test_the_grid_pins_your_teams_game_first_and_can_filter(self):
+        out = run(GAME + '''const gs = [G({game_id:"1", state:"pre", kickoff:"b", home:{abbr:"KC"}, away:{abbr:"BUF"}}), G({game_id:"2", state:"in", home:{abbr:"DET"}, away:{abbr:"GB"}}), G({game_id:"3", state:"post", home:{abbr:"SF"}, away:{abbr:"SEA"}})];
+          return [L.gridSections(gs, "DET", "all", () => 0).map(s => [s.label, s.games.map(g => g.game_id)]), L.gridSections(gs, "DET", "fav", () => 0).map(s => s.games.length), L.gridSections(gs, "DET", "mine", (g) => g.game_id === "3" ? 2 : 0).map(s => s.games.map(g => g.game_id))];''')
+        self.assertEqual(out[0][0], ["Your team", ["2"]])
+        self.assertEqual([x[0] for x in out[0][1:]], ["Upcoming", "Final"])
+        self.assertEqual(out[1], [1])
+        self.assertEqual(out[2], [["3"]])
+
     def test_all_three_badges_render(self):
         for b, cls in (("TNF", "tnf"), ("SNF", "snf"), ("MNF", "mnf")):
             out = run(GAME + f'return L.scorebugHtml(G({{badge:"{b}"}}), 0);')
@@ -147,15 +171,72 @@ class PureTests(unittest.TestCase):
         self.assertEqual(out[1], "Jahmyr Gibbs")
         self.assertEqual(out[2], ["Jahmyr Gibbs"])
 
-    def test_pre_game_shows_countdown_weather_wind_alert_vegas_and_injuries(self):
-        out = run(GAME + '''const d = {weather:{temp:41, summary:"Cloudy", wind:17, wind_alert:true, indoor:false}, odds:{favorite:"DET", spread:3.5, total:48, home_implied:25.8, away_implied:22.2},
-          projections:[{name:"Amon-Ra St. Brown", position:"WR", team:"DET", proj:17.3, floor:7, ceiling:28, is_starter:true}], injuries:{DET:[{name:"Someone", position:"WR", status:"Questionable", detail:"Ankle"}]}};
-          return L.preHtml(d, G({state:"pre", kickoff:"2099-01-01T00:00:00Z"}));''')
-        for needle in ("gc-count", "wind alert", "DET -3.5", "O/U", "17.3", "Questionable", "implied totals"):
+    MATCHUP = """const M = { home: { abbr: "DET", record: "4-2", games: 6, pf_pg: 27.5, pa_pg: 19.0, pass_yds_pg: 250, rush_yds_pg: 120,
+          recent: [{week:3,opponent:"A",home:true,result:"W",team_score:30,opp_score:10},{week:4,opponent:"B",home:false,result:"L",team_score:17,opp_score:24}],
+          top_players: [{name:"Amon-Ra St. Brown", position:"WR", ppg:21.4, headshot_url:null}] },
+        away: { abbr: "GB", record: "3-3", games: 6, pf_pg: 21.0, pa_pg: 23.0, pass_yds_pg: 230, rush_yds_pg: 100, recent: [], top_players: [] },
+        prediction: { home_score: 26.1, away_score: 21.4, total: 47.5, margin: 4.7, home_win_pct: 64, away_win_pct: 36, pick: "home", used_market: true,
+                      vs_market: { market_margin: 3.5, margin_edge: 1.2 } } };"""
+    PRE = """const d = { weather:{temp:41, summary:"Cloudy", wind:17, wind_alert:true, indoor:false},
+          odds:{favorite:"DET", spread:3.5, total:48, home_implied:25.8, away_implied:22.2, home_ml:-170, away_ml:145},
+          projections:[{name:"Amon-Ra St. Brown", position:"WR", team:"DET", proj:17.3, floor:7, ceiling:28, is_starter:true}],
+          injuries:{DET:[{name:"Someone", position:"WR", status:"Questionable", detail:"Ankle"}]}, matchup: M };"""
+
+    def pre(self, extra="", fav=""):
+        return run(GAME + self.MATCHUP + self.PRE + extra + f'return L.preHtml(d, G({{state:"pre", kickoff:"2026-11-01T18:00:00Z", status_detail:"Sun 1:00 PM"}}), "{fav}");')
+
+    def test_pre_game_has_no_countdown_and_lists_the_kickoff_time(self):
+        out = self.pre()
+        self.assertNotIn("gc-count", out)
+        self.assertNotIn("Kickoff in", out)
+        head = run(GAME + 'return L.headerHtml(G({state:"pre", kickoff:"2026-11-01T18:00:00Z"}), "");')
+        self.assertIn("KICKOFF", head)
+        self.assertRegex(head, r"(Sun|Mon|Sat)[^<]*\d")            # a weekday and a time, in the header
+
+    def test_pre_game_shows_the_current_odds_for_both_sides(self):
+        out = self.pre()
+        for needle in ("DET -3.5", "GB +3.5", "-170", "+145", "O/U", "48.0", "implied totals"):
             self.assertIn(needle, out)
 
+    def test_pre_game_shows_the_lineup_lab_pick_with_scores_win_chance_and_market_view(self):
+        out = self.pre()
+        for needle in ("Lineup Lab pick", "26.1", "21.4", "64%", "36%", "by 4.7", "vs the market"):
+            self.assertIn(needle, out)
+
+    def test_pre_game_compares_the_two_teams_with_bars_and_shows_recent_form(self):
+        out = self.pre()
+        for needle in ("Points per game", "Points allowed", "Passing yards", "Rushing yards", "27.5", "19.0", "cmp-row", "form-pip", "Players to watch", "Amon-Ra St. Brown"):
+            self.assertIn(needle, out)
+
+    def test_pre_game_keeps_weather_your_players_and_injuries(self):
+        out = self.pre()
+        for needle in ("wind alert", "17.3", "Questionable"):
+            self.assertIn(needle, out)
+
+    def test_the_pick_says_your_team_when_your_favorite_is_playing(self):
+        out = self.pre(fav="DET")
+        self.assertIn("Your team", out)
+        self.assertIn("gc-fav", out)
+        self.assertNotIn("gc-fav", self.pre(fav="KC"))
+
+    def test_records_are_shown_in_the_game_header(self):
+        out = run(GAME + 'const g = G({state:"pre", home:{abbr:"DET", name:"Lions", score:null, record:"4-2"}, away:{abbr:"GB", name:"Packers", score:null, record:"3-3"}}); return L.headerHtml(g, "");')
+        self.assertIn("4-2", out)
+        self.assertIn("3-3", out)
+
+    def test_the_header_marks_your_team_with_a_ribbon(self):
+        out = run(GAME + 'return [L.headerHtml(G({state:"pre"}), "DET"), L.headerHtml(G({state:"pre"}), "KC")];')
+        self.assertIn("YOUR TEAM", out[0])
+        self.assertNotIn("YOUR TEAM", out[1])
+
+    def test_a_missing_matchup_still_renders_the_other_pre_game_cards(self):
+        out = run(GAME + 'return L.preHtml({ odds: null, matchup: null, weather: null, injuries: {}, projections: [] }, G({state:"pre", kickoff:"2026-11-01T18:00:00Z"}), "");')
+        self.assertIn("No betting line posted yet", out)
+        self.assertIn("Lineup Lab pick", out)
+        self.assertIn("not enough games", out.lower())
+
     def test_pre_game_without_data_degrades_gracefully(self):
-        out = run(GAME + 'return L.preHtml({}, G({state:"pre"}));')
+        out = run(GAME + 'return L.preHtml({}, G({state:"pre"}), "");')
         self.assertIn("No betting line posted yet", out)
         self.assertIn("Not available yet", out)
 

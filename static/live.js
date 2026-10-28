@@ -14,9 +14,16 @@
     var t = typeof TeamTheme !== "undefined" ? TeamTheme.get(key(abbr)) : null;
     return t || { primary: "#475569", secondary: "#94a3b8", logo: null, name: abbr };
   }
+  // A team-colored badge with its letters, used wherever the real logo cannot load.
+  function badgeUri(abbr) {
+    var t = theme(abbr);
+    var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80"><rect width="80" height="80" rx="18" fill="' + t.primary + '"/><text x="50%" y="54%" font-family="ui-monospace,monospace" font-size="28" font-weight="800" fill="' +
+      (t.onPrimary || "#fff") + '" text-anchor="middle" dominant-baseline="middle">' + String(abbr || "").slice(0, 3).toUpperCase() + "</text></svg>";
+    return "data:image/svg+xml," + encodeURIComponent(svg);
+  }
   function logo(abbr, cls) {
     var t = theme(abbr);
-    return t.logo ? '<img class="' + cls + '" src="/api/img?url=' + encodeURIComponent(t.logo) + '" alt="" data-fb-hide="1">' : "";
+    return '<img class="' + cls + '" src="' + (t.logo ? "/api/img?url=" + encodeURIComponent(t.logo) : badgeUri(abbr)) + '" data-fb="' + badgeUri(abbr) + '" alt="">';
   }
 
   // ---------------------------------------------------------------- pure ----
@@ -36,13 +43,6 @@
     if (g.away.score > pa) return "away";
     if (g.home.score > ph) return "home";
     return null;
-  }
-
-  function countdown(ms) {
-    if (!isFinite(ms) || ms <= 0) return "Kickoff";
-    var s = Math.floor(ms / 1000), d = Math.floor(s / 86400), h = Math.floor((s % 86400) / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
-    var p = function (n) { return (n < 10 ? "0" : "") + n; };
-    return d ? d + "d " + h + "h " + m + "m" : p(h) + ":" + p(m) + ":" + p(sec);
   }
 
   // SVG x for a yard line (0 to 100 from the left goal line): end zones take 100 units each side of a 1000-wide field.
@@ -154,6 +154,37 @@
     return g.status_detail || (g.state === "post" ? "Final" : "");
   }
 
+  // "Sun, Nov 1, 1:00 PM EST": the kickoff in the viewer's own time zone.
+  function kickoffText(g) {
+    var d = new Date(g && g.kickoff);
+    if (isNaN(d)) return (g && g.status_detail) || "";
+    return d.toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZoneName: "short" });
+  }
+
+  function signed(n) { return n == null ? "" : (n > 0 ? "+" : "") + n; }
+
+  // "DET -3.5 · O/U 48.0" from the betting line.
+  function oddsLine(o) {
+    if (!o) return "";
+    var parts = [];
+    if (o.favorite) parts.push(o.favorite + " -" + o.spread);
+    else if (o.spread === 0) parts.push("Pick'em");
+    if (o.total != null) parts.push("O/U " + d1(o.total));
+    return parts.join(" \u00b7 ");
+  }
+
+  // Which side covered the spread in a finished game, or null without a line.
+  function coverNote(g) {
+    var o = g.odds;
+    if (g.state !== "post" || !o || !o.favorite || g.home.score == null || g.away.score == null) return "";
+    var favHome = key(o.favorite) === key(g.home.abbr);
+    var margin = (favHome ? g.home.score - g.away.score : g.away.score - g.home.score);
+    if (margin === o.spread) return "Push";
+    return (margin > o.spread ? o.favorite : (favHome ? g.away.abbr : g.home.abbr)) + " covered";
+  }
+
+  function isFavGame(g, fav) { return !!fav && (key(g.home.abbr) === fav || key(g.away.abbr) === fav); }
+
   // Your players in a game, on the right of the card: his head and projected points before kickoff, his current
   // fantasy points once the game is on or over. `mine` rows: {name, headshot, value, kind: "proj" | "pts", status}.
   function mineHtml(mine) {
@@ -170,19 +201,40 @@
     }).join("") + (more > 0 ? '<div class="sb-more">+' + more + "</div>" : "") + "</div>";
   }
 
-  function scorebugHtml(g, mineCount, flash, mine) {
-    var h = theme(g.home.abbr), a = theme(g.away.abbr);
-    var cls = "sb-card" + (g.state === "in" ? " live" : g.state === "post" ? " final" : " pre") + (mineCount ? " has-mine" : "") + (mine && mine.length ? " with-mine" : "");
+  function scorebugHtml(g, mineCount, flash, mine, fav) {
+    var h = theme(g.home.abbr), a = theme(g.away.abbr), isFav = isFavGame(g, fav);
+    var cls = "sb-card" + (g.state === "in" ? " live" : g.state === "post" ? " final" : " pre") + (mineCount ? " has-mine" : "") + (mine && mine.length ? " with-mine" : "") + (isFav ? " sb-fav" : "");
     var row = function (t, side) {
-      return '<div class="sb-team' + (t.winner ? " win" : "") + '">' + logo(t.abbr, "sb-logo") + '<span class="sb-abbr">' + esc(t.abbr) + "</span>" +
+      var mineSide = fav && key(t.abbr) === fav;
+      return '<div class="sb-team' + (t.winner ? " win" : "") + (mineSide ? " fav" : "") + '">' + logo(t.abbr, "sb-logo") + '<span class="sb-abbr">' + esc(t.abbr) + "</span>" +
+        (t.record ? '<span class="sb-rec">' + esc(t.record) + "</span>" : "") +
         '<span class="sb-score" data-side="' + side + '">' + (g.state === "pre" ? "" : t.score == null ? "–" : t.score) + "</span></div>";
     };
     var sit = g.state === "in" && g.situation ? '<div class="sb-sit' + (g.situation.is_red_zone ? " rz" : "") + '">' + esc(g.situation.text || "") + (g.situation.is_red_zone ? " · RED ZONE" : "") + "</div>" : "";
+    var line = oddsLine(g.odds), cover = coverNote(g);
+    var when = g.state === "pre" ? kickoffText(g) : statusLine(g);
+    var top = '<div class="sb-top"><span class="sb-tl">' + (g.state === "in" ? '<span class="sb-live"><i></i>LIVE</span>' : "") + (isFav ? '<span class="sb-ribbon">\u2605 YOUR TEAM</span>' : "") + "</span>" + badgeHtml(g) + "</div>";
     return '<button type="button" class="' + cls + '" data-game="' + esc(g.game_id) + '" style="--c1:' + esc(a.primary) + ";--c2:" + esc(h.primary) + ";--s1:" + esc(a.secondary) + ";--s2:" + esc(h.secondary) + '" data-state="' + esc(g.state) + '">' +
-      badgeHtml(g) + (g.state === "in" ? '<span class="sb-live"><i></i>LIVE</span>' : "") +
+      (isFav ? '<span class="sb-crest" aria-hidden="true">' + logo(fav, "sb-crest-img") + "</span>" : "") + top +
       '<div class="sb-body"><div class="sb-main">' + row(g.away, "away") + row(g.home, "home") +
-      '<div class="sb-status">' + esc(statusLine(g)) + (g.network ? ' <span class="sb-net">' + esc(g.network) + "</span>" : "") + "</div>" + sit + "</div>" + mineHtml(mine) + "</div>" +
+      '<div class="sb-status">' + esc(when) + (g.network ? ' <span class="sb-net">' + esc(g.network) + "</span>" : "") + "</div>" + sit +
+      (line ? '<div class="sb-line">' + esc(line) + (cover ? ' <b class="sb-cover">' + esc(cover) + "</b>" : "") + "</div>" : "") + "</div>" + mineHtml(mine) + "</div>" +
       (flash ? '<span class="sb-flash ' + flash + '"></span>' : "") + "</button>";
+  }
+
+  // Sections of the grid: your team's game first, then what is on, upcoming and final. `filter`: all | fav | mine.
+  function gridSections(list, fav, filter, mineFn) {
+    var pool = list.slice();
+    if (filter === "fav") pool = pool.filter(function (g) { return isFavGame(g, fav); });
+    if (filter === "mine") pool = pool.filter(function (g) { return mineFn(g) > 0; });
+    var sections = [], favGames = pool.filter(function (g) { return isFavGame(g, fav); }), rest = pool.filter(function (g) { return !isFavGame(g, fav); });
+    if (favGames.length) sections.push({ label: "Your team", games: sortGames(favGames), fav: true });
+    var labels = { in: "On now", pre: "Upcoming", post: "Final" };
+    ["in", "pre", "post"].forEach(function (st) {
+      var gs = sortGames(rest.filter(function (g) { return g.state === st; }));
+      if (gs.length) sections.push({ label: labels[st], games: gs });
+    });
+    return sections;
   }
 
   // The teams (nflverse codes) with a game on right now.
@@ -234,9 +286,119 @@
     }).join("");
   }
 
-  function preHtml(d, g) {
-    return '<div class="gc-count-wrap"><div class="gc-h">Kickoff in</div><div class="gc-count" id="gc-count" data-kick="' + esc(g.kickoff || "") + '">' + countdown(Date.parse(g.kickoff) - Date.now()) + "</div></div>" +
-      '<div class="gc-two">' + weatherHtml(d.weather) + oddsBarHtml(d.odds, g) + "</div>" +
+  // ---- the game header (every state): both teams with their records, the score or the kickoff time ----
+  function headerHtml(g, fav) {
+    var a = theme(g.away.abbr), h = theme(g.home.abbr);
+    var side = function (t) {
+      var mineSide = fav && key(t.abbr) === fav;
+      return '<div class="gc-team' + (t.winner ? " win" : "") + (mineSide ? " fav" : "") + '">' + logo(t.abbr, "gc-logo") +
+        '<div class="gc-tinfo"><div class="gc-tname">' + esc(t.name || t.abbr) + "</div>" + (t.record ? '<div class="gc-rec">' + esc(t.record) + "</div>" : "") +
+        (mineSide ? '<span class="gc-ribbon">\u2605 YOUR TEAM</span>' : "") + '</div><div class="gc-tscore">' + (g.state === "pre" ? "" : t.score == null ? "–" : t.score) + "</div></div>";
+    };
+    var mid = g.state === "pre"
+      ? '<div class="gc-status">KICKOFF</div><div class="gc-when">' + esc(kickoffText(g)) + "</div>"
+      : '<div class="gc-status">' + esc(statusLine(g)) + "</div>";
+    return '<div class="gc-head' + (isFavGame(g, fav) ? " has-fav" : "") + '" style="--c1:' + esc(a.primary) + ";--c2:" + esc(h.primary) + '"><button type="button" class="gc-back" id="gc-back" aria-label="Back to all games">\u2039 All games</button>' +
+      badgeHtml(g) + '<div class="gc-scoreline">' + side(g.away) + '<div class="gc-mid">' + mid + (g.network ? '<div class="sb-net">' + esc(g.network) + "</div>" : "") + "</div>" + side(g.home) + "</div></div>";
+  }
+
+  // ---- pre-game dashboard ----
+  var COMPARE_ROWS = [["Points per game", "pf_pg", true], ["Points allowed", "pa_pg", false], ["Passing yards", "pass_yds_pg", true], ["Rushing yards", "rush_yds_pg", true]];
+
+  // Tug-of-war bars: each team's share of the pair, in its own color; the better side of each row is bold.
+  function compareBarsHtml(m, g) {
+    if (!m || !m.home || !m.away) return "";
+    var ac = theme(g.away.abbr).primary, hc = theme(g.home.abbr).primary;
+    var rows = COMPARE_ROWS.map(function (r) {
+      var av = m.away[r[1]], hv = m.home[r[1]];
+      if (av == null || hv == null) return "";
+      var tot = (av + hv) || 1, aw = Math.round((av / tot) * 100);
+      var better = av === hv ? "" : ((av > hv) === r[2] ? "away" : "home");
+      return '<div class="cmp-row"><span class="cmp-v' + (better === "away" ? " best" : "") + '">' + d1(av) + '</span><div class="cmp-mid"><div class="cmp-lbl">' + r[0] +
+        '</div><div class="cmp-bar"><i style="width:' + aw + "%;background:" + esc(ac) + '"></i><b style="background:' + esc(hc) + '"></b></div></div><span class="cmp-v' + (better === "home" ? " best" : "") + '">' + d1(hv) + "</span></div>";
+    }).join("");
+    return '<div class="gc-card"><div class="gc-h">Team comparison</div><div class="cmp-head"><span>' + logo(g.away.abbr, "gc-mini") + esc(g.away.abbr) + " " + esc((m.away.record) || "") + "</span><span>" + esc((m.home.record) || "") + " " + esc(g.home.abbr) + logo(g.home.abbr, "gc-mini") + "</span></div>" + (rows || '<div class="muted">No team stats yet.</div>') + "</div>";
+  }
+
+  // Last five results as pips plus a small bar chart of points scored.
+  function formSideHtml(side, abbr) {
+    var rec = (side && side.recent) || [];
+    if (!rec.length) return '<div class="form-side"><div class="form-name">' + logo(abbr, "gc-mini") + esc(abbr) + '</div><div class="muted small">No games yet.</div></div>';
+    var maxPts = Math.max.apply(null, rec.map(function (r) { return r.team_score || 0; }).concat([1]));
+    var color = theme(abbr).primary;
+    var bars = rec.map(function (r, i) {
+      var hgt = Math.max(4, Math.round(((r.team_score || 0) / maxPts) * 38));
+      return '<rect x="' + (i * 22) + '" y="' + (44 - hgt) + '" width="16" height="' + hgt + '" rx="3" fill="' + esc(color) + '" opacity="' + (r.result === "W" ? 1 : 0.45) + '"><title>Wk ' + r.week + ": " + r.team_score + "\u2013" + r.opp_score + "</title></rect>";
+    }).join("");
+    var pips = rec.map(function (r) {
+      return '<span class="form-pip ' + String(r.result).toLowerCase() + '" title="Wk ' + r.week + " " + r.result + " " + r.team_score + "\u2013" + r.opp_score + (r.home ? " vs " : " @ ") + esc(r.opponent) + '">' + esc(r.result) + "</span>";
+    }).join("");
+    return '<div class="form-side"><div class="form-name">' + logo(abbr, "gc-mini") + esc(abbr) + '</div><div class="form-pips">' + pips + '</div><svg class="form-bars" viewBox="0 0 ' + (rec.length * 22) + ' 48" role="img" aria-label="Points scored, last ' + rec.length + ' games">' + bars + "</svg></div>";
+  }
+
+  function formHtml(m, g) {
+    if (!m || !m.home || !m.away) return "";
+    return '<div class="gc-card"><div class="gc-h">Recent form <span class="muted">last 5 · points scored</span></div><div class="gc-two form-two">' + formSideHtml(m.away, g.away.abbr) + formSideHtml(m.home, g.home.abbr) + "</div></div>";
+  }
+
+  function watchHtml(m, g) {
+    if (!m || !m.home || !m.away) return "";
+    var col = function (side, abbr) {
+      var ps = (side.top_players || []).map(function (p) {
+        var src = p.headshot_url ? (typeof proxyImg === "function" ? proxyImg(p.headshot_url) : p.headshot_url) : "";
+        var fb = typeof initialsAvatarUri === "function" ? initialsAvatarUri(p.name) : "";
+        return '<div class="watch-p"><img class="sb-face" src="' + esc(src || fb) + '"' + (fb ? ' data-fb="' + esc(fb) + '"' : "") + ' alt=""><span>' + esc(p.name) + " <small>" + esc(p.position) + '</small></span><b>' + d1(p.ppg) + " <small>ppg</small></b></div>";
+      }).join("");
+      return '<div><div class="form-name">' + logo(abbr, "gc-mini") + esc(abbr) + "</div>" + (ps || '<div class="muted small">No player data yet.</div>') + "</div>";
+    };
+    return '<div class="gc-card"><div class="gc-h">Players to watch</div><div class="gc-two">' + col(m.away, g.away.abbr) + col(m.home, g.home.abbr) + "</div></div>";
+  }
+
+  // Lineup Lab's own pick, with the market's view when there is a line.
+  function predictionHtml(m, g, fav) {
+    var p = m && m.prediction;
+    var favInGame = isFavGame(g, fav);
+    if (!p) return '<div class="gc-card gc-pick"><div class="gc-h">Lineup Lab pick</div><div class="muted">Lineup Lab needs a few games from both teams before it makes a pick (not enough games yet).</div></div>';
+    var ac = theme(g.away.abbr).primary, hc = theme(g.home.abbr).primary;
+    var winner = p.pick === "home" ? g.home : g.away, wpct = p.pick === "home" ? p.home_win_pct : p.away_win_pct;
+    var wname = winner.name || winner.abbr, by = Math.abs(p.margin);
+    var mk = "";
+    if (p.vs_market) {
+      var e = p.vs_market.margin_edge;
+      mk = Math.abs(e) < 0.5 ? "Lineup Lab and the market agree on the margin."
+        : "Lineup Lab is " + Math.abs(e).toFixed(1) + " pts " + (e > 0 ? "higher" : "lower") + " on " + g.home.abbr + " vs the market.";
+    }
+    var yours = favInGame ? '<div class="gc-fav">\u2605 Your team: the ' + esc(key(g.home.abbr) === fav ? g.home.name || g.home.abbr : g.away.name || g.away.abbr) + " have a " + (key(g.home.abbr) === fav ? p.home_win_pct : p.away_win_pct) + "% chance</div>" : "";
+    return '<div class="gc-card gc-pick' + (favInGame ? " has-fav" : "") + '"><div class="gc-h">Lineup Lab pick</div>' + yours +
+      '<div class="pick-score"><div class="pick-side"><span>' + esc(g.away.abbr) + '</span><b>' + d1(p.away_score) + '</b></div><span class="pick-dash">\u2014</span><div class="pick-side"><span>' + esc(g.home.abbr) + "</span><b>" + d1(p.home_score) + "</b></div></div>" +
+      '<div class="pick-call">' + esc(wname) + " by " + by.toFixed(1) + " <span>(" + wpct + "% to win)</span></div>" +
+      '<div class="pick-bar"><i style="width:' + p.away_win_pct + "%;background:" + esc(ac) + '"></i><b style="background:' + esc(hc) + '"></b></div>' +
+      '<div class="odds-legend"><span>' + esc(g.away.abbr) + " <b>" + p.away_win_pct + '%</b></span><span class="muted">win probability</span><span>' + esc(g.home.abbr) + " <b>" + p.home_win_pct + "%</b></span></div>" +
+      (mk ? '<div class="pick-mk">' + esc(mk) + "</div>" : "") +
+      '<div class="muted small">Built from each team\'s scoring and defense this season' + (p.used_market ? ", blended with the betting line" : "") + ". An estimate, not a guarantee.</div></div>";
+  }
+
+  function mlText(v) { return v == null ? "" : (v > 0 ? "+" : "") + v; }
+
+  // Current odds: spread and moneyline for each side, the total and each side's implied score.
+  function oddsFullHtml(o, g) {
+    if (!o) return '<div class="gc-card"><div class="gc-h">Odds</div><div class="muted">No betting line posted yet.</div></div>';
+    var hs = o.favorite ? (key(o.favorite) === key(g.home.abbr) ? -o.spread : o.spread) : 0, as = o.favorite ? -hs : 0;
+    var spreadTxt = function (abbr, v) { return esc(abbr) + " " + (o.favorite ? (v < 0 ? "-" + Math.abs(v) : "+" + Math.abs(v)) : "PK"); };
+    var hi = o.home_implied, ai = o.away_implied, tot = (hi || 0) + (ai || 0), split = tot ? Math.round((ai / tot) * 100) : 50;
+    return '<div class="gc-card gc-odds"><div class="gc-h">Odds <span class="muted">current line</span></div>' +
+      '<div class="odds-grid"><div class="odds-team">' + logo(g.away.abbr, "gc-mini") + '<b class="odds-spread">' + spreadTxt(g.away.abbr, as) + '</b><span class="odds-ml">' + esc(mlText(o.away_ml)) + '</span></div>' +
+      '<div class="odds-ou"><small>O/U</small><b>' + d1(o.total) + '</b></div>' +
+      '<div class="odds-team r"><span class="odds-ml">' + esc(mlText(o.home_ml)) + '</span><b class="odds-spread">' + spreadTxt(g.home.abbr, hs) + "</b>" + logo(g.home.abbr, "gc-mini") + "</div></div>" +
+      (hi != null ? '<div class="odds-bar"><i style="width:' + split + "%;background:" + esc(theme(g.away.abbr).primary) + '"></i><b style="background:' + esc(theme(g.home.abbr).primary) + '"></b></div>' +
+        '<div class="odds-legend"><span>' + esc(g.away.abbr) + " <b>" + d1(ai) + '</b></span><span class="muted">implied totals</span><span>' + esc(g.home.abbr) + " <b>" + d1(hi) + "</b></span></div>" : "") + "</div>";
+  }
+
+  function preHtml(d, g, fav) {
+    var m = d.matchup || null;
+    return predictionHtml(m, g, fav) +
+      '<div class="gc-two">' + oddsFullHtml(d.odds, g) + weatherHtml(d.weather) + "</div>" +
+      compareBarsHtml(m, g) + formHtml(m, g) + watchHtml(m, g) +
       '<div class="gc-card"><div class="gc-h">Your players in this game</div>' + projectionsHtml(d.projections) + "</div>" +
       '<div class="gc-card"><div class="gc-h">Injury report</div>' + injuriesHtml(d.injuries) + "</div>";
   }
@@ -271,15 +433,15 @@
       '<div class="gc-two"><div class="gc-card"><div class="gc-h">Fantasy impact audit</div>' + aud + '</div><div class="gc-card"><div class="gc-h">Top fantasy scorers</div>' + (lead || '<div class="muted">No stats posted.</div>') + "</div></div>" + boxHtml;
   }
 
-  var LiveTab = { sortGames: sortGames, scoreChange: scoreChange, countdown: countdown, fieldX: fieldX, fieldSvg: fieldSvg, bannerText: bannerText,
-    playHeadline: playHeadline, liveTeamKeys: liveTeamKeys, mineHtml: mineHtml, playRowHtml: playRowHtml, scorebugHtml: scorebugHtml, preHtml: preHtml, liveHtml: liveHtml, postHtml: postHtml,
+  var LiveTab = { sortGames: sortGames, scoreChange: scoreChange, fieldX: fieldX, fieldSvg: fieldSvg, bannerText: bannerText,
+    playHeadline: playHeadline, liveTeamKeys: liveTeamKeys, mineHtml: mineHtml, playRowHtml: playRowHtml, scorebugHtml: scorebugHtml, preHtml: preHtml, headerHtml: headerHtml, gridSections: gridSections, kickoffText: kickoffText, predictionHtml: predictionHtml, oddsFullHtml: oddsFullHtml, compareBarsHtml: compareBarsHtml, coverNote: coverNote, liveHtml: liveHtml, postHtml: postHtml,
     audit: audit, mvp: mvp, leaders: leaders, oddsBarHtml: oddsBarHtml, weatherHtml: weatherHtml, key: key };
   if (typeof window !== "undefined") window.LiveTab = LiveTab;
   if (typeof module !== "undefined") module.exports = LiveTab;
   if (typeof document === "undefined" || typeof window === "undefined" || !window.document.getElementById) return;
 
   // -------------------------------------------------------------- browser ----
-  var games = [], lastScores = {}, flashes = {}, poll = null, gcTimer = null, gcTick = null, gcGame = null, gcOrigin = null;
+  var games = [], lastScores = {}, flashes = {}, poll = null, gcTimer = null, gcGame = null, gcOrigin = null;
   function $(s) { return document.querySelector(s); }
   function reduced() { return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches); }
   function mineCount(g) {
@@ -287,7 +449,8 @@
     return (m[key(g.away.abbr)] || 0) + (m[key(g.home.abbr)] || 0);
   }
 
-  var roster = [], boxes = {}, rosterAt = 0;
+  var roster = [], boxes = {}, rosterAt = 0, filter = "all";
+  function favKey() { return typeof TeamTheme !== "undefined" && TeamTheme.current() ? key(TeamTheme.current()) : ""; }
 
   // Your roster players in one game, as scorebug rows: projections before kickoff, his points once it is on.
   function mineFor(g) {
@@ -307,15 +470,29 @@
       .map(function (p) { return { name: p.player_display_name, headshot: p.headshot_url, value: null, kind: "pts", status: p.injury_status || null }; });
   }
 
+  function renderFilters() {
+    var host = $("#live-filters");
+    if (!host) return;
+    var fav = favKey(), t = fav && typeof TeamTheme !== "undefined" ? TeamTheme.get(fav) : null;
+    var nFav = games.filter(function (g) { return isFavGame(g, fav); }).length, nMine = games.filter(function (g) { return mineCount(g) > 0; }).length;
+    var chips = [["all", "All games", games.length]];
+    if (t) chips.push(["fav", "\u2605 " + t.name, nFav]);
+    if (nMine || (typeof state !== "undefined" && state.user)) chips.push(["mine", "My players", nMine]);
+    if (!chips.some(function (c) { return c[0] === filter; })) filter = "all";
+    host.innerHTML = chips.map(function (c) { return '<button type="button" class="lv-chip' + (c[0] === filter ? " on" : "") + (c[0] === "fav" ? " fav" : "") + '" data-filter="' + c[0] + '">' + esc(c[1]) + "<b>" + c[2] + "</b></button>"; }).join("");
+  }
+
   function renderGrid(animate) {
     var grid = $("#live-grid");
     if (!grid) return;
+    renderFilters();
     if (!games.length) { grid.innerHTML = '<div class="empty">No games on the schedule right now.</div>'; return; }
-    var sorted = sortGames(games), out = "", last = null;
-    var labels = { in: "On now", pre: "Upcoming", post: "Final" };
-    sorted.forEach(function (g) {
-      if (g.state !== last) { out += '<div class="lv-sec">' + (labels[g.state] || "Games") + "</div>"; last = g.state; }
-      out += scorebugHtml(g, mineCount(g), flashes[g.game_id], mineFor(g));
+    var fav = favKey(), out = "";
+    var sections = gridSections(games, fav, filter, mineCount);
+    if (!sections.length) { grid.innerHTML = '<div class="empty">' + (filter === "mine" ? "None of your players are in a game this week." : "Your team isn't playing this week.") + "</div>"; return; }
+    sections.forEach(function (sec) {
+      out += '<div class="lv-sec' + (sec.fav ? " fav" : "") + '">' + sec.label + "</div>";
+      sec.games.forEach(function (g) { out += scorebugHtml(g, mineCount(g), flashes[g.game_id], mineFor(g), fav); });
     });
     grid.innerHTML = out;
     grid.classList.toggle("lv-enter", !!animate);
@@ -388,13 +565,6 @@
   }
 
   // ------------------------------------------------------------ deep dive ----
-  function headerHtml(g) {
-    var a = theme(g.away.abbr), h = theme(g.home.abbr);
-    var side = function (t, th) { return '<div class="gc-team' + (t.winner ? " win" : "") + '">' + logo(t.abbr, "gc-logo") + '<div class="gc-tname">' + esc(t.name || t.abbr) + '</div><div class="gc-tscore">' + (g.state === "pre" ? "" : t.score == null ? "–" : t.score) + "</div></div>"; };
-    return '<div class="gc-head" style="--c1:' + esc(a.primary) + ";--c2:" + esc(h.primary) + '"><button type="button" class="gc-back" id="gc-back" aria-label="Back to all games">‹ All games</button>' +
-      badgeHtml(g) + '<div class="gc-scoreline">' + side(g.away, a) + '<div class="gc-mid"><div class="gc-status">' + esc(statusLine(g)) + "</div>" + (g.network ? '<div class="sb-net">' + esc(g.network) + "</div>" : "") + "</div>" + side(g.home, h) + "</div></div>";
-  }
-
   function boxSection(d) {
     return typeof gameBodyHtml === "function" && d.box ? '<div class="gc-card gc-box"><div class="gc-h">Box score</div>' + gameBodyHtml(d.box) + "</div>" : "";
   }
@@ -406,13 +576,10 @@
     if (!body) return;
     var box = boxSection(d);
     var scroll = body.scrollTop;
-    body.innerHTML = g.state === "pre" ? preHtml(d, g) : g.state === "in" ? liveHtml(d, g, box) : postHtml(d, g, box);
+    body.innerHTML = g.state === "pre" ? preHtml(d, g, favKey()) : g.state === "in" ? liveHtml(d, g, box) : postHtml(d, g, box);
     body.scrollTop = scroll;
     var head = $(".gc-head");
-    if (head) head.outerHTML = headerHtml(g);
-    clearInterval(gcTick);
-    var c = $("#gc-count");
-    if (c) gcTick = setInterval(function () { var el = $("#gc-count"); if (!el) return clearInterval(gcTick); el.textContent = countdown(Date.parse(el.dataset.kick) - Date.now()); }, 1000);
+    if (head) head.outerHTML = headerHtml(g, favKey());
   }
 
   async function refreshGame() {
@@ -431,7 +598,7 @@
     var root = $("#gc-root");
     if (!g || !root) return;
     gcGame = g; gcOrigin = origin || null;
-    root.innerHTML = '<div class="gc-backdrop"><section class="gc-panel" role="dialog" aria-modal="true" aria-label="Game center">' + headerHtml(g) +
+    root.innerHTML = '<div class="gc-backdrop"><section class="gc-panel" role="dialog" aria-modal="true" aria-label="Game center">' + headerHtml(g, favKey()) +
       '<div class="gc-body" id="gc-body"><div class="gc-skel">' + '<div class="skel gc-skel-row"></div>'.repeat(5) + "</div></div></section></div>";
     document.body.classList.add("gc-open");
     var panel = root.querySelector(".gc-panel");
@@ -447,7 +614,7 @@
 
   function closeGame() {
     var root = $("#gc-root"), panel = root && root.querySelector(".gc-panel");
-    clearInterval(gcTimer); clearInterval(gcTick);
+    clearInterval(gcTimer);
     var done = function () { root.innerHTML = ""; document.body.classList.remove("gc-open"); gcGame = null; };
     var origin = gcOrigin && document.body.contains(gcOrigin) ? gcOrigin : null;
     if (panel && origin && !reduced() && panel.animate) {
@@ -462,6 +629,8 @@
   document.addEventListener("click", function (e) {
     var t = e.target && e.target.closest ? e.target : null;
     if (!t) return;
+    var chip = t.closest(".lv-chip[data-filter]");
+    if (chip) { filter = chip.dataset.filter; renderGrid(false); return; }
     var card = t.closest(".sb-card[data-game]");
     if (card && card.closest("#live-grid")) { openGame(card.dataset.game, card); return; }
     if (t.closest("#gc-back")) closeGame();

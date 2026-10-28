@@ -4549,46 +4549,8 @@ function gameBodyHtml(box) {
 }
 
 // ---- team page: record, next game outlook, weekly results, stats and a roster of clickable player profiles ----
-function teamGameRowHtml(g) {
-  const res = g.result;
-  const score = res ? `${g.team_score}–${g.opp_score}` : "—";
-  return `<div class="tp-game ${res ? "res-" + res.toLowerCase() : "res-pending"}">
-    <span class="tp-wk">Wk ${g.week}</span>
-    <span class="tp-opp">${g.home ? "vs" : "@"} ${esc(g.opponent)}</span>
-    <span class="tp-score">${score}</span>
-    <span class="tp-res">${res || "·"}</span>
-  </div>`;
-}
-
-function teamPageHtml(d) {
-  const th = TeamTheme.get(d.team) || {};
-  const n = d.next_game;
-  const when = (iso) => { const t = new Date(iso + "T12:00:00"); return isNaN(t) ? iso : t.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" }); };
-  const fav = n && n.spread != null ? (n.spread < 0 ? `${esc(d.team)} favored by ${Math.abs(n.spread)}` : n.spread > 0 ? `${esc(n.opponent)} favored by ${n.spread}` : "Pick'em") : "";
-  const outlook = n ? `<div class="tp-next">
-      <div class="tp-next-title">Next game · Week ${n.week} · ${esc(when(n.date))}</div>
-      <div class="tp-next-main">${n.home ? "vs" : "@"} <b>${esc(n.opponent)}</b></div>
-      ${n.implied_total != null ? `<div class="tp-next-meta">${fav ? fav + " · " : ""}Expected score ${FMT.d1(n.implied_total)}–${FMT.d1(n.opp_implied_total)} (total ${FMT.d1(n.total)})</div>` : ""}
-    </div>` : `<div class="tp-next"><div class="tp-next-title">Next game</div><div class="muted">No upcoming game on the schedule.</div></div>`;
-  const s = d.stats || {};
-  const stat = (label, v) => `<div class="tp-stat"><b>${v == null ? "–" : FMT.d1(v)}</b><span>${label}</span></div>`;
-  const players = (d.players || []).map((p) => `<button type="button" class="tp-player" data-player="${esc(p.player_id)}"${n ? ` data-opp="${esc(n.opponent)}"` : ""}>
-      <img class="tp-photo" ${headshotAttrs({ headshot_url: p.headshot_url, player_display_name: p.name })} alt="" loading="lazy">
-      <span class="tp-pname">${esc(p.name)}${statusFlagsHtml({ ...p, recent_team: d.team })}<small>${esc(p.position)}</small></span>
-      <span class="tp-pnum"><b>${p.proj != null ? FMT.d1(p.proj) : "–"}</b><small>proj</small></span>
-      <span class="tp-pnum"><b>${FMT.d1(p.ppg)}</b><small>avg</small></span>
-    </button>`).join("");
-  return `<div class="tp-head">
-      ${d.logo ? `<img class="tp-logo" src="${proxyImg(d.logo)}" data-fb-hide="1" alt="">` : ""}
-      <div><h2>${esc(th.city || "")} ${esc(th.name || d.team)}</h2>
-        <div class="muted">${esc(th.division || "")} · <b>${esc(d.record.text)}</b> · ${d.points_for} PF / ${d.points_against} PA</div></div>
-    </div>
-    ${outlook}
-    <div class="tp-stats">${stat("Points / game", s.points_for_pg)}${stat("Allowed / game", s.points_against_pg)}${stat("Pass yds / game", s.pass_yds_pg)}${stat("Rush yds / game", s.rush_yds_pg)}</div>
-    <div class="section-label">Weekly results</div>
-    <div class="tp-games">${(d.games || []).map(teamGameRowHtml).join("") || `<div class="muted">No games yet.</div>`}</div>
-    <div class="section-label">Players${n ? ` · projected for Week ${n.week}` : ""}</div>
-    <div class="tp-players">${players || `<div class="muted">No player data yet.</div>`}</div>`;
+function teamPageMarkup(d) {
+  return TeamPageUI.html(d, { esc, d1: FMT.d1, statusFlags: statusFlagsHtml, headshotAttrs, proxyImg, theme: TeamTheme.get(d.team) || {} });
 }
 
 async function openTeamModal(code) {
@@ -4607,7 +4569,7 @@ async function openTeamModal(code) {
     const qs = scoringQS().replace(/^&/, "");
     const d = await api(`/api/team/${encodeURIComponent(code)}${qs ? "?" + qs : ""}`);
     const body = $("#tp-body");
-    if (body && seq === teamModalSeq) body.innerHTML = teamPageHtml(d);
+    if (body && seq === teamModalSeq) body.innerHTML = teamPageMarkup(d);
   } catch (e) {
     const body = $("#tp-body");
     if (body && seq === teamModalSeq) body.innerHTML = `<div class="empty">Couldn't load this team. Try again in a moment.</div>`;
