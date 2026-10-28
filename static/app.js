@@ -394,6 +394,8 @@ function positionNavIndicator(tab) {
   indicator.style.height = `${btn.offsetHeight * 0.6}px`;
 }
 
+function reducedMotion() { return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches); }
+
 function switchTab(tab) {
   document.querySelectorAll(".nav-item[data-tab]").forEach((b) => b.classList.toggle("active", b.dataset.tab === tab));
   positionNavIndicator(tab);
@@ -405,6 +407,8 @@ function switchTab(tab) {
   void activeSection.offsetWidth; // force reflow so the animation replays every switch
   activeSection.classList.add("tab-fade-in");
   if (typeof ThemeFX !== "undefined") ThemeFX.tabWipe();
+  window.scrollTo({ top: 0, behavior: reducedMotion() ? "auto" : "smooth" });
+  document.querySelectorAll(".gate-card .primary-btn").forEach((b) => { b.textContent = state.user ? "Go to Settings" : "Sign in"; });
   if (tab !== "draft") stopDraftPolling();
   // chat.js is a separate script: if it failed to load, navigation must still work
   if (tab !== "chat" && typeof stopChatPolling === "function") stopChatPolling();
@@ -892,8 +896,11 @@ function initCompareTray() {
 // One list for every position, ranked by value over replacement (VOR) —
 // see engine/value.py. PROJ is points per game; VOR is how many of those
 // points beat the free replacement at his position.
+$("#board-hint")?.addEventListener("click", (e) => e.currentTarget.classList.toggle("open"));
+
 function renderOverallBoard(data) {
-  $("#board-head").innerHTML = `<th></th><th>Player</th><th>Tier</th><th title="Player Value Score: edge over a replacement player, comparable across positions">PVS</th><th>PROJ</th><th>VOR</th><th class="hide-mobile">Experts</th>`;
+  const hasEcr = data.players.some((p) => p.ecr != null);   // no expert column when the consensus feed is down
+  $("#board-head").innerHTML = `<th></th><th>Player</th><th>Tier</th><th title="Player Value Score: edge over a replacement player, comparable across positions">PVS</th><th>PROJ</th><th>VOR</th>${hasEcr ? '<th class="hide-mobile">Experts</th>' : ""}`;
   const body = $("#board-body");
   body.innerHTML = "";
   const q = state.search.trim().toLowerCase();
@@ -916,7 +923,7 @@ function renderOverallBoard(data) {
         <td>${p.PVS == null ? "—" : scoreCell(p.PVS)}</td>
         <td>${FMT.d1(p.PROJ)}</td>
         <td><span class="vor-cell" title="Points per game above a free replacement ${esc(p.position)}">+${FMT.d1(p.VOR)}</span></td>
-        <td class="hide-mobile">${ecrGapHtml(p)}</td>`;
+        ${hasEcr ? `<td class="hide-mobile">${ecrGapHtml(p)}</td>` : ""}`;
       tr.querySelector(".cmp-check").addEventListener("click", (e) => {
         e.stopPropagation();
         toggleCompare(p, e.currentTarget);
@@ -926,6 +933,7 @@ function renderOverallBoard(data) {
     });
   $("#board-hint").textContent =
     `Ranked by PVS (Player Value Score, 0–100): how many points per game he gives a lineup over a free replacement at his position (replacement ≈ QB${rr.QB}, RB${rr.RB}, WR${rr.WR}, TE${rr.TE} in a ${data.league?.teams || 12}-team league), plus his usage, ceiling and stability. The expert consensus rank is shown for comparison and no longer moves anyone. That's why an elite tight end can outrank a good quarterback.`;
+  $("#board-hint").classList.add("clamp");
 }
 
 // A short expanding circle where you clicked — pure CSS animation, removed when done.
@@ -960,6 +968,7 @@ async function loadBoard() {
     const cols = TABLE_COLS[state.pos] || [];
     renderBoardHead(cols, !!state.opp);
     renderBoardRows(data.players, cols, !!state.opp);
+    $("#board-hint").classList.remove("clamp", "open");
     $("#board-hint").textContent = state.opp
       ? `PROJ = projected points vs ${state.opp} this week — a real, multi-stat matchup read (run D, pass D, pressure), adjusted for recent form and your scoring.`
       : `PVS = 0–100 value over a replacement player: projected edge, usage, ceiling and stability. Pick an opponent above to see matchup-adjusted projections.`;
