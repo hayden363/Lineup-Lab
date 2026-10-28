@@ -68,13 +68,13 @@ class WeeklyInjuryProjection(unittest.TestCase):
     def test_healthy_is_the_full_projection(self):
         self.assertEqual(self.proj(None), 17.5)
 
-    def test_questionable_on_a_wednesday_is_ninety_percent_not_half(self):
+    def test_questionable_on_a_wednesday_is_ninety_two_percent_not_half(self):
         p = self.proj("Questionable", self.DNP, self.WED)       # a Wednesday non-participant
-        self.assertEqual(p, 15.8)                                # 17.5 x 0.90
+        self.assertEqual(p, 16.1)                                # 17.5 x 0.92
         self.assertGreater(p, 0.85 * self.BASE)
 
-    def test_questionable_with_no_practice_information_is_ninety_percent(self):
-        self.assertEqual(self.proj("Questionable"), 15.8)
+    def test_questionable_with_no_practice_information_is_ninety_two_percent(self):
+        self.assertEqual(self.proj("Questionable"), 16.1)
 
     def test_questionable_after_a_friday_did_not_practice_is_sixty_percent(self):
         self.assertEqual(self.proj("Questionable", self.DNP, self.FRI), 10.5)
@@ -167,7 +167,7 @@ class HeadToHeadInTheProjection(unittest.TestCase):
             row.loc["arsb", "injury_status"] = None
             healthy = tools._opponent_adjusted_proj_full(row, "arsb", "WR", {"schedule": None}, None)[0]
         self.assertEqual(healthy, 18.2)            # 17.5 x 1.04
-        self.assertEqual(q, 16.4)                  # then x 0.90 for Questionable
+        self.assertEqual(q, 16.7)                  # then x 0.92 for Questionable
 
     def test_no_head_to_head_leaves_the_projection_alone(self):
         row = pd.DataFrame({"recent_team": ["DET"], "injury_status": [None], "injury_report": [None]}, index=["arsb"])
@@ -270,7 +270,7 @@ class MyTeamRowRange(unittest.TestCase):
 
     def test_questionable_keeps_the_ceiling_and_loses_the_floor_and_shows_the_chance(self):
         healthy = self.rng(17.3)
-        q = self.rng(15.6, "Questionable")                  # row PROJ is already x0.90
+        q = self.rng(15.6, "Questionable")                  # row PROJ is already x0.92
         self.assertGreaterEqual(q["p_play"], 0.5)
         self.assertLess(q["p_play"], 1.0)
         self.assertLess(q["floor"], healthy["floor"] + 0.01)

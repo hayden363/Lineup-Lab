@@ -4,15 +4,15 @@ Chance a player listed Questionable or Doubtful plays, used to scale his WEEKLY 
 The policy (set by the product owner, not fitted):
     Out, IR, PUP, Sus   weekly projection 0 (handled by the callers: a known zero)
     Doubtful            projection x 0.25
-    Questionable        projection x 0.90, unless he did NOT practice on the FRIDAY (the final
+    Questionable        projection x 0.92, unless he did NOT practice on the FRIDAY (the final
                         report of the week), then x 0.60
 Routine practice maintenance never halves a projection: a Wednesday or Thursday
-non-participant who is merely listed Questionable stays at x 0.90.
+non-participant who is merely listed Questionable stays at x 0.92.
 
 For reference only, engine/play_prob_factors.json holds the measured rates (nflverse injury
 reports and snap counts, 2016-2024: Questionable overall played 70% of the time, a Questionable
 WR who did not practice about 46%). They are returned as `p_history` but do not drive the
-number. The 0.90 is therefore generous on average, by design.
+number. The 0.92 is therefore generous on average, by design.
 
 Practice participation is not in any live feed: it is read from the wording of ESPN's latest
 injury note when that note is recent, and "Friday" is the day that note was posted (Eastern time).
@@ -40,7 +40,7 @@ except (OSError, ValueError) as e:
 
 NOTE_MAX_AGE_DAYS = 4
 DOUBTFUL_P = 0.25
-QUESTIONABLE_P = 0.90
+QUESTIONABLE_P = 0.92
 QUESTIONABLE_FRIDAY_DNP_P = 0.60
 OUT_NOTE_P = 0.05
 FRIDAY = 4
