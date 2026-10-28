@@ -28,6 +28,9 @@ class ByeStartSitTests(unittest.TestCase):
         self.assertEqual(byp["week"], slate)
         self.assertIsNone(byp["opponent"])
         self.assertNotEqual(res["decision"]["pick"], on_bye.index[0])
+        self.assertEqual(byp["PROJ"], 0.0)                 # not his next game's number
+        self.assertGreater(byp["next_game_proj"], 0)
+        self.assertIn("vs 0.0 for " + byp["player_display_name"], res["summary"] or "")   # the write-up compares against his real 0
 
 
 if __name__ == "__main__":

@@ -562,6 +562,11 @@ def start_sit(player_ids, opponents=None, season=None, scoring=None, mode="balan
         floor_v, ceil_v = _clean_num(row.get("floor")), _clean_num(row.get("ceiling"))
         floor_v = floor_v * env_f * h2h_f if floor_v is not None else None
         ceil_v = ceil_v * env_f * h2h_f if ceil_v is not None else None
+        # A player on a bye or ruled out scores nothing this week. His next-game number is kept for reference, but
+        # the PROJ every ranking and sentence reads is zero, so a bye can never look like the best option.
+        next_proj = proj
+        if on_bye or _clean_num(row.get("injury_status")) in decision.WONT_PLAY:
+            proj, floor_v, ceil_v = 0.0, 0.0, 0.0
         usage = context.usage_trend(bundle["wk"], pid, pos)
         spread = (ceil_v - floor_v) if (floor_v is not None and ceil_v is not None) else None
         results.append({
@@ -573,6 +578,7 @@ def start_sit(player_ids, opponents=None, season=None, scoring=None, mode="balan
             "recent_team": row.get("recent_team"), "headshot_url": row.get("headshot_url"),
             "SCORE": row.get("SCORE"), "PVS": row.get("PVS"), "FORM": row.get("FORM"), "fpts_per_game": row.get("fpts_per_game"),
             "opponent": None if on_bye else opp, "matchup_tag": matchup_tag, "matchup_factor": matchup_factor, "PROJ": proj,
+            "next_game_proj": next_proj if proj == 0.0 and next_proj else None,
             "week": slate_week if on_bye else wk_no, "on_bye": on_bye,
             "floor": floor_v, "ceiling": ceil_v,
             "snap_pct": _clean_num(row.get("snap_pct")), "redzone_touches": _clean_num(row.get("redzone_touches")),
