@@ -124,7 +124,10 @@ def parse_odds(js, home, away):
     if total is None and not spread and fav is None:
         return None
     edge = 0.0 if fav is None else (spread if fav == home else -spread)
+    ml = lambda side: _num(_g(pick, side, "moneyLine"))
+    hml, aml = ml("homeTeamOdds"), ml("awayTeamOdds")
     return {"favorite": fav, "spread": spread, "total": total, "details": pick.get("details"),
+            "home_ml": None if hml is None else int(hml), "away_ml": None if aml is None else int(aml),
             "home_implied": None if total is None else round((total + edge) / 2, 1),
             "away_implied": None if total is None else round((total - edge) / 2, 1)}
 

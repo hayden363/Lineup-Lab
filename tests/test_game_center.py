@@ -71,6 +71,11 @@ class OddsWeatherInjuriesTest(unittest.TestCase):
         self.assertEqual((o["favorite"], o["spread"], o["total"]), ("DET", 3.5, 48.0))
         self.assertEqual((o["home_implied"], o["away_implied"]), (25.8, 22.2))
 
+    def test_moneylines_are_read_from_the_pick_center_too(self):
+        js = {"pickcenter": [{"details": "DET -3.5", "overUnder": 48.0, "homeTeamOdds": {"favorite": True, "moneyLine": -170}, "awayTeamOdds": {"moneyLine": 145}}]}
+        o = G.parse_odds(js, home="DET", away="GB")
+        self.assertEqual((o["home_ml"], o["away_ml"]), (-170, 145))
+
     def test_odds_missing_is_none_and_pickem_has_no_favorite(self):
         self.assertIsNone(G.parse_odds({}, home="DET", away="GB"))
         o = G.parse_odds({"pickcenter": [{"details": "EVEN", "overUnder": 40.0, "spread": 0}]}, home="DET", away="GB")
@@ -185,6 +190,7 @@ class EndpointTest(unittest.TestCase):
                   mock.patch.object(server.boxscore_layer, "game_summary_raw", return_value=SUMMARY),
                   mock.patch.object(server.live_scores_layer, "live_scoreboard", return_value=[self.GAME]),
                   mock.patch.object(server, "_effective_scoring", return_value=None),
+                  mock.patch.object(server.tools, "matchup_profile", return_value={"home": {"abbr": "DET"}, "away": {"abbr": "GB"}, "prediction": {"pick": "home"}}),
                   mock.patch.object(server, "_load_my_team", return_value=({}, {"my_team": {"players": [
                       {"player_id": "x", "player_display_name": "Jahmyr Gibbs", "position": "RB", "recent_team": "DET", "PROJ": 17.0,
                        "floor": 8, "ceiling": 28, "is_starter": True, "injury_status": None},
@@ -200,6 +206,16 @@ class EndpointTest(unittest.TestCase):
         td = next(p for p in body["plays"] if p["id"] == "1")
         self.assertEqual(td["fantasy"][0]["mine"], True)
         self.assertEqual(body["odds"]["favorite"], "DET")        # falls back to the scoreboard's odds
+
+    def test_the_matchup_and_the_lineup_lab_pick_are_included(self):
+        body = self.client.get("/api/live-scores/401772510/center").json()
+        self.assertEqual(body["matchup"]["prediction"]["pick"], "home")
+
+    def test_a_failing_matchup_lookup_does_not_break_the_page(self):
+        with mock.patch.object(self.server.tools, "matchup_profile", side_effect=RuntimeError("no data")):
+            r = self.client.get("/api/live-scores/401772510/center")
+        self.assertEqual(r.status_code, 200)
+        self.assertIsNone(r.json()["matchup"])
 
     def test_bad_game_id_is_400(self):
         self.assertEqual(self.client.get("/api/live-scores/abc/center").status_code, 400)

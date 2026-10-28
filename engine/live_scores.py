@@ -43,6 +43,7 @@ def _team_info(competitor):
         "name": team.get("shortDisplayName") or team.get("displayName"),
         "score": int(competitor["score"]) if str(competitor.get("score", "")).isdigit() else None,
         "winner": bool(competitor.get("winner")),
+        "record": next((r.get("summary") for r in competitor.get("records") or [] if r.get("type") == "total"), None),
     }
 
 

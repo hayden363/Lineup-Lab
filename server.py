@@ -1668,6 +1668,11 @@ def api_game_boxscore(game_id: str, scoring: Optional[dict] = Depends(scoring_fr
     return _clean(boxscore_layer.annotate(parsed, roster, pts_scoring))
 
 
+def key_team(abbr):
+    """ESPN's team abbreviation as nflverse spells it (WSH is WAS, JAC is JAX...)."""
+    return boxscore_layer._team(abbr)
+
+
 @app.get("/api/live-scores/{game_id}/center", dependencies=[Depends(boxscore_rate_limit)])
 def api_game_center(game_id: str, scoring: Optional[dict] = Depends(scoring_from_query), user=Depends(current_user)):
     """Everything the Live tab's deep dive shows for one game: the box score (see api_game_boxscore) plus the live
@@ -1699,6 +1704,13 @@ def api_game_center(game_id: str, scoring: Optional[dict] = Depends(scoring_from
                                 "floor": r.get("floor"), "ceiling": r.get("ceiling"), "status": r.get("injury_status"),
                                 "is_starter": bool(r.get("is_starter"))})
     center = game_center_layer.center(boxscore_layer.game_summary_raw(game_id), game, names, pts_scoring, mine)
+    try:
+        market = center.get("odds") or game.get("odds")
+        matchup = tools.matchup_profile(key_team(game["home"]["abbr"]), key_team(game["away"]["abbr"]), market) if game.get("home") else None
+    except Exception as e:
+        print(f"[game center] matchup profile unavailable: {e}")
+        matchup = None
+    center["matchup"] = matchup
     if center["situation"] is None:
         center["situation"] = game.get("situation")
     if center["odds"] is None:

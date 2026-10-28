@@ -193,6 +193,23 @@ class EnrichedEventTests(unittest.TestCase):
                          ("KC", 2, "right-to-left"))          # KC is the home team
         self.assertEqual(g["situation"]["yard_line"], 62)
 
+    def test_each_team_carries_its_record(self):
+        e = self._rich()
+        for c in e["competitions"][0]["competitors"]:
+            c["records"] = [{"type": "total", "summary": "4-2" if c["homeAway"] == "home" else "3-3-1"}, {"type": "home", "summary": "2-1"}]
+        g = _parse_event(e)
+        self.assertEqual((g["home"]["record"], g["away"]["record"]), ("4-2", "3-3-1"))
+
+    def test_a_missing_record_is_none(self):
+        g = _parse_event(self._rich())
+        self.assertIsNone(g["home"]["record"])
+
+    def test_moneylines_come_through_with_the_odds(self):
+        e = self._rich()
+        e["competitions"][0]["odds"][0].update({"homeTeamOdds": {"favorite": True, "moneyLine": -150}, "awayTeamOdds": {"moneyLine": 130}})
+        g = _parse_event(e)
+        self.assertEqual((g["odds"]["home_ml"], g["odds"]["away_ml"]), (-150, 130))
+
     def test_plain_events_still_parse_with_empty_extras(self):
         g = _parse_event(_event())
         self.assertEqual((g["badge"], g["network"], g["odds"], g["situation"]), (None, None, None, None))

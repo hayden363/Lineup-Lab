@@ -81,6 +81,35 @@ if __name__ == "__main__":
     unittest.main()
 
 
+class MatchupProfileTest(unittest.TestCase):
+    def test_both_teams_are_summarized_with_a_prediction(self):
+        from unittest import mock
+        from engine import tools
+        with mock.patch.object(tools, "load_bundle", return_value={"schedule": sched(), "wk": weekly()}):
+            m = tools.matchup_profile("DET", "GB", {"home_implied": 25.0, "away_implied": 21.0})
+        self.assertEqual((m["home"]["abbr"], m["away"]["abbr"]), ("DET", "GB"))
+        self.assertEqual(m["home"]["record"], "1-1-1")
+        self.assertEqual(m["home"]["pf_pg"], 21.7)
+        self.assertEqual([r["result"] for r in m["home"]["recent"]], ["W", "L", "T"])
+        self.assertEqual(m["home"]["top_players"][0]["name"], "Amon-Ra St. Brown")
+        self.assertIn(m["prediction"]["pick"], ("home", "away"))
+        self.assertTrue(m["prediction"]["used_market"])
+
+    def test_a_team_with_no_games_has_no_prediction_but_the_profile_still_builds(self):
+        from unittest import mock
+        from engine import tools
+        with mock.patch.object(tools, "load_bundle", return_value={"schedule": sched().iloc[0:0], "wk": weekly().iloc[0:0]}):
+            m = tools.matchup_profile("DET", "GB", None)
+        self.assertIsNone(m["prediction"])
+        self.assertEqual(m["home"]["recent"], [])
+
+    def test_bad_input_is_none(self):
+        from unittest import mock
+        from engine import tools
+        with mock.patch.object(tools, "load_bundle", return_value={"schedule": sched(), "wk": weekly()}):
+            self.assertIsNone(tools.matchup_profile("XYZ", "GB", None))
+
+
 class EndpointTest(unittest.TestCase):
     def setUp(self):
         from unittest import mock

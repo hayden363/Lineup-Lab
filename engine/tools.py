@@ -1184,6 +1184,31 @@ def team_profile(code, scoring=None, season=None, projected=10):
     return page
 
 
+def matchup_profile(home_abbr, away_abbr, market=None, season=None):
+    """Both teams side by side for the game dashboard: record, scoring and allowed per game, passing and rushing
+    yards, the last results, their best fantasy players, and Lineup Lab's own pick (engine/game_predict.py)."""
+    from . import game_predict, team_page
+    bundle = load_bundle(season)
+
+    def side(abbr):
+        page = team_page.build(abbr, bundle["schedule"], bundle["wk"])
+        if page is None:
+            return None
+        st = page["stats"]
+        played = [g for g in page["games"] if g["result"]][-5:]
+        return {"abbr": abbr, "record": page["record"]["text"], "games": st["games"], "pf_pg": st["points_for_pg"],
+                "pa_pg": st["points_against_pg"], "pass_yds_pg": st["pass_yds_pg"], "rush_yds_pg": st["rush_yds_pg"],
+                "recent": [{"week": g["week"], "opponent": g["opponent"], "home": g["home"], "result": g["result"],
+                            "team_score": g["team_score"], "opp_score": g["opp_score"]} for g in played],
+                "top_players": [{k: p.get(k) for k in ("player_id", "name", "position", "ppg", "headshot_url")} for p in page["players"][:4]]}
+    h, a = side(home_abbr), side(away_abbr)
+    if h is None or a is None:
+        return None
+    pred = game_predict.predict({"games": h["games"], "pf_pg": h["pf_pg"], "pa_pg": h["pa_pg"]} if h["games"] else None,
+                                {"games": a["games"], "pf_pg": a["pf_pg"], "pa_pg": a["pa_pg"]} if a["games"] else None, market)
+    return {"home": h, "away": a, "prediction": pred}
+
+
 def team_player_roster(team, season=None):
     """Names, teams and headshots of the players whose latest game was with NFL `team`: lets the favorite-team
     news tab say which player a story is about."""
