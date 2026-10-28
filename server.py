@@ -56,6 +56,7 @@ from engine import live_scores as live_scores_layer
 from engine import locks
 from engine import waivers as waivers_layer
 from engine import lineup_advisor
+from engine import game_center as game_center_layer
 from engine import ros_projection
 from engine import startsit_ai
 from engine import mail as mail_layer
@@ -1647,6 +1648,46 @@ def api_game_boxscore(game_id: str, scoring: Optional[dict] = Depends(scoring_fr
         print(f"[boxscore] scoring settings unavailable, using default: {e}")
         pts_scoring = scoring
     return _clean(boxscore_layer.annotate(parsed, roster, pts_scoring))
+
+
+@app.get("/api/live-scores/{game_id}/center", dependencies=[Depends(boxscore_rate_limit)])
+def api_game_center(game_id: str, scoring: Optional[dict] = Depends(scoring_from_query), user=Depends(current_user)):
+    """Everything the Live tab's deep dive shows for one game: the box score (see api_game_boxscore) plus the live
+    field situation, betting line, weather, injuries and a play-by-play with fantasy points, and the viewer's
+    roster players in the game with their projections. Public; roster-specific parts need a signed-in league."""
+    if not boxscore_layer.valid_game_id(game_id):
+        raise HTTPException(400, "bad game id")
+    parsed = boxscore_layer.game_boxscore(game_id)
+    roster, projections = None, []
+    if user:
+        try:
+            _, team = _load_my_team(user, None, scoring)
+            roster = team["my_team"]["players"]
+        except Exception as e:
+            print(f"[game center] no roster to highlight: {e}")
+    try:
+        pts_scoring = _effective_scoring(scoring, user)
+    except Exception as e:
+        print(f"[game center] scoring settings unavailable, using default: {e}")
+        pts_scoring = scoring
+    box = boxscore_layer.annotate(parsed, roster, pts_scoring)
+    names, mine = boxscore_layer.athlete_index(parsed, roster)
+    game = next((g for g in live_scores_layer.live_scoreboard() if str(g.get("game_id")) == str(game_id)), None) or {}
+    abbrs = {(game.get("home") or {}).get("abbr"), (game.get("away") or {}).get("abbr")} - {None}
+    for r in roster or []:
+        if r.get("recent_team") in abbrs:
+            projections.append({"player_id": r.get("player_id"), "name": r.get("player_display_name"), "position": r.get("position"),
+                                "team": r.get("recent_team"), "headshot_url": r.get("headshot_url"), "proj": r.get("PROJ"),
+                                "floor": r.get("floor"), "ceiling": r.get("ceiling"), "status": r.get("injury_status"),
+                                "is_starter": bool(r.get("is_starter"))})
+    center = game_center_layer.center(boxscore_layer.game_summary_raw(game_id), game, names, pts_scoring, mine)
+    if center["situation"] is None:
+        center["situation"] = game.get("situation")
+    if center["odds"] is None:
+        center["odds"] = game.get("odds")
+    if center["weather"] is None:
+        center["weather"] = game.get("weather")
+    return _clean({"game": game, "box": box, "projections": projections, **center})
 
 
 # ---- image proxy ----

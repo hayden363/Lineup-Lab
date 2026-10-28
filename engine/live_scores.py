@@ -24,6 +24,8 @@ import time
 
 import requests
 
+from . import game_center
+
 SCOREBOARD_URL = "https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard"
 
 # Short on purpose — live scores are exactly the kind of data where a
@@ -54,7 +56,19 @@ def _parse_event(event):
         away = next((c for c in competitors if c.get("homeAway") == "away"), None)
         if home is None or away is None:
             return None
+        home_abbr, away_abbr = _team_info(home)["abbr"], _team_info(away)["abbr"]
+        teams = {str((c.get("team") or {}).get("id")): (c.get("team") or {}).get("abbreviation") for c in competitors}
+        nets = [n for b in comp.get("broadcasts") or [] for n in (b.get("names") or [])]
+        odds = game_center.parse_odds({"pickcenter": comp.get("odds") or []}, home_abbr, away_abbr)
+        wx = game_center.parse_weather({"gameInfo": {"weather": event.get("weather") and {
+            "temperature": event["weather"].get("temperature"), "displayValue": event["weather"].get("displayWeather") or event["weather"].get("displayValue"),
+            "windSpeed": event["weather"].get("windSpeed")}, "venue": comp.get("venue")}})
         return {
+            "badge": game_center.broadcast_badge(event.get("date")),
+            "network": nets[0] if nets else None,
+            "odds": odds, "weather": wx,
+            "situation": game_center.situation(comp.get("situation"), home_abbr, away_abbr, teams)
+            if (status_type.get("state") == "in") else None,
             "game_id": event.get("id"),
             "week": (event.get("week") or {}).get("number"),
             "kickoff": event.get("date"),

@@ -166,5 +166,37 @@ class Scoreboard(unittest.TestCase):
         self.assertEqual([g["game_id"] for g in games], ["a", "b"])
 
 
+class EnrichedEventTests(unittest.TestCase):
+    def _rich(self):
+        e = _event(state="in")
+        e["date"] = "2026-11-02T01:20Z"                      # Sunday 8:20 pm ET
+        for c in e["competitions"][0]["competitors"]:
+            c["team"]["id"] = "12" if c["homeAway"] == "home" else "4"
+        comp = e["competitions"][0]
+        comp["broadcasts"] = [{"market": "national", "names": ["NBC"]}]
+        comp["odds"] = [{"details": "KC -2.5", "overUnder": 47.5}]
+        comp["situation"] = {"down": 2, "distance": 4, "possession": "12", "possessionText": "KC 38",
+                             "downDistanceText": "2nd & 4 at KC 38", "isRedZone": False}
+        comp["venue"] = {"indoor": False}
+        e["weather"] = {"displayValue": "Clear", "temperature": 55}
+        return e
+
+    def test_prime_time_badge_network_odds_and_weather_come_through(self):
+        g = _parse_event(self._rich())
+        self.assertEqual((g["badge"], g["network"]), ("SNF", "NBC"))
+        self.assertEqual((g["odds"]["favorite"], g["odds"]["spread"], g["odds"]["total"]), ("KC", 2.5, 47.5))
+        self.assertEqual((g["weather"]["temp"], g["weather"]["indoor"]), (55, False))
+
+    def test_live_situation_is_placed_on_the_field(self):
+        g = _parse_event(self._rich())
+        self.assertEqual((g["situation"]["possession"], g["situation"]["down"], g["situation"]["direction"]),
+                         ("KC", 2, "right-to-left"))          # KC is the home team
+        self.assertEqual(g["situation"]["yard_line"], 62)
+
+    def test_plain_events_still_parse_with_empty_extras(self):
+        g = _parse_event(_event())
+        self.assertEqual((g["badge"], g["network"], g["odds"], g["situation"]), (None, None, None, None))
+
+
 if __name__ == "__main__":
     unittest.main()

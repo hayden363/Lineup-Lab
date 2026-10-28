@@ -34,6 +34,7 @@ SUMMARY_URL = "https://site.api.espn.com/apis/site/v2/sports/football/nfl/summar
 TTL_SECONDS = 20          # same freshness as the scoreboard; many tabs share one fetch
 CACHE_MAX = 64            # games kept; the oldest is dropped past this
 _CACHE = {}               # game_id -> (fetched_at, parsed)
+_RAW = {}                 # game_id -> the summary JSON behind that parse (the game center reads plays, odds, weather from it)
 
 SKILL = ("QB", "RB", "WR", "TE")
 GROUP_ORDER = {"QB": 0, "RB": 1, "FB": 1, "WR": 2, "TE": 3, "K": 4, "PK": 4}   # everyone else (defense, line) follows
@@ -208,11 +209,37 @@ def game_boxscore(game_id, force=False):
     try:
         resp = requests.get(SUMMARY_URL, params={"event": game_id}, timeout=5)
         resp.raise_for_status()
-        parsed = parse_summary(resp.json())
+        raw = resp.json()
+        parsed = parse_summary(raw)
     except Exception as e:
         print(f"[boxscore] couldn't fetch game {game_id}: {e}")
         return hit[1] if hit else {"teams": []}
     if len(_CACHE) >= CACHE_MAX:
         _CACHE.pop(min(_CACHE, key=lambda k: _CACHE[k][0]))
     _CACHE[game_id] = (now, parsed)
+    _RAW[game_id] = raw
+    for k in [k for k in _RAW if k not in _CACHE]:
+        _RAW.pop(k, None)
     return parsed
+
+
+def game_summary_raw(game_id):
+    """The raw summary JSON for a game already fetched by game_boxscore (or {})."""
+    return _RAW.get(game_id) or {}
+
+
+def athlete_index(parsed, roster):
+    """({athlete_id: (name, position, team)}, {athlete ids on the viewer's roster}) for a parsed box score, using the
+    same name+position+team matching annotate() uses for `mine`."""
+    mine_keys = {}
+    for r in roster or []:
+        nm = r.get("player_display_name") or r.get("name")
+        mine_keys[consensus.match_key(nm, r.get("position"))] = _team(r.get("recent_team") or r.get("team"))
+    names, mine = {}, set()
+    for t in (parsed or {}).get("teams", []):
+        for p in t.get("players", []):
+            names[p["athlete_id"]] = (p.get("name"), p.get("position"), p.get("team") or t.get("abbr"))
+            want = mine_keys.get(consensus.match_key(p.get("name"), p.get("position")))
+            if want is not None and (not want or want == _team(p.get("team") or t.get("abbr"))):
+                mine.add(p["athlete_id"])
+    return names, mine
