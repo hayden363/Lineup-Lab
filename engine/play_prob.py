@@ -22,7 +22,7 @@ is expected to miss PRACTICE does not.
 import json
 import os
 import re
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
 try:
     from zoneinfo import ZoneInfo
@@ -77,7 +77,12 @@ def practice_from_note(note, updated=None, today=None):
     if updated:
         try:
             when = datetime.fromisoformat(str(updated).replace("Z", "+00:00")).date()
-            if ((today or date.today()) - when).days > NOTE_MAX_AGE_DAYS:
+            now = today or date.today()
+            if (now - when).days > NOTE_MAX_AGE_DAYS:
+                return None
+            # A note belongs to the game week it was written in: from the Tuesday after that week's Monday night on,
+            # that game is over and the note is about last week, whatever its age in days.
+            if now >= when - timedelta(days=when.weekday()) + timedelta(days=8):
                 return None
         except ValueError:
             return None

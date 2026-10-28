@@ -16,6 +16,18 @@ class PlayProbTests(unittest.TestCase):
     WED, THU, FRI = "2026-10-21T18:00Z", "2026-10-22T18:00Z", "2026-10-23T18:00Z"
     DNP = "Smith (hamstring) was a non-participant in practice."
 
+    def test_last_weeks_friday_dnp_never_counts_once_that_game_has_been_played(self):
+        tuesday, wednesday = date(2026, 10, 27), date(2026, 10, 28)       # the Friday note is 4 and 5 days old
+        for today in (tuesday, wednesday):
+            r = play_prob.play_probability("WR", "Questionable", self.note(self.DNP, self.FRI), today)
+            self.assertEqual(r["p_play"], 0.92, today)
+        monday = date(2026, 10, 26)                                        # Monday night is still that week's game
+        self.assertEqual(play_prob.play_probability("WR", "Questionable", self.note(self.DNP, self.FRI), monday)["p_play"], 0.60)
+
+    def test_a_stale_out_note_does_not_zero_him_the_next_week(self):
+        r = play_prob.play_probability("WR", "Questionable", self.note("Smith is expected to miss the game.", self.FRI), date(2026, 10, 27))
+        self.assertEqual(r["p_play"], 0.92)
+
     def test_only_questionable_and_doubtful(self):
         self.assertIsNone(play_prob.play_probability("WR", "Out"))
         self.assertIsNone(play_prob.play_probability("WR", "IR"))
