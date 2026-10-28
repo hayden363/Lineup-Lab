@@ -25,7 +25,7 @@ from . import defense as defense_layer
 from . import injury_impact, play_prob
 from . import profile
 from . import consensus
-from . import pvs
+from . import aging, pvs
 from . import value as value_layer
 from . import weekly_proj
 from . import projmodel
@@ -676,6 +676,13 @@ def shrunk_rate(board, position, scoring=None, season=None):
             board["history_weight"] = board.get("history_weight", pd.Series(0.0, index=board.index))
             board.loc[have, "history_weight"] = fitted.loc[have, "history_weight"].round(3)
             board.loc[have, "FORM_ADJ"] = 0.0    # recent form is already inside the fitted rate
+    if season is not None and "history_weight" in board.columns:
+        # Past seasons describe a younger player: move the history's share of the rate along the age curve.
+        ages = aging.ages(season).reindex(board.index)
+        board["age"] = ages.round(1)
+        mult = aging.multiplier(position, ages, board["history_weight"])
+        board["age_factor"] = mult.round(3)
+        out = out * mult
     return out
 
 

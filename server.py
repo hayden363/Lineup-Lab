@@ -636,7 +636,7 @@ _OVERALL_COLUMNS = [
     "PROJ", "VOR", "VALUE", "replacement_proj", "ecr", "ecr_sd", "ecr_gap", "SCORE", "FORM", "games",
     "fpts_per_game", "floor", "ceiling", "cv", "boom_rate", "bust_rate", "bye_week", "stat_line",
     "injury_status", "injury_body_part", "weeks_since_played",
-    "PVS", "PVS_tier", "pvs_vorp", "pvs_vol", "pvs_ceil", "pvs_perf", "pvs_match",
+    "PVS", "PVS_tier", "pvs_vorp", "pvs_vol", "pvs_ceil", "pvs_perf", "pvs_match", "age", "age_factor",
 ]
 
 
