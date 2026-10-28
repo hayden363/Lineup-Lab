@@ -13,6 +13,55 @@ from . import news as news_layer
 
 FANTASY_POS = ("QB", "RB", "WR", "TE")
 
+DIVISIONS = {}
+for _div, _teams in {
+    "AFC East": "BUF MIA NE NYJ", "AFC North": "BAL CIN CLE PIT", "AFC South": "HOU IND JAX TEN", "AFC West": "DEN KC LV LAC",
+    "NFC East": "DAL NYG PHI WAS", "NFC North": "CHI DET GB MIN", "NFC South": "ATL CAR NO TB", "NFC West": "ARI LA SF SEA",
+}.items():
+    for _t in _teams.split():
+        DIVISIONS[_t] = _div
+
+_ORD = {1: "1st", 2: "2nd", 3: "3rd", 4: "4th"}
+
+
+def _record_and_diff(code, schedule):
+    w = l = t = diff = 0
+    g = schedule[(schedule["home_team"] == code) | (schedule["away_team"] == code)]
+    for r in g.itertuples():
+        if pd.isna(r.home_score) or pd.isna(r.away_score):
+            continue
+        mine, theirs = (r.home_score, r.away_score) if r.home_team == code else (r.away_score, r.home_score)
+        diff += mine - theirs
+        w, l, t = w + (mine > theirs), l + (mine < theirs), t + (mine == theirs)
+    n = w + l + t
+    return ((w + 0.5 * t) / n if n else 0.0), diff, n
+
+
+def standing(code, schedule):
+    """{rank, division, text}: the team's place among its four division rivals by win percentage, then point
+    differential. rank is None before anyone has played."""
+    div = DIVISIONS.get(code)
+    if not div:
+        return {"rank": None, "division": None, "text": None}
+    mates = [t for t, d in DIVISIONS.items() if d == div]
+    table = {t: _record_and_diff(t, schedule) for t in mates}
+    if not any(n for _, _, n in table.values()):
+        return {"rank": None, "division": div, "text": None}
+    order = sorted(mates, key=lambda t: (-table[t][0], -table[t][1], t))
+    rank = order.index(code) + 1
+    return {"rank": rank, "division": div, "text": f"{_ORD[rank]} {div}"}
+
+
+def streak(games):
+    """The run of identical results at the end of the played games: {type: W|L|T|None, n}."""
+    played = [g["result"] for g in games if g.get("result")]
+    if not played:
+        return {"type": None, "n": 0}
+    n = 1
+    while n < len(played) and played[-1 - n] == played[-1]:
+        n += 1
+    return {"type": played[-1], "n": n}
+
 
 def _r1(x):
     return round(float(x), 1)
@@ -69,5 +118,7 @@ def build(code, schedule, wk):
             players.append({"player_id": pid, "name": last["player_display_name"], "position": last["position"], "headshot_url": shot,
                             "ppg": _r1(g["fantasy_points_ppr"].mean()), "games": int(g["week"].nunique())})
         players.sort(key=lambda p: -p["ppg"] * min(p["games"], 4))       # a one-game cameo doesn't outrank a starter
-    return {"team": code, "record": {"wins": int(w), "losses": int(l), "ties": int(t), "text": f"{w}-{l}" + (f"-{t}" if t else "")},
+    from . import profile
+    return {"team": code, "standing": standing(code, schedule), "streak": streak(games),
+            "bye_week": profile.bye_weeks(schedule).get(code), "record": {"wins": int(w), "losses": int(l), "ties": int(t), "text": f"{w}-{l}" + (f"-{t}" if t else "")},
             "points_for": int(pf), "points_against": int(pa), "games": games, "next_game": nxt, "stats": stats, "players": players}

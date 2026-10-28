@@ -200,3 +200,47 @@ class TeamPageSpeedTests(unittest.TestCase):
         import os
         theme = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "static/theme.js")).read()
         self.assertIn('"/api/team/" + encodeURIComponent(code) + "?lite=1"', theme)
+
+
+class StandingsTests(unittest.TestCase):
+    def sched_div(self):
+        # NFC North after three weeks: DET 3-0, GB 2-1, CHI 1-2, MIN 0-3. Rows are (week, away, home, away_score, home_score).
+        rows = [(1, "GB", "DET", 10, 20), (2, "CHI", "DET", 7, 24), (3, "MIN", "DET", 3, 30), (1, "CHI", "GB", 13, 17),
+                (2, "MIN", "GB", 6, 14), (1, "MIN", "CHI", 10, 14)]
+        return pd.DataFrame([(w, a, h, as_, hs, "REG", "2026-09-1%d" % w, 40.0, 3.0) for w, a, h, as_, hs in rows],
+                            columns=["week", "away_team", "home_team", "away_score", "home_score", "game_type", "gameday", "total_line", "spread_line"])
+
+    def test_division_rank_comes_from_the_win_percentage_of_the_four_teams(self):
+        s = T.standing("DET", self.sched_div())
+        self.assertEqual((s["rank"], s["division"], s["text"]), (1, "NFC North", "1st NFC North"))
+        self.assertEqual(T.standing("GB", self.sched_div())["text"], "2nd NFC North")
+        self.assertEqual(T.standing("MIN", self.sched_div())["text"], "4th NFC North")
+
+    def test_ties_in_the_standings_break_on_point_differential(self):
+        rows = [(1, "A", "DET", 0, 7, "REG"), (1, "GB", "B", 10, 0, "REG")]       # DET beat A by 7, GB beat B by 10: both 1-0
+        df = pd.DataFrame([(w, a, h, as_, hs, g, "2026-09-13", 40.0, 3.0) for w, a, h, as_, hs, g in rows],
+                          columns=["week", "away_team", "home_team", "away_score", "home_score", "game_type", "gameday", "total_line", "spread_line"])
+        self.assertEqual(T.standing("GB", df)["rank"], 1)
+        self.assertEqual(T.standing("DET", df)["rank"], 2)
+
+    def test_before_any_game_there_is_no_rank_text(self):
+        df = sched().iloc[0:0]
+        self.assertIsNone(T.standing("DET", df)["rank"])
+
+    def test_a_win_streak_counts_back_from_the_last_game(self):
+        games = [{"result": "L"}, {"result": "W"}, {"result": "W"}, {"result": "W"}, {"result": None}]
+        self.assertEqual(T.streak(games), {"type": "W", "n": 3})
+        self.assertEqual(T.streak([{"result": "W"}, {"result": "L"}]), {"type": "L", "n": 1})
+        self.assertEqual(T.streak([]), {"type": None, "n": 0})
+        self.assertEqual(T.streak([{"result": "T"}]), {"type": "T", "n": 1})
+
+    def test_build_carries_standing_streak_and_bye_week(self):
+        p = T.build("DET", sched(), weekly())
+        self.assertIn("standing", p)
+        self.assertEqual(p["streak"]["type"], "T")
+        self.assertIsNone(p["bye_week"])                   # DET plays every week of the fixture
+
+    def test_every_team_has_a_division(self):
+        self.assertEqual(len(T.DIVISIONS), 32)
+        from collections import Counter
+        self.assertEqual(set(Counter(T.DIVISIONS.values()).values()), {4})

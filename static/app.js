@@ -988,6 +988,7 @@ function closeModal() {
   clearInterval(gameModalTimer);      // a closed box score must stop polling
   teamModalSeq++;                     // and a team page still loading must not paint into the next modal
   $("#modal-root").innerHTML = "";
+  document.body.classList.remove("tp-open");
   syncModalScrollLock();
 }
 
@@ -3996,6 +3997,7 @@ async function loadMyTeam(week, refresh) {
     renderMyTeamWeekSelector(data);
     state.notifications = computeInjuryNotifications(data.my_team);
     state.myTeamAbbrs = rosterTeamCounts(data.my_team);
+    if (window.ThemeFX) ThemeFX.setRoster(data.my_team.players || []);
     renderNotifBell();
     const onLiveWeek = data.live_week && data.live_week === data.nfl_week;
     const unknown = [...data.my_team.players].filter((p) => p.unresolved).length;
@@ -4556,6 +4558,7 @@ function teamPageMarkup(d) {
 async function openTeamModal(code) {
   const seq = ++teamModalSeq;
   const root = $("#modal-root");
+  document.body.classList.add("tp-open");
   root.innerHTML = `<div class="modal-backdrop"><div class="modal tp-modal"><div class="modal-header"><div></div><button class="modal-close" aria-label="Close">✕</button></div>
     <div id="tp-body">${skeletonRows(6, 2)}</div></div></div>`;
   syncModalScrollLock();
@@ -5422,6 +5425,7 @@ async function loadSlate() {
     const d = await api("/api/slate");
     state.slateWeek = d.week;
     state.byeTeams = d.byes || {};
+    if (window.ThemeFX) ThemeFX.setSlate({ week: d.week, byes: state.byeTeams });
   } catch (e) { /* keep whatever we had */ }
 }
 setInterval(loadSlate, 60 * 60 * 1000);

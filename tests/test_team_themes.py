@@ -553,6 +553,95 @@ class GameStripTests(unittest.TestCase):
         self.assertNotIn("<img", out)
 
 
+class FranchiseStripTests(unittest.TestCase):
+    G = """const mk = (state, hs, as_, extra) => Object.assign({ game_id: "1", state, period: 3, display_clock: "10:14", kickoff: "2026-11-01T18:00:00Z",
+        home: { abbr: "DET", score: hs, winner: false }, away: { abbr: "GB", score: as_, winner: false }, situation: null }, extra || {});"""
+
+    def pill(self, expr, slate="null"):
+        return run_fx(self.G + f"return ThemeFX.pillState('DET', {expr}, {slate});")
+
+    def test_pre_game_shows_the_opponent_day_and_time(self):
+        out = self.pill('[mk("pre", null, null)]')
+        self.assertEqual(out["kind"], "pre")
+        self.assertRegex(out["text"], r"^vs GB \u2022 [A-Z]{3} \d{1,2}:\d{2} (AM|PM)$")
+
+    def test_an_away_game_reads_at(self):
+        out = run_fx(self.G + "return ThemeFX.pillState('GB', [mk('pre', null, null)], null);")
+        self.assertTrue(out["text"].startswith("@ DET"))
+
+    def test_live_shows_the_score_with_my_team_first_and_the_clock(self):
+        out = self.pill('[mk("in", 24, 17)]')
+        self.assertEqual((out["kind"], out["text"]), ("live", "DET 24 - 17 GB \u2022 Q3 10:14"))
+        self.assertFalse(out["rz"])
+        away = run_fx(self.G + "return ThemeFX.pillState('GB', [mk('in', 24, 17)], null);")
+        self.assertEqual(away["text"], "GB 17 - 24 DET \u2022 Q3 10:14")
+
+    def test_the_pill_goes_crimson_in_the_red_zone_only_when_my_team_has_the_ball(self):
+        mine = self.pill('[mk("in", 24, 17, { situation: { possession: "DET", is_red_zone: true } })]')
+        theirs = self.pill('[mk("in", 24, 17, { situation: { possession: "GB", is_red_zone: true } })]')
+        self.assertTrue(mine["rz"])
+        self.assertFalse(theirs["rz"])
+
+    def test_final_shows_the_result_from_my_teams_side(self):
+        self.assertEqual(self.pill('[mk("post", 31, 24)]')["text"], "FINAL: W 31-24")
+        self.assertEqual(self.pill('[mk("post", 20, 24)]')["text"], "FINAL: L 20-24")
+        self.assertEqual(self.pill('[mk("post", 24, 24)]')["text"], "FINAL: T 24-24")
+        self.assertEqual(run_fx(self.G + "return ThemeFX.pillState('GB', [mk('post', 31, 24)], null);")["text"], "FINAL: L 24-31")
+
+    def test_a_bye_week_shows_when_there_is_no_game_and_the_slate_says_so(self):
+        out = self.pill("[]", '{ week: 8, byes: { DET: 8 } }')
+        self.assertEqual((out["kind"], out["text"]), ("bye", "BYE WEEK"))
+        self.assertIsNone(self.pill("[]", '{ week: 8, byes: { DET: 6 } }'))
+        self.assertIsNone(self.pill("[]"))
+
+    def test_espn_style_abbreviations_still_match(self):
+        out = run_fx("""return ThemeFX.pillState("WAS", [{ game_id: "9", state: "in", period: 1, display_clock: "5:00", home: { abbr: "WSH", score: 3 }, away: { abbr: "NYG", score: 0 } }], null);""")
+        self.assertEqual(out["text"], "WAS 3 - 0 NYG \u2022 Q1 5:00")
+
+    def test_the_subline_is_record_and_division_place_and_the_streak_chip_needs_three_wins(self):
+        d = '{ record: { text: "6-1" }, standing: { text: "1st NFC North" }, streak: { type: "W", n: 3 } }'
+        self.assertEqual(run_fx(f"return ThemeFX.subline({d});"), "6-1 \u2022 1st NFC North")
+        self.assertEqual(run_fx(f"return ThemeFX.streakText({d});"), "3-Game Win Streak \U0001F525")
+        self.assertIsNone(run_fx('return ThemeFX.streakText({ streak: { type: "W", n: 2 } });'))
+        self.assertIsNone(run_fx('return ThemeFX.streakText({ streak: { type: "L", n: 4 } });'))
+        self.assertEqual(run_fx('return ThemeFX.subline({ record: { text: "0-0" }, standing: { text: null } });'), "0-0")
+
+    def test_synergy_counts_the_roster_players_on_this_team_who_can_play(self):
+        out = run_fx("""const roster = [{ recent_team: "DET" }, { recent_team: "DET", injury_status: "Questionable" }, { recent_team: "DET", injury_status: "Out" },
+          { recent_team: "DET", on_bye: true }, { recent_team: "KC" }, { recent_team: "WSH" }];
+          return [ThemeFX.synergy(roster, "DET"), ThemeFX.synergy(roster, "WAS"), ThemeFX.synergy([], "DET"), ThemeFX.synergy(null, "DET")];""")
+        self.assertEqual(out[0], {"total": 4, "active": 2})
+        self.assertEqual(out[1], {"total": 1, "active": 1})
+        self.assertEqual(out[2], {"total": 0, "active": 0})
+        self.assertEqual(out[3], {"total": 0, "active": 0})
+
+    def test_a_touchdown_is_a_jump_of_six_or_more(self):
+        out = run_fx("return [ThemeFX.isTouchdown(10, 17), ThemeFX.isTouchdown(10, 16), ThemeFX.isTouchdown(10, 13), ThemeFX.isTouchdown(null, 7), ThemeFX.isTouchdown(10, 10)];")
+        self.assertEqual(out, [True, True, False, False, False])
+
+    def test_scoring_a_touchdown_flashes_the_strip_once_and_clears_it(self):
+        out = run_fx(HERO_HOST + """const cls = new Set(); hero.querySelector = (sel) => (sel === ".th-band" ? { classList: { add: (c) => cls.add(c), remove: (c) => cls.delete(c), toggle: (c, on) => on ? cls.add(c) : cls.delete(c) } } : null);
+          TeamTheme.apply("DET");
+          const g = (s) => [{ game_id: "1", state: "in", period: 2, display_clock: "3:00", home: { abbr: "DET", score: s }, away: { abbr: "GB", score: 3 } }];
+          ThemeFX.setGames(g(7)); const before = cls.has("td-flash");
+          ThemeFX.setGames(g(14)); const during = cls.has("td-flash");
+          const t = window.__timers[window.__timers.length - 1]; t.fn();
+          return { before, during, after: cls.has("td-flash"), live: cls.has("is-live"), ms: t.ms };""")
+        self.assertEqual((out["before"], out["during"], out["after"], out["live"]), (False, True, False, True))
+        self.assertGreaterEqual(out["ms"], 1000)
+
+    def test_the_strip_has_the_crest_glow_name_synergy_and_pill_slots(self):
+        out = run_fx(HERO_HOST + 'TeamTheme.apply("DET"); ThemeFX.renderHero(); return hero.innerHTML;')
+        for needle in ("th-crest", "th-glow", "th-logo", "th-title", "th-sub", "th-syn", "th-pill", "Detroit", "Lions"):
+            self.assertIn(needle, out)
+
+    def test_motion_states_exist_in_the_stylesheet_and_respect_reduced_motion(self):
+        css = open(os.path.join(ROOT, "static/style.css")).read()
+        for sel in (".th-band:hover", ".th-band.is-live", ".th-band.td-flash", ".th-pill.rz", ".th-pill.bye", "body.tp-open .th-band", "@keyframes thSweep", "@keyframes thBreathe", "@keyframes thDouble"):
+            self.assertIn(sel, css)
+        self.assertRegex(css, r"prefers-reduced-motion: reduce\) \{[^}]*\.th-band")
+
+
 class AtmosphereWiringTests(WiringTests):
     def test_hero_mount_is_at_the_top_of_the_app_above_every_tab(self):
         html = self.read("static/index.html")

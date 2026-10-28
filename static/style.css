@@ -5393,3 +5393,67 @@ body { font-variant-numeric: tabular-nums; background: var(--bg); }
   .toast-root, #toast-root { bottom: calc(84px + env(safe-area-inset-bottom)); }
 }
 @media (prefers-reduced-motion: reduce) { .bn-live-dot { animation: none; } }
+
+
+/* ---- franchise strip: crest + ambient glow, name and standing, roster synergy, game-state pill ---- */
+#team-hero { margin: 18px 0 12px; }
+.th-band { --tc: var(--tm, var(--accent)); --tc2: var(--team-secondary, var(--accent)); overflow: visible; align-items: center; justify-content: space-between; gap: 18px;
+  padding: 12px 20px 12px 96px; min-height: 64px; border-radius: 16px; border: 1px solid color-mix(in srgb, var(--tc) 30%, transparent);
+  background: rgba(15, 20, 32, 0.8); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+  transition: transform .3s cubic-bezier(.34,1.56,.64,1), border-color .3s, box-shadow .3s; }
+.th-band::before { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; background: linear-gradient(180deg, color-mix(in srgb, var(--tc) 0%, transparent), transparent); transition: background .4s; }
+.th-band::after { content: ""; position: absolute; inset: -1px; border-radius: inherit; padding: 1px; pointer-events: none; opacity: 0; transition: opacity .3s;
+  background: linear-gradient(120deg, var(--tc), var(--tc2)); -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; }
+.th-band:hover { transform: scale(1.015); border-color: transparent; box-shadow: 0 0 25px rgba(var(--tm-rgb, 52,211,153), .25); }
+.th-band:hover::after { opacity: 1; }
+.th-band:hover .th-sheen { transform: translateX(120%); transition: transform .8s ease; }
+.th-band:active { transform: scale(.995); }
+.th-sheen { position: absolute; inset: 0; border-radius: inherit; overflow: hidden; pointer-events: none; }
+.th-sheen::before { content: ""; position: absolute; top: 0; bottom: 0; left: -60%; width: 40%; transform: translateX(0) skewX(-18deg);
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.12), transparent); }
+.th-band:hover .th-sheen::before { animation: thSweep .9s ease; }
+@keyframes thSweep { from { left: -60%; } to { left: 130%; } }
+
+.th-crest { position: absolute; left: 14px; top: -18px; width: 68px; height: 68px; display: grid; place-items: center; pointer-events: none; }
+.th-glow { position: absolute; inset: -26px; border-radius: 50%; background: radial-gradient(closest-side, rgba(var(--tm-rgb, 52,211,153), .2), transparent 72%); filter: blur(10px); }
+.th-logo { position: relative; width: 56px; height: 56px; object-fit: contain;
+  filter: drop-shadow(0 6px 10px rgba(0,0,0,.55)) drop-shadow(0 1px 0 rgba(255,255,255,.35)) drop-shadow(0 -1px 0 rgba(0,0,0,.4)) saturate(1.1) contrast(1.05); }
+.th-abbr { position: relative; width: 56px; height: 56px; font-size: 16px; border-radius: 14px; box-shadow: 0 6px 14px rgba(0,0,0,.5); }
+
+.th-title { display: flex; flex-direction: column; gap: 4px; min-width: 0; flex: 1 1 auto; position: relative; }
+.th-text { display: block; line-height: 1.05; }
+.th-city, .th-name { display: inline; font-family: inherit; font-size: 14px; font-weight: 900; letter-spacing: .06em; text-transform: uppercase; color: var(--text); }
+.th-name { color: var(--text); }
+.th-sub { display: flex; flex-wrap: wrap; gap: 4px 10px; font-family: var(--mono); font-size: 11px; color: #94a3b8; min-height: 14px; }
+.th-streak { color: #fb923c; }
+.th-band::selection { background: transparent; }
+
+.th-syn { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; position: relative; }
+.th-dots { display: inline-flex; gap: 4px; }
+.th-dot { width: 7px; height: 7px; border-radius: 50%; background: #334155; }
+.th-dot.on { background: var(--tc); box-shadow: 0 0 8px var(--tc), 0 0 2px #fff inset; }
+.th-syn-txt { font-family: var(--mono); font-size: 11px; color: #94a3b8; white-space: nowrap; }
+.th-syn:not(:empty) .th-syn-txt { padding: 3px 8px; border-radius: 8px; border: 1px solid rgba(100,116,139,.35); }
+
+.th-pill { flex: 0 0 auto; position: relative; padding: 4px 12px; border-radius: 999px; font-family: var(--mono); font-size: 12px; font-weight: 700; white-space: nowrap;
+  background: rgba(15, 23, 42, .9); border: 1px solid rgba(51, 65, 85, .6); color: #94a3b8; }
+.th-pill.hide { display: none; }
+.th-pill.k-live { color: #4ade80; border-color: rgba(74,222,128,.5); box-shadow: 0 0 14px rgba(74,222,128,.25); }
+.th-pill.k-post { color: var(--text); }
+.th-pill.bye, .th-pill.k-bye { color: #94a3b8; background: repeating-linear-gradient(135deg, rgba(15,23,42,.9) 0 7px, rgba(51,65,85,.55) 7px 14px); }
+.th-pill.rz { color: #fecaca; border-color: rgba(244,63,94,.8); box-shadow: 0 0 18px rgba(244,63,94,.55); animation: thRz 1.1s ease-in-out infinite; }
+@keyframes thRz { 50% { box-shadow: 0 0 6px rgba(244,63,94,.25); border-color: rgba(244,63,94,.4); } }
+
+/* gameday: a slow breathing glow around the whole strip while the team is on the field */
+.th-band.is-live { border-color: color-mix(in srgb, var(--tc) 55%, transparent); animation: thBreathe 3.6s ease-in-out infinite; }
+@keyframes thBreathe { 0%, 100% { box-shadow: 0 0 0 rgba(var(--tm-rgb, 52,211,153), 0); } 50% { box-shadow: 0 0 28px rgba(var(--tm-rgb, 52,211,153), .35); } }
+/* touchdown: a quick double pulse */
+.th-band.td-flash { animation: thDouble .75s ease-out 1; }
+@keyframes thDouble { 0%, 45% { box-shadow: 0 0 0 rgba(var(--tm-rgb), 0); } 15% { box-shadow: 0 0 0 4px rgba(var(--tm-rgb), .7), 0 0 36px rgba(var(--tm-rgb), .7); } 60% { box-shadow: 0 0 0 4px rgba(var(--tm-rgb), .7), 0 0 36px rgba(var(--tm-rgb), .7); } 100% { box-shadow: 0 0 0 rgba(var(--tm-rgb), 0); } }
+
+/* in the team tab: neon bottom line under the name and a top-to-bottom team wash */
+body.tp-open .th-band::before { background: linear-gradient(180deg, color-mix(in srgb, var(--tc) 15%, transparent), transparent); }
+body.tp-open .th-title::after { content: ""; position: absolute; left: 0; right: 0; bottom: -8px; height: 2px; border-radius: 2px; background: var(--tc); box-shadow: 0 0 10px var(--tc), 0 0 2px var(--tc); }
+
+@media (max-width: 720px) { .th-band { flex-wrap: wrap; padding-left: 88px; gap: 8px 12px; } .th-syn { order: 3; } .th-pill { margin-left: auto; } .th-city { display: inline; } }
+@media (prefers-reduced-motion: reduce) { .th-band, .th-band.is-live, .th-band.td-flash, .th-pill.rz { animation: none; transition: none; } .th-band:hover { transform: none; } .th-band:hover .th-sheen::before { animation: none; } }

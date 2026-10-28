@@ -517,6 +517,8 @@
     }));
   }
 
+  function fxCall(name, arg) { try { if (window.ThemeFX) window.ThemeFX[name](arg); } catch (e) { /* the team strip is cosmetic */ } }
+
   async function loadRoster() {
     if (typeof state === "undefined" || !state.user || Date.now() - rosterAt < 120000) return;
     rosterAt = Date.now();
@@ -524,6 +526,7 @@
       var d = await api("/api/myteam");
       roster = d.my_team.players || [];
       state.myTeamAbbrs = rosterTeamCounts(d.my_team);
+      fxCall("setRoster", roster);
     } catch (e) { /* no league connected: nothing is highlighted */ }
   }
 
@@ -549,6 +552,7 @@
         if (side) { flashes[g.game_id] = side; changed.push(g.game_id); }
       });
       games = next;
+      fxCall("setGames", games);
       updateNavDot();
       await loadBoxes();
       renderGrid(!quiet);
@@ -656,6 +660,6 @@
   };
 
   async function refreshDotOnly() {
-    try { games = (await api("/api/live-scores")).games || []; updateNavDot(); } catch (e) { /* leave the marker as it was */ }
+    try { games = (await api("/api/live-scores")).games || []; fxCall("setGames", games); updateNavDot(); } catch (e) { /* leave the marker as it was */ }
   }
 })();
