@@ -65,7 +65,8 @@ def build(code, schedule, wk):
         base = team_wk[team_wk["position"].isin(FANTASY_POS)]
         for pid, g in base.groupby("player_id"):
             last = g.sort_values("week").iloc[-1]
-            players.append({"player_id": pid, "name": last["player_display_name"], "position": last["position"],
+            shot = last["headshot_url"] if "headshot_url" in g.columns and isinstance(last["headshot_url"], str) else None
+            players.append({"player_id": pid, "name": last["player_display_name"], "position": last["position"], "headshot_url": shot,
                             "ppg": _r1(g["fantasy_points_ppr"].mean()), "games": int(g["week"].nunique())})
         players.sort(key=lambda p: -p["ppg"] * min(p["games"], 4))       # a one-game cameo doesn't outrank a starter
     return {"team": code, "record": {"wins": int(w), "losses": int(l), "ties": int(t), "text": f"{w}-{l}" + (f"-{t}" if t else "")},

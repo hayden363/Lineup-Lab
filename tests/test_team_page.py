@@ -60,6 +60,14 @@ class TeamPageTest(unittest.TestCase):
         self.assertEqual(r[0]["ppg"], 20.0)
         self.assertEqual(r[0]["player_id"], "w")
 
+    def test_roster_rows_carry_headshots_when_the_data_has_them(self):
+        w = weekly()
+        w["headshot_url"] = w["player_id"].map({"w": "https://a.espncdn.com/w.png", "q": None})
+        by = {x["player_id"]: x for x in T.build("DET", sched(), w)["players"]}
+        self.assertEqual(by["w"]["headshot_url"], "https://a.espncdn.com/w.png")
+        self.assertIsNone(by["q"]["headshot_url"])
+        self.assertIsNone(T.build("DET", sched(), weekly())["players"][0]["headshot_url"])     # column absent
+
     def test_a_team_with_no_games_or_players_still_builds(self):
         p = T.build("DET", sched().iloc[0:0], weekly().iloc[0:0])
         self.assertEqual((p["games"], p["players"], p["next_game"]), ([], [], None))

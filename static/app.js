@@ -4539,7 +4539,7 @@ function teamPageHtml(d) {
   const s = d.stats || {};
   const stat = (label, v) => `<div class="tp-stat"><b>${v == null ? "–" : FMT.d1(v)}</b><span>${label}</span></div>`;
   const players = (d.players || []).map((p) => `<button type="button" class="tp-player" data-player="${esc(p.player_id)}"${n ? ` data-opp="${esc(n.opponent)}"` : ""}>
-      <img class="tp-photo" src="${initialsAvatarUri(p.name)}" alt="">
+      <img class="tp-photo" ${headshotAttrs({ headshot_url: p.headshot_url, player_display_name: p.name })} alt="" loading="lazy">
       <span class="tp-pname">${esc(p.name)}<small>${esc(p.position)}${p.injury_status ? ` · ${esc(p.injury_status)}` : ""}</small></span>
       <span class="tp-pnum"><b>${p.proj != null ? FMT.d1(p.proj) : "–"}</b><small>proj</small></span>
       <span class="tp-pnum"><b>${FMT.d1(p.ppg)}</b><small>avg</small></span>
