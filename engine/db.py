@@ -29,6 +29,8 @@ import uuid
 from contextlib import contextmanager
 
 import bcrypt
+
+from . import security
 import psycopg
 from psycopg import sql
 from psycopg.rows import dict_row
@@ -124,6 +126,9 @@ def _hash_password(password):
     return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
 
 
+_DUMMY_HASH = bcrypt.hashpw(b"not-a-real-password", bcrypt.gensalt()).decode("utf-8")
+
+
 def _check_password(password, hashed):
     try:
         return bcrypt.checkpw(password.encode("utf-8"), hashed.encode("utf-8"))
@@ -147,8 +152,9 @@ def create_user(username, email, password):
         raise AuthError("Username must be 3-20 characters: letters, numbers, underscore only.")
     if not EMAIL_RE.match(email):
         raise AuthError("That doesn't look like a valid email address.")
-    if not password or len(password) < 8:
-        raise AuthError("Password must be at least 8 characters.")
+    weak = security.check_password(password, username, email)
+    if weak:
+        raise AuthError(weak)
 
     with _conn() as c:
         c.execute(
@@ -178,14 +184,12 @@ def authenticate(identifier, password):
             (identifier, identifier),
         )
         row = c.fetchone()
-    if row and not row["password_hash"]:
-        # OAuth-only account (see find_or_create_oauth_user's "" sentinel) —
-        # never had a password to check, so say so instead of a generic
-        # "wrong password" that'd send someone hunting for one they don't have.
-        via = "Google" if row["google_id"] else ("Apple" if row["apple_id"] else "Google/Apple")
-        raise AuthError(f"This account signs in with {via} — use that button instead of a password.")
-    if not row or not _check_password(password, row["password_hash"]):
-        raise AuthError("Incorrect username/email or password.")
+    # One message and one amount of work for "no such account", "wrong password" and "signs in with Google", so the
+    # response never says which usernames or emails exist (a hash is computed even when there is nothing to check).
+    stored = (row or {}).get("password_hash") or _DUMMY_HASH
+    ok = _check_password(password, stored) and bool(row and row["password_hash"])
+    if not ok:
+        raise AuthError("Incorrect username/email or password. If you signed up with Google or Apple, use that button.")
     return _public(row)
 
 
@@ -263,8 +267,9 @@ def change_password(user_id, current_password, new_password):
         row = c.fetchone()
         if not row or not _check_password(current_password, row["password_hash"]):
             raise AuthError("Current password is incorrect.")
-        if not new_password or len(new_password) < 8:
-            raise AuthError("New password must be at least 8 characters.")
+        weak = security.check_password(new_password, row["username"], row["email"])
+        if weak:
+            raise AuthError(weak)
         c.execute("UPDATE users SET password_hash = %s WHERE id = %s", (_hash_password(new_password), user_id))
 
 
@@ -295,7 +300,7 @@ def create_session(user_id):
     with _conn() as c:
         c.execute(
             "INSERT INTO sessions (token, user_id, created_at, expires_at) VALUES (%s, %s, %s, %s)",
-            (token, user_id, now, now + SESSION_TTL_SECONDS),
+            (security.hash_token(token), user_id, now, now + SESSION_TTL_SECONDS),   # only the hash is stored
         )
     return token
 
@@ -306,8 +311,8 @@ def get_user_by_session(token):
     with _conn() as c:
         c.execute(
             "SELECT u.* FROM sessions s JOIN users u ON u.id = s.user_id "
-            "WHERE s.token = %s AND s.expires_at > %s",
-            (token, time.time()),
+            "WHERE s.token IN (%s, %s) AND s.expires_at > %s",     # the plain form: sessions made before hashing
+            (security.hash_token(token), token, time.time()),
         )
         row = c.fetchone()
     return _public(row) if row else None
@@ -315,7 +320,22 @@ def get_user_by_session(token):
 
 def delete_session(token):
     with _conn() as c:
-        c.execute("DELETE FROM sessions WHERE token = %s", (token,))
+        c.execute("DELETE FROM sessions WHERE token IN (%s, %s)", (security.hash_token(token), token))
+
+
+def delete_other_sessions(user_id, keep_token=None):
+    """Signs the account out everywhere except `keep_token` (everywhere, with None). Returns how many ended."""
+    with _conn() as c:
+        c.execute("DELETE FROM sessions WHERE user_id = %s AND token NOT IN (%s, %s)",
+                  (user_id, security.hash_token(keep_token), keep_token or ""))
+        return c.rowcount
+
+
+def purge_expired():
+    """Housekeeping: expired sessions and one-time links are dead weight and a larger target."""
+    with _conn() as c:
+        c.execute("DELETE FROM sessions WHERE expires_at < %s", (time.time(),))
+        c.execute("DELETE FROM verification_tokens WHERE expires_at < %s", (time.time(),))
 
 
 # --------------------------------------------------------- email verification ----
@@ -328,7 +348,7 @@ def create_verification_token(user_id):
         c.execute(
             "INSERT INTO verification_tokens (token, user_id, purpose, created_at, expires_at) "
             "VALUES (%s, %s, 'verify', %s, %s)",
-            (token, user_id, now, now + VERIFY_TTL_SECONDS),
+            (security.hash_token(token), user_id, now, now + VERIFY_TTL_SECONDS),
         )
     return token
 
@@ -338,14 +358,14 @@ def consume_verification_token(token):
     raises AuthError if the token is missing/expired/wrong purpose."""
     with _conn() as c:
         c.execute(
-            "SELECT * FROM verification_tokens WHERE token = %s AND purpose = 'verify' AND expires_at > %s",
-            (token, time.time()),
+            "SELECT * FROM verification_tokens WHERE token IN (%s, %s) AND purpose = 'verify' AND expires_at > %s",
+            (security.hash_token(token), token, time.time()),
         )
         row = c.fetchone()
         if not row:
             raise AuthError("That verification link is invalid or has expired.")
         c.execute("UPDATE users SET email_verified = TRUE WHERE id = %s", (row["user_id"],))
-        c.execute("DELETE FROM verification_tokens WHERE token = %s", (token,))
+        c.execute("DELETE FROM verification_tokens WHERE token = %s", (row["token"],))
         c.execute("SELECT * FROM users WHERE id = %s", (row["user_id"],))
         return _public(c.fetchone())
 
@@ -362,7 +382,7 @@ def create_reset_token(user_id):
         c.execute(
             "INSERT INTO verification_tokens (token, user_id, purpose, created_at, expires_at) "
             "VALUES (%s, %s, 'reset', %s, %s)",
-            (token, user_id, now, now + RESET_TTL_SECONDS),
+            (security.hash_token(token), user_id, now, now + RESET_TTL_SECONDS),
         )
     return token
 
@@ -370,18 +390,19 @@ def create_reset_token(user_id):
 def reset_password(token, new_password):
     """Consumes a password-reset token and sets the new password. Raises
     AuthError if the token is invalid/expired or the password is too weak."""
-    if not new_password or len(new_password) < 8:
-        raise AuthError("Password must be at least 8 characters.")
+    weak = security.check_password(new_password)
+    if weak:
+        raise AuthError(weak)
     with _conn() as c:
         c.execute(
-            "SELECT * FROM verification_tokens WHERE token = %s AND purpose = 'reset' AND expires_at > %s",
-            (token, time.time()),
+            "SELECT * FROM verification_tokens WHERE token IN (%s, %s) AND purpose = 'reset' AND expires_at > %s",
+            (security.hash_token(token), token, time.time()),
         )
         row = c.fetchone()
         if not row:
             raise AuthError("That reset link is invalid or has expired.")
         c.execute("UPDATE users SET password_hash = %s WHERE id = %s", (_hash_password(new_password), row["user_id"]))
-        c.execute("DELETE FROM verification_tokens WHERE token = %s", (token,))
+        c.execute("DELETE FROM verification_tokens WHERE token = %s", (row["token"],))
         # a successful reset also invalidates every existing session — if
         # someone else had access to the account, this logs them out too
         c.execute("DELETE FROM sessions WHERE user_id = %s", (row["user_id"],))

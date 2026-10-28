@@ -167,7 +167,8 @@ class Triggers(unittest.TestCase):
     def test_change_password_sends_notice(self):
         with mock.patch.object(server, "current_user", return_value=dict(USER)), \
              mock.patch.object(db, "get_user_by_session", return_value=dict(USER)), \
-             mock.patch.object(db, "change_password"):
+             mock.patch.object(db, "change_password"), \
+             mock.patch.object(db, "delete_other_sessions", return_value=0):
             self.client.cookies.set(server.SESSION_COOKIE, "s")
             r = self.client.post("/api/auth/change-password",
                                  json={"current_password": "oldpassword1", "new_password": "newpassword1"})

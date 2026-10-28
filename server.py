@@ -63,6 +63,7 @@ from engine import game_center as game_center_layer
 from engine import ros_projection
 from engine import startsit_ai
 from engine import mail as mail_layer
+from engine import security
 from engine import news as news_layer
 from engine import oauth as oauth_layer
 from engine import projection_blend
@@ -85,6 +86,10 @@ async def lifespan(app: FastAPI):
     # needing a separate cron job/launchd plist. Cancelled cleanly on
     # shutdown rather than left to die mid-fetch.
     task = refresh_scheduler.start()
+    try:
+        db.purge_expired()      # expired sessions and one-time links are not kept around
+    except Exception as e:
+        print(f"[db] housekeeping skipped: {e}")
     news_layer.warm()   # fill the news cache in the background so the first visitor isn't the one waiting
     try:
         yield
@@ -93,6 +98,13 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Lineup Lab API", lifespan=lifespan)
+
+
+@app.exception_handler(Exception)
+async def unhandled_error(request: Request, exc: Exception):
+    """An unexpected failure answers with a plain message: no stack trace, file path or SQL ever reaches a client."""
+    print(f"[error] {request.method} {request.url.path}: {type(exc).__name__}: {exc}")
+    return PlainTextResponse("Something went wrong on our side.", status_code=500)
 # Nothing here was being compressed before — app.js/style.css (~190KB
 # combined) and every JSON board response went over the wire raw. gzip
 # shrinks text/JSON/JS/CSS by roughly 70-80%; skips anything already
@@ -127,6 +139,27 @@ def _public_cache_headers(request: Request, response: Response) -> None:
         response.headers["Cache-Control"] = PUBLIC_CACHE_CONTROL
 
 
+MAX_BODY_BYTES = 1_000_000
+_UNSAFE = {"POST", "PUT", "PATCH", "DELETE"}
+
+
+@app.middleware("http")
+async def request_guard(request: Request, call_next):
+    """Refuses oversized bodies and cross-site state changes before any endpoint runs. SameSite=Lax already keeps the
+    session cookie off cross-site POSTs; the Origin check is the second lock."""
+    if request.method in _UNSAFE and request.url.path.startswith("/api/"):
+        try:
+            too_big = int(request.headers.get("content-length") or 0) > MAX_BODY_BYTES
+        except ValueError:
+            too_big = True
+        if too_big:
+            return PlainTextResponse("Request too large.", status_code=413)
+        if SESSION_COOKIE in request.cookies and not security.same_origin(request.headers, request.headers.get("host")):
+            security.audit("cross_site_blocked", path=request.url.path)
+            return PlainTextResponse("Cross-site request blocked.", status_code=403)
+    return await call_next(request)
+
+
 @app.middleware("http")
 async def security_headers(request: Request, call_next):
     t0 = time.perf_counter()
@@ -149,8 +182,15 @@ async def security_headers(request: Request, call_next):
         "default-src 'self'; img-src 'self' https: data:; "
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
         "font-src 'self' https://fonts.gstatic.com; "
-        "script-src 'self'; connect-src 'self'; frame-ancestors 'none'"
+        "script-src 'self'; connect-src 'self'; frame-ancestors 'none'; "
+        "base-uri 'self'; form-action 'self'; object-src 'none'"
     )
+    response.headers["Cross-Origin-Opener-Policy"] = "same-origin"
+    response.headers["Cross-Origin-Resource-Policy"] = "same-origin"
+    response.headers["X-Permitted-Cross-Domain-Policies"] = "none"
+    # anything account-shaped must never sit in a browser or CDN cache (the public board paths set their own)
+    if request.url.path.startswith(("/api/auth", "/api/account", "/api/settings", "/api/myteam")):
+        response.headers["Cache-Control"] = "no-store"
     # Real gap found in a security pass: this was missing entirely. Only
     # meaningful (and only sent) once actually served over https — same
     # scheme check the session/OAuth-state cookies already use to decide
@@ -184,8 +224,12 @@ def rate_limit(key_prefix: str, limit: int, window_seconds: int):
         while bucket and now - bucket[0] > window_seconds:
             bucket.popleft()
         if len(bucket) >= limit:
+            security.audit("rate_limited", bucket=key_prefix, ip=client_ip)
             raise HTTPException(429, "Too many attempts — wait a bit and try again.")
         bucket.append(now)
+        if len(_RATE_BUCKETS) > 5000:                      # a flood of one-off addresses must not grow memory forever
+            for k in [k for k, q in _RATE_BUCKETS.items() if not q or now - q[-1] > 3600]:
+                _RATE_BUCKETS.pop(k, None)
     return dep
 
 
@@ -219,6 +263,7 @@ news_rate_limit = rate_limit("news", limit=30, window_seconds=60)
 projcompare_rate_limit = rate_limit("projcompare", limit=30, window_seconds=60)
 
 OAUTH_STATE_COOKIE = "eb_oauth_state"
+_login_throttle = security.AccountThrottle(limit=8, window=15 * 60)
 
 
 def _clean(obj: Any) -> Any:
@@ -300,7 +345,7 @@ def _send_verification(request: Request, user) -> str:
               "(see .env.example)")
         return "not_configured"
     token = db.create_verification_token(user["id"])
-    verify_url = f"{str(request.base_url).rstrip('/')}/api/auth/verify?token={token}"
+    verify_url = f"{security.public_base_url(request.base_url)}/api/auth/verify?token={token}"
     try:
         mail_layer.send_verification_email(user["email"], user["username"], verify_url)
     except (mail_layer.MailNotConfigured, mail_layer.MailSendError) as e:
@@ -343,7 +388,7 @@ def signup(req: SignupRequest, request: Request, response: Response):
 def verify_email(token: str, request: Request, background: BackgroundTasks):
     try:
         user = db.consume_verification_token(token)
-        background.add_task(_notify_welcome, str(request.base_url), user)
+        background.add_task(_notify_welcome, security.public_base_url(request.base_url), user)
         return RedirectResponse(url="/?verified=1")
     except db.AuthError:
         return RedirectResponse(url="/?verified=0")
@@ -362,16 +407,24 @@ def resend_verification(request: Request, user=Depends(require_user)):
 
 @app.post("/api/auth/login", dependencies=[Depends(login_rate_limit)])
 def login(req: LoginRequest, request: Request, response: Response):
+    key = (req.identifier or "").strip().lower()[:100]
+    if _login_throttle.blocked(key):
+        security.audit("login_locked", ip=request.client.host if request.client else None)
+        raise HTTPException(429, "Too many failed attempts for this account. Wait 15 minutes or reset your password.")
     try:
         user = db.authenticate(req.identifier, req.password)
     except db.AuthError as e:
+        _login_throttle.fail(key)
+        security.audit("login_failed", ip=request.client.host if request.client else None)
         raise HTTPException(401, str(e))
+    _login_throttle.clear(key)
+    security.audit("login_ok", user_id=user["id"])
     _set_session_cookie(request, response, db.create_session(user["id"]))
     return user
 
 
 def _oauth_redirect_uri(request: Request, provider: str) -> str:
-    return f"{str(request.base_url).rstrip('/')}/api/auth/{provider}/callback"
+    return f"{security.public_base_url(request.base_url)}/api/auth/{provider}/callback"
 
 
 @app.get("/api/auth/google/start")
@@ -405,7 +458,7 @@ def oauth_google_callback(request: Request, response: Response, background: Back
     resp.delete_cookie(OAUTH_STATE_COOKIE)
     _set_session_cookie(request, resp, db.create_session(user["id"]))
     if user.get("just_created"):
-        background.add_task(_notify_welcome, str(request.base_url), user)
+        background.add_task(_notify_welcome, security.public_base_url(request.base_url), user)
     return resp
 
 
@@ -425,6 +478,34 @@ def logout(request: Request, response: Response):
     return {"status": "ok"}
 
 
+@app.post("/api/auth/logout-all")
+def logout_all(request: Request, response: Response, user=Depends(require_user)):
+    """Signs this account out on every device, this one included."""
+    ended = db.delete_other_sessions(user["id"], None)
+    response.delete_cookie(SESSION_COOKIE)
+    security.audit("logout_all", user_id=user["id"], sessions_ended=ended)
+    return {"status": "ok", "sessions_ended": ended}
+
+
+@app.get("/api/account/export")
+def export_account(user=Depends(require_user)):
+    """Everything we hold about the signed-in user, as JSON (the data-access right). Credentials, password hashes and
+    session tokens are never included."""
+    settings = dict(db.get_settings(user["id"]) or {})
+    for secret in ("espn_swid", "espn_s2"):
+        if settings.get(secret):
+            settings[secret] = "stored (encrypted), not exported"
+    return {"account": user, "settings": settings, "connected_teams": db.list_connected_teams(user["id"]),
+            "track_record": db.get_track_record(user["id"])}
+
+
+@app.get("/.well-known/security.txt", include_in_schema=False)
+def security_txt():
+    return PlainTextResponse(
+        "Contact: mailto:lineuplabfootball@gmail.com\nExpires: 2027-12-31T00:00:00.000Z\nPreferred-Languages: en\n"
+        "Policy: please report vulnerabilities privately and give us time to fix them before publishing.\n")
+
+
 @app.get("/api/auth/me")
 def me(user=Depends(require_user)):
     return user
@@ -437,7 +518,9 @@ def change_password(req: ChangePasswordRequest, request: Request, background: Ba
         db.change_password(user["id"], req.current_password, req.new_password)
     except db.AuthError as e:
         raise HTTPException(400, str(e))
-    background.add_task(_notify_password_changed, str(request.base_url), user)
+    ended = db.delete_other_sessions(user["id"], request.cookies.get(SESSION_COOKIE))   # a stolen session ends here
+    security.audit("password_changed", user_id=user["id"], other_sessions_ended=ended)
+    background.add_task(_notify_password_changed, security.public_base_url(request.base_url), user)
     return {"status": "ok"}
 
 
@@ -464,7 +547,7 @@ def forgot_password(req: ForgotPasswordRequest, request: Request):
     user = db.get_user_by_email(req.email)
     if user:
         token = db.create_reset_token(user["id"])
-        reset_url = f"{str(request.base_url).rstrip('/')}/?reset_token={token}"
+        reset_url = f"{security.public_base_url(request.base_url)}/?reset_token={token}"
         try:
             mail_layer.send_password_reset_email(user["email"], user["username"], reset_url)
         except (mail_layer.MailNotConfigured, mail_layer.MailSendError) as e:
@@ -479,7 +562,7 @@ def reset_password(req: ResetPasswordRequest, request: Request, response: Respon
     except db.AuthError as e:
         raise HTTPException(400, str(e))
     _set_session_cookie(request, response, db.create_session(user["id"]))
-    background.add_task(_notify_password_changed, str(request.base_url), user)
+    background.add_task(_notify_password_changed, security.public_base_url(request.base_url), user)
     return user
 
 
@@ -1779,6 +1862,7 @@ _IMG_PROXY_ALLOWED_HOSTS = {
     "static.www.nfl.com", "sleepercdn.com", "a.espncdn.com",
     "sportshub.cbsistatic.com", "static.nfl.com",
 }
+_IMG_PROXY_MAX_BYTES = 3_000_000
 _IMG_PROXY_CACHE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data_cache", "img_proxy")
 os.makedirs(_IMG_PROXY_CACHE_DIR, exist_ok=True)
 
@@ -1797,15 +1881,18 @@ def api_img_proxy(url: str = Query(...)):
         return FileResponse(cache_path, media_type=content_type, headers={"Cache-Control": "public, max-age=86400"})
 
     try:
-        resp = requests.get(url, timeout=8, headers={"User-Agent": "Mozilla/5.0"})
+        # No redirects: an allowed host that redirects elsewhere must not turn this into a fetch of any URL.
+        resp = requests.get(url, timeout=8, headers={"User-Agent": "Mozilla/5.0"}, allow_redirects=False)
         resp.raise_for_status()
+        if len(resp.content) > _IMG_PROXY_MAX_BYTES:
+            raise HTTPException(502, "That image is too large.")
         content_type = resp.headers.get("Content-Type", "image/jpeg").split(";")[0]
         if not content_type.startswith("image/"):
             raise HTTPException(502, "That URL didn't return an image.")
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(502, f"Couldn't fetch that image: {e}")
+        raise HTTPException(502, "Couldn't fetch that image.")
 
     with open(cache_path, "wb") as f:
         f.write(resp.content)
