@@ -93,3 +93,21 @@ class WiringTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class AvailabilityTests(unittest.TestCase):
+    def test_an_unavailable_starter_is_flagged_for_replacement_not_left_as_a_normal_slot(self):
+        ss = open(os.path.join(ROOT, "static/ss-team.js")).read()
+        self.assertIn("needAlert", ss)
+        self.assertIn('"FILL"', ss)
+        self.assertIn("can\\'t play this week", ss)
+
+    def test_status_and_live_markers_come_from_the_shared_renderers(self):
+        ss = open(os.path.join(ROOT, "static/ss-team.js")).read()
+        self.assertIn("window.statusFlagsHtml", ss)
+        self.assertIn("LiveTab.liveTeams", ss)
+        self.assertIn("live-mark", ss)
+
+    def test_ruled_out_ir_and_pup_starters_count_as_open_slots(self):
+        out = run('const me = [P("a","QB","QB",20,true), P("b","RB","RB",0,true,{injury_status:"PUP"}), P("c","WR","WR",0,true,{injury_status:"IR"}), P("d","TE","TE",9,true,{injury_status:"Out"})]; return S.status(me);')
+        self.assertEqual(out, {"active": 1, "open": 3, "offline": 3})

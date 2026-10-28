@@ -91,6 +91,44 @@ class PureTests(unittest.TestCase):
         self.assertIn("--c1:", out)
         self.assertIn("--c2:", out)
 
+
+    def test_scorebug_shows_your_players_on_the_right_with_projections_before_kickoff(self):
+        out = run(GAME + '''const mine = [{name:"Amon-Ra St. Brown", headshot:"https://a.espncdn.com/x.png", value:17.3, kind:"proj", status:null},
+          {name:"Jahmyr Gibbs", headshot:null, value:16.2, kind:"proj", status:"Questionable"}];
+          return L.scorebugHtml(G({state:"pre"}), 2, null, mine);''')
+        self.assertIn("sb-mine", out)
+        self.assertIn("17.3", out)
+        self.assertIn("16.2", out)
+        self.assertIn("proj", out)
+        self.assertIn("QUESTIONABLE", out)
+
+    def test_a_live_game_shows_current_points_not_projections(self):
+        out = run(GAME + '''const mine = [{name:"Jahmyr Gibbs", headshot:null, value:12.4, kind:"pts", status:null}];
+          return L.scorebugHtml(G(), 1, null, mine);''')
+        self.assertIn("12.4", out)
+        self.assertIn('data-kind="pts"', out)
+        self.assertNotIn('data-kind="proj"', out)
+
+    def test_more_than_four_players_collapse_into_a_count(self):
+        out = run(GAME + '''const mine = [1,2,3,4,5,6].map((i) => ({name:"P"+i, headshot:null, value:i, kind:"proj", status:null}));
+          return L.scorebugHtml(G({state:"pre"}), 6, null, mine);''')
+        self.assertEqual(out.count('class="sb-p"'), 4)
+        self.assertIn("+2", out)
+
+    def test_a_live_card_carries_the_red_glowing_marker_and_a_pre_game_card_does_not(self):
+        live = run(GAME + 'return L.scorebugHtml(G(), 0);')
+        pre = run(GAME + 'return L.scorebugHtml(G({state:"pre"}), 0);')
+        self.assertIn("sb-live", live)
+        self.assertNotIn("sb-live", pre)
+
+    def test_your_players_names_are_escaped(self):
+        out = run(GAME + 'return L.scorebugHtml(G({state:"pre"}), 1, null, [{name:"<b>x</b>", headshot:null, value:1, kind:"proj"}]);')
+        self.assertNotIn("<b>x</b>", out)
+
+    def test_live_teams_are_collected_for_other_screens(self):
+        out = run(GAME + 'return L.liveTeamKeys([G(), G({state:"pre", home:{abbr:"KC"}, away:{abbr:"BUF"}}), G({home:{abbr:"WSH"}, away:{abbr:"NYJ"}})]);')
+        self.assertEqual(sorted(out), ["DET", "GB", "NYJ", "WAS"])
+
     def test_all_three_badges_render(self):
         for b, cls in (("TNF", "tnf"), ("SNF", "snf"), ("MNF", "mnf")):
             out = run(GAME + f'return L.scorebugHtml(G({{badge:"{b}"}}), 0);')
@@ -143,6 +181,15 @@ class WiringTests(unittest.TestCase):
     def read(self, rel):
         with open(os.path.join(ROOT, rel)) as f:
             return f.read()
+
+    def test_the_tab_is_called_nfl_games_with_a_live_marker_in_the_nav(self):
+        html = self.read("static/index.html")
+        self.assertIn('<span class="nav-label">NFL Games</span>', html)
+        self.assertIn("<h1>NFL Games</h1>", html)
+        self.assertNotIn("Live Games", html)
+        self.assertIn('id="nav-live-dot"', html)
+        css = self.read("static/style.css")
+        self.assertIn(".nav-live-dot", css)
 
     def test_live_tab_is_in_the_nav_the_tab_list_and_the_page(self):
         html, js = self.read("static/index.html"), self.read("static/app.js")

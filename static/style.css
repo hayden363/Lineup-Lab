@@ -5067,7 +5067,7 @@ html[data-team] .news-card:hover::after, html[data-team] .lab-card:hover::after,
 .lv-grid.lv-enter .sb-card:nth-child(3n+2) { animation-delay: 50ms; } .lv-grid.lv-enter .sb-card:nth-child(3n) { animation-delay: 100ms; }
 
 /* gradient border from the two teams' colors */
-.sb-card { position: relative; display: block; text-align: left; font: inherit; color: inherit; cursor: pointer; padding: 34px 14px 12px; border-radius: 16px; border: 2px solid transparent;
+.sb-card { position: relative; display: block; text-align: left; font: inherit; color: inherit; cursor: pointer; padding: 32px 14px 12px; border-radius: 16px; border: 2px solid transparent;
   background: linear-gradient(var(--panel), var(--panel)) padding-box, linear-gradient(135deg, var(--c1), var(--c2)) border-box; transition: transform .18s ease, box-shadow .25s ease; overflow: hidden; }
 .sb-card:hover { transform: translateY(-3px); box-shadow: 0 10px 26px -12px rgba(0,0,0,.6); }
 .sb-card.final { opacity: .78; }
@@ -5165,3 +5165,39 @@ html[data-team] .news-card:hover::after, html[data-team] .lab-card:hover::after,
 .mt-hint { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
 .mt-refresh { background: var(--panel-2); border: 1px solid var(--border-bright); color: var(--text); border-radius: 8px; padding: 4px 10px; font: inherit; font-size: 12px; cursor: pointer; }
 .mt-refresh:hover:not(:disabled) { border-color: var(--accent); } .mt-refresh:disabled { opacity: .6; cursor: progress; }
+
+.injury-flag.unavailable { background: rgba(255,107,129,0.22); }
+.injury-flag.bye-flag { letter-spacing: .06em; }
+.ss-hidden { grid-column: 1 / -1; padding: 4px 2px; }
+
+/* ---- NFL Games: your players on the card, red live markers ---- */
+.lv-grid { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
+.sb-body { display: flex; gap: 14px; align-items: stretch; }
+.sb-main { flex: 1; min-width: 0; }
+.sb-mine { display: flex; flex-wrap: wrap; align-content: center; justify-content: flex-end; gap: 8px; max-width: 46%; padding-left: 12px; border-left: 1px solid var(--border); }
+.sb-p { display: grid; justify-items: center; gap: 0; min-width: 44px; }
+.sb-face { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; object-position: top; background: var(--panel-2); border: 2px solid rgba(16,185,129,.55); }
+.sb-p b { font-family: var(--mono); font-size: 13px; line-height: 1.1; margin-top: 2px; } .sb-p b[data-kind="pts"] { color: #22ff88; text-shadow: 0 0 8px rgba(34,255,136,.5); }
+.sb-p small { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+.sb-p-st { font-size: 8px; font-weight: 800; color: var(--avg); letter-spacing: .04em; }
+.sb-more { align-self: center; font-size: 11px; color: var(--muted); font-family: var(--mono); }
+/* the sleek glowing red LIVE marker (card, sidebar, Start/Sit) */
+.sb-live { left: 14px; transform: none; top: 10px; }
+.sb-card.live .sb-live { color: #ff5470; font-weight: 800; text-shadow: 0 0 8px rgba(255,84,112,.7); }
+.sb-live i, .live-mark i, .nav-live-dot { background: #ff3b5c; box-shadow: 0 0 0 2px rgba(255,59,92,.25), 0 0 10px 2px rgba(255,59,92,.75); }
+.sb-live i { width: 7px; height: 7px; animation: liveGlow 1.5s ease-in-out infinite; }
+@keyframes liveGlow { 0%, 100% { box-shadow: 0 0 0 2px rgba(255,59,92,.25), 0 0 6px 1px rgba(255,59,92,.6); transform: scale(1); } 50% { box-shadow: 0 0 0 5px rgba(255,59,92,.1), 0 0 16px 4px rgba(255,59,92,.9); transform: scale(1.15); } }
+.nav-live-dot { margin-left: auto; width: 8px; height: 8px; border-radius: 50%; animation: liveGlow 1.5s ease-in-out infinite; }
+.nav-live-dot[hidden] { display: none; }
+.live-mark { display: inline-flex; align-items: center; gap: 4px; font-size: 9px; font-weight: 800; letter-spacing: .08em; color: #ff5470; text-shadow: 0 0 8px rgba(255,84,112,.6); }
+.live-mark i { width: 6px; height: 6px; border-radius: 50%; display: inline-block; animation: liveGlow 1.5s ease-in-out infinite; }
+@media (max-width: 559px) { .sb-mine { max-width: 50%; } }
+@media (prefers-reduced-motion: reduce) { .sb-live i, .nav-live-dot, .live-mark i { animation: none; } }
+
+.nav-item { position: relative; }
+body.sidebar-collapsed .nav-live-dot { position: absolute; top: 9px; right: 16px; margin: 0; }
+.sst-slot.need { border-color: rgba(255,107,129,.6); background: rgba(255,107,129,.08); opacity: 1; }
+.sst-slot.need .sst-slot-label { color: var(--neg); }
+.sst-alert { display: grid; gap: 6px; margin-bottom: 12px; }
+.sst-alert-row { text-align: left; font: inherit; color: var(--text); background: rgba(255,107,129,.1); border: 1px solid rgba(255,107,129,.5); border-radius: 10px; padding: 8px 12px; font-size: 13px; cursor: pointer; }
+.sst-alert-row:hover { border-color: var(--neg); }

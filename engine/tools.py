@@ -760,6 +760,10 @@ def start_sit_suggestions_from_roster(roster_players, season=None, scoring=None,
     floor/ceiling/snap/matchup/tier/confidence shape the manual compare
     tool already returns, so the frontend renders it with the exact same
     real components, no separate/duplicated code path."""
+    # Nobody weighs starting a player on a bye or ruled out, so neither can be one side of a "closest call".
+    # (A starter on a bye needs replacing, which the Start/Sit lineup panel flags on its own.)
+    roster_players = [p for p in roster_players
+                      if not p.get("on_bye") and not p.get("unresolved") and p.get("injury_status") not in decision.WONT_PLAY]
     by_pos = {}
     for p in roster_players:
         if p.get("position"):
@@ -1158,6 +1162,12 @@ def team_profile(code, scoring=None, season=None, projected=10):
     if page is None:
         return None
     nxt = page["next_game"]
+    try:                       # how every player is listed (Questionable, Out, IR, PUP...), not just the projected few
+        listed = sleeper.live_injury_statuses()
+        for p in page["players"]:
+            p["injury_status"] = listed.get(p["player_id"])
+    except Exception as e:
+        print(f"[team] injury statuses for {code} unavailable: {e}")
     top = page["players"][:projected]
     if nxt and top:
         try:

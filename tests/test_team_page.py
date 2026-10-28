@@ -100,6 +100,16 @@ class EndpointTest(unittest.TestCase):
     def test_unknown_team_is_404(self):
         self.assertEqual(self.client.get("/api/team/XYZ").status_code, 404)
 
+    def test_every_player_carries_how_he_is_listed(self):
+        from engine import tools
+        bundle = {"schedule": sched(), "wk": weekly()}
+        with self.mock.patch.object(tools, "load_bundle", return_value=bundle), \
+                self.mock.patch.object(tools.sleeper, "live_injury_statuses", return_value={"w": "Questionable", "r": "IR"}), \
+                self.mock.patch.object(tools, "start_sit", return_value={"players": []}):
+            page = tools.team_profile("DET")
+        by = {p["player_id"]: p["injury_status"] for p in page["players"]}
+        self.assertEqual(by, {"w": "Questionable", "q": None, "r": "IR"})
+
     def test_projections_attach_for_the_top_players_and_failure_degrades(self):
         from engine import tools
         bundle = {"schedule": sched(), "wk": weekly()}

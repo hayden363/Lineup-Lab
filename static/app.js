@@ -666,7 +666,7 @@ function playerCellHtml(p) {
   const isTop = p.rank === 1;
   return `<div class="player-cell${isTop ? " player-cell-top" : ""}">
       <img ${headshotAttrs(p)} alt="">
-      <div><div class="player-name">${isTop ? '<span class="top-crown" title="Top of this board">👑</span>' : ""}${esc(p.player_display_name) || "—"}${statusFlagsHtml(p)}${byeTagHtml(p)}</div><div class="player-team">${esc(p.recent_team)}${p.position && state.pos === "ALL" ? ` · <span class="pos-chip pos-${esc(p.position)}">${esc(p.position)}</span>` : ""}</div>${p.stat_line ? `<div class="stat-line">${esc(p.stat_line)}</div>` : ""}</div>
+      <div><div class="player-name">${isTop ? '<span class="top-crown" title="Top of this board">👑</span>' : ""}${esc(p.player_display_name) || "—"}${statusFlagsHtml(p)}</div><div class="player-team">${esc(p.recent_team)}${p.position && state.pos === "ALL" ? ` · <span class="pos-chip pos-${esc(p.position)}">${esc(p.position)}</span>` : ""}</div>${p.stat_line ? `<div class="stat-line">${esc(p.stat_line)}</div>` : ""}</div>
     </div>`;
 }
 
@@ -752,7 +752,7 @@ function renderCompareTray() {
   chips.innerHTML = [...state.compareSelected.values()].map((p) => `
     <div class="cmp-chip">
       <img ${headshotAttrs(p)} alt="">
-      <span>${esc(p.player_display_name)}</span>
+      <span>${esc(p.player_display_name)}${statusFlagsHtml(p)}</span>
       <button type="button" class="chip-x" data-pid="${esc(p.player_id)}" aria-label="Remove ${esc(p.player_display_name)}">✕</button>
     </div>`).join("");
   chips.querySelectorAll(".chip-x").forEach((b) => {
@@ -2196,7 +2196,7 @@ function initPicker(containerId, onAdd) {
       data.results.forEach((p) => {
         const row = el("div", "picker-result");
         row.innerHTML = `<img ${headshotAttrs(p)} alt="">
-          <span>${esc(p.player_display_name)} <span class="muted">${esc(p.position)} · ${esc(p.recent_team)}</span></span>`;
+          <span>${esc(p.player_display_name)}${statusFlagsHtml(p)} <span class="muted">${esc(p.position)} · ${esc(p.recent_team)}</span></span>`;
         row.addEventListener("click", () => {
           onAdd(p);
           input.value = "";
@@ -2280,30 +2280,41 @@ function startSitCompareSentence(top, p) {
 }
 
 
-function injuryFlagHtml(status, factorDetail) {
-  if (!status) return "";
-  const mild = status === "Questionable";
-  // Real, disclosed reason PROJ moved (see engine/injury_impact.py) —
-  // only present where the backend actually attached it (Big Board's
-  // opponent view, the player modal; not yet threaded through My
-  // Team/Trade/Start-Sit's own row-builders, a real, smaller scope gap
-  // rather than a silently partial job). Never shown for a plain flag
-  // with no real backing factor.
-  const title = factorDetail
-    ? ` title="Historically ${factorDetail.median_pct_change >= 0 ? "+" : ""}${Math.round(factorDetail.median_pct_change * 100)}% for ${esc(factorDetail.body_part)} + ${esc(status)} (real median, n=${factorDetail.real_sample_size} games) — already reflected in PROJ"`
-    : "";
-  return ` <span class="injury-flag${mild ? " questionable" : ""}"${title}>${esc(status.toUpperCase())}</span>`;
+// ---- availability tags: how a player is listed this week --------------------------------------------------------
+// BYE, QUESTIONABLE, DOUBTFUL, OUT, IR, PUP or SUS next to his name, everywhere a player appears. statusFlagsHtml is
+// the one call site every player-name render uses, so this is the only place that decides it.
+const SLATE_UNAVAILABLE = ["Out", "IR", "PUP", "Sus", "NA", "DNR"];
+
+// True when his team has its bye in this week's slate. A server-set `on_bye` wins (My Team looking at another week
+// says so explicitly); otherwise a row's own `bye_week`, otherwise the team's bye from /api/slate.
+function isOnBye(p) {
+  if (!p) return false;
+  if (p.on_bye != null) return !!p.on_bye;
+  if (p.bye_week != null && state.slateWeek != null) return Number(p.bye_week) === Number(state.slateWeek);
+  const t = teamKey(p.recent_team || p.team);
+  return !!(t && state.byeTeams && state.slateWeek != null && state.byeTeams[t] === state.slateWeek);
 }
 
-// Kept as the single call site every player-name render uses (Big
-// Board/Waivers, player modal, Start/Sit, My Team, Trade picker) so any
-// future status badge only needs wiring in once, here — see git history
-// for the "gone dark" badge this used to also render, removed per request.
+// Cannot play this week: on a bye, or listed OUT, IR, PUP or SUS.
+function isUnavailable(p) {
+  return isOnBye(p) || SLATE_UNAVAILABLE.indexOf(p && p.injury_status) !== -1;
+}
+
+function injuryFlagHtml(status, factorDetail) {
+  if (!status) return "";
+  const out = SLATE_UNAVAILABLE.indexOf(status) !== -1;
+  const title = factorDetail
+    ? ` title="Historically ${factorDetail.median_pct_change >= 0 ? "+" : ""}${Math.round(factorDetail.median_pct_change * 100)}% for ${esc(factorDetail.body_part)} + ${esc(status)} (real median, n=${factorDetail.real_sample_size} games), already reflected in PROJ"`
+    : ` title="Listed ${esc(status)}"`;
+  return ` <span class="injury-flag${status === "Questionable" ? " questionable" : ""}${out ? " unavailable" : ""}"${title}>${esc(status.toUpperCase())}</span>`;
+}
+
 function statusFlagsHtml(p) {
   const factorDetail = (p.injury_factor != null && p.injury_factor !== 1 && p.injury_sample_n != null)
     ? { median_pct_change: p.injury_factor - 1, body_part: p.injury_body_part, real_sample_size: p.injury_sample_n }
     : null;
-  return injuryFlagHtml(p.injury_status, factorDetail);
+  const bye = isOnBye(p) ? ' <span class="injury-flag bye-flag unavailable" title="Team is on a bye this week">BYE</span>' : "";
+  return bye + injuryFlagHtml(p.injury_status, factorDetail);
 }
 
 function statChipsHtml(p) {
@@ -2891,13 +2902,16 @@ async function renderStartSitPicker() {
   try {
     await ensureMyRoster();
   } catch (e) { picker.innerHTML = ""; return; }
-  picker.innerHTML = state.shopRoster.map((p) => `
+  // Nobody weighs starting a player on a bye or listed OUT, IR or PUP, so they are not offered here.
+  const playable = state.shopRoster.filter((p) => !isUnavailable(p));
+  const hidden = state.shopRoster.filter((p) => isUnavailable(p));
+  picker.innerHTML = playable.map((p) => `
     <button type="button" class="shop-chip${state.startsit.some((x) => x.player_id === p.player_id) ? " selected" : ""}" data-pid="${esc(p.player_id)}">
       <img ${headshotAttrs(p)} alt="">
       <span class="pos-badge">${esc(p.position)}</span>
-      <span>${esc(p.player_display_name)}</span>
+      <span>${esc(p.player_display_name)}${statusFlagsHtml(p)}</span>
     </button>
-  `).join("");
+  `).join("") + (hidden.length ? `<div class="ss-hidden muted small">Not offered: ${hidden.map((p) => `${esc(p.player_display_name)}${statusFlagsHtml(p)}`).join(", ")}</div>` : "");
   picker.querySelectorAll(".shop-chip").forEach((chip) => {
     chip.addEventListener("click", () => {
       const pid = chip.dataset.pid;
@@ -3001,7 +3015,7 @@ function ssSuggestCardHtml(s) {
     : `<span class="ss-suggest-verdict hold">Starter confirmed — ahead by ${FMT.d1(Math.abs(s.gap))} pts</span>`;
   const miniRow = (p, tone) => `<div class="ss-suggest-player ${tone}">
     <img ${headshotAttrs(p)} alt="">
-    <div><div class="ss-suggest-name">${esc(p.player_display_name)}</div><div class="ss-suggest-proj tabular">${FMT.d1(p.PROJ)} pts</div></div>
+    <div><div class="ss-suggest-name">${esc(p.player_display_name)}${statusFlagsHtml(p)}</div><div class="ss-suggest-proj tabular">${FMT.d1(p.PROJ)} pts</div></div>
   </div>`;
   // Real bug fixed here: both verdicts used to render with the same
   // out(struck-through)/in(highlighted) treatment regardless of which
@@ -3109,7 +3123,7 @@ function renderTradeChips(side) {
   state[listKey].forEach((p) => {
     const chip = el("div", "chip");
     chip.innerHTML = `<img ${headshotAttrs(p)} alt="">
-      <span>${esc(p.player_display_name)}</span><button class="chip-x" aria-label="Remove ${esc(p.player_display_name)}">✕</button>`;
+      <span>${esc(p.player_display_name)}${statusFlagsHtml(p)}</span><button class="chip-x" aria-label="Remove ${esc(p.player_display_name)}">✕</button>`;
     chip.querySelector(".chip-x").addEventListener("click", () => {
       state[listKey] = state[listKey].filter((x) => x.player_id !== p.player_id);
       renderTradeChips(side);
@@ -3213,7 +3227,7 @@ function tradePlayerCardHtml(p, delayMs) {
   const accent = posAccentClass(p.position);
   return `<div class="result-card${accent ? ` ${accent}` : ""}" style="animation-delay:${delayMs}ms">
     <img ${headshotAttrs(p)} alt="">
-    <div><div class="name">${esc(p.player_display_name)}</div><div class="meta">${esc(p.position)} · ${esc(p.recent_team)} · PVS ${FMT.d1(p.SCORE)}</div></div>
+    <div><div class="name">${esc(p.player_display_name)}${statusFlagsHtml(p)}</div><div class="meta">${esc(p.position)} · ${esc(p.recent_team)} · PVS ${FMT.d1(p.SCORE)}</div></div>
     <div class="proj"><div class="num">${FMT.d1(p.value)}</div><div class="lbl">value</div></div>
   </div>`;
 }
@@ -3826,7 +3840,7 @@ function rosterRowHtml(p, isBench) {
   return `<div class="myteam-roster-row${isBench ? " bench" : ""}${unscored ? " unscored" : " kbd-click"}" data-pid="${esc(p.player_id)}" ${unscored ? 'data-unscored="1"' : 'role="button" tabindex="0"'}>
     <img ${headshotAttrs(p)} alt="">
     <span class="pos-badge">${esc(p.slot || p.position)}</span>
-    <span>${esc(p.player_display_name)}${p.recent_team ? ` <span class="mt-team" data-team-page="${esc(p.recent_team)}" role="link" tabindex="0" title="Open the ${esc(p.recent_team)} team page">${esc(p.recent_team)}</span>` : ""}${statusFlagsHtml(p)}${p.on_bye ? ' <span class="bye-tag" title="Team is on a bye this week">BYE</span>' : ""}</span>
+    <span>${esc(p.player_display_name)}${p.recent_team ? ` <span class="mt-team" data-team-page="${esc(p.recent_team)}" role="link" tabindex="0" title="Open the ${esc(p.recent_team)} team page">${esc(p.recent_team)}</span>` : ""}${statusFlagsHtml(p)}</span>
     <span class="proj-num tabular">${FMT.d1(p.PROJ)}${p.floor != null && p.ceiling != null ? `<small class="proj-range" title="Typical range (10th to 90th percentile)${p.p_play != null ? `; ${Math.round(p.p_play * 100)}% chance to play` : ""}">${FMT.int(p.floor)}–${FMT.int(p.ceiling)}${p.p_play != null ? ` · ${Math.round(p.p_play * 100)}% to play` : ""}</small>` : ""}</span>
   </div>`;
 }
@@ -4103,7 +4117,7 @@ function renderDraftBoard(d) {
         <span class="rank-cell">${i + 1}</span>
         <img ${headshotAttrs(p)} alt="">
         <span class="pos-badge">${esc(p.position)}</span>
-        <span>${esc(p.player_display_name)}${needBadge(p.need_multiplier)}${runBadge(p.run_multiplier)}</span>
+        <span>${esc(p.player_display_name)}${statusFlagsHtml(p)}${needBadge(p.need_multiplier)}${runBadge(p.run_multiplier)}</span>
         <span class="proj-num">${FMT.d1(p.ADJ_SCORE)}</span>
       </div>`).join("");
     html += `<div class="draft-columns">
@@ -4198,7 +4212,7 @@ function playerChipsHtml(players) {
   return players.map((p) => `
     <div class="ts-player">
       <img ${headshotAttrs(p)} alt="">
-      <span>${esc(p.player_display_name)}</span>
+      <span>${esc(p.player_display_name)}${statusFlagsHtml(p)}</span>
     </div>`).join("");
 }
 
@@ -4390,7 +4404,7 @@ async function renderShopPicker() {
     <button type="button" class="shop-chip${state.shopSelected.has(p.player_id) ? " selected" : ""}" data-pid="${esc(p.player_id)}">
       <img ${headshotAttrs(p)} alt="">
       <span class="pos-badge">${esc(p.position)}</span>
-      <span>${esc(p.player_display_name)}</span>
+      <span>${esc(p.player_display_name)}${statusFlagsHtml(p)}</span>
     </button>
   `).join("");
   picker.querySelectorAll(".shop-chip").forEach((chip) => {
@@ -4505,7 +4519,7 @@ function teamPageHtml(d) {
   const stat = (label, v) => `<div class="tp-stat"><b>${v == null ? "–" : FMT.d1(v)}</b><span>${label}</span></div>`;
   const players = (d.players || []).map((p) => `<button type="button" class="tp-player" data-player="${esc(p.player_id)}"${n ? ` data-opp="${esc(n.opponent)}"` : ""}>
       <img class="tp-photo" ${headshotAttrs({ headshot_url: p.headshot_url, player_display_name: p.name })} alt="" loading="lazy">
-      <span class="tp-pname">${esc(p.name)}<small>${esc(p.position)}${p.injury_status ? ` · ${esc(p.injury_status)}` : ""}</small></span>
+      <span class="tp-pname">${esc(p.name)}${statusFlagsHtml({ ...p, recent_team: d.team })}<small>${esc(p.position)}</small></span>
       <span class="tp-pnum"><b>${p.proj != null ? FMT.d1(p.proj) : "–"}</b><small>proj</small></span>
       <span class="tp-pnum"><b>${FMT.d1(p.ppg)}</b><small>avg</small></span>
     </button>`).join("");
@@ -5384,7 +5398,19 @@ function initSearch() {
   });
 }
 
+// This week's slate and every team's bye, so any row can say BYE (statusFlagsHtml). Refreshed hourly; a failure just
+// means no team-level BYE tags until the next try (rows the server already flagged still show).
+async function loadSlate() {
+  try {
+    const d = await api("/api/slate");
+    state.slateWeek = d.week;
+    state.byeTeams = d.byes || {};
+  } catch (e) { /* keep whatever we had */ }
+}
+setInterval(loadSlate, 60 * 60 * 1000);
+
 async function initMeta() {
+  loadSlate();
   const meta = await api("/api/meta");
   state.meta = meta;
   // The "which season is stats data actually from" explanation (it's the

@@ -1,4 +1,4 @@
-// Live Games tab: a grid of dynamic scorebugs and a full-screen stadium dashboard with three states
+// NFL Games tab: a grid of dynamic scorebugs and a full-screen stadium dashboard with three states
 // (pre-game, live with a 2D field and play-by-play, post-game recap). Pure builders live on window.LiveTab
 // (tested under node); the DOM, polling and animation code only runs in the browser.
 (function () {
@@ -154,9 +154,25 @@
     return g.status_detail || (g.state === "post" ? "Final" : "");
   }
 
-  function scorebugHtml(g, mineCount, flash) {
+  // Your players in a game, on the right of the card: his head and projected points before kickoff, his current
+  // fantasy points once the game is on or over. `mine` rows: {name, headshot, value, kind: "proj" | "pts", status}.
+  function mineHtml(mine) {
+    if (!mine || !mine.length) return "";
+    var show = mine.slice(0, 4), more = mine.length - show.length;
+    var img = function (p) {
+      var src = p.headshot ? (typeof proxyImg === "function" ? proxyImg(p.headshot) : p.headshot) : null;
+      var fb = typeof initialsAvatarUri === "function" ? initialsAvatarUri(p.name) : "";
+      return '<img class="sb-face" src="' + esc(src || fb) + '"' + (fb ? ' data-fb="' + esc(fb) + '"' : "") + ' alt="">';
+    };
+    return '<div class="sb-mine" aria-label="Your players in this game">' + show.map(function (p) {
+      var st = p.status ? '<span class="sb-p-st">' + esc(String(p.status).toUpperCase()) + "</span>" : "";
+      return '<div class="sb-p" title="' + esc(p.name) + '">' + img(p) + '<b data-kind="' + esc(p.kind) + '">' + d1(p.value) + "</b><small>" + (p.kind === "pts" ? "pts" : "proj") + "</small>" + st + "</div>";
+    }).join("") + (more > 0 ? '<div class="sb-more">+' + more + "</div>" : "") + "</div>";
+  }
+
+  function scorebugHtml(g, mineCount, flash, mine) {
     var h = theme(g.home.abbr), a = theme(g.away.abbr);
-    var cls = "sb-card" + (g.state === "in" ? " live" : g.state === "post" ? " final" : " pre") + (mineCount ? " has-mine" : "");
+    var cls = "sb-card" + (g.state === "in" ? " live" : g.state === "post" ? " final" : " pre") + (mineCount ? " has-mine" : "") + (mine && mine.length ? " with-mine" : "");
     var row = function (t, side) {
       return '<div class="sb-team' + (t.winner ? " win" : "") + '">' + logo(t.abbr, "sb-logo") + '<span class="sb-abbr">' + esc(t.abbr) + "</span>" +
         '<span class="sb-score" data-side="' + side + '">' + (g.state === "pre" ? "" : t.score == null ? "–" : t.score) + "</span></div>";
@@ -164,9 +180,16 @@
     var sit = g.state === "in" && g.situation ? '<div class="sb-sit' + (g.situation.is_red_zone ? " rz" : "") + '">' + esc(g.situation.text || "") + (g.situation.is_red_zone ? " · RED ZONE" : "") + "</div>" : "";
     return '<button type="button" class="' + cls + '" data-game="' + esc(g.game_id) + '" style="--c1:' + esc(a.primary) + ";--c2:" + esc(h.primary) + ";--s1:" + esc(a.secondary) + ";--s2:" + esc(h.secondary) + '" data-state="' + esc(g.state) + '">' +
       badgeHtml(g) + (g.state === "in" ? '<span class="sb-live"><i></i>LIVE</span>' : "") +
-      row(g.away, "away") + row(g.home, "home") +
-      '<div class="sb-status">' + esc(statusLine(g)) + (g.network ? ' <span class="sb-net">' + esc(g.network) + "</span>" : "") + "</div>" + sit +
+      '<div class="sb-body"><div class="sb-main">' + row(g.away, "away") + row(g.home, "home") +
+      '<div class="sb-status">' + esc(statusLine(g)) + (g.network ? ' <span class="sb-net">' + esc(g.network) + "</span>" : "") + "</div>" + sit + "</div>" + mineHtml(mine) + "</div>" +
       (flash ? '<span class="sb-flash ' + flash + '"></span>' : "") + "</button>";
+  }
+
+  // The teams (nflverse codes) with a game on right now.
+  function liveTeamKeys(list) {
+    var out = [];
+    (list || []).forEach(function (g) { if (g.state === "in") { out.push(key(g.home.abbr)); out.push(key(g.away.abbr)); } });
+    return out;
   }
 
   function oddsBarHtml(o, g) {
@@ -197,11 +220,17 @@
     }).join("");
   }
 
+  // How he is listed, from the app's shared renderer when it is loaded (BYE, QUESTIONABLE, OUT, IR, PUP...).
+  function tagHtml(status, team) {
+    if (typeof statusFlagsHtml === "function") return statusFlagsHtml({ injury_status: status, recent_team: team });
+    return status ? ' <span class="injury-flag">' + esc(String(status).toUpperCase()) + "</span>" : "";
+  }
+
   function projectionsHtml(list) {
     if (!list || !list.length) return '<div class="muted">None of your players are in this game.</div>';
     return list.map(function (p) {
-      return '<div class="gc-proj"><span>' + esc(p.name) + " <small>" + esc(p.position) + " · " + esc(p.team) + (p.is_starter ? " · starting" : " · bench") + (p.status ? " · " + esc(p.status) : "") +
-        "</small></span><b>" + d1(p.proj) + (p.floor != null ? " <small>" + Math.round(p.floor) + "–" + Math.round(p.ceiling) + "</small>" : "") + "</b></div>";
+      return '<div class="gc-proj"><span>' + esc(p.name) + " <small>" + esc(p.position) + " · " + esc(p.team) + (p.is_starter ? " · starting" : " · bench") + "</small>" + tagHtml(p.status, p.team) +
+        "</span><b>" + d1(p.proj) + (p.floor != null ? " <small>" + Math.round(p.floor) + "–" + Math.round(p.ceiling) + "</small>" : "") + "</b></div>";
     }).join("");
   }
 
@@ -243,7 +272,7 @@
   }
 
   var LiveTab = { sortGames: sortGames, scoreChange: scoreChange, countdown: countdown, fieldX: fieldX, fieldSvg: fieldSvg, bannerText: bannerText,
-    playHeadline: playHeadline, playRowHtml: playRowHtml, scorebugHtml: scorebugHtml, preHtml: preHtml, liveHtml: liveHtml, postHtml: postHtml,
+    playHeadline: playHeadline, liveTeamKeys: liveTeamKeys, mineHtml: mineHtml, playRowHtml: playRowHtml, scorebugHtml: scorebugHtml, preHtml: preHtml, liveHtml: liveHtml, postHtml: postHtml,
     audit: audit, mvp: mvp, leaders: leaders, oddsBarHtml: oddsBarHtml, weatherHtml: weatherHtml, key: key };
   if (typeof window !== "undefined") window.LiveTab = LiveTab;
   if (typeof module !== "undefined") module.exports = LiveTab;
@@ -258,18 +287,67 @@
     return (m[key(g.away.abbr)] || 0) + (m[key(g.home.abbr)] || 0);
   }
 
+  var roster = [], boxes = {}, rosterAt = 0;
+
+  // Your roster players in one game, as scorebug rows: projections before kickoff, his points once it is on.
+  function mineFor(g) {
+    var keys = [key(g.home.abbr), key(g.away.abbr)];
+    if (g.state === "pre") {
+      return roster.filter(function (p) { return keys.indexOf(key(p.recent_team)) !== -1; })
+        .map(function (p) { return { name: p.player_display_name, headshot: p.headshot_url, value: p.PROJ, kind: "proj", status: p.injury_status || null, starter: !!p.is_starter }; })
+        .sort(function (a, b) { return (b.starter - a.starter) || ((b.value || 0) - (a.value || 0)); });
+    }
+    var box = boxes[g.game_id];
+    var fromBox = [];
+    ((box && box.teams) || []).forEach(function (t) {
+      (t.players || []).forEach(function (p) { if (p.mine) fromBox.push({ name: p.name, headshot: p.headshot, value: p.fantasy_points == null ? 0 : p.fantasy_points, kind: "pts", status: null }); });
+    });
+    if (fromBox.length) return fromBox.sort(function (a, b) { return b.value - a.value; });
+    return roster.filter(function (p) { return keys.indexOf(key(p.recent_team)) !== -1; })     // box score not in yet
+      .map(function (p) { return { name: p.player_display_name, headshot: p.headshot_url, value: null, kind: "pts", status: p.injury_status || null }; });
+  }
+
   function renderGrid(animate) {
     var grid = $("#live-grid");
     if (!grid) return;
     if (!games.length) { grid.innerHTML = '<div class="empty">No games on the schedule right now.</div>'; return; }
     var sorted = sortGames(games), out = "", last = null;
-    var labels = { in: "Live now", pre: "Upcoming", post: "Final" };
+    var labels = { in: "On now", pre: "Upcoming", post: "Final" };
     sorted.forEach(function (g) {
       if (g.state !== last) { out += '<div class="lv-sec">' + (labels[g.state] || "Games") + "</div>"; last = g.state; }
-      out += scorebugHtml(g, mineCount(g), flashes[g.game_id]);
+      out += scorebugHtml(g, mineCount(g), flashes[g.game_id], mineFor(g));
     });
     grid.innerHTML = out;
     grid.classList.toggle("lv-enter", !!animate);
+  }
+
+  // The red marker in the sidebar whenever any game is on.
+  function updateNavDot() {
+    var dot = $("#nav-live-dot");
+    if (!dot) return;
+    var on = games.some(function (g) { return g.state === "in"; });
+    dot.hidden = !on;
+    dot.setAttribute("aria-label", on ? "A game is on now" : "");
+  }
+
+  // Box scores for the on-now and final games that have one of your players (finals are fetched once).
+  async function loadBoxes() {
+    var need = games.filter(function (g) { return mineCount(g) && (g.state === "in" || (g.state === "post" && !boxes[g.game_id])); });
+    if (!need.length) return;
+    var qs = typeof scoringQS === "function" ? scoringQS().replace(/^&/, "") : "";
+    await Promise.all(need.map(async function (g) {
+      try { boxes[g.game_id] = await api("/api/live-scores/" + encodeURIComponent(g.game_id) + (qs ? "?" + qs : "")); } catch (e) { /* the card keeps its placeholders */ }
+    }));
+  }
+
+  async function loadRoster() {
+    if (typeof state === "undefined" || !state.user || Date.now() - rosterAt < 120000) return;
+    rosterAt = Date.now();
+    try {
+      var d = await api("/api/myteam");
+      roster = d.my_team.players || [];
+      state.myTeamAbbrs = rosterTeamCounts(d.my_team);
+    } catch (e) { /* no league connected: nothing is highlighted */ }
   }
 
   function bounce(card, side) {
@@ -284,10 +362,7 @@
     if (!grid) return;
     if (!games.length && !quiet) grid.innerHTML = '<div class="lv-skel">' + '<div class="skel sb-skel"></div>'.repeat(6) + "</div>";
     try {
-      if (typeof state !== "undefined" && state.user && !state.myTeamAbbrs && !window.__liveRosterTried) {
-        window.__liveRosterTried = true;
-        try { var d = await api("/api/myteam"); state.myTeamAbbrs = rosterTeamCounts(d.my_team); } catch (e) { /* no league: nothing is highlighted */ }
-      }
+      await loadRoster();
       var data = await api("/api/live-scores");
       var next = data.games || [];
       var changed = [];
@@ -297,6 +372,8 @@
         if (side) { flashes[g.game_id] = side; changed.push(g.game_id); }
       });
       games = next;
+      updateNavDot();
+      await loadBoxes();
       renderGrid(!quiet);
       changed.forEach(function (id) {
         bounce(document.querySelector('.sb-card[data-game="' + id + '"]'), flashes[id]);
@@ -394,8 +471,22 @@
   LiveTab.load = load;
   LiveTab.openGame = openGame;
   LiveTab.close = closeGame;
+  LiveTab.liveTeams = function () { return liveTeamKeys(games); };
+  // A light poll keeps the sidebar marker and Start/Sit's live tags honest on every tab: every 20 s on this tab, a
+  // minute elsewhere, never in a hidden tab.
   LiveTab.init = function () {
     clearInterval(poll);
-    poll = setInterval(function () { if (typeof state !== "undefined" && state.tab === "live" && !document.hidden) load(true); }, 20000);
+    var n = 0;
+    poll = setInterval(function () {
+      if (document.hidden || typeof state === "undefined") return;
+      n++;
+      if (state.tab === "live") load(true);
+      else if (state.user !== undefined && n % 3 === 0) refreshDotOnly();
+    }, 20000);
+    refreshDotOnly();
   };
+
+  async function refreshDotOnly() {
+    try { games = (await api("/api/live-scores")).games || []; updateNavDot(); } catch (e) { /* leave the marker as it was */ }
+  }
 })();

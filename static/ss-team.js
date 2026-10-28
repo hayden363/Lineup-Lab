@@ -113,18 +113,23 @@
 
   function face(p) { return '<img class="sst-face" ' + headshotAttrs({ headshot_url: p.headshot_url, player_display_name: p.player_display_name }) + ' alt="">'; }
 
+  // How he is listed (BYE, QUESTIONABLE, OUT, IR, PUP...) from the app's one shared renderer, plus the play chance
+  // and a red LIVE marker while his game is on.
   function flags(p) {
-    var f = "";
-    if (p.on_bye) f += '<span class="sst-tag bye">BYE</span>';
-    else if (p.injury_status) f += '<span class="sst-tag inj">' + esc(p.injury_status) + "</span>";
+    var f = window.statusFlagsHtml ? window.statusFlagsHtml(p) : (p.on_bye ? '<span class="sst-tag bye">BYE</span>' : p.injury_status ? '<span class="sst-tag inj">' + esc(p.injury_status) + "</span>" : "");
     if (p.p_play != null && !p.on_bye) f += '<span class="sst-tag q">' + Math.round(p.p_play * 100) + "% to play</span>";
-    return f;
+    return f + liveMark(p);
+  }
+
+  function liveMark(p) {
+    var lt = window.LiveTab && window.LiveTab.liveTeams ? window.LiveTab.liveTeams() : [];
+    return lt.indexOf(window.LiveTab ? window.LiveTab.key(p.recent_team) : "") !== -1 ? ' <span class="live-mark" title="His game is on now"><i></i>LIVE</span>' : "";
   }
 
   function starterCard(p) {
     var range = p.floor != null && p.ceiling != null ? '<small>' + Math.round(p.floor) + "–" + Math.round(p.ceiling) + "</small>" : "";
-    return '<button type="button" class="sst-slot' + (unavailable(p) ? " down" : "") + '" data-pid="' + esc(p.player_id) + '" title="Swap ' + esc(p.player_display_name) + '">' +
-      '<span class="sst-slot-label">' + esc(p.slot || p.position) + "</span>" + face(p) +
+    return '<button type="button" class="sst-slot' + (unavailable(p) ? " down need" : "") + '" data-pid="' + esc(p.player_id) + '" title="' + (unavailable(p) ? "Replace " : "Swap ") + esc(p.player_display_name) + '">' +
+      '<span class="sst-slot-label">' + (unavailable(p) ? "FILL" : esc(p.slot || p.position)) + "</span>" + face(p) +
       '<span class="sst-slot-name">' + esc(p.player_display_name) + flags(p) + "</span>" +
       '<span class="sst-slot-proj"><b>' + d1(p.PROJ) + "</b>" + range + "</span></button>";
   }
@@ -132,6 +137,16 @@
   function benchChip(p) {
     return '<div class="sst-bench-chip' + (unavailable(p) ? " down" : "") + '">' + face(p) + "<span>" + esc(p.player_display_name) +
       '<small>' + esc(p.position) + (p.opponent ? " · vs " + esc(p.opponent) : "") + "</small></span><b>" + d1(p.PROJ) + "</b></div>";
+  }
+
+  // A starter who cannot play (bye, OUT, IR, PUP) is not a start/sit question: his slot needs filling.
+  function needAlert(mine) {
+    var gone = starters(mine).filter(unavailable);
+    if (!gone.length) return "";
+    return '<div class="sst-alert" role="alert">' + gone.map(function (p) {
+      return '<button type="button" class="sst-alert-row" data-pid="' + esc(p.player_id) + '"><b>' + esc(p.player_display_name) + "</b>" + (window.statusFlagsHtml ? window.statusFlagsHtml(p) : "") +
+        ' can\'t play this week. Tap to pick who takes his ' + esc(p.slot || p.position) + " slot.</button>";
+    }).join("") + "</div>";
   }
 
   function render(first) {
@@ -156,6 +171,7 @@
         '<button type="button" class="sst-btn" data-solve="upside" title="Underdog mode: favors big weeks">Max ceiling</button>' +
         '<button type="button" class="sst-btn" data-solve="safe" title="Favorite mode: favors fewer duds">Safe floor</button>' +
         '<span class="sst-msg" id="sst-msg" aria-live="polite"></span></div>' +
+      needAlert(mine) +
       '<div class="sst-lineup">' + starters(mine).map(starterCard).join("") + "</div>" +
       (bench.length ? '<div class="sst-bench-head">Bench</div><div class="sst-bench">' + bench.map(benchChip).join("") + "</div>" : "");
     if (first) {          // count up and fill the bar on first paint
@@ -187,7 +203,7 @@
         var p = c.player, up = c.delta >= 0;
         return '<button type="button" class="sst-cand" data-bench="' + esc(p.player_id) + '">' + face(p) +
           '<span class="sst-cand-main"><b>' + esc(p.player_display_name) + "</b><small>" + esc(p.position) + (p.recent_team ? " · " + esc(p.recent_team) : "") +
-          (p.opponent ? " · vs " + esc(p.opponent) : "") + (p.matchup_tag ? ' · <em class="mt-' + esc(p.matchup_tag) + '">' + esc(p.matchup_tag) + " matchup</em>" : "") + "</small>" +
+          (p.opponent ? " · vs " + esc(p.opponent) : "") + (window.statusFlagsHtml ? window.statusFlagsHtml(p) : "") + liveMark(p) + (p.matchup_tag ? ' · <em class="mt-' + esc(p.matchup_tag) + '">' + esc(p.matchup_tag) + " matchup</em>" : "") + "</small>" +
           '<span class="sst-impact ' + (up ? "up" : "dn") + '">' + esc(p.player_display_name) + " (" + (up ? "+" : "") + c.delta.toFixed(1) + " pts) over " + esc(s.player_display_name) + "</span></span>" +
           '<span class="sst-cand-proj">' + d1(p.PROJ) + "</span></button>";
       }).join("") : '<div class="empty">No bench player can play ' + esc(s.slot || s.position) + " this week.</div>");
@@ -251,7 +267,7 @@
   document.addEventListener("click", function (e) {
     var t = e.target && e.target.closest ? e.target : null;
     if (!t || !model) return;
-    var slot = t.closest(".sst-slot");
+    var slot = t.closest(".sst-slot, .sst-alert-row");
     if (slot) { openDrawer(slot.dataset.pid); return; }
     var cand = t.closest(".sst-cand");
     if (cand) { doSwap(cand.dataset.bench); return; }
