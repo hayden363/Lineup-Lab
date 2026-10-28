@@ -17,6 +17,8 @@ passing and kicking:
 """
 
 import datetime as dt
+import time
+from concurrent.futures import ThreadPoolExecutor
 
 from . import sleeper
 
@@ -25,6 +27,9 @@ FORECAST_URL = ("https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude
                 "&wind_speed_unit=mph&temperature_unit=fahrenheit&timezone=America%2FNew_York"
                 "&start_date={day}&end_date={day}")
 WEATHER_TTL = 60 * 60
+FAIL_TTL = 10 * 60          # a lookup that failed is not retried for ten minutes: one slow weather service must not slow a page
+TIMEOUT = 4                 # seconds a forecast request may take
+_FAILED = {}                # cache name -> when it last failed
 FORECAST_DAYS = 15
 
 # (lat, lon) by nflverse stadium_id.
@@ -84,9 +89,11 @@ def kickoff_forecast(stadium_id, roof, gameday, gametime, today=None):
         return None
     hour = int(str(gametime or "13:00").split(":")[0])
     lat, lon = STADIUMS[stadium_id]
+    name = f"wx_{stadium_id}_{day.isoformat()}"
+    if time.time() - _FAILED.get(name, 0) < FAIL_TTL:
+        return None
     try:
-        data = sleeper._cached_get(FORECAST_URL.format(lat=lat, lon=lon, day=day.isoformat()),
-                                   f"wx_{stadium_id}_{day.isoformat()}", WEATHER_TTL)
+        data = sleeper._cached_get(FORECAST_URL.format(lat=lat, lon=lon, day=day.isoformat()), name, WEATHER_TTL, timeout=TIMEOUT)
         h = data["hourly"]
         # Average kickoff through the next two hours: roughly the first half.
         idx = [i for i, t in enumerate(h["time"]) if hour <= int(t[11:13]) <= hour + 2]
@@ -96,9 +103,31 @@ def kickoff_forecast(stadium_id, roof, gameday, gametime, today=None):
         wind, gust, temp = avg("wind_speed_10m"), avg("wind_gusts_10m"), avg("temperature_2m")
         precip, snow = avg("precipitation"), avg("snowfall")
     except Exception as e:
+        _FAILED[name] = time.time()
         print(f"[weather] forecast unavailable for {stadium_id} {day}: {e}")
         return None
     index, label, why = degradation(wind, precip, snow, temp)
     return {"temp": round(temp), "wind": round(wind), "gust": round(gust), "precip_mm": round(precip, 1),
             "snow_cm": round(snow, 1), "index": index, "label": label, "reasons": why,
             "maybe_closed": stadium_id in RETRACTABLE and roof not in ("open", "outdoors")}
+
+
+def prefetch(schedule, week):
+    """Warm the forecast cache for every outdoor game in `week`, all at once, so the per-player lookups that follow
+    are instant. Returns how many games it asked about; never raises."""
+    try:
+        s = schedule[schedule["game_type"] == "REG"] if "game_type" in schedule.columns else schedule
+        g = s[(s["week"] == week) & (~s["roof"].isin(INDOOR_ROOFS))] if "roof" in s.columns else s[s["week"] == week]
+        games = [(r.get("stadium_id"), r.get("roof"), r.get("gameday"), r.get("gametime")) for r in g.to_dict("records")]
+    except Exception:
+        return 0
+
+    def one(a):
+        try:
+            kickoff_forecast(*a)
+        except Exception as e:
+            print(f"[weather] prefetch skipped one game: {e}")
+    if games:
+        with ThreadPoolExecutor(max_workers=8) as ex:
+            list(ex.map(one, games))
+    return len(games)

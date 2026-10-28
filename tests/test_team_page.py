@@ -154,3 +154,49 @@ class EndpointTest(unittest.TestCase):
         with self.mock.patch.object(tools, "load_bundle", return_value=bundle), \
                 self.mock.patch.object(tools, "start_sit", side_effect=RuntimeError("boom")):
             self.assertEqual(len(tools.team_profile("DET")["players"]), 3)
+
+
+class TeamPageSpeedTests(unittest.TestCase):
+    def setUp(self):
+        from unittest import mock
+        from fastapi.testclient import TestClient
+        import server
+        self.server, self.mock = server, mock
+        server._TEAM_CACHE.clear()
+        self.addCleanup(server._TEAM_CACHE.clear)
+        self.client = TestClient(server.app)
+
+    def test_lite_skips_projections_and_injury_lookups(self):
+        from engine import tools
+        bundle = {"schedule": sched(), "wk": weekly()}
+        with self.mock.patch.object(tools, "load_bundle", return_value=bundle), \
+                self.mock.patch.object(tools, "start_sit", side_effect=AssertionError("lite must not project")), \
+                self.mock.patch.object(tools.sleeper, "live_injury_statuses", side_effect=AssertionError("lite must not look up injuries")):
+            page = tools.team_profile("DET", lite=True)
+        self.assertEqual(page["record"]["text"], "1-1-1")
+        self.assertIsNotNone(page["next_game"])
+
+    def test_the_route_caches_each_version_for_a_few_minutes(self):
+        page = T.build("DET", sched(), weekly())
+        with self.mock.patch.object(self.server.tools, "team_profile", return_value=page) as tp:
+            self.client.get("/api/team/DET")
+            self.client.get("/api/team/DET")
+            self.client.get("/api/team/DET?lite=1")
+            self.client.get("/api/team/DET?lite=1")
+        self.assertEqual(tp.call_count, 2)
+        self.assertEqual([c.kwargs.get("lite") for c in tp.call_args_list], [False, True])
+
+    def test_the_cache_expires(self):
+        page = T.build("DET", sched(), weekly())
+        with self.mock.patch.object(self.server.tools, "team_profile", return_value=page) as tp:
+            self.client.get("/api/team/DET")
+            for k in list(self.server._TEAM_CACHE):
+                ts, v = self.server._TEAM_CACHE[k]
+                self.server._TEAM_CACHE[k] = (ts - self.server.TEAM_TTL - 1, v)
+            self.client.get("/api/team/DET")
+        self.assertEqual(tp.call_count, 2)
+
+    def test_the_header_strip_asks_for_the_light_version(self):
+        import os
+        theme = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "static/theme.js")).read()
+        self.assertIn('"/api/team/" + encodeURIComponent(code) + "?lite=1"', theme)

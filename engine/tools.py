@@ -15,7 +15,7 @@ import pandas as pd
 
 from . import lineup as lineup_layer
 from . import profile
-from . import context, correlation, data, db, decision, kdef_model, schemas, play_prob, draft_runs, history, trade_engine, locks, trade_reasons, defense_scoring, kicker_scoring, role_baseline, sleeper, waivers
+from . import context, correlation, data, db, decision, kdef_model, schemas, play_prob, draft_runs, history, trade_engine, locks, trade_reasons, defense_scoring, kicker_scoring, role_baseline, sleeper, waivers, weather
 from .board import (POSITIONS, build_board, load_bundle, rest_of_season_value,
                      project_vs)
 from .scoring import apply_scoring
@@ -505,6 +505,7 @@ def start_sit(player_ids, opponents=None, season=None, scoring=None, mode="balan
     # A team on bye in this week's slate isn't playing, whatever its next game is.
     slate_week = waivers.target_week(bundle["schedule"])
     byes = profile.bye_weeks(bundle["schedule"])
+    weather.prefetch(bundle["schedule"], slate_week)
     for pid in player_ids:
         pos = _position_of(pid, bundle)
         if pos is None:
@@ -1153,7 +1154,7 @@ _NEWS_ROSTER_CACHE = {}
 NEWS_ROSTER_TTL = 60
 
 
-def team_profile(code, scoring=None, season=None, projected=10):
+def team_profile(code, scoring=None, season=None, projected=10, lite=False):
     """engine/team_page.build on the live data, plus next-game projections (matchup-adjusted, the same numbers
     Start/Sit shows) for the team's `projected` best fantasy players."""
     from . import team_page
@@ -1161,6 +1162,8 @@ def team_profile(code, scoring=None, season=None, projected=10):
     page = team_page.build(code, bundle["schedule"], bundle["wk"])
     if page is None:
         return None
+    if lite:                   # the header strip needs only the record and the games
+        return page
     nxt = page["next_game"]
     try:                       # how every player is listed (Questionable, Out, IR, PUP...), not just the projected few
         listed = sleeper.live_injury_statuses()
@@ -1429,6 +1432,7 @@ def my_team(league_id, roster_id, season=None, scoring=None, week=None):
 
     bundle = load_bundle(season)
     get_board = _board_cache(season, scoring)
+    weather.prefetch(bundle["schedule"], week)       # every game's forecast at once, so the per-player lookups are instant
 
     # Real starting lineup, real slots (including a real double-FLEX league,
     # or DEF/K, or whatever your league actually runs) — from Sleeper's own
@@ -1544,6 +1548,7 @@ def my_team_espn(league_id, team_id, season=None, scoring=None, week=None, year=
 
     bundle = load_bundle(season)
     get_board = _board_cache(season, scoring)
+    weather.prefetch(bundle["schedule"], week)
     def_board = _defense_board(bundle)
     fragility = _offense_fragility(bundle)
     k_board = _kicker_board(bundle)

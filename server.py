@@ -25,7 +25,10 @@ SECURITY POSTURE (see README for the full writeup):
     exposing it beyond your own network
 """
 
+import copy
 import hashlib
+import json
+import threading
 import math
 import os
 import re
@@ -1349,9 +1352,27 @@ def api_chat_mute(req: ChatMute, user=Depends(require_user)):
     return {"ok": True}
 
 
+MYTEAM_TTL = 20            # seconds a computed My Team is reused: several panels ask for it as a page opens
+_MYTEAM_CACHE = {}         # key -> (computed_at, active_team, result)
+_MYTEAM_LOCKS = {}
+_MYTEAM_GUARD = threading.Lock()
+
+
+def _compute_my_team(user, active, week, scoring):
+    try:
+        if active.get("platform") == "espn":
+            espn_s2, swid = db.get_espn_secrets(user["id"])
+            return tools.my_team_espn(active["league_id"], int(active["roster_id"]), scoring=scoring, week=week,
+                                       espn_s2=espn_s2, swid=swid)
+        return tools.my_team(active["league_id"], int(active["roster_id"]), scoring=scoring, week=week)
+    except Exception as e:
+        raise HTTPException(400, str(e))
+
+
 def _load_my_team(user, week, scoring, refresh=False):
     """my_team()/my_team_espn() for the user's active connected league. `refresh` drops the cached rosters and
-    lineups first, so a player just added or dropped on the league site shows up now."""
+    lineups first, so a player just added or dropped on the league site shows up now. The result is reused for
+    MYTEAM_TTL seconds, and requests that arrive together wait for one computation instead of each doing it."""
     active = db.get_active_team(user["id"])
     if not active:
         raise HTTPException(400, "connect a league in Settings first")
@@ -1362,16 +1383,19 @@ def _load_my_team(user, week, scoring, refresh=False):
         else:
             sleeper_layer.clear_league_caches(active["league_id"])
     scoring = _effective_scoring(scoring, user)
-    try:
-        if active.get("platform") == "espn":
-            espn_s2, swid = db.get_espn_secrets(user["id"])
-            result = tools.my_team_espn(active["league_id"], int(active["roster_id"]), scoring=scoring, week=week,
-                                         espn_s2=espn_s2, swid=swid)
-        else:
-            result = tools.my_team(active["league_id"], int(active["roster_id"]), scoring=scoring, week=week)
-    except Exception as e:
-        raise HTTPException(400, str(e))
-    return active, result
+    key = (user["id"], active.get("platform"), str(active["league_id"]), str(active["roster_id"]), week,
+           json.dumps(scoring, sort_keys=True, default=str))
+    with _MYTEAM_GUARD:
+        lock = _MYTEAM_LOCKS.setdefault(key, threading.Lock())
+    with lock:
+        hit = _MYTEAM_CACHE.get(key)
+        if hit and not refresh and time.time() - hit[0] < MYTEAM_TTL:
+            return hit[1], copy.deepcopy(hit[2])
+        result = _compute_my_team(user, active, week, scoring)          # an exception is not cached
+        if len(_MYTEAM_CACHE) > 200:
+            _MYTEAM_CACHE.clear()
+        _MYTEAM_CACHE[key] = (time.time(), active, result)
+    return active, copy.deepcopy(result)
 
 
 @app.get("/api/myteam")
@@ -1616,20 +1640,32 @@ def api_news(scope: str = Query("team", pattern="^(team|opponent|league|favorite
 
 
 team_rate_limit = rate_limit("team", limit=60, window_seconds=60)
+TEAM_TTL = 300             # seconds a team page is reused
+_TEAM_CACHE = {}
+_MATCHUP_CACHE = {}
 
 
 @app.get("/api/team/{code}", dependencies=[Depends(team_rate_limit)])
-def api_team(code: str, scoring: Optional[dict] = Depends(scoring_from_query)):
+def api_team(code: str, lite: bool = Query(False), scoring: Optional[dict] = Depends(scoring_from_query)):
     """One NFL team's page (engine/team_page.py): record, week-by-week results, next game outlook,
-    team stats, and the roster with next-game projections. Public."""
+    team stats, and the roster with next-game projections. `lite` is the record and games only (the header strip
+    on every page asks for it). Public, and cached for a few minutes."""
     code = code.upper()
     if code not in news_layer.TEAM_CODES:
         raise HTTPException(404, "unknown team")
-    page = tools.team_profile(code, scoring=scoring)
+    key = (code, bool(lite), json.dumps(scoring, sort_keys=True, default=str))
+    hit = _TEAM_CACHE.get(key)
+    if hit and time.time() - hit[0] < TEAM_TTL:
+        return hit[1]
+    page = tools.team_profile(code, scoring=scoring, lite=lite)
     if page is None:
         raise HTTPException(404, "unknown team")
     page["logo"] = news_layer.team_logo(code)
-    return _clean(page)
+    out = _clean(page)
+    if len(_TEAM_CACHE) > 200:
+        _TEAM_CACHE.clear()
+    _TEAM_CACHE[key] = (time.time(), out)
+    return out
 
 
 @app.get("/api/live-scores")
@@ -1706,7 +1742,17 @@ def api_game_center(game_id: str, scoring: Optional[dict] = Depends(scoring_from
     center = game_center_layer.center(boxscore_layer.game_summary_raw(game_id), game, names, pts_scoring, mine)
     try:
         market = center.get("odds") or game.get("odds")
-        matchup = tools.matchup_profile(key_team(game["home"]["abbr"]), key_team(game["away"]["abbr"]), market) if game.get("home") else None
+        matchup = None
+        if game.get("home"):
+            mkey = (key_team(game["home"]["abbr"]), key_team(game["away"]["abbr"]), json.dumps(market, sort_keys=True, default=str))
+            hit = _MATCHUP_CACHE.get(mkey)
+            if hit and time.time() - hit[0] < TEAM_TTL:       # the two teams' stats change weekly, so a live game's 15 s polls reuse it
+                matchup = hit[1]
+            else:
+                matchup = tools.matchup_profile(mkey[0], mkey[1], market)
+                if len(_MATCHUP_CACHE) > 100:
+                    _MATCHUP_CACHE.clear()
+                _MATCHUP_CACHE[mkey] = (time.time(), matchup)
     except Exception as e:
         print(f"[game center] matchup profile unavailable: {e}")
         matchup = None

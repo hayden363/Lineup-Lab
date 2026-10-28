@@ -218,7 +218,7 @@
     var hit = gameCache[code];
     var paint = function (d) { if (TT().current() === code) slot.innerHTML = gameLineHtml(gameLine(d, new Date()), d); };
     if (hit && Date.now() - hit.at < 600000) { paint(hit.d); return; }
-    fetch("/api/team/" + encodeURIComponent(code)).then(function (r) { return r.ok ? r.json() : null; }).then(function (d) {
+    fetch("/api/team/" + encodeURIComponent(code) + "?lite=1").then(function (r) { return r.ok ? r.json() : null; }).then(function (d) {
       if (d) { gameCache[code] = { at: Date.now(), d: d }; paint(d); }
     }).catch(function () { /* the strip just stays without a game line */ });
   }

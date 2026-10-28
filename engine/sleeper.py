@@ -69,7 +69,7 @@ def _json_cache_path(name):
 _MEM: dict = {}
 
 
-def _cached_get(url, cache_name, ttl, force=False):
+def _cached_get(url, cache_name, ttl, force=False, timeout=15):
     if not force:
         mem = _MEM.get(cache_name)
         if mem and (time.time() - mem[0]) < ttl:
@@ -82,7 +82,7 @@ def _cached_get(url, cache_name, ttl, force=False):
                     data = json.load(f)
                 _MEM[cache_name] = (mtime, data)
                 return data
-    resp = requests.get(url, timeout=15)
+    resp = requests.get(url, timeout=timeout)
     resp.raise_for_status()
     data = resp.json()
     with open(_json_cache_path(cache_name), "w") as f:

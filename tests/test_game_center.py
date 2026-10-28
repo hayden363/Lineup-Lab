@@ -217,6 +217,14 @@ class EndpointTest(unittest.TestCase):
         self.assertEqual(r.status_code, 200)
         self.assertIsNone(r.json()["matchup"])
 
+    def test_the_matchup_is_reused_between_polls(self):
+        self.server._MATCHUP_CACHE.clear()
+        self.addCleanup(self.server._MATCHUP_CACHE.clear)
+        with mock.patch.object(self.server.tools, "matchup_profile", return_value={"home": {}, "away": {}, "prediction": None}) as mp:
+            self.client.get("/api/live-scores/401772510/center")
+            self.client.get("/api/live-scores/401772510/center")
+        self.assertEqual(mp.call_count, 1)
+
     def test_bad_game_id_is_400(self):
         self.assertEqual(self.client.get("/api/live-scores/abc/center").status_code, 400)
 
