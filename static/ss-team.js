@@ -63,6 +63,13 @@
       .sort(function (a, b) { return (+b.player.PROJ || 0) - (+a.player.PROJ || 0); });
   }
 
+  // For every starter who cannot play (bye, OUT, IR, PUP), the best bench players who can take his slot.
+  function replacements(players, n) {
+    return starters(players).filter(unavailable).map(function (s) {
+      return { starter: s, options: candidates(players, s.player_id).slice(0, n || 2) };
+    });
+  }
+
   // New roster with the bench player in the starter's slot and the starter on the bench.
   function swap(players, starterId, benchId) {
     var s = players.filter(function (p) { return p.player_id === starterId; })[0];
@@ -86,7 +93,7 @@
   }
 
   var SSTeam = { eligible: eligible, total: total, variance: variance, winProb: winProb, status: status,
-    candidates: candidates, swap: swap, applyLineup: applyLineup, unavailable: unavailable };
+    candidates: candidates, replacements: replacements, swap: swap, applyLineup: applyLineup, unavailable: unavailable };
   if (typeof window !== "undefined") window.SSTeam = SSTeam;
   if (typeof module !== "undefined") module.exports = SSTeam;
   if (typeof document === "undefined" || typeof window === "undefined" || !window.document.getElementById) return;

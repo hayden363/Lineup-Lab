@@ -3856,6 +3856,21 @@ function rosterRowHtml(p, isBench) {
   </div>`;
 }
 
+// A starter who can't play (bye, OUT, IR, PUP) holds a slot for nothing: name who on your bench can take it. The app
+// reads your real lineup from the league site and can't change it there, so this points at the swap.
+function replacementBannerHtml(team) {
+  if (!window.SSTeam) return "";
+  const gaps = SSTeam.replacements(team.players || [], 2);
+  if (!gaps.length) return "";
+  const rows = gaps.map(({ starter, options }) => {
+    const best = options.length
+      ? options.map((o) => `<b>${esc(o.player.player_display_name)}</b>${statusFlagsHtml(o.player)} (${FMT.d1(o.player.PROJ)} proj, +${FMT.d1(o.delta)})`).join(" or ")
+      : "nobody on your bench who can fill that slot";
+    return `<div class="rb-row"><b>${esc(starter.player_display_name)}</b>${statusFlagsHtml(starter)} is starting at ${esc(starter.slot || starter.position)} and can't play this week. Start ${best}.</div>`;
+  }).join("");
+  return `<div class="rb-banner" role="alert">${rows}<button type="button" class="pill" id="rb-go">Fix it in Start / Sit</button></div>`;
+}
+
 function teamCardHtml(team, kind) {
   const starters = team.players.filter((p) => p.is_starter);
   const bench = team.players.filter((p) => !p.is_starter);
@@ -3993,10 +4008,12 @@ async function loadMyTeam(week, refresh) {
       ${data.opponent ? teamCardHtml(data.opponent, "opponent")
         : `<div class="myteam-card opponent"><div class="mt-label">OPPONENT</div><div class="mt-name muted">No head-to-head matchup set for week ${esc(data.nfl_week)} yet.</div></div>`}
     </div>`;
+    html = html.replace('<div class="myteam-summary">', replacementBannerHtml(data.my_team) + '<div class="myteam-summary">');
     if (data.opponent) html += matchupBarHtml(data.my_team, data.opponent);
     html += leagueMatchupsHtml(data.league_matchups, data.my_team.roster_id);
     html += `<div id="trades-panel"></div>`;
     content.innerHTML = html;
+    $("#rb-go")?.addEventListener("click", () => switchTab("startsit"));
     $("#mt-refresh").addEventListener("click", async (e) => {
       e.currentTarget.disabled = true; e.currentTarget.textContent = "Refreshing…";
       await loadMyTeam(data.nfl_week, true);

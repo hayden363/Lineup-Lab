@@ -111,3 +111,31 @@ class AvailabilityTests(unittest.TestCase):
     def test_ruled_out_ir_and_pup_starters_count_as_open_slots(self):
         out = run('const me = [P("a","QB","QB",20,true), P("b","RB","RB",0,true,{injury_status:"PUP"}), P("c","WR","WR",0,true,{injury_status:"IR"}), P("d","TE","TE",9,true,{injury_status:"Out"})]; return S.status(me);')
         self.assertEqual(out, {"active": 1, "open": 3, "offline": 3})
+
+
+class ReplacementTests(unittest.TestCase):
+    ROSTER = ('const me = [P("cmc","RB","RB",0,true,{on_bye:true,player_display_name:"CMC"}), P("w","WR","WR",17,true), P("flex","FLEX","WR",0,true,{injury_status:"IR"}),'
+              ' P("sadiq",null,"RB",9,false), P("watkins",null,"WR",8.1,false), P("byewr",null,"WR",20,false,{on_bye:true}), P("te",null,"TE",6,false)];')
+
+    def test_each_starter_who_cannot_play_gets_the_best_eligible_bench_options(self):
+        out = run(self.ROSTER + "return S.replacements(me, 2).map(r => [r.starter.player_id, r.options.map(o => [o.player.player_id, o.delta])]);")
+        self.assertEqual(out[0], ["cmc", [["sadiq", 9.0]]])                   # only an RB can take the RB slot
+        self.assertEqual(out[1][0], "flex")
+        self.assertEqual([o[0] for o in out[1][1]], ["sadiq", "watkins"])      # FLEX takes RB/WR/TE, best first; the bye WR is never offered
+
+    def test_nobody_to_replace_means_nothing(self):
+        self.assertEqual(run('const me = [P("a","QB","QB",20,true), P("b",null,"QB",10,false)]; return S.replacements(me, 2);'), [])
+
+    def test_a_slot_with_no_eligible_bench_player_still_reports_the_gap(self):
+        out = run('const me = [P("k","K","K",0,true,{on_bye:true}), P("b",null,"WR",10,false)]; return S.replacements(me, 2).map(r => [r.starter.player_id, r.options.length]);')
+        self.assertEqual(out, [["k", 0]])
+
+
+class MyTeamBannerTests(unittest.TestCase):
+    def test_my_team_names_who_can_take_a_dead_starters_slot_and_links_to_start_sit(self):
+        js = open(os.path.join(ROOT, "static/app.js")).read()
+        self.assertIn("function replacementBannerHtml", js)
+        self.assertIn("SSTeam.replacements", js)
+        self.assertIn("can't play this week. Start", js)
+        self.assertIn('id="rb-go"', js)
+        self.assertIn('switchTab("startsit")', js[js.index('$("#rb-go")'):][:80])
