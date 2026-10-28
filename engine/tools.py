@@ -2001,7 +2001,7 @@ def _trade_setup_espn(league_id, scoring=None, season=None, year=None, espn_s2=N
     return bundle, rosters, ctx
 
 
-def _run_trade_finder(setup, league_id, my_roster_id, target_roster_id, give_player_ids, max_suggestions):
+def _run_trade_finder(setup, league_id, my_roster_id, target_roster_id, give_player_ids, max_suggestions, want_player_ids=None):
     bundle, rosters, ctx = setup
     if my_roster_id not in rosters:
         raise ValueError(f"roster_id {my_roster_id} not found in league {league_id}")
@@ -2014,7 +2014,7 @@ def _run_trade_finder(setup, league_id, my_roster_id, target_roster_id, give_pla
             raise ValueError("Pick one or two players to shop at a time.")
     found = trade_engine.find_trades(rosters, my_roster_id, ctx, give_ids=list(give_player_ids or []) or None,
                                      target_ids={target_roster_id} if target_roster_id else None,
-                                     max_suggestions=max_suggestions)
+                                     max_suggestions=max_suggestions, want_ids=list(want_player_ids) if want_player_ids else None)
     out = []
     for f in found:
         a = f["analysis"]
@@ -2025,25 +2025,32 @@ def _run_trade_finder(setup, league_id, my_roster_id, target_roster_id, give_pla
             "fills_need": max(f["you_get"], key=lambda p: p["trade"])["position"],
             "analysis": {k: v for k, v in a.items() if not k.startswith("_")},
         })
-    return {"season": bundle["season"], "my_roster_id": my_roster_id, "suggestions": out}
+    result = {"season": bundle["season"], "my_roster_id": my_roster_id, "suggestions": out}
+    if want_player_ids:        # who owns the player being pursued, so the page can say so when there is nothing to offer
+        pid = list(want_player_ids)[0]
+        owner = next(((rid, t) for rid, t in rosters.items() if any(p["player_id"] == pid for p in t["players"])), None)
+        result["target"] = {"player_id": pid, "owner_roster_id": owner[0] if owner else None,
+                            "owner_team_name": owner[1]["name"] if owner else None,
+                            "on_my_roster": bool(owner and owner[0] == my_roster_id), "on_a_roster": owner is not None}
+    return result
 
 
 def trade_finder(league_id, my_roster_id, target_roster_id=None, give_player_ids=None,
-                  season=None, scoring=None, max_suggestions=6):
+                  season=None, scoring=None, max_suggestions=6, want_player_ids=None):
     """Trades that pass every gate in engine/trade_engine.py (tier break,
     both starting lineups, roster fit, records, fairness index), ranked by
     mutual benefit. Need-driven by default; with `give_player_ids` (one or
     two of yours) every suggestion includes them."""
     return _run_trade_finder(_trade_setup(league_id, scoring, season), league_id, my_roster_id,
-                             target_roster_id, give_player_ids, max_suggestions)
+                             target_roster_id, give_player_ids, max_suggestions, want_player_ids)
 
 
 def trade_finder_espn(league_id, my_roster_id, target_roster_id=None, give_player_ids=None, season=None,
-                      scoring=None, max_suggestions=6, year=None, espn_s2=None, swid=None):
+                      scoring=None, max_suggestions=6, year=None, espn_s2=None, swid=None, want_player_ids=None):
     """trade_finder() for an ESPN league. Kickers and defenses are not traded
     here (the engine values QB/RB/WR/TE), same as for Sleeper."""
     return _run_trade_finder(_trade_setup_espn(league_id, scoring, season, year, espn_s2, swid), league_id,
-                             my_roster_id, target_roster_id, give_player_ids, max_suggestions)
+                             my_roster_id, target_roster_id, give_player_ids, max_suggestions, want_player_ids)
 
 
 def evaluate_trade(league_id, my_roster_id, opponent_roster_id, give_ids, get_ids, scoring=None, season=None):

@@ -657,6 +657,14 @@ def annotate(rosters, slots):
 
 
 # ---------------------------------------------------------------- finder ----
+def _owns(team, want_ids):
+    """True when `team` holds every player in `want_ids` (always true with none named)."""
+    if not want_ids:
+        return True
+    have = {p["player_id"] for p in team["players"]}
+    return set(want_ids) <= have
+
+
 def _combos(players, sizes, must=None):
     must = set(must or [])
     for n in sizes:
@@ -671,7 +679,7 @@ FAIR_POOL = 12                    # players per side considered for fair trades
 MAX_FAIR = 150
 
 
-def _fair_trades(rosters, my_roster_id, ctx, give_ids, target_ids):
+def _fair_trades(rosters, my_roster_id, ctx, give_ids, target_ids, want_ids=None):
     """Every 1-for-1 up to 2-for-2 that is dead-even on the trade chart (and
     clears the tier, roster, contender, insult and bye checks), whether or not
     it helps either lineup. Closest to even first (in 2-point bands), then by mutual benefit."""
@@ -686,12 +694,12 @@ def _fair_trades(rosters, my_roster_id, ctx, give_ids, target_ids):
     lo, hi = FAIR_PREFILTER
     found = []
     for rid, opp in rosters.items():
-        if rid == my_roster_id or (target_ids and rid not in target_ids):
+        if rid == my_roster_id or (target_ids and rid not in target_ids) or not _owns(opp, want_ids):
             continue
-        their_pool = pool(opp["players"])
+        their_pool = pool(opp["players"], want_ids)
         for give in _combos(my_pool, my_sizes, must=give_ids):
             vg = effective_value(give, profile)
-            for get in _combos(their_pool, (1, 2)):
+            for get in _combos(their_pool, (1, 2), must=want_ids):
                 vt = effective_value(get, profile)
                 if not vt or not lo <= 100 * vg / vt <= hi:
                     continue
@@ -712,7 +720,7 @@ def _fair_trades(rosters, my_roster_id, ctx, give_ids, target_ids):
     return out
 
 
-def find_trades(rosters, my_roster_id, ctx, give_ids=None, target_ids=None, max_suggestions=6, fair_first=True):
+def find_trades(rosters, my_roster_id, ctx, give_ids=None, target_ids=None, max_suggestions=6, fair_first=True, want_ids=None):
     """First every dead-even 1-for-1 up to 2-for-2 (see _fair_trades), then the
     trades that pass every gate ranked by mutual benefit, at most two per
     opponent and three per player of yours."""
@@ -727,12 +735,17 @@ def find_trades(rosters, my_roster_id, ctx, give_ids=None, target_ids=None, max_
     else:
         my_pool, my_sizes = tradeable(me["players"]), (1, 2)
     found = []
+
+    def their_players(opp):          # the wanted player is always on the table, whatever his rank on his team
+        pool = tradeable(opp["players"])
+        extra = [p for p in opp["players"] if want_ids and p["player_id"] in want_ids and p not in pool]
+        return pool + extra
     for rid, opp in rosters.items():
-        if rid == my_roster_id or (target_ids and rid not in target_ids):
+        if rid == my_roster_id or (target_ids and rid not in target_ids) or not _owns(opp, want_ids):
             continue
-        their_pool = tradeable(opp["players"])
+        their_pool = their_players(opp)
         for give in _combos(my_pool, my_sizes, must=give_ids):
-            for get in _combos(their_pool, (1, 2)):
+            for get in _combos(their_pool, (1, 2), must=want_ids):
                 quick = assess(give, get, me, opp, ctx, full=False)
                 if quick and quick["_status"] == "APPROVED":
                     found.append((quick["_score"], rid, give, get))
@@ -740,17 +753,17 @@ def find_trades(rosters, my_roster_id, ctx, give_ids=None, target_ids=None, max_
         # Nothing passes every gate: offer the closest one-tweak deals instead
         # of an empty page, clearly labelled as needing a change.
         for rid, opp in rosters.items():
-            if rid == my_roster_id or (target_ids and rid not in target_ids):
+            if rid == my_roster_id or (target_ids and rid not in target_ids) or not _owns(opp, want_ids):
                 continue
             for give in _combos(my_pool, my_sizes, must=give_ids):
-                for get in _combos(tradeable(opp["players"]), (1, 2)):
+                for get in _combos(their_players(opp), (1, 2), must=want_ids):
                     quick = assess(give, get, me, opp, ctx, full=False)
                     if quick and quick["_status"] == "MODIFICATION_REQUIRED":
                         found.append((quick["_score"] - 5, rid, give, get))
     found.sort(key=lambda x: -x[0])
     picked, per_opp, per_player, cores = [], {}, {}, set()
     fair_keys = set()
-    for rid, give, get in (_fair_trades(rosters, my_roster_id, ctx, give_ids, target_ids) if fair_first else []):
+    for rid, give, get in (_fair_trades(rosters, my_roster_id, ctx, give_ids, target_ids, want_ids) if fair_first else []):
         fair_keys.add((rid, frozenset(p["player_id"] for p in give), frozenset(p["player_id"] for p in get)))
         picked.append({"opponent_roster_id": rid, "opponent_team_name": rosters[rid]["name"], "kind": "fair",
                        "you_give": list(give), "you_get": list(get),

@@ -506,6 +506,53 @@ class InteractionTests(unittest.TestCase):
         self.assertTrue("ThemeFX.tabWipe" in body[:body.index("\n}\n")], "switchTab must call ThemeFX.tabWipe")
 
 
+class GameStripTests(unittest.TestCase):
+    DATA = """const D = { record: { text: "4-2" }, games: [
+      { week: 6, opponent: "TB", home: false, result: "L", team_score: 17, opp_score: 24, date: "2026-10-18" },
+      { week: 7, opponent: "GB", home: true, result: "W", team_score: 27, opp_score: 20, date: "2026-10-25" },
+      { week: 8, opponent: "MIN", home: true, result: null, date: "2026-11-01" }],
+      next_game: { week: 8, opponent: "MIN", home: true, date: "2026-11-01", spread: -6.5 } };
+      const day = (dow) => ({ getDay: () => dow });"""
+
+    def test_early_in_the_week_it_shows_the_last_game_with_the_result(self):
+        for dow in (1, 2, 3):          # Monday to Wednesday
+            out = run_fx(self.DATA + f"return ThemeFX.gameLine(D, day({dow}));")
+            self.assertEqual(out["kind"], "last", dow)
+            self.assertEqual(out["result"], "W")
+            self.assertIn("W 27\u201320 vs GB", out["text"])
+            self.assertIn("Wk 7", out["text"])
+
+    def test_from_thursday_it_shows_the_next_game_with_the_line(self):
+        for dow in (4, 5, 6, 0):       # Thursday to Sunday
+            out = run_fx(self.DATA + f"return ThemeFX.gameLine(D, day({dow}));")
+            self.assertEqual(out["kind"], "next", dow)
+            self.assertIn("vs MIN", out["text"])
+            self.assertIn("Wk 8", out["text"])
+            self.assertIn("-6.5", out["text"])
+
+    def test_an_away_game_reads_at_and_a_loss_is_marked(self):
+        out = run_fx("""const D = { games: [{ week: 6, opponent: "TB", home: false, result: "L", team_score: 17, opp_score: 24, date: "2026-10-18" }], next_game: null };
+            return ThemeFX.gameLine(D, { getDay: () => 2 });""")
+        self.assertEqual((out["kind"], out["result"]), ("last", "L"))
+        self.assertIn("L 17\u201324 @ TB", out["text"])
+
+    def test_with_no_last_game_it_falls_back_to_the_next_and_the_other_way_round(self):
+        out = run_fx("""const D = { games: [], next_game: { week: 1, opponent: "KC", home: false, date: "2026-09-10" } };
+            return [ThemeFX.gameLine(D, { getDay: () => 2 }).kind, ThemeFX.gameLine({ games: [{week:3, opponent:"X", home:true, result:"T", team_score:20, opp_score:20, date:"2026-09-20"}], next_game: null }, { getDay: () => 5 }).kind];""")
+        self.assertEqual(out, ["next", "last"])
+
+    def test_nothing_to_show_is_null(self):
+        self.assertIsNone(run_fx('return ThemeFX.gameLine({ games: [], next_game: null }, { getDay: () => 2 });'))
+        self.assertIsNone(run_fx('return ThemeFX.gameLine(null, { getDay: () => 2 });'))
+
+    def test_the_strip_spans_the_page_and_the_game_text_is_escaped(self):
+        css = open(os.path.join(ROOT, "static/style.css")).read()
+        self.assertIn(".th-game", css)
+        out = run_fx("""const D = { games: [{ week: 1, opponent: "<img src=x>", home: true, result: "W", team_score: 1, opp_score: 0, date: "2026-09-10" }], next_game: null };
+            return ThemeFX.gameLineHtml(ThemeFX.gameLine(D, { getDay: () => 2 }), D);""")
+        self.assertNotIn("<img", out)
+
+
 class AtmosphereWiringTests(WiringTests):
     def test_hero_mount_is_at_the_top_of_the_app_above_every_tab(self):
         html = self.read("static/index.html")

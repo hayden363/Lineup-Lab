@@ -619,6 +619,15 @@ def meta(user=Depends(current_user)):
     }
 
 
+@app.get("/api/slate")
+def api_slate():
+    """This week's slate and every team's bye week, so any screen can tag a player "BYE" (static/app.js
+    statusFlagsHtml). Reads only the schedule, so it is quick even on a cold start. Public."""
+    from engine import profile as profile_layer
+    sched = data_layer.load_schedule()
+    return {"week": waivers_layer.target_week(sched), "byes": profile_layer.bye_weeks(sched)}
+
+
 _OVERALL_COLUMNS = [
     "player_display_name", "position", "recent_team", "headshot_url", "overall_rank", "tier", "pos_rank",
     "PROJ", "VOR", "VALUE", "replacement_proj", "ecr", "ecr_sd", "ecr_gap", "SCORE", "FORM", "games",
@@ -1462,6 +1471,7 @@ def api_draft_board(draft_id: str, roster_id: Optional[int] = Query(None),
 @app.get("/api/trade-finder")
 def api_trade_finder(target_roster_id: Optional[int] = Query(None),
                       give: Optional[List[str]] = Query(None, description="player_id(s) you want to shop — omit for need-driven auto suggestions"),
+                      want: Optional[List[str]] = Query(None, max_length=2, description="player_id(s) you want to acquire: every suggestion lands them"),
                       scoring: Optional[dict] = Depends(scoring_from_query), user=Depends(require_user)):
     active = db.get_active_team(user["id"])
     if not active:
@@ -1472,10 +1482,11 @@ def api_trade_finder(target_roster_id: Optional[int] = Query(None),
             espn_s2, swid = db.get_espn_secrets(user["id"])
             result = tools.trade_finder_espn(active["league_id"], int(active["roster_id"]),
                                              target_roster_id=target_roster_id, give_player_ids=give,
-                                             scoring=scoring, espn_s2=espn_s2, swid=swid)
+                                             scoring=scoring, espn_s2=espn_s2, swid=swid, want_player_ids=want)
         else:
             result = tools.trade_finder(active["league_id"], int(active["roster_id"]),
-                                         target_roster_id=target_roster_id, give_player_ids=give, scoring=scoring)
+                                         target_roster_id=target_roster_id, give_player_ids=give, scoring=scoring,
+                                         want_player_ids=want)
     except Exception as e:
         raise HTTPException(400, str(e))
     if result.get("suggestions"):

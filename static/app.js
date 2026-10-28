@@ -1899,6 +1899,7 @@ function playerCardHtml(p) {
       <button type="button" class="pcd-btn pri" data-act="compare">${cardIcon("compare")}Compare</button>
       <button type="button" class="pcd-btn" data-act="startsit">${cardIcon("startsit")}Start / Sit</button>
       <button type="button" class="pcd-btn" data-act="trade" hidden>${cardIcon("trade")}Shop in trades</button>
+      <button type="button" class="pcd-btn" data-act="findtrade" hidden>${cardIcon("trade")}Find a trade</button>
       <div class="pcd-scoring">Scoring <span>${esc(SCORING_LABELS[state.scoring] || "PPR")}</span></div>
     </div>
     <nav class="pcd-nav" role="tablist" aria-label="Player sections">${CARD_SECTIONS.map(([k, l]) => `<button type="button" role="tab" id="pcd-tab-${k}" data-go="${k}" aria-controls="pcd-pane-${k}" aria-selected="false" tabindex="-1">${l}</button>`).join("")}</nav>
@@ -1965,6 +1966,16 @@ function wirePlayerCard(root, p) {
       if (roster.some((x) => x.player_id === pid)) tradeBtn.hidden = false;
     }).catch(() => {});
   }
+  // "Find a trade" is for a player you do not have: the trade finder builds realistic offers to land him.
+  const findBtn = card.querySelector('[data-act="findtrade"]');
+  if (state.user && activeTeam() && POSITIONS.includes(p.position)) {
+    ensureMyRoster().then((roster) => { findBtn.hidden = roster.some((x) => x.player_id === pid); }).catch(() => {});
+  }
+  findBtn.addEventListener("click", () => {
+    state.tradeWant = { player_id: pid, name: p.player_display_name };
+    closeModal();
+    switchTab("trade");
+  });
   tradeBtn.addEventListener("click", () => {
     state.shopSelected = new Set([pid]);
     closeModal();
@@ -4237,11 +4248,38 @@ function tradeFinderTier(pctDiff) {
   return { css: "tier-bad", label: "Overpay", icon: "📉" };
 }
 
+// Realistic ways to land one specific player: the same trade finder, told who to get. Every suggestion includes him.
+async function runAcquire(results) {
+  const want = state.tradeWant;
+  const head = `<div class="tf-acquire"><div><span class="tf-acquire-k">Finding a trade for</span> <b>${esc(want.name)}</b></div>
+    <button type="button" class="link-btn" id="tf-acquire-clear">Clear</button></div>`;
+  results.innerHTML = head + `<div class="trade-analyzing"><div class="trade-scan-bar"></div><span>Looking for realistic offers for ${esc(want.name)}…</span></div>`;
+  $("#tf-acquire-clear").addEventListener("click", () => { state.tradeWant = null; loadTradeFinder(); });
+  try {
+    const data = await api(`/api/trade-finder?${(scoringQS() + `&want=${encodeURIComponent(want.player_id)}`).replace(/^&/, "")}`);
+    const t = data.target || {};
+    const holder = results.querySelector(".trade-analyzing");
+    if (!data.suggestions.length) {
+      const why = t.on_my_roster ? `${esc(want.name)} is already on your team.`
+        : !t.on_a_roster ? `${esc(want.name)} isn't on a roster in your league, so there's no trade to make. Check the waiver wire instead.`
+        : `No realistic offer for ${esc(want.name)} turns up from ${esc(t.owner_team_name)} right now: every package that matches his value either costs you a starter you need or wouldn't help them. Try the builder below to make your own offer.`;
+      holder.outerHTML = `<div class="empty tf-empty">${why}</div>`;
+      return;
+    }
+    holder.outerHTML = `<div id="tf-acquire-results"></div>`;
+    renderTradeFinderResults($("#tf-acquire-results"), data.suggestions);
+  } catch (e) {
+    results.querySelector(".trade-analyzing").outerHTML = `<div class="empty">${esc(e.message)}</div>`;
+  }
+}
+
 async function loadTradeFinder(giveIds) {
   const block = $("#trade-finder-block");
   if (!state.user || !activeTeam()) { block.style.display = "none"; return; }
   block.style.display = "";
+  if (giveIds) state.tradeWant = null;       // shopping your own players or scanning replaces a pending "find a trade"
   await renderShopPicker();
+  if (!giveIds && state.tradeWant) { runAcquire($("#trade-finder-results")); $("#shop-clear-btn").style.display = "none"; return; }
 
   const results = $("#trade-finder-results");
   const clearBtn = $("#shop-clear-btn");

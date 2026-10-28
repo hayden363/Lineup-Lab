@@ -122,6 +122,38 @@ class FinderTest(unittest.TestCase):
         self.assertTrue(all(s["kind"] in ("fair", "approved") for s in mixed))
 
 
+class AcquireTest(unittest.TestCase):
+    """find_trades(want_ids=...): every suggestion lands the player you named, from the team that owns him."""
+
+    def rosters(self):
+        me = AssessTest()
+        me.setUp()
+        rosters = {1: dict(me.me, name="Me")}
+        for rid in range(2, 5):
+            t = team([dict(p, player_id=f"{p['player_id']}{rid}") for p in me.them["players"]], 2, 2, weak=["WR2"])
+            rosters[rid] = dict(t, name=f"T{rid}")
+        return rosters
+
+    def test_every_suggestion_lands_the_wanted_player_from_his_owner(self):
+        out = T.find_trades(self.rosters(), 1, CTX, want_ids=["T3"], max_suggestions=6)
+        self.assertTrue(out)
+        for s in out:
+            self.assertEqual(s["opponent_roster_id"], 3)
+            self.assertIn("T3", [p["player_id"] for p in s["you_get"]])
+
+    def test_a_player_nobody_else_owns_returns_nothing(self):
+        self.assertEqual(T.find_trades(self.rosters(), 1, CTX, want_ids=["ghost"]), [])
+
+    def test_your_own_player_cannot_be_the_target(self):
+        self.assertEqual(T.find_trades(self.rosters(), 1, CTX, want_ids=["w1"]), [])
+
+    def test_a_target_outside_the_top_candidates_is_still_considered(self):
+        rosters = self.rosters()
+        rosters[2]["players"].append(P("deep", "WR", 9, 20))
+        out = T.find_trades(rosters, 1, CTX, want_ids=["deep"], fair_first=False, max_suggestions=6)
+        self.assertTrue(all("deep" in [p["player_id"] for p in s["you_get"]] for s in out))
+
+
 if __name__ == "__main__":
     unittest.main()
 

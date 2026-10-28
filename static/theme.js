@@ -177,6 +177,52 @@
   }
 
   // Fills #team-hero for the current team, or empties it for the default theme.
+  // ---- the strip's game line: the last result early in the week, the next game from Thursday on ----
+  function dateLabel(iso) {
+    var d = new Date(String(iso).slice(0, 10) + "T12:00:00");
+    return isNaN(d) ? "" : d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+  }
+
+  // `d` is /api/team/{code}. Monday to Wednesday the game people are talking about is the one just played; Thursday
+  // to Sunday it is the one coming up. With only one of the two available, that one.
+  function gameLine(d, now) {
+    if (!d) return null;
+    var played = (d.games || []).filter(function (g) { return g.result; });
+    var last = played[played.length - 1], nxt = d.next_game;
+    var dow = (now || new Date()).getDay();
+    var wantLast = dow >= 1 && dow <= 3;
+    var useLast = last && (wantLast || !nxt);
+    if (!useLast && !nxt) return null;
+    if (useLast) {
+      return { kind: "last", result: last.result, week: last.week,
+        text: "Last game \u00b7 Wk " + last.week + " \u00b7 " + last.result + " " + last.team_score + "\u2013" + last.opp_score + " " + (last.home ? "vs" : "@") + " " + last.opponent };
+    }
+    var line = "";
+    if (nxt.spread != null && nxt.spread !== 0) line = " \u00b7 " + (nxt.spread < 0 ? (d.team || "") : nxt.opponent) + " -" + Math.abs(nxt.spread);
+    var when = dateLabel(nxt.date);
+    return { kind: "next", result: null, week: nxt.week,
+      text: "Next game \u00b7 Wk " + nxt.week + (when ? " \u00b7 " + when : "") + " \u00b7 " + (nxt.home ? "vs" : "@") + " " + nxt.opponent + line };
+  }
+
+  function gameLineHtml(line, d) {
+    if (!line) return "";
+    var rec = d && d.record ? '<span class="th-rec">' + esc(d.record.text) + "</span>" : "";
+    return rec + '<span class="th-game' + (line.result ? " res-" + String(line.result).toLowerCase() : "") + '">' + esc(line.text) + "</span>";
+  }
+
+  var gameCache = {};
+  function fillGame(code) {
+    var el = document.getElementById ? document.getElementById("team-hero") : null;
+    var slot = el && el.querySelector ? el.querySelector(".th-info") : null;
+    if (!slot || typeof fetch !== "function") return;
+    var hit = gameCache[code];
+    var paint = function (d) { if (TT().current() === code) slot.innerHTML = gameLineHtml(gameLine(d, new Date()), d); };
+    if (hit && Date.now() - hit.at < 600000) { paint(hit.d); return; }
+    fetch("/api/team/" + encodeURIComponent(code)).then(function (r) { return r.ok ? r.json() : null; }).then(function (d) {
+      if (d) { gameCache[code] = { at: Date.now(), d: d }; paint(d); }
+    }).catch(function () { /* the strip just stays without a game line */ });
+  }
+
   function renderHero() {
     var el = document.getElementById ? document.getElementById("team-hero") : null;
     if (!el) return;
@@ -185,11 +231,13 @@
     el.innerHTML = '<button type="button" class="th-band" data-team-page="' + esc(t.code) + '" aria-label="Open the ' + esc(t.city + " " + t.name) + ' team page">' +
       '<span class="th-art" aria-hidden="true"></span><span class="th-lines" aria-hidden="true"></span>' +
       '<span class="th-body"><img class="th-logo" src="' + esc("/api/img?url=" + encodeURIComponent(t.logo)) + '" alt="" width="28" height="28" data-logo="' + esc(t.code) + '">' +
-      '<span class="th-text"><span class="th-city">' + esc(t.city) + '</span><span class="th-name">' + esc(t.name) + '</span></span><span class="th-go" aria-hidden="true">Team page ›</span></span></button>';
+      '<span class="th-text"><span class="th-city">' + esc(t.city) + '</span><span class="th-name">' + esc(t.name) + '</span></span>' +
+      '<span class="th-info"></span><span class="th-go" aria-hidden="true">Team page \u203a</span></span></button>';
     if (!el._tpBound) {
       el._tpBound = true;
       el.addEventListener("error", function (e) { var img = e.target; if (img && img.dataset && img.dataset.logo) swapLogo(img); }, true);   // error does not bubble
     }
+    fillGame(t.code);
   }
 
   function removeOverlay() {
@@ -251,7 +299,7 @@
     window.setTimeout(function () { if (wipe === el) { if (el.remove) el.remove(); wipe = null; } }, 400);
   }
 
-  window.ThemeFX = { renderHero: renderHero, kickoff: kickoff, initGlow: initGlow, tabWipe: tabWipe };
+  window.ThemeFX = { gameLine: gameLine, gameLineHtml: gameLineHtml, renderHero: renderHero, kickoff: kickoff, initGlow: initGlow, tabWipe: tabWipe };
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", renderHero);
   else renderHero();
