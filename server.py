@@ -1790,7 +1790,7 @@ def _app_js():
 
 
 # The theme files are correctness-critical on every load for the same reason: theme-boot.js runs before first paint.
-for _theme_js in ("team-themes.js", "theme-boot.js", "theme.js", "ss-team.js", "live.js", "team-page.js"):
+for _theme_js in ("team-themes.js", "theme-boot.js", "theme.js", "ss-team.js", "live.js", "team-page.js", "skin.js"):
     def _theme_script(_f=_theme_js):
         return FileResponse(f"static/{_f}", media_type="text/javascript", headers={"Cache-Control": "no-cache"})
     app.add_api_route(f"/{_theme_js}", _theme_script, methods=["GET"], include_in_schema=False)

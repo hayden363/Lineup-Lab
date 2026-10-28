@@ -5328,3 +5328,68 @@ body.sidebar-collapsed .nav-live-dot { position: absolute; top: 9px; right: 16px
 @media (max-width: 700px) { .tpx-tiles { grid-template-columns: repeat(2, 1fr); padding: 14px 14px 0; } .tpx-card { margin: 14px 14px 0; } .tpx-hero, .tpx-next { padding-left: 14px; padding-right: 14px; } .tpx-name { font-size: 24px; }
   .tpx-player { grid-template-columns: 20px 32px 1fr 44px 44px; } .tpx-bar { display: none; } }
 @media (prefers-reduced-motion: reduce) { .tpx-gauge i { transition: none; } .tpx-player { transition: none; } }
+
+/* ---- Sleeper skin ----------------------------------------------------------------------------------------------
+   Deep navy surfaces, one teal accent, rounded flat cards, position-colored chips, big bold numerals in the system
+   sans (no terminal font), and a bottom tab bar on phones. Team themes still override the accent and surfaces, and
+   the meaning colors (green good, red risk, amber caution) are the same family as before. */
+:root {
+  --bg: #101520; --panel: #171d2b; --panel-2: #1f2637; --panel-glass: rgba(23, 29, 43, 0.72);
+  --border: rgba(255, 255, 255, 0.07); --border-bright: rgba(0, 206, 184, 0.3);
+  --text: #f2f5fa; --muted: #8f9bb3; --muted-dim: #7f8ba3;
+  --accent: #00ceb8; --accent-dim: #00a897; --accent-glow: rgba(0, 206, 184, 0.32); --brand: #00a897; --on-accent: #04201c;
+  --pos: #2fd9a0; --soft: #2fd9a0; --neg: #ff5d7a; --tough: #ff5d7a; --avg: #ffb84d; --info: #58a7ff; --violet: #bd66ff;
+  --neg-glow: rgba(255, 93, 122, 0.35); --avg-glow: rgba(255, 184, 77, 0.32); --info-glow: rgba(88, 167, 255, 0.35); --violet-glow: rgba(189, 102, 255, 0.35);
+  --radius-sm: 10px; --radius: 16px; --radius-lg: 20px;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --shadow: 0 1px 0 rgba(255, 255, 255, 0.03) inset, 0 8px 22px -14px rgba(0, 0, 0, 0.7);
+  --shadow-lift: 0 18px 36px -16px rgba(0, 0, 0, 0.75);
+  --shadow-glow: 0 10px 24px -12px var(--accent-glow);
+  --sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Inter, Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mono: var(--sans);
+  --pos-qb: #ff2a6d; --pos-rb: #00ceb8; --pos-wr: #58a7ff; --pos-te: #ffae58; --pos-k: #bd66ff; --pos-def: #7988a1;
+}
+body { font-variant-numeric: tabular-nums; background: var(--bg); }
+.tpx, .fld, .gc-count { --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }   /* the team page and field keep their technical look */
+
+/* position-colored chips, everywhere a position is printed */
+[data-pos] { color: #0b1018 !important; font-weight: 800; border: 0 !important; border-radius: 7px; padding: 2px 7px; letter-spacing: .02em; text-align: center; }
+[data-pos="QB"] { background: var(--pos-qb) !important; } [data-pos="RB"] { background: var(--pos-rb) !important; } [data-pos="WR"] { background: var(--pos-wr) !important; }
+[data-pos="TE"] { background: var(--pos-te) !important; } [data-pos="K"] { background: var(--pos-k) !important; } [data-pos="DEF"] { background: var(--pos-def) !important; color: #fff !important; }
+[data-pos="FLEX"] { background: linear-gradient(135deg, var(--pos-rb), var(--pos-wr)) !important; }
+
+/* surfaces */
+.page-header h1 { background: none; -webkit-text-fill-color: currentColor; color: var(--text); font-size: 24px; letter-spacing: -0.01em; }
+#sidebar { background: var(--panel); }
+.nav-item.active { background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--accent); }
+.primary-btn { background: var(--accent); color: var(--on-accent, #04201c); border-radius: 12px; box-shadow: none; }
+.primary-btn:hover:not(:disabled) { filter: brightness(1.08); box-shadow: var(--shadow-glow); }
+.lab-card, .myteam-card, .gc-card, .board-wrap, .news-card, .tr-card, .settings-block { border-radius: var(--radius); }
+
+/* My Team / roster rows: slot chip, face, name and team, then the points */
+.myteam-roster-row { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 12px; background: var(--panel-2); border: 0; margin-bottom: 6px; }
+.myteam-roster-row .pos-badge { order: -1; min-width: 40px; }
+.myteam-roster-row img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; object-position: top; background: var(--panel); }
+.myteam-roster-row .proj-num { margin-left: auto; font-size: 17px; font-weight: 800; color: var(--text); }
+.myteam-roster-row.bench .proj-num { color: var(--muted); font-weight: 600; }
+.myteam-summary { gap: 12px; }
+.myteam-card .mt-total { font-size: 38px; font-weight: 800; letter-spacing: -0.02em; }
+
+/* Start/Sit hero cards and NFL Games cards in the same softer language */
+.sst-slot, .sst-cand, .sst-bench-chip { background: var(--panel-2); border-color: transparent; }
+.sb-card { border-radius: 18px; }
+
+/* phones: a bottom tab bar replaces the floating menu button */
+#bottom-nav { display: none; }
+@media (max-width: 900px) {
+  #bottom-nav { display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 70; padding: 6px 6px calc(6px + env(safe-area-inset-bottom)); background: rgba(16, 21, 32, 0.94); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border-top: 1px solid var(--border); }
+  #bottom-nav button { position: relative; flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 6px 2px; background: none; border: 0; border-radius: 12px; color: var(--muted); font: inherit; font-size: 10px; font-weight: 700; cursor: pointer; }
+  #bottom-nav svg { width: 22px; height: 22px; }
+  #bottom-nav button.on { color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); }
+  .bn-live-dot { position: absolute; top: 5px; right: calc(50% - 18px); width: 8px; height: 8px; border-radius: 50%; background: #ff3b5c; box-shadow: 0 0 0 2px rgba(255, 59, 92, .25), 0 0 10px 2px rgba(255, 59, 92, .75); animation: liveGlow 1.5s ease-in-out infinite; }
+  .bn-live-dot[hidden] { display: none; }
+  #mobile-menu-btn { display: none !important; }
+  #app, main { padding-bottom: calc(76px + env(safe-area-inset-bottom)); }
+  .toast-root, #toast-root { bottom: calc(84px + env(safe-area-inset-bottom)); }
+}
+@media (prefers-reduced-motion: reduce) { .bn-live-dot { animation: none; } }

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Lineup Lab — Fantasy Football</title>
   <meta name="description" content="A from-scratch fantasy football valuation engine built on free, real NFL data and Next Gen Stats.">
-  <meta name="theme-color" content="#070b09">
+  <meta name="theme-color" content="#101520">
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="icon" href="/icons/favicon-32.png" sizes="32x32">
   <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
@@ -508,6 +508,13 @@
     <div class="footer-note">Data: nflverse / nfl_data_py · Next Gen Stats · ESPN &amp; CBS RSS · Not affiliated with the NFL, PFF, or WalterFootball. · <a href="/legal/terms">Terms</a> · <a href="/legal/privacy">Privacy</a> · <a href="mailto:lineuplabfootball@gmail.com">Contact</a></div>
   </div>
 
+  <nav id="bottom-nav" aria-label="Main tabs">
+    <button type="button" data-go="myteam"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2.5l6 2.2v4.6c0 3.6-2.4 6.3-6 8.2-3.6-1.9-6-4.6-6-8.2V4.7z"/></svg><span>My Team</span></button>
+    <button type="button" data-go="live"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="4.5" width="15" height="11" rx="2"/><path d="M2.5 10h15M10 4.5v11"/></svg><span>NFL Games</span><i class="bn-live-dot" id="bn-live-dot" hidden></i></button>
+    <button type="button" data-go="startsit"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 5l-3 3 3 3M3 8h9M14 12l3 3-3 3M17 15H8"/></svg><span>Start/Sit</span></button>
+    <button type="button" data-go="trade"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M13 4l3 3-3 3M16 7H4M7 16l-3-3 3-3M4 13h12"/></svg><span>Trade</span></button>
+    <button type="button" id="bn-more"><svg viewBox="0 0 20 20" fill="currentColor"><circle cx="4.5" cy="10" r="1.6"/><circle cx="10" cy="10" r="1.6"/><circle cx="15.5" cy="10" r="1.6"/></svg><span>More</span></button>
+  </nav>
   <div id="modal-root"></div>
   <div id="gc-root"></div>
   <div id="auth-modal-root"></div>
@@ -524,6 +531,7 @@
   </div>
 
   <script src="/theme.js"></script>
+  <script src="/skin.js"></script>
   <script src="/ss-team.js"></script>
   <script src="/team-page.js"></script>
   <script src="/live.js"></script>
