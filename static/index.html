@@ -85,6 +85,10 @@
         <span class="nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2.5l6 2.2v4.4c0 4-2.6 6.6-6 8.4-3.4-1.8-6-4.4-6-8.4V4.7z"/></svg></span>
         <span class="nav-label">My Team</span>
       </button>
+      <button class="nav-item" data-tab="live">
+        <span class="nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="4.5" width="15" height="11" rx="2"/><path d="M2.5 10h15M10 4.5v11"/><circle cx="10" cy="10" r="1.6"/></svg></span>
+        <span class="nav-label">Live Games</span>
+      </button>
       <button class="nav-item" data-tab="startsit">
         <span class="nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 5l-3 3 3 3M3 8h9M14 12l3 3-3 3M17 15H8"/></svg></span>
         <span class="nav-label">Start/Sit</span>
@@ -165,7 +169,6 @@
         <h1>My Team</h1>
         <p>Your synced roster, this week's real opponent, and the full league schedule.</p>
       </div>
-      <div id="live-scores-strip" class="live-scores-strip" style="display:none"></div>
       <div id="myteam-gate" class="gate-card" style="display:none">
         <div class="gate-icon">⬢</div>
         <div class="gate-title">Sync your league to see your team</div>
@@ -196,6 +199,14 @@
       </div>
       <div id="draft-picker" style="display:none"></div>
       <div id="draft-content" style="display:none"></div>
+    </section>
+
+    <section id="tab-live" style="display:none">
+      <div class="page-header">
+        <h1>Live Games</h1>
+        <p id="live-hint">Every game this week. Tap one for the full stadium view.</p>
+      </div>
+      <div id="live-grid" class="lv-grid"></div>
     </section>
 
     <section id="tab-startsit" style="display:none">
@@ -497,6 +508,7 @@
   </div>
 
   <div id="modal-root"></div>
+  <div id="gc-root"></div>
   <div id="auth-modal-root"></div>
 
   <!-- Big Board "Compare" tray — pick 2-4 players (any position, any team,
@@ -512,6 +524,7 @@
 
   <script src="/theme.js"></script>
   <script src="/ss-team.js"></script>
+  <script src="/live.js"></script>
   <script src="/app.js"></script>
   <script src="/chat.js"></script>
 </body>

@@ -45,8 +45,10 @@ class PolishTests(unittest.TestCase):
         self.assertIn(".news-skel", CSS)
 
     def test_score_changes_flash_and_the_flag_clears(self):
-        self.assertIn("score-flash", JS)
-        self.assertIn("@keyframes scoreFlash", CSS)
+        live = read("static/live.js")
+        self.assertIn("scoreChange(lastScores", live)
+        self.assertIn("delete flashes[id]", live)
+        self.assertIn("sb-flash", CSS)
 
     def test_totals_count_up_once_per_week_and_not_under_reduced_motion(self):
         b = body_of("function countUpTotals")

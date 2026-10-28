@@ -374,7 +374,7 @@ function scoringQS() {
 }
 
 // ---------------------------------------------------------------- tabs ----
-const TAB_IDS = ["board", "myteam", "draft", "startsit", "trade", "waivers", "news", "chat", "settings"];
+const TAB_IDS = ["board", "myteam", "live", "draft", "startsit", "trade", "waivers", "news", "chat", "settings"];
 // The home/landing tab once the gate clears — My Team, not Big Board.
 const DEFAULT_TAB = "myteam";
 
@@ -412,7 +412,8 @@ function switchTab(tab) {
   // first visit to Big Board sat on "Loading real NFL data…" forever.
   if (tab === "board" && !state.boardLoaded) loadBoard();
   if (tab === "waivers") loadWaivers();
-  if (tab === "myteam") { loadMyTeam(); loadLiveScores(); }
+  if (tab === "myteam") loadMyTeam();
+  if (tab === "live" && window.LiveTab) LiveTab.load();
   if (tab === "draft") loadDraftTab();
   if (tab === "startsit") loadStartSitTab();
   if (tab === "news") loadNews();
@@ -3955,7 +3956,6 @@ async function loadMyTeam(week) {
     renderMyTeamWeekSelector(data);
     state.notifications = computeInjuryNotifications(data.my_team);
     state.myTeamAbbrs = rosterTeamCounts(data.my_team);
-    markLiveScoreCards();
     renderNotifBell();
     const onLiveWeek = data.live_week && data.live_week === data.nfl_week;
     let html = `<div class="hint">Week ${esc(data.nfl_week)}${onLiveWeek ? " · in progress" : ""} · ${esc(data.league_name)}</div>`;
@@ -4433,52 +4433,6 @@ function myPlayersInGame(g) {
   return (m[teamKey(g.away.abbr)] || 0) + (m[teamKey(g.home.abbr)] || 0);
 }
 
-function liveScoreCardHtml(g) {
-  const isLive = g.state === "in";
-  const isFinal = g.state === "post";
-  const scoreLine = g.state === "pre"
-    ? `<span class="muted">vs</span>`
-    : `${g.away.score}–${g.home.score}`;
-  const mine = myPlayersInGame(g);
-  return `<button type="button" class="live-score-card${isLive ? " live" : ""}${isFinal ? " final" : ""}${mine ? " has-mine" : ""}${g.flash ? " score-flash" : ""}" data-game="${esc(g.game_id)}" title="Open box score">
-    ${isLive ? `<span class="live-dot"></span>` : ""}
-    <div class="lsc-teams">
-      <span class="${g.away.winner ? "lsc-winner" : ""}">${esc(g.away.abbr)}</span>
-      <span class="lsc-score">${scoreLine}</span>
-      <span class="${g.home.winner ? "lsc-winner" : ""}">${esc(g.home.abbr)}</span>
-    </div>
-    <div class="lsc-status">${esc(isLive ? `Q${g.period} · ${g.display_clock}` : g.status_detail)}</div>
-    ${mine ? `<div class="lsc-mine">★ ${mine} of yours</div>` : ""}
-  </button>`;
-}
-
-// Re-flag the strip's cards once My Team's roster is known (the strip can
-// finish loading before the roster does).
-function markLiveScoreCards() {
-  const strip = $("#live-scores-strip");
-  if (!strip || !state.liveGames) return;
-  strip.innerHTML = state.liveGames.map(liveScoreCardHtml).join("");
-}
-
-async function loadLiveScores() {
-  const strip = $("#live-scores-strip");
-  if (!strip) return;
-  try {
-    const data = await api("/api/live-scores");
-    const games = data.games || [];
-    if (!games.length) { strip.style.display = "none"; return; }
-    const before = new Map((state.liveGames || []).map((g) => [String(g.game_id), `${g.away.score}-${g.home.score}`]));
-    games.forEach((g) => { const b = before.get(String(g.game_id)); g.flash = b != null && g.state === "in" && b !== `${g.away.score}-${g.home.score}`; });
-    state.liveGames = games;
-    strip.innerHTML = games.map(liveScoreCardHtml).join("");
-    if (games.some((g) => g.flash)) setTimeout(() => { games.forEach((g) => { g.flash = false; }); strip.querySelectorAll(".score-flash").forEach((c) => c.classList.remove("score-flash")); }, 2200);
-    strip.style.display = "flex";
-  } catch (e) {
-    // a scoreboard hiccup shouldn't be loud — just leave whatever was
-    // showing (or stay hidden if this was the first load)
-  }
-}
-
 const GB_GROUPS = [["QB", "Quarterbacks"], ["RB", "Running backs"], ["WR", "Wide receivers"], ["TE", "Tight ends"], ["K", "Kickers"]];
 const GB_GROUP_OF = { QB: "QB", RB: "RB", FB: "RB", WR: "WR", TE: "TE", K: "K", PK: "K" };
 
@@ -4592,47 +4546,9 @@ document.addEventListener("click", (e) => {
 var gameModalTimer = null;
 var teamModalSeq = 0;
 
-async function openGameModal(gameId) {
-  const g = (state.liveGames || []).find((x) => String(x.game_id) === String(gameId));
-  if (!g) return;
-  const root = $("#modal-root");
-  const live = g.state === "in";
-  const score = g.state === "pre" ? "vs" : `${g.away.score}–${g.home.score}`;
-  root.innerHTML = `<div class="modal-backdrop"><div class="modal gb-modal">
-    <div class="modal-header"><div><h2>${esc(g.away.abbr)} ${score} ${esc(g.home.abbr)}</h2>
-      <div class="muted" id="gb-status">${esc(live ? `Q${g.period} · ${g.display_clock}` : g.status_detail)}</div></div>
-      <button class="modal-close" aria-label="Close">✕</button></div>
-    <div id="gb-body">${skeletonRows(8, 2)}</div>
-  </div></div>`;
-  syncModalScrollLock();
-  root.querySelector(".modal-backdrop").addEventListener("click", (e) => { if (e.target.classList.contains("modal-backdrop")) closeModal(); });
-  root.querySelector(".modal-close").addEventListener("click", closeModal);
-
-  clearInterval(gameModalTimer);
-  const refresh = async () => {
-    const body = $("#gb-body");
-    if (!body) { clearInterval(gameModalTimer); return; }   // modal was closed
-    try {
-      const qs = scoringQS().replace(/^&/, "");
-      body.innerHTML = gameBodyHtml(await api(`/api/live-scores/${encodeURIComponent(gameId)}${qs ? "?" + qs : ""}`));
-    } catch (e) {
-      if (!body.querySelector(".gb-teams")) body.innerHTML = `<div class="empty">Couldn't load this box score. Try again in a moment.</div>`;
-    }
-  };
-  await refresh();
-  if (live) gameModalTimer = setInterval(refresh, 20000);
-}
-
+// The Live tab (static/live.js) owns the scoreboard, the game deep dive and its polling.
 function initLiveScores() {
-  const strip = $("#live-scores-strip");
-  if (strip) strip.addEventListener("click", (e) => {
-    const card = e.target.closest(".live-score-card[data-game]");
-    if (card) openGameModal(card.dataset.game);
-  });
-  loadLiveScores();
-  setInterval(() => {
-    if (state.tab === "myteam" && document.visibilityState === "visible") loadLiveScores();
-  }, 20000);
+  if (window.LiveTab) LiveTab.init();
 }
 
 function initNews() {
