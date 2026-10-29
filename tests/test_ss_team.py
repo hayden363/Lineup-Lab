@@ -147,11 +147,11 @@ class LayoutTests(unittest.TestCase):
 
     def test_rows_stack_vertically_in_football_order(self):
         out = run(self.ROSTER + "return S.layout(me).map(r => r.key);")
-        self.assertEqual(out, ["QB", "SKILL", "TE", "FLEX", "K", "DEF"])
+        self.assertEqual(out, ["QB", "RB", "WR", "TE", "FLEX", "K", "DEF"])
 
-    def test_running_backs_and_receivers_sit_side_by_side_in_one_row(self):
-        out = run(self.ROSTER + 'const row = S.layout(me).filter(r => r.key === "SKILL")[0]; return row.cols.map(c => c.map(p => p.player_id));')
-        self.assertEqual(out, [["r1", "r2"], ["w1", "w2", "w3"]])
+    def test_each_position_has_its_own_row_with_its_players_side_by_side(self):
+        out = run(self.ROSTER + 'const L = S.layout(me); const ids = (k) => L.filter(r => r.key === k)[0].cols.map(c => c.map(p => p.player_id)); return [ids("RB"), ids("WR")];')
+        self.assertEqual(out, [[["r1", "r2"]], [["w1", "w2", "w3"]]])
 
     def test_flex_and_superflex_slots_share_the_flex_row(self):
         out = run(self.ROSTER + 'return S.layout(me).filter(r => r.key === "FLEX")[0].cols[0].map(p => p.player_id);')
@@ -163,7 +163,7 @@ class LayoutTests(unittest.TestCase):
 
     def test_only_rbs_or_only_wrs_still_form_a_row(self):
         out = run('const me = [P("r","RB","RB",20,true)]; return S.layout(me).map(r => [r.key, r.cols.length]);')
-        self.assertEqual(out, [["SKILL", 1]])
+        self.assertEqual(out, [["RB", 1]])
 
     def test_espn_slot_labels_group_correctly(self):
         out = run('const me = [P("a","RB/WR/TE","WR",10,true), P("b","D/ST","DEF",5,true), P("c","OP","QB",12,true)]; return S.layout(me).map(r => r.key);')

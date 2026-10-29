@@ -5273,7 +5273,7 @@ body.sidebar-collapsed .nav-live-dot { position: absolute; top: 9px; right: 16px
 .sst-lineup { display: grid; grid-template-columns: 1fr; gap: 10px; }
 .sst-row { display: grid; grid-template-columns: 1fr; gap: 10px; }
 .sst-row[data-cols="2"] { grid-template-columns: 1fr 1fr; }
-.sst-col { display: grid; gap: 8px; align-content: start; }
+.sst-col { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px; align-content: start; }   /* one position per row, its players side by side */
 @media (max-width: 700px) { .sst-row[data-cols="2"] { grid-template-columns: 1fr; } }
 /* no cursor glow on Start/Sit */
 #tab-startsit .lab-card::after, #tab-startsit .board-wrap::after, #tab-startsit .news-card::after { display: none !important; }

@@ -78,8 +78,7 @@
     starters(players).forEach(function (p) { by[slotGroup(p)].push(p); });
     var rows = [];
     if (by.QB.length) rows.push({ key: "QB", cols: [by.QB] });
-    if (by.RB.length || by.WR.length) rows.push({ key: "SKILL", cols: [by.RB, by.WR].filter(function (c) { return c.length; }) });
-    ["TE", "FLEX", "K", "DEF"].forEach(function (k) { if (by[k].length) rows.push({ key: k, cols: [by[k]] }); });
+    ["RB", "WR", "TE", "FLEX", "K", "DEF"].forEach(function (k) { if (by[k].length) rows.push({ key: k, cols: [by[k]] }); });
     return rows;
   }
 
