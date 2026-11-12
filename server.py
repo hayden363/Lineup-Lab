@@ -57,6 +57,8 @@ from engine import boxscore as boxscore_layer
 from engine import schemas
 from engine import live_scores as live_scores_layer
 from engine import locks
+from engine.flight import FLIGHT
+from engine.imgshrink import shrink as shrink_image
 from engine import waivers as waivers_layer
 from engine import lineup_advisor
 from engine import game_center as game_center_layer
@@ -1861,8 +1863,15 @@ def api_game_center(game_id: str, scoring: Optional[dict] = Depends(scoring_from
 _IMG_PROXY_ALLOWED_HOSTS = {
     "static.www.nfl.com", "sleepercdn.com", "a.espncdn.com",
     "sportshub.cbsistatic.com", "static.nfl.com",
+    # News photo hosts (Pro Football Rumors, ProFootballTalk). Their photos used to load straight from the
+    # publisher at full size, uncached; through the proxy they are shrunk once and kept.
+    "www.profootballrumors.com", "nbcsports.brightspotcdn.com",
 }
-_IMG_PROXY_MAX_BYTES = 3_000_000
+# The fetch cap is for the ORIGINAL; the copy sent to the browser is shrunk (engine/imgshrink.py).
+_IMG_PROXY_MAX_BYTES = 8_000_000
+_IMG_PROXY_HEADERS = {"Cache-Control": "public, max-age=86400"}
+_IMG_PROXY_FAILED = {}          # cache_key -> time of last failed fetch; a broken photo is not retried for 30 s
+_IMG_PROXY_RETRY_SECONDS = 30
 _IMG_PROXY_CACHE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data_cache", "img_proxy")
 os.makedirs(_IMG_PROXY_CACHE_DIR, exist_ok=True)
 
@@ -1873,32 +1882,54 @@ def api_img_proxy(url: str = Query(...)):
     if parsed.scheme not in ("http", "https") or parsed.hostname not in _IMG_PROXY_ALLOWED_HOSTS:
         raise HTTPException(400, "That image host isn't on the allowlist.")
 
-    cache_key = hashlib.sha256(url.encode("utf-8")).hexdigest()
+    cache_key = hashlib.sha256(("v2|" + url).encode("utf-8")).hexdigest()
     cache_path = os.path.join(_IMG_PROXY_CACHE_DIR, cache_key)
     meta_path = cache_path + ".type"
-    if os.path.exists(cache_path) and (time.time() - os.path.getmtime(cache_path)) < 24 * 60 * 60:
-        content_type = open(meta_path).read().strip() if os.path.exists(meta_path) else "image/jpeg"
-        return FileResponse(cache_path, media_type=content_type, headers={"Cache-Control": "public, max-age=86400"})
 
-    try:
-        # No redirects: an allowed host that redirects elsewhere must not turn this into a fetch of any URL.
-        resp = requests.get(url, timeout=8, headers={"User-Agent": "Mozilla/5.0"}, allow_redirects=False)
-        resp.raise_for_status()
-        if len(resp.content) > _IMG_PROXY_MAX_BYTES:
-            raise HTTPException(502, "That image is too large.")
-        content_type = resp.headers.get("Content-Type", "image/jpeg").split(";")[0]
-        if not content_type.startswith("image/"):
-            raise HTTPException(502, "That URL didn't return an image.")
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(502, "Couldn't fetch that image.")
+    def cached():
+        if os.path.exists(cache_path) and (time.time() - os.path.getmtime(cache_path)) < 24 * 60 * 60:
+            content_type = open(meta_path).read().strip() if os.path.exists(meta_path) else "image/jpeg"
+            return FileResponse(cache_path, media_type=content_type, headers=_IMG_PROXY_HEADERS)
+        return None
 
-    with open(cache_path, "wb") as f:
-        f.write(resp.content)
-    with open(meta_path, "w") as f:
-        f.write(content_type)
-    return Response(content=resp.content, media_type=content_type, headers={"Cache-Control": "public, max-age=86400"})
+    hit = cached()
+    if hit is not None:
+        return hit
+
+    # One fetch per photo: a page of 30 cards opened by 40 people at once is 30 fetches, not 1,200.
+    with FLIGHT.hold(("img", cache_key)):
+        hit = cached()
+        if hit is not None:
+            return hit
+        if time.time() - _IMG_PROXY_FAILED.get(cache_key, 0) < _IMG_PROXY_RETRY_SECONDS:
+            raise HTTPException(502, "Couldn't fetch that image.")
+        try:
+            # No redirects: an allowed host that redirects elsewhere must not turn this into a fetch of any URL.
+            resp = requests.get(url, timeout=8, headers={"User-Agent": "Mozilla/5.0"}, allow_redirects=False)
+            resp.raise_for_status()
+            if len(resp.content) > _IMG_PROXY_MAX_BYTES:
+                raise HTTPException(502, "That image is too large.")
+            content_type = resp.headers.get("Content-Type", "image/jpeg").split(";")[0]
+            if not content_type.startswith("image/"):
+                raise HTTPException(502, "That URL didn't return an image.")
+        except HTTPException:
+            _IMG_PROXY_FAILED[cache_key] = time.time()
+            raise
+        except Exception as e:
+            _IMG_PROXY_FAILED[cache_key] = time.time()
+            raise HTTPException(502, "Couldn't fetch that image.")
+
+        body, content_type = shrink_image(resp.content, content_type)
+        # Type first, picture last and by rename, so a request that sees the picture also sees its type
+        # and never reads a half-written file.
+        with open(meta_path, "w") as f:
+            f.write(content_type)
+        tmp_path = f"{cache_path}.{threading.get_ident()}.tmp"
+        with open(tmp_path, "wb") as f:
+            f.write(body)
+        os.replace(tmp_path, cache_path)
+        _IMG_PROXY_FAILED.pop(cache_key, None)
+    return Response(content=body, media_type=content_type, headers=_IMG_PROXY_HEADERS)
 
 
 # The two files that change on every deploy and are correctness-critical

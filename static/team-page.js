@@ -59,7 +59,7 @@
     var maxProj = Math.max.apply(null, (d.players || []).map(function (p) { return p.proj || 0; }).concat([1]));
     var players = (d.players || []).map(function (p, i) {
       return '<button type="button" class="tpx-player" data-player="' + env.esc(p.player_id) + '"' + (n ? ' data-opp="' + env.esc(n.opponent) + '"' : "") + '>' +
-        '<span class="tpx-rank">' + (i + 1) + '</span><img class="tpx-photo" ' + env.headshotAttrs({ headshot_url: p.headshot_url, player_display_name: p.name }) + ' alt="" loading="lazy">' +
+        '<span class="tpx-rank">' + (i + 1) + '</span><img class="tpx-photo" ' + env.headshotAttrs({ headshot_url: p.headshot_url, player_display_name: p.name }) + ' alt="">' +
         '<span class="tpx-pname">' + env.esc(p.name) + env.statusFlags(Object.assign({}, p, { recent_team: d.team })) + "<small>" + env.esc(p.position) + "</small></span>" +
         '<span class="tpx-bar"><i style="width:' + Math.round(((p.proj || 0) / maxProj) * 100) + '%"></i></span>' +
         '<span class="tpx-num"><b>' + (p.proj != null ? env.d1(p.proj) : "—") + "</b><small>proj</small></span>" +

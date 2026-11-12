@@ -40,7 +40,8 @@ function initialsAvatarUri(name) {
 // call inline (keeps the CSP-sensitive inline-handler surface trivial: a
 // plain attribute swap, no function invocation).
 function headshotAttrs(p) {
-  return `src="${proxyImg(p.headshot_url)}" data-fb="${initialsAvatarUri(p.player_display_name)}"`;
+  // lazy + async: a 60-row board only fetches the faces on screen, then the rest as you scroll.
+  return `src="${proxyImg(p.headshot_url)}" data-fb="${initialsAvatarUri(p.player_display_name)}" loading="lazy" decoding="async"`;
 }
 
 // Every image fallback in this app used to be an inline onerror="..."
@@ -150,6 +151,7 @@ function safeUrl(u) {
 const IMG_PROXY_HOSTS = new Set([
   "static.www.nfl.com", "sleepercdn.com", "a.espncdn.com",
   "sportshub.cbsistatic.com", "static.nfl.com",
+  "www.profootballrumors.com", "nbcsports.brightspotcdn.com",
 ]);
 function proxyImg(u) {
   // Builds from the RAW url, not safeUrl()'s output — safeUrl() HTML-escapes
@@ -2161,7 +2163,7 @@ async function loadProjectionCompare(playerId, opp, container) {
 
 function playerNewsCardHtml(it) {
   const img = it.image
-    ? `<img class="pn-thumb" src="${safeUrl(it.image)}" alt="" data-fb-remove="1">`
+    ? `<img class="pn-thumb" src="${proxyImg(it.image)}" alt="" loading="lazy" decoding="async" data-fb-remove="1">`
     : "";
   return `<a class="pn-card" href="${safeUrl(it.link)}" target="_blank" rel="noopener noreferrer">
     ${img}
@@ -4631,7 +4633,7 @@ function newsCardHtml(it, featured, i) {
   const isFallback = !it.image && !!it.fallback_image;
   return `<a class="news-card${featured ? " featured" : ""}" href="${safeUrl(it.link)}" target="_blank" rel="noopener noreferrer" style="animation-delay:${Math.min(i, 8) * 50}ms">
     <div class="news-img-wrap${src ? "" : " no-image"}${isFallback ? " is-fallback" : ""}">
-      ${src ? `<img src="${proxyImg(src)}" alt="" loading="lazy" data-fb-noimage-wrap="1">` : ""}
+      ${src ? `<img src="${proxyImg(src)}" alt="" loading="lazy" decoding="async" data-fb-noimage-wrap="1">` : ""}
       ${featured ? `<span class="news-badge">FEATURED</span>` : ""}
     </div>
     <div class="news-body">
