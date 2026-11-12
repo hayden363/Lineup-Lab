@@ -201,6 +201,78 @@ def overlay(board, bundle):
 
 
 # ---- the timeline ---------------------------------------------------------
+# One build asks for the same team's remaining games hundreds of times (every board, every injured player), and each
+# ask used to re-filter the whole schedule table. They are remembered per schedule table instead. Each table gets its
+# OWN memo object, so a thread that is still working on an old table can only ever write into that table's memo, never
+# into the current one (two tables are briefly in use when a data refresh swaps the bundle under running requests).
+# A memo is replaced when a different table object arrives or when anything a schedule answer depends on changes
+# (a game moved, a team changed, a score came in), so it can never serve an outdated answer. Only real team codes are
+# stored: at most one entry per team.
+_SCHEDULE_COLUMNS = ("week", "home_team", "away_team", "game_type", "gameday", "gametime")
+
+
+class _ScheduleMemo:
+    __slots__ = ("schedule", "fingerprint", "games", "left")
+
+    def __init__(self, schedule, fingerprint):
+        self.schedule, self.fingerprint, self.games, self.left = schedule, fingerprint, {}, {}
+
+
+def schedule_fingerprint(schedule):
+    """Changes whenever anything a schedule answer is built from changes. str() makes missing values hash the same on
+    every call and every Python version. About 0.1 ms for a full season."""
+    parts = tuple(hash(tuple(map(str, schedule[c].tolist()))) for c in _SCHEDULE_COLUMNS if c in schedule.columns)
+    scores = schedule["home_score"].isna().to_numpy().tobytes() if "home_score" in schedule.columns else b""
+    return len(schedule), parts, scores
+
+
+_REMAINING = _ScheduleMemo(None, None)
+
+
+def _memo(schedule, team):
+    """The memo for this schedule table, or None when it should not be used (not a real team code, or a table that
+    isn't a normal schedule: the plain code path then runs and behaves exactly as before)."""
+    global _REMAINING
+    if not isinstance(team, str) or not isinstance(schedule, pd.DataFrame):
+        return None
+    try:
+        fingerprint = schedule_fingerprint(schedule)
+    except Exception:
+        return None
+    memo = _REMAINING
+    if memo.schedule is not schedule or memo.fingerprint != fingerprint:
+        memo = _REMAINING = _ScheduleMemo(schedule, fingerprint)
+    return memo
+
+
+def _remaining_rows(schedule, team):
+    s = schedule
+    if "game_type" in s.columns:
+        s = s[s["game_type"] == "REG"]
+    s = s[(s["home_team"] == team) | (s["away_team"] == team)]
+    if "home_score" in s.columns:
+        s = s[s["home_score"].isna()]
+    return s
+
+
+def _remaining_games(schedule, team):
+    """[(week, game date)] for the team's unplayed regular-season games, soonest first; games whose date can't be read
+    are left out."""
+    memo = _memo(schedule, team)
+    hit = memo.games.get(team) if memo is not None else None
+    if hit is not None:
+        return hit
+    games = []
+    for r in _remaining_rows(schedule, team).sort_values("week").itertuples(index=False):
+        try:
+            games.append((int(r.week), date.fromisoformat(str(r.gameday)[:10])))
+        except (TypeError, ValueError):
+            continue
+    if memo is not None:
+        memo.games[team] = games
+    return games
+
+
 def timeline(return_date, schedule, team, today=None):
     """From ESPN's estimated return date and the team's remaining games:
     {return_date, return_week, games_out, days_out}. games_out counts games
@@ -214,18 +286,7 @@ def timeline(return_date, schedule, team, today=None):
     except ValueError:
         return out
     out["days_out"] = (back - today).days
-    s = schedule
-    if "game_type" in s.columns:
-        s = s[s["game_type"] == "REG"]
-    s = s[(s["home_team"] == team) | (s["away_team"] == team)]
-    if "home_score" in s.columns:
-        s = s[s["home_score"].isna()]
-    games = []
-    for r in s.sort_values("week").itertuples(index=False):
-        try:
-            games.append((int(r.week), date.fromisoformat(str(r.gameday)[:10])))
-        except (TypeError, ValueError):
-            continue
+    games = _remaining_games(schedule, team)
     out["games_left"] = len(games)
     missed = [w for w, d in games if d < back]
     out["games_out"] = len(missed)
@@ -263,13 +324,14 @@ ASSUMED_GAMES_OUT = {"Out": 1, "IR": LONG_ABSENCE_GAMES, "PUP": LONG_ABSENCE_GAM
 
 
 def _games_left(schedule, team):
-    s = schedule
-    if "game_type" in s.columns:
-        s = s[s["game_type"] == "REG"]
-    s = s[(s["home_team"] == team) | (s["away_team"] == team)]
-    if "home_score" in s.columns:
-        s = s[s["home_score"].isna()]
-    return int(len(s))
+    memo = _memo(schedule, team)
+    hit = memo.left.get(team) if memo is not None else None
+    if hit is not None:
+        return hit
+    n = int(len(_remaining_rows(schedule, team)))
+    if memo is not None:
+        memo.left[team] = n
+    return n
 
 
 def availability(row, schedule, today=None):

@@ -100,22 +100,39 @@ def _opportunity_values(df):
 
 def _training_rows(df, ppo):
     """One row per player-game with the features known BEFORE that game."""
-    d = df.copy()
+    # Built with pandas' own per-group operations (shift, expanding, rolling) instead of a Python function run once per
+    # player-season: the same numbers to the last digit (tests/test_projmodel_training_rows.py checks that exactly),
+    # about 10x faster. This is the 1-1.5 s every new scoring setting used to pay on its first projection.
+    orig_index = df.index
+    d = df.reset_index(drop=True)
     d["opp"] = [ppo[p][0] * t + ppo[p][1] * c if p in ppo else 0.0
                 for p, t, c in zip(d["position"], d["targets"], d["carries"])]
-    g = d.groupby(["player_id", "season"], sort=False)
-    d["n"] = g.cumcount()
-    d["ppg"] = g["fpts_active"].transform(lambda s: s.shift(1).expanding().mean())
-    d["l4"] = g["fpts_active"].transform(lambda s: s.shift(1).rolling(RECENT, min_periods=1).mean())
-    d["opp4"] = g["opp"].transform(lambda s: s.shift(1).rolling(RECENT, min_periods=1).mean())
-    d["opp_ppg"] = g["opp"].transform(lambda s: s.shift(1).expanding().mean())   # season-long, for the baseline
-    per = d.groupby(["player_id", "season"])["fpts_active"].agg(["mean", "count"])
+    keys = ["player_id", "season"]
+    d["n"] = d.groupby(keys, sort=False).cumcount()
+
+    def _before(col, rolling):
+        """`col` over the games BEFORE each one, within the player-season: expanding mean, or the last RECENT games."""
+        shifted = d.groupby(keys, sort=False)[col].shift(1)
+        grouped = shifted.groupby([d["player_id"], d["season"]], sort=False)
+        out = grouped.rolling(RECENT, min_periods=1).mean() if rolling else grouped.expanding().mean()
+        return out.reset_index(level=[0, 1], drop=True).reindex(d.index)
+
+    d["ppg"] = _before("fpts_active", rolling=False)
+    d["l4"] = _before("fpts_active", rolling=True)
+    d["opp4"] = _before("opp", rolling=True)
+    d["opp_ppg"] = _before("opp", rolling=False)   # season-long, for the baseline
+    per = d.groupby(keys)["fpts_active"].agg(["mean", "count"])
     per = per[per["count"] >= MIN_PRIOR_GAMES]["mean"]
-    prior = pd.Series([per.get((p, s - 1), np.nan) for p, s in zip(d["player_id"], d["season"])], index=d.index)
+    # last season's average for the same player (NaN when he had fewer than MIN_PRIOR_GAMES games or no last season)
+    prior = pd.Series(per.reindex(pd.MultiIndex.from_arrays([d["player_id"], d["season"] - 1])).to_numpy(dtype=float),
+                      index=d.index)
     d["has_prior"] = prior.notna()
     d["prior"] = prior.fillna(d["ppg"])
     first = d["season"].min()
-    return d[(d["n"] >= MIN_GAMES) & (d["season"] > first)]
+    keep = (d["n"] >= MIN_GAMES) & (d["season"] > first)
+    out = d[keep]
+    out.index = orig_index[keep.to_numpy()]
+    return out
 
 
 FEATURES = ("ppg", "l4", "opp4", "prior")

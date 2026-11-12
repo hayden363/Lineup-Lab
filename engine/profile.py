@@ -225,6 +225,38 @@ def team_schedule(schedule, team):
     return out
 
 
+class _TeamScheduleMemo:
+    __slots__ = ("schedule", "fingerprint", "by_team")
+
+    def __init__(self, schedule, fingerprint):
+        self.schedule, self.fingerprint, self.by_team = schedule, fingerprint, {}
+
+
+_TEAM_SCHEDULES = _TeamScheduleMemo(None, None)
+
+
+def team_schedule_cached(schedule, team):
+    """team_schedule(), remembered per schedule table for callers that ask for the same team many times in one
+    build (waivers does, per position). Callers must treat the result as read-only. Each table gets its own memo
+    object (a thread still on an old table can't write into the current one), and the memo is replaced when a
+    different table arrives or anything its answers are built from changes; only real team codes are stored."""
+    global _TEAM_SCHEDULES
+    if not isinstance(team, str) or not isinstance(schedule, pd.DataFrame):
+        return team_schedule(schedule, team)
+    from .injuries import schedule_fingerprint
+    try:
+        fingerprint = schedule_fingerprint(schedule)
+    except Exception:
+        return team_schedule(schedule, team)
+    memo = _TEAM_SCHEDULES
+    if memo.schedule is not schedule or memo.fingerprint != fingerprint:
+        memo = _TEAM_SCHEDULES = _TeamScheduleMemo(schedule, fingerprint)
+    hit = memo.by_team.get(team)
+    if hit is None:
+        hit = memo.by_team[team] = team_schedule(schedule, team)
+    return hit
+
+
 def weekly_status(player_weeks, schedule, team, final_week=18):
     """One row per week 1..final_week for a player:
         status  "played" | "bye" | "dnp" (team played, he didn't) | "upcoming"

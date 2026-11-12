@@ -230,7 +230,7 @@ def grade(score):
 
 def schedule_outlook(position, team, week, bundle, n=4):
     """Next n games' matchup multipliers -> 0-100 (1.10 easy = 100, 0.90 hard = 0)."""
-    sched = profile.team_schedule(bundle["schedule"], team) if team else {}
+    sched = profile.team_schedule_cached(bundle["schedule"], team) if team else {}   # read-only here
     games = [(w, sched[w]["opponent"]) for w in range(week, week + n) if w in sched]
     if not games:
         return {"score": 50.0, "grade": "C", "opponents": []}
