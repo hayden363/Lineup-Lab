@@ -15,9 +15,11 @@ together, including Sleeper's. We only ever use it as an ID map, never to
 pull grades from any paid source.
 """
 
+import gc
 import json
 import os
 import re
+import sys
 import time
 
 import pandas as pd
@@ -34,6 +36,35 @@ PLAYERS_MISS_REFETCH = 60 * 60   # a rostered id missing from the cached player 
 CROSSWALK_TTL = 24 * 60 * 60  # id crosswalk: refresh daily
 TRENDING_TTL = 30 * 60     # trending adds/drops: refresh every 30 min
 PLAYERS_TTL = 24 * 60 * 60    # full player list (~5-15MB): Sleeper asks for at most once/day
+# A forced refresh asks for the player list and the id crosswalk from three places in a row (retired ids, injury
+# status, injury body part). Within this window a forced request reuses what was just fetched instead of
+# downloading and parsing the same data again: same data, a third of the memory peak. Kept short so a separate
+# manual refresh a little later still fetches fresh data.
+FORCE_REUSE_SECONDS = 30   # the three steps run within ~10 s of each other (the whole refresh is ~11 s on Render)
+
+# The only per-player fields anything in this app reads from Sleeper's player list (all_players() callers:
+# live_injury_statuses, live_injury_body_parts, inactive_gsis_ids, resolve_unscored_player, league_trades). The
+# list holds 53 fields for every player who ever played; the full list stays on disk untouched. If new code
+# needs another field from all_players(), add it here or it will read as missing.
+PLAYER_FIELDS = ("first_name", "last_name", "full_name", "position", "team",
+                 "injury_status", "injury_body_part", "depth_chart_order")
+
+
+def _slim_players(raw):
+    """Sleeper player list -> the same list with only PLAYER_FIELDS per player (a field the player lacks stays
+    absent, so .get() behaves exactly as it did on the full record)."""
+    return {pid: {f: p[f] for f in PLAYER_FIELDS if f in p} for pid, p in raw.items()}
+
+
+def _release_memory():
+    """Hand memory freed by a big parse back to the OS. Matters on Linux (Render), where glibc keeps freed pages."""
+    gc.collect()
+    if sys.platform.startswith("linux"):
+        try:
+            import ctypes
+            ctypes.CDLL("libc.so.6").malloc_trim(0)
+        except Exception:
+            pass
 
 # accepts a bare league ID or any Sleeper URL that has one in it, e.g.
 # https://sleeper.com/leagues/289646328504385536  or  .../leagues/289646328504385536/team
@@ -69,7 +100,8 @@ def _json_cache_path(name):
 _MEM: dict = {}
 
 
-def _cached_get(url, cache_name, ttl, force=False, timeout=15):
+def _cached_get(url, cache_name, ttl, force=False, timeout=15, slim=None):
+    """`slim`, when given, shrinks the parsed payload before it is kept in memory; the file on disk stays complete."""
     if not force:
         mem = _MEM.get(cache_name)
         if mem and (time.time() - mem[0]) < ttl:
@@ -80,13 +112,20 @@ def _cached_get(url, cache_name, ttl, force=False, timeout=15):
             if (time.time() - mtime) < ttl:
                 with open(path) as f:
                     data = json.load(f)
+                if slim:
+                    data = slim(data)
+                    _release_memory()
                 _MEM[cache_name] = (mtime, data)
                 return data
     resp = requests.get(url, timeout=timeout)
     resp.raise_for_status()
     data = resp.json()
+    del resp
     with open(_json_cache_path(cache_name), "w") as f:
         json.dump(data, f)
+    if slim:
+        data = slim(data)
+        _release_memory()
     _MEM[cache_name] = (time.time(), data)
     return data
 
@@ -207,7 +246,11 @@ def all_players(force=False):
     look fine by the numbers alone. Sleeper's live `team` field catches
     that: no current NFL team means they can't really be added in any
     fantasy league right now, whatever the reason."""
-    return _cached_get(f"{SLEEPER_BASE}/players/nfl", "all_players", PLAYERS_TTL, force)
+    if force:
+        mem = _MEM.get("all_players")
+        if mem and (time.time() - mem[0]) < FORCE_REUSE_SECONDS:
+            force = False   # fetched seconds ago by an earlier step of this same refresh: nothing newer exists
+    return _cached_get(f"{SLEEPER_BASE}/players/nfl", "all_players", PLAYERS_TTL, force, slim=_slim_players)
 
 
 def live_injury_statuses(force=False):
@@ -280,13 +323,16 @@ def inactive_gsis_ids(force=False):
 
 
 _CROSSWALK = None
+_CROSSWALK_AT = 0.0
 
 
 def id_crosswalk(force=False):
     """sleeper_id (str) -> gsis player_id, cached to disk (~12k rows, cheap)."""
-    global _CROSSWALK
+    global _CROSSWALK, _CROSSWALK_AT
     if _CROSSWALK is not None and not force:
         return _CROSSWALK
+    if force and _CROSSWALK is not None and (time.time() - _CROSSWALK_AT) < FORCE_REUSE_SECONDS:
+        return _CROSSWALK   # downloaded seconds ago by an earlier step of this same refresh
 
     path = os.path.join(CACHE_DIR, "id_crosswalk.parquet")
     if not force and os.path.exists(path) and (time.time() - os.path.getmtime(path)) < CROSSWALK_TTL:
@@ -295,6 +341,7 @@ def id_crosswalk(force=False):
         import nfl_data_py as nfl
         df = nfl.import_ids()
         df.to_parquet(path)
+        _CROSSWALK_AT = time.time()   # only a real download counts: a load from the disk file may be a day old
 
     df = df.dropna(subset=["sleeper_id", "gsis_id"]).copy()
     df["sleeper_id"] = df["sleeper_id"].astype(float).astype(int).astype(str)
