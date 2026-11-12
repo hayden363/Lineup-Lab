@@ -102,8 +102,13 @@ def league_status(league, rosters, my_roster_id, now=None):
     return out
 
 
-def target_week(schedule):
-    """The week waivers are for: the first week with most games still unplayed."""
+def target_week(schedule, now=None):
+    """The week waivers, Start/Sit and the bye tags are for: the same week the rest of the app calls "this
+    week" (it changes on Wednesdays, see profile.active_week). Falls back to the first week with most games
+    still unplayed when the schedule has no game dates."""
+    week = profile.active_week(schedule, now)
+    if week is not None:
+        return week
     s = schedule[schedule["game_type"] == "REG"] if "game_type" in schedule.columns else schedule
     for wk in sorted(s["week"].unique()):
         games = s[s["week"] == wk]
@@ -506,7 +511,7 @@ def build(league_id=None, my_roster_id=None, scoring=None, now=None, limit=10, e
     settings from ESPN instead of Sleeper."""
     bundle = load_bundle()
     schedule = bundle["schedule"]
-    week = target_week(schedule)
+    week = target_week(schedule, now)
     byes = profile.bye_weeks(schedule)
     pool, logs = cached_pool(scoring, bundle)
     pool = pool.copy()

@@ -14,6 +14,9 @@ Four things the card needs that the ranked board doesn't carry:
 Everything here is computed from the tables engine/board.py already loads.
 """
 
+import datetime as dt
+from zoneinfo import ZoneInfo
+
 import numpy as np
 import pandas as pd
 
@@ -324,12 +327,51 @@ def stat_line(row, position):
     return ", ".join(parts)
 
 
-def upcoming_week(schedule):
-    """The next regular-season week with an unplayed game (what 'this week'
-    means for BYE tags and lineups), or None once the season is over."""
+WEEK_FLIP_WEEKDAY = 2                  # Wednesday (Monday is 0)
+WEEK_FLIP_ZONE = ZoneInfo("America/New_York")
+
+
+def active_week(schedule, now=None):
+    """The week the app treats as "this week": a week becomes current at midnight Eastern on the
+    Wednesday on or before its first game, and stays current until the next week's Wednesday. So the
+    week of Thu Nov 12 shows from Wed Nov 11 through Tue Nov 17 and the next one starts Wed Nov 18,
+    whatever has or hasn't been scored yet. Before the first week's Wednesday it is that first
+    week; after the last, the last. None when the schedule has no usable game dates (callers then
+    fall back to their older score-based rule). `now` is for tests."""
     s = schedule
     if "game_type" in s.columns:
         s = s[s["game_type"] == "REG"]
-    if "home_score" in s.columns:
-        s = s[s["home_score"].isna()]
-    return int(s["week"].min()) if len(s) else None
+    if "gameday" not in s.columns or "week" not in s.columns or s.empty:
+        return None
+    days = pd.to_datetime(s["gameday"], errors="coerce")
+    ok = days.notna() & s["week"].notna()
+    if not ok.any():
+        return None
+    first = days[ok].groupby(s.loc[ok, "week"]).min().sort_index()
+    anchors = {int(wk): (d - pd.Timedelta(days=(d.weekday() - WEEK_FLIP_WEEKDAY) % 7)).date()
+               for wk, d in first.items()}
+    if now is None:
+        now = dt.datetime.now(WEEK_FLIP_ZONE)
+    elif now.tzinfo is not None:
+        now = now.astimezone(WEEK_FLIP_ZONE)
+    today = now.date()
+    started = [wk for wk, anchor in anchors.items() if anchor <= today]
+    return max(started) if started else min(anchors)
+
+
+def upcoming_week(schedule, now=None):
+    """The week the app calls "this week" (see active_week: it changes on Wednesdays), used for BYE
+    tags, lineups and the board labels. None once the season is over: the last week's games are all
+    scored and its last game day is past. Falls back to the next week with an unplayed game when the
+    schedule has no game dates."""
+    s = schedule
+    if "game_type" in s.columns:
+        s = s[s["game_type"] == "REG"]
+    week = active_week(schedule, now)
+    if week is None:
+        if "home_score" in s.columns:
+            s = s[s["home_score"].isna()]
+        return int(s["week"].min()) if len(s) else None
+    if week == int(s["week"].max()) and "home_score" in s.columns and s["home_score"].notna().all():
+        return None
+    return week

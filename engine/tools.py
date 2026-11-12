@@ -103,6 +103,16 @@ class _Actuals:
         return self.skill(pid, team) if pos in ("QB", "RB", "WR", "TE") else None
 
 
+def _bye_before_next_game(bye_week, slate_week, next_game_week):
+    """The week a team is idle for, when its bye falls between the app's current week and its next game; else
+    None. With the week changing on Wednesdays, from Sunday to Tuesday the current week can be one a team has
+    already played while its next game is two weeks out (its bye is the week between), and that player must
+    read as on bye, not as playing a game that is not next. On any other day this is "bye in the current week"."""
+    if bye_week is None or slate_week is None or next_game_week is None:
+        return None
+    return bye_week if slate_week <= bye_week < next_game_week else None
+
+
 def _team_on_bye(bundle, team, week):
     """True when `team` has its bye in the explicitly requested NFL `week`: it
     plays no game, so every player on it scores 0, not a next-game projection."""
@@ -533,7 +543,8 @@ def start_sit(player_ids, opponents=None, season=None, scoring=None, mode="balan
         # With no override, the projection is against that real next opponent.
         next_opp, wk_no = data.next_opponent(bundle["schedule"], row.get("recent_team"))
         opp = opponents.get(pid) or next_opp
-        on_bye = not opponents.get(pid) and byes.get(row.get("recent_team")) == slate_week
+        bye_week = None if opponents.get(pid) else _bye_before_next_game(byes.get(row.get("recent_team")), slate_week, wk_no)
+        on_bye = bye_week is not None
         if opp:
             projected = project_vs(board.loc[[pid]], pos, opp, bundle=bundle, scoring=scoring)
             proj = float(projected["PROJ"].iloc[0])
@@ -580,7 +591,7 @@ def start_sit(player_ids, opponents=None, season=None, scoring=None, mode="balan
             "SCORE": row.get("SCORE"), "PVS": row.get("PVS"), "FORM": row.get("FORM"), "fpts_per_game": row.get("fpts_per_game"),
             "opponent": None if on_bye else opp, "matchup_tag": matchup_tag, "matchup_factor": matchup_factor, "PROJ": proj,
             "next_game_proj": next_proj if proj == 0.0 and next_proj else None,
-            "week": slate_week if on_bye else wk_no, "on_bye": on_bye,
+            "week": bye_week if on_bye else wk_no, "on_bye": on_bye,
             "floor": floor_v, "ceiling": ceil_v,
             "snap_pct": _clean_num(row.get("snap_pct")), "redzone_touches": _clean_num(row.get("redzone_touches")),
             "injury_status": _clean_num(row.get("injury_status")),
