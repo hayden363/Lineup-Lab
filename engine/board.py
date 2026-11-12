@@ -29,6 +29,7 @@ from . import aging, pvs
 from . import value as value_layer
 from . import weekly_proj
 from . import projmodel
+from .flight import FLIGHT
 from .metrics import METRIC_FNS, WEIGHTS, MIN_GAMES, score_players, form_adjustment
 from .advanced import qb_advanced, rb_advanced, wr_advanced, te_advanced, weekly_epa, ADVANCED_COLS
 from .matchup import matchup_tag
@@ -500,9 +501,13 @@ def build_board(position, season=None, min_games=2, min_volume=None, scoring=Non
     else:
         board = _cache_get(_BOARD_CACHE, key, _board_key_scoring)
     if board is None:
-        board = _build_board_uncached(position, season, min_volume, scoring)
-        board["rate"] = shrunk_rate(board, position, scoring, season)
-        _cache_put(_BOARD_CACHE, key, board, _board_key_scoring)
+        # One build per key: simultaneous misses wait for the first instead of each building their own.
+        with FLIGHT.hold(("board", key)):
+            board = _cache_get(_BOARD_CACHE, key, _board_key_scoring)
+            if board is None:
+                board = _build_board_uncached(position, season, min_volume, scoring)
+                board["rate"] = shrunk_rate(board, position, scoring, season)
+                _cache_put(_BOARD_CACHE, key, board, _board_key_scoring)
     filtered = board[board["games"] >= min_games]
     # Live injury designations (ESPN's feed, 15 minutes old at most) over
     # Sleeper's once-a-day list; see engine/injuries.py. Never lets the feed
@@ -536,13 +541,16 @@ def pvs_lookup(season=None, scoring=None):
     key = (season, _scoring_cache_key(scoring))
     hit = _cache_get(_PVS_CACHE, key, _pvs_key_scoring)
     if hit is None:
-        _PVS_LOCAL.building = True
-        try:
-            allp = overall_board(scoring=scoring, season=season)
-        finally:
-            _PVS_LOCAL.building = False
-        hit = {pid: (float(r.PVS), r.PVS_tier) for pid, r in allp[["PVS", "PVS_tier"]].iterrows()}
-        _cache_put(_PVS_CACHE, key, hit, _pvs_key_scoring)
+        with FLIGHT.hold(("pvs", key)):
+            hit = _cache_get(_PVS_CACHE, key, _pvs_key_scoring)
+            if hit is None:
+                _PVS_LOCAL.building = True
+                try:
+                    allp = overall_board(scoring=scoring, season=season)
+                finally:
+                    _PVS_LOCAL.building = False
+                hit = {pid: (float(r.PVS), r.PVS_tier) for pid, r in allp[["PVS", "PVS_tier"]].iterrows()}
+                _cache_put(_PVS_CACHE, key, hit, _pvs_key_scoring)
     return hit
 
 
@@ -758,8 +766,15 @@ def overall_board(scoring=None, league=None, season=None, ecr=None):
         out = hit[1].copy()
         out.attrs = dict(hit[1].attrs)
         return out
-    out = _overall_board_uncached(scoring, league, season, None)
-    _cache_put(_OVERALL_CACHE, key, (time.time(), out), _overall_key_scoring)
+    # One rebuild per key: simultaneous misses (or a just-expired entry) wait for the first.
+    with FLIGHT.hold(("overall", key)):
+        hit = _cache_get(_OVERALL_CACHE, key, _overall_key_scoring)
+        if hit is not None and time.time() - hit[0] < OVERALL_TTL_SECONDS:
+            out = hit[1].copy()
+            out.attrs = dict(hit[1].attrs)
+            return out
+        out = _overall_board_uncached(scoring, league, season, None)
+        _cache_put(_OVERALL_CACHE, key, (time.time(), out), _overall_key_scoring)
     copy = out.copy()
     copy.attrs = dict(out.attrs)
     return copy

@@ -101,6 +101,26 @@ class RefreshLoop(unittest.IsolatedAsyncioTestCase):
         lb.assert_called_once_with(None, True)            # force=True re-resolves the season
         warm.assert_awaited_once_with(delay=0)
 
+    async def test_a_refresh_rewarms_the_default_screens_only_when_warm_is_on(self):
+        for flag, expected in (("1", 1), ("", 0)):
+            with self.subTest(WARM_ON_START=flag), env(WARM_ON_START=flag), \
+                    mock.patch.object(rs.board, "load_bundle", return_value={"season": 2026, "wk": object()}), \
+                    mock.patch.object(rs, "_warm_model_tables", new=mock.AsyncMock()), \
+                    mock.patch.object(rs.board, "warm_default_boards") as wd, \
+                    mock.patch.object(rs, "_warm_waivers") as ww, \
+                    mock.patch.object(rs.tools, "resolve_track_record", return_value=0):
+                await self.run_one_tick()
+            self.assertEqual((wd.call_count, ww.call_count), (expected, expected))
+
+    async def test_a_failed_rewarm_does_not_look_like_a_failed_refresh_or_stop_the_resolve(self):
+        with env(WARM_ON_START="1"), \
+                mock.patch.object(rs.board, "load_bundle", return_value={"season": 2026, "wk": object()}), \
+                mock.patch.object(rs, "_warm_model_tables", new=mock.AsyncMock()), \
+                mock.patch.object(rs.board, "warm_default_boards", side_effect=RuntimeError("boom")), \
+                mock.patch.object(rs.tools, "resolve_track_record", return_value=0) as rtr:
+            await self.run_one_tick()
+        rtr.assert_called_once_with()
+
     async def test_a_failed_refresh_does_not_stop_the_track_record_resolve(self):
         with mock.patch.object(rs.board, "load_bundle", side_effect=RuntimeError("nflverse down")), \
                 mock.patch.object(rs.tools, "resolve_track_record", return_value=2) as rtr:
@@ -146,13 +166,29 @@ class WarmOnStart(unittest.IsolatedAsyncioTestCase):
         lb.assert_not_called()
         wd.assert_not_called()
 
-    async def test_on_builds_the_bundle_then_the_default_boards(self):
+    async def test_on_builds_the_bundle_then_the_default_boards_then_the_waivers_screen(self):
         order = []
         with env(WARM_ON_START="1"), \
                 mock.patch.object(rs.board, "load_bundle", side_effect=lambda *a, **k: order.append("bundle")), \
-                mock.patch.object(rs.board, "warm_default_boards", side_effect=lambda *a, **k: order.append("boards")):
+                mock.patch.object(rs.board, "warm_default_boards", side_effect=lambda *a, **k: order.append("boards")), \
+                mock.patch.object(rs, "_warm_waivers", side_effect=lambda *a, **k: order.append("waivers")):
             await rs._warm_on_start()
-        self.assertEqual(order, ["bundle", "boards"])
+        self.assertEqual(order, ["bundle", "boards", "waivers"])
+
+    async def test_a_waivers_failure_is_swallowed_and_the_boards_stay_warm(self):
+        with env(WARM_ON_START="1"), \
+                mock.patch.object(rs.board, "load_bundle"), \
+                mock.patch.object(rs.board, "warm_default_boards") as wd, \
+                mock.patch.object(rs, "_warm_waivers", side_effect=RuntimeError("no data")):
+            await rs._warm_on_start()          # must not raise
+        wd.assert_called_once()
+
+    async def test_a_board_failure_skips_the_waivers_warm(self):
+        with env(WARM_ON_START="1"), \
+                mock.patch.object(rs.board, "load_bundle", side_effect=RuntimeError("x")), \
+                mock.patch.object(rs, "_warm_waivers") as ww:
+            await rs._warm_on_start()
+        ww.assert_not_called()
 
     async def test_a_failure_is_swallowed(self):
         with env(WARM_ON_START="1"), mock.patch.object(rs.board, "load_bundle", side_effect=RuntimeError("x")):

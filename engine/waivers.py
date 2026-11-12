@@ -40,6 +40,7 @@ import pandas as pd
 
 from . import data, injuries, lineup as lineup_layer, optimizer, profile, sleeper, value as value_layer
 from .board import POSITIONS, build_board, load_bundle, matchup_multiplier, rest_of_season_value
+from .flight import FLIGHT
 from .scoring import ScoringSettings, apply_scoring
 
 ET = ZoneInfo("America/New_York")
@@ -391,11 +392,16 @@ def cached_pool(scoring, bundle):
     hit = _POOL_CACHE.get(key)
     if hit and time.time() - hit[0] < POOL_TTL:
         return hit[1], hit[2]
-    pool, logs = player_pool(scoring, bundle)
-    pool["usage_score"] = usage_scores(pool)
-    _POOL_CACHE.clear()
-    _POOL_CACHE[key] = (time.time(), pool, logs)
-    return pool, logs
+    # One rebuild per key: simultaneous misses wait for the first instead of each building a pool.
+    with FLIGHT.hold(("pool", key)):
+        hit = _POOL_CACHE.get(key)
+        if hit and time.time() - hit[0] < POOL_TTL:
+            return hit[1], hit[2]
+        pool, logs = player_pool(scoring, bundle)
+        pool["usage_score"] = usage_scores(pool)
+        _POOL_CACHE.clear()
+        _POOL_CACHE[key] = (time.time(), pool, logs)
+        return pool, logs
 
 
 def player_pool(scoring, bundle):

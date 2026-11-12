@@ -85,12 +85,19 @@ async def _refresh_loop():
             print(f"[refresh_scheduler] refreshed season {bundle['season']} "
                   f"in {time.time() - started:.1f}s")
             await _warm_model_tables(delay=0)   # this week's games change both tables
-            # Deliberately not eagerly warming board.py's cache here either
-            # (see the comment above this loop) — on a memory-constrained
-            # host, real request traffic filling the cache in naturally,
-            # one board at a time, is safer than a 16-build burst right
-            # after every refresh. board.warm_common_boards() still exists
-            # for a host with real headroom to call explicitly.
+            # Not the 16-build burst (board.warm_common_boards): on a
+            # memory-constrained host real traffic filling the cache in one
+            # board at a time is safer. A host that opted in with
+            # WARM_ON_START has headroom, and a forced refresh empties the
+            # board caches, so the four default boards and the default
+            # waivers screen are rebuilt here instead of by the first visitor.
+            if _warm_enabled():
+                try:
+                    await asyncio.to_thread(board.warm_default_boards)
+                    await asyncio.to_thread(_warm_waivers)
+                    print(f"[refresh_scheduler] default boards and waivers re-warmed in {time.time() - started:.1f}s")
+                except Exception as e:
+                    print(f"[refresh_scheduler] re-warm after refresh skipped: {e}")
         except Exception as e:
             # A flaky fetch shouldn't kill the background task — it just
             # tries again next interval, same as any other cache miss
@@ -145,6 +152,19 @@ async def _warm_on_start():
         print(f"[refresh_scheduler] default boards warmed in {time.time() - started:.1f}s")
     except Exception as e:
         print(f"[refresh_scheduler] warm on start skipped: {e}")
+        return
+    # The signed-out Waivers screen: the slowest first call after a restart
+    # (about 6 s on a small host), so it is built here instead of by a visitor.
+    try:
+        await asyncio.to_thread(_warm_waivers)
+        print(f"[refresh_scheduler] default waivers engine warmed in {time.time() - started:.1f}s")
+    except Exception as e:
+        print(f"[refresh_scheduler] waivers warm skipped: {e}")
+
+
+def _warm_waivers():
+    from . import waivers          # imported here: waivers imports board, which imports a lot
+    waivers.build()
 
 
 def start():

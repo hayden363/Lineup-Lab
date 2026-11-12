@@ -54,6 +54,7 @@ import numpy as np
 import pandas as pd
 
 from . import history
+from .flight import FLIGHT
 from .scoring import apply_scoring
 
 POSITIONS = ("QB", "RB", "WR", "TE")
@@ -170,21 +171,26 @@ def model(scoring, current):
     with _LOCK:
         if key in _MODELS:
             return _MODELS[key]
-    built = None
-    if history.available():
-        df = _scored_history(scoring, current)
-        if not df.empty and df["season"].nunique() >= 2:
-            ppo = _opportunity_values(df)
-            coef = fit(_training_rows(df, ppo))
-            if coef:
-                last = int(current) - 1
-                prev = df[df["season"] == last].groupby("player_id")["fpts_active"].agg(["mean", "count"])
-                built = {"coef": coef, "ppo": ppo, "prior": prev[prev["count"] >= MIN_PRIOR_GAMES]["mean"]}
-    with _LOCK:
-        if len(_MODELS) >= _MODEL_LIMIT:
-            _MODELS.clear()
-        _MODELS[key] = built
-    return built
+    # One training per key: simultaneous first requests for a scoring setting wait for the first.
+    with FLIGHT.hold(("model", key)):
+        with _LOCK:
+            if key in _MODELS:
+                return _MODELS[key]
+        built = None
+        if history.available():
+            df = _scored_history(scoring, current)
+            if not df.empty and df["season"].nunique() >= 2:
+                ppo = _opportunity_values(df)
+                coef = fit(_training_rows(df, ppo))
+                if coef:
+                    last = int(current) - 1
+                    prev = df[df["season"] == last].groupby("player_id")["fpts_active"].agg(["mean", "count"])
+                    built = {"coef": coef, "ppo": ppo, "prior": prev[prev["count"] >= MIN_PRIOR_GAMES]["mean"]}
+        with _LOCK:
+            if len(_MODELS) >= _MODEL_LIMIT:
+                _MODELS.clear()
+            _MODELS[key] = built
+        return built
 
 
 def predict(position, wk_scored, scoring, season):
