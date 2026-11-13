@@ -450,6 +450,8 @@
   }
 
   var roster = [], boxes = {}, rosterAt = 0, filter = "all";
+  // The roster is cached for 2 minutes; switching leagues in the sidebar must not keep showing the old team's players.
+  LiveTab.resetRoster = function () { roster = []; rosterAt = 0; if (typeof state !== "undefined") state.myTeamAbbrs = {}; };
   function favKey() { return typeof TeamTheme !== "undefined" && TeamTheme.current() ? key(TeamTheme.current()) : ""; }
 
   // Your roster players in one game, as scorebug rows: projections before kickoff, his points once it is on.

@@ -59,5 +59,45 @@ class EaseOfUseMarkup(unittest.TestCase):
         self.assertIn("platform: connectPlatform", gate)
 
 
+class LeagueSwitchingFromTheSidebar(unittest.TestCase):
+    """Clicking a league in the sidebar must move EVERY league-dependent screen, not just some."""
+
+    def setUp(self):
+        self.js = read("static/app.js")
+        self.handler = block(self.js, 'row.addEventListener("click", async () => {', "showToast(`Switched to")
+
+    def test_sidebar_lists_every_league_as_a_clickable_keyboard_row(self):
+        fn = block(self.js, "function renderSidebarTeams()", "function initPosPills()")
+        self.assertIn('class="sidebar-team-row kbd-click', fn)
+        self.assertIn('role="button" tabindex="0"', fn)
+        self.assertIn("state.teams.map(", fn)                      # one row per connected league, not just the active one
+
+    def test_the_phone_menu_closes_after_picking_a_league(self):
+        self.assertGreaterEqual(self.handler.count("closeMobileDrawer()"), 2)   # on a switch and on tapping the current one
+
+    def test_the_big_board_reloads_when_it_was_scored_by_league_rules(self):
+        self.assertIn("boardUsedLeagueScoring", self.handler)
+        self.assertIn("state.boardLoaded = false", self.handler)
+        self.assertIn('if (state.tab === "board") loadBoard()', self.handler)
+
+    def test_the_live_tab_forgets_the_previous_leagues_roster(self):
+        self.assertIn("LiveTab.resetRoster()", self.handler)
+        live = read("static/live.js")
+        self.assertIn("LiveTab.resetRoster = function", live)
+        self.assertIn("rosterAt = 0", block(live, "LiveTab.resetRoster = function", "\n"))
+
+    def test_league_chat_follows_the_active_league(self):
+        self.assertIn("chatFollowActiveLeague()", self.handler)
+        self.assertIn('if (state.tab === "chat") loadChatTab()', self.handler)
+        chat = read("static/chat.js")
+        fn = block(chat, "function chatFollowActiveLeague()", "function stopChatPolling()")
+        self.assertIn("chatState.leagueId = active.league_id", fn)
+        self.assertIn("chatLeagues().some(", fn)                   # ESPN leagues have no chat: nothing to follow
+
+    def test_the_screens_that_were_already_refreshed_still_are(self):
+        for call in ("loadMyTeam()", "loadWaivers()", "loadNews()", "loadDraftTab()", "loadTradeFinder()", "loadStartSitTab()"):
+            self.assertIn(call, self.handler)
+
+
 if __name__ == "__main__":
     unittest.main()

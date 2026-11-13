@@ -30,6 +30,16 @@ function chatLeagues() {
   return [...seen].map(([id, name]) => ({ id, name }));
 }
 
+// Switching leagues in the sidebar should take chat to that league too (chat is Sleeper-only: for an ESPN
+// league there is nothing to follow, so the last chat league stays selected).
+function chatFollowActiveLeague() {
+  const active = activeTeam();
+  if (active && chatLeagues().some((l) => l.id === active.league_id) && chatState.leagueId !== active.league_id) {
+    chatState.leagueId = active.league_id;
+    chatState.lastId = 0;
+  }
+}
+
 function stopChatPolling() {
   if (chatState.timer) clearInterval(chatState.timer);
   chatState.timer = null;

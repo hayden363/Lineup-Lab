@@ -532,8 +532,9 @@ function renderSidebarTeams() {
     </div>`).join("");
   list.querySelectorAll(".sidebar-team-row").forEach((row) => {
     row.addEventListener("click", async () => {
-      if (row.classList.contains("active")) return;
+      if (row.classList.contains("active")) { closeMobileDrawer(); return; }
       row.classList.add("switching");
+      closeMobileDrawer();             // phones: get the slide-out menu out of the way so the new league is visible
       let res;
       try {
         res = await api(`/api/teams/${row.dataset.teamId}/activate`, { method: "POST" });
@@ -550,10 +551,19 @@ function renderSidebarTeams() {
       state.startsit = [];
       if (window.SSTeam) SSTeam.reset();
       state.tradeA = []; state.tradeB = [];
+      const boardUsedLeagueScoring = state.scoring === "league";
       state.leagueScoringDict = await fetchLeagueScoring(active);
       if (state.scoring === "league" && !state.leagueScoringDict) { state.scoring = ""; saveScoring(); }
       refreshScoringLeagueOption();
       renderSidebarTeams();
+      // Screens that were not in the list above but also depend on the active league:
+      // the Big Board when it is scored by league rules, the live games tab's "your players", and league chat.
+      if (boardUsedLeagueScoring || state.scoring === "league") {
+        state.boardLoaded = false;
+        if (state.tab === "board") loadBoard();
+      }
+      if (window.LiveTab && LiveTab.resetRoster) { LiveTab.resetRoster(); if (state.tab === "live") LiveTab.load(); }
+      if (typeof chatFollowActiveLeague === "function") { chatFollowActiveLeague(); if (state.tab === "chat") loadChatTab(); }
       if (state.tab === "settings") { renderTeamsList(); renderScoringPills(); }
       if (state.tab === "myteam") loadMyTeam();
       if (state.tab === "waivers") loadWaivers();
