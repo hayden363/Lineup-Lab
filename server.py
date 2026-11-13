@@ -510,6 +510,10 @@ def security_txt():
 
 @app.get("/api/auth/me")
 def me(user=Depends(require_user)):
+    try:
+        db.touch_last_seen(user["id"])      # feeds the monthly owner report's "came back" count
+    except Exception:                       # never let bookkeeping break sign-in (also: column not migrated yet)
+        pass
     return user
 
 

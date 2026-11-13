@@ -34,7 +34,7 @@ import asyncio
 import os
 import time
 
-from . import board, contingency, correlation, tools
+from . import board, contingency, correlation, owner_report, tools
 
 DEFAULT_INTERVAL_HOURS = 24
 _WARM_TASK = None
@@ -116,6 +116,15 @@ async def _refresh_loop():
                 print(f"[refresh_scheduler] resolved {resolved} track-record prediction(s)")
         except Exception as e:
             print(f"[refresh_scheduler] track-record resolve skipped: {e}")
+
+        # Monthly owner report: a no-op unless OWNER_REPORT_EMAIL is set, and sends each
+        # month at most once (see engine/owner_report.py), so running it every night is safe.
+        try:
+            status = await asyncio.to_thread(owner_report.send_if_due)
+            if status not in ("not-configured", "already-sent"):
+                print(f"[refresh_scheduler] owner report: {status}")
+        except Exception as e:
+            print(f"[refresh_scheduler] owner report skipped: {e}")
 
 
 async def _warm_model_tables(delay=20):

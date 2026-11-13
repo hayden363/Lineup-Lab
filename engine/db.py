@@ -318,6 +318,25 @@ def get_user_by_session(token):
     return _public(row) if row else None
 
 
+_LAST_SEEN_MEMO = {}            # user_id -> epoch of the last write this process made
+LAST_SEEN_EVERY_SECONDS = 24 * 3600
+
+
+def touch_last_seen(user_id, now=None):
+    """Record that this account opened the app, at most once a day per person (the monthly
+    owner report counts who came back). Remembered per process so a busy day is one tiny write
+    per person, not one per page load. Returns True if it wrote. Callers treat any failure as
+    non-fatal: before the migration adds users.last_seen_at this just raises and is ignored."""
+    now = now if now is not None else time.time()
+    if now - _LAST_SEEN_MEMO.get(user_id, 0) < LAST_SEEN_EVERY_SECONDS:
+        return False
+    with _conn() as c:
+        c.execute("UPDATE users SET last_seen_at = %s WHERE id = %s AND (last_seen_at IS NULL OR last_seen_at < %s)",
+                  (now, user_id, now - LAST_SEEN_EVERY_SECONDS))
+    _LAST_SEEN_MEMO[user_id] = now          # only after a successful write, so a failure retries next load
+    return True
+
+
 def delete_session(token):
     with _conn() as c:
         c.execute("DELETE FROM sessions WHERE token IN (%s, %s)", (security.hash_token(token), token))
