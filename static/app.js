@@ -678,11 +678,11 @@ function playerCellHtml(p) {
 
 function renderBoardHead(cols, showProj) {
   const head = $("#board-head");
-  let html = `<th></th><th>Player</th><th title="Player Value Score: edge over a replacement player, comparable across positions">PVS</th><th>FORM</th><th>FPTS/G</th>`;
+  let html = `<th></th><th>Player</th><th title="Player Value Score: edge over a replacement player, comparable across positions">PVS</th><th title="Recent games vs. his season average.">FORM</th><th title="Fantasy points per game this season.">FPTS/G</th>`;
   cols.forEach((c) => {
     html += `<th${c.mobileHide ? ' class="hide-mobile"' : ""}>${esc(c.label)}</th>`;
   });
-  if (showProj) html += `<th>PROJ</th>`;
+  if (showProj) html += `<th title="Projected points per game.">PROJ</th>`;
   head.innerHTML = html;
 }
 
@@ -902,7 +902,7 @@ $("#board-hint")?.addEventListener("click", (e) => e.currentTarget.classList.tog
 
 function renderOverallBoard(data) {
   const hasEcr = data.players.some((p) => p.ecr != null);   // no expert column when the consensus feed is down
-  $("#board-head").innerHTML = `<th></th><th>Player</th><th>Tier</th><th title="Player Value Score: edge over a replacement player, comparable across positions">PVS</th><th>PROJ</th><th>VOR</th>${hasEcr ? '<th class="hide-mobile">Experts</th>' : ""}`;
+  $("#board-head").innerHTML = `<th></th><th>Player</th><th title="Players in the same tier are close in value.">Tier</th><th title="Player Value Score: edge over a replacement player, comparable across positions">PVS</th><th title="Projected points per game.">PROJ</th><th title="Points per game above a free replacement player.">VOR</th>${hasEcr ? '<th class="hide-mobile" title="Expert consensus rank vs. our rank.">Experts</th>' : ""}`;
   const body = $("#board-body");
   body.innerHTML = "";
   const q = state.search.trim().toLowerCase();
@@ -1438,7 +1438,7 @@ function weeklyStatSelectHtml(p) {
   const statKeys = ["fpts", ...Object.keys((p.weekly_log || [])[0] || {}).filter((k) => !["week", "opponent_team", "fpts"].includes(k))];
   if (statKeys.length < 2) return "";
   const statOptions = statKeys.map((k) => `<option value="${esc(k)}">${esc(WEEKLY_STAT_LABELS[k] || k)}</option>`).join("");
-  return `<select class="weeklog-stat-select">${statOptions}</select>`;
+  return `<select class="weeklog-stat-select" aria-label="Stat to chart">${statOptions}</select>`;
 }
 
 function playerStatsBodyHtml(p) {
@@ -2201,7 +2201,7 @@ async function loadPlayerNews(playerId, root) {
 // ------------------------------------------------------- player picker ----
 function initPicker(containerId, onAdd) {
   const container = $(containerId);
-  container.innerHTML = `<input type="text" placeholder="Search players to add…" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"><div class="picker-results" style="display:none"></div>`;
+  container.innerHTML = `<input type="text" aria-label="Search players to add" placeholder="Search players to add…" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"><div class="picker-results" style="display:none"></div>`;
   const input = container.querySelector("input");
   const results = container.querySelector(".picker-results");
   let debounce;
@@ -2251,7 +2251,7 @@ function renderStartSitChips() {
       <img ${headshotAttrs(p)} alt="">
       <div class="ss-slot-name">${esc(p.player_display_name)}${statusFlagsHtml(p)}</div>
       <div class="ss-slot-meta">${esc(p.position)} · ${esc(p.recent_team)}</div>
-      <select class="opp-select"><option value="">vs…</option>${state.meta.teams.map((t) => `<option value="${esc(t)}" ${p.opp === t ? "selected" : ""}>${esc(t)}</option>`).join("")}</select>`;
+      <select class="opp-select" aria-label="Opponent"><option value="">vs…</option>${state.meta.teams.map((t) => `<option value="${esc(t)}" ${p.opp === t ? "selected" : ""}>${esc(t)}</option>`).join("")}</select>`;
     slot.querySelector(".opp-select").addEventListener("change", (e) => { p.opp = e.target.value; });
     slot.querySelector(".ss-slot-x").addEventListener("click", () => {
       state.startsit = state.startsit.filter((x) => x.player_id !== p.player_id);
@@ -2972,8 +2972,8 @@ async function loadStartSitTab() {
 // ------------------------------------------------ whole-lineup advisor ----
 // engine/lineup_advisor.py: the exact best lineup for this week under the
 // Safe / Balanced / Upside lens, flex slots included, and what it changes.
-const ADVISOR_MODES = [["safe", "Safe", "Protecting a lead: favors fewer duds"], ["balanced", "Balanced", "Highest average points"],
-  ["upside", "Upside", "Chasing: favors big weeks"]];
+const ADVISOR_MODES = [["safe", "Play it safe", "Protecting a lead: favors fewer duds"], ["balanced", "Balanced", "Highest average points"],
+  ["upside", "Need a big week", "Chasing: favors big weeks"]];
 
 function renderLineupAdvisor(res, loading) {
   const host = $("#ss-lineup-advisor");
@@ -3534,7 +3534,7 @@ function wvStatusHtml(st, week) {
       <div class="wv-stat wv-stat-wide"><span class="wv-k">Your league</span><span class="wv-v small">Sign in and connect a Sleeper league in Settings to see your FAAB, waiver order and picks matched to your roster.</span></div>`;
   }
   const faab = st.is_faab
-    ? `<div class="wv-stat"><span class="wv-k">FAAB left</span><span class="wv-v">$${fmtTotal(st.faab_remaining)}<span class="wv-sub">${fmtTotal(st.faab_remaining_pct, 0)}% of $${fmtTotal(st.faab_budget)}</span></span></div>`
+    ? `<div class="wv-stat"><span class="wv-k">FAAB budget left</span><span class="wv-v">$${fmtTotal(st.faab_remaining)}<span class="wv-sub">${fmtTotal(st.faab_remaining_pct, 0)}% of $${fmtTotal(st.faab_budget)}</span></span></div>`
     : `<div class="wv-stat"><span class="wv-k">Format</span><span class="wv-v">${esc(st.waiver_type)}<span class="wv-sub">No FAAB budget</span></span></div>`;
   const prio = st.priority != null
     ? `<div class="wv-stat"><span class="wv-k">Waiver priority</span><span class="wv-v">#${esc(st.priority)}<span class="wv-sub">of ${esc(st.teams)} teams</span></span></div>` : "";
@@ -3649,7 +3649,9 @@ const WV_ADV = [["rank", "#"], ["name", "Player"], ["SCORE", "PVS"], ["ros", "RO
   ["target_share", "Target %"], ["xfp_pg", "xFP/G"], ["xfp_diff", "Pts vs xFP"], ["hvt_pg", "HVT/G"], ["wopr", "WOPR"], ["sched", "Next 4"]];
 const WV_TIPS = {
   SCORE: "Player Value Score, 0-100: how much more he gives a lineup than a freely available replacement at his position. Same number as the Big Board.",
-  ros: "Projected fantasy points per week for the rest of the season.",
+  FORM: "Recent games vs. his season average.",
+  fpts_pg: "Fantasy points per game this season.",
+  ros: "Rest-of-season points per week: projected fantasy points per week for the rest of the season.",
   snap_pct: "Share of his team's offensive snaps in his most recent game.",
   xfp_pg: "Expected fantasy points per game: what an average player would score on his targets and carries, given their depth and field position (our model, this season's play-by-play).",
   xfp_diff: "Actual points per game minus xFP. Very negative = getting the work but not the points yet (buy low). Very positive = scoring beyond his volume (may cool off).",
@@ -3795,7 +3797,7 @@ async function loadWaivers(pos) {
     wvSmartRender();
     $("#wv-movers").innerHTML = wvMoversHtml(d.market_movers, d.has_league);
     $("#wv-cuffs").innerHTML = wvCuffsHtml(d.handcuffs, d.has_league);
-    $("#wv-gaps").textContent = `Not shown: ${d.not_available.join("; ")}. xFP is our own model and FAAB bids are our suggestion, not a market consensus.`;
+    $("#wv-gaps").textContent = `Not shown: ${d.not_available.join("; ")}. xFP = expected points from his touches (our model). FAAB bids are our suggestion, not a market consensus.`;
     $("#waivers-hint").textContent = d.has_league
       ? "Ranked by PVS, excluding everyone rostered in your league. 🔥 = adds on Sleeper in the last 48h."
       : "Ranked by PVS. Connect your Sleeper or ESPN league in Settings to hide players who are already rostered.";
@@ -4869,8 +4871,8 @@ function wireAuthPanel(container, mode, onSuccess) {
     const area = $("#auth-form-area");
     if (m === "login") {
       area.innerHTML = `<div class="form-grid">
-        <input type="text" id="auth-identifier" placeholder="Username or email">
-        <input type="password" id="auth-password" placeholder="Password">
+        <input type="text" id="auth-identifier" aria-label="Username or email" placeholder="Username or email">
+        <input type="password" id="auth-password" aria-label="Password" placeholder="Password">
         <button class="primary-btn" id="auth-submit">Sign In</button>
         <button class="link-btn" id="auth-forgot" type="button">Forgot password?</button>
         <div class="form-msg" id="auth-msg"></div>
@@ -4890,15 +4892,15 @@ function wireAuthPanel(container, mode, onSuccess) {
     } else {
       area.innerHTML = `<div class="form-grid signup-form">
         <div class="field">
-          <input type="text" id="auth-username" placeholder="Username (3-20 chars, letters/numbers/_)" autocomplete="username">
+          <input type="text" id="auth-username" aria-label="Username" placeholder="Username (3-20 chars, letters/numbers/_)" autocomplete="username">
           <div class="field-hint" id="hint-username"></div>
         </div>
         <div class="field">
-          <input type="email" id="auth-email" placeholder="Email" autocomplete="email">
+          <input type="email" id="auth-email" aria-label="Email" placeholder="Email" autocomplete="email">
           <div class="field-hint" id="hint-email"></div>
         </div>
         <div class="field">
-          <input type="password" id="auth-password" placeholder="Password (8+ characters)" autocomplete="new-password">
+          <input type="password" id="auth-password" aria-label="Password" placeholder="Password (8+ characters)" autocomplete="new-password">
           <div class="pw-strength" id="pw-strength"><div class="pw-strength-bar" id="pw-strength-bar"></div></div>
           <div class="field-hint" id="hint-password"></div>
         </div>
@@ -5018,7 +5020,7 @@ function wireAuthPanel(container, mode, onSuccess) {
     const area = $("#auth-form-area");
     area.innerHTML = `<div class="form-grid">
       <div class="hint" style="margin:0 0 4px">Enter your account email — if it matches an account, a reset link is sent to it. The email may land in your spam or junk folder.</div>
-      <input type="email" id="forgot-email" placeholder="Email">
+      <input type="email" id="forgot-email" aria-label="Email" placeholder="Email">
       <button class="primary-btn" id="forgot-submit">Send Reset Link</button>
       <button class="link-btn" id="forgot-back" type="button">Back to sign in</button>
       <div class="form-msg" id="auth-msg"></div>
@@ -5070,7 +5072,7 @@ function openResetPasswordModal(token) {
   root.innerHTML = `<div class="modal-backdrop auth-modal"><div class="modal">
     <div class="modal-header"><h2>Reset Password</h2><button class="modal-close" aria-label="Close">✕</button></div>
     <div class="form-grid">
-      <input type="password" id="reset-new-password" placeholder="New password (8+ characters)">
+      <input type="password" id="reset-new-password" aria-label="New password" placeholder="New password (8+ characters)">
       <button class="primary-btn" id="reset-submit">Set New Password</button>
       <div class="form-msg" id="reset-msg"></div>
     </div>
@@ -5533,7 +5535,7 @@ function renderGateConnectLeague() {
     <div class="gate-mobile-brand"><img src="/icons/icon-192.png" alt=""><span>Lineup Lab</span></div>
     <div class="modal-header"><h2>Connect Your League</h2></div>
     <div class="form-grid">
-      <input type="text" id="gate-connect-input" placeholder="Paste Sleeper league URL or ID" autocomplete="off">
+      <input type="text" id="gate-connect-input" aria-label="Sleeper or ESPN league URL or ID" placeholder="Paste Sleeper league URL or ID" autocomplete="off">
       <button class="primary-btn" id="gate-connect-btn">Connect</button>
     </div>
     <div id="gate-connect-results"></div>

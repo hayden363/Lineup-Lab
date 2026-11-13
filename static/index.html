@@ -144,15 +144,15 @@
       </div>
       <div class="controls">
         <div class="pill-group" id="pos-pills"></div>
-        <select id="opp-select"><option value="">Project vs…</option></select>
-        <select id="scoring-select">
+        <select id="opp-select" aria-label="Opponent to project against"><option value="">Pick an opponent</option></select>
+        <select id="scoring-select" aria-label="Scoring format">
           <option value="">Scoring: PPR</option>
           <option value="half_ppr">Scoring: Half PPR</option>
           <option value="standard">Scoring: Standard</option>
           <option value="te_premium">Scoring: TE Premium</option>
           <option value="league" id="scoring-league-opt" style="display:none">Scoring: My League</option>
         </select>
-        <input class="search-box" type="text" id="search" placeholder="Search players…" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+        <input class="search-box" type="text" id="search" aria-label="Search players" placeholder="Search players…" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
       </div>
       <div class="hint" id="board-hint"></div>
       <div class="board-wrap">
@@ -178,7 +178,7 @@
       <div class="controls" id="myteam-week-controls" style="display:none">
         <div class="week-nav">
           <button class="week-arrow" id="myteam-week-prev" aria-label="Previous week">‹</button>
-          <select id="myteam-week-select"></select>
+          <select id="myteam-week-select" aria-label="Week"></select>
           <button class="week-arrow" id="myteam-week-next" aria-label="Next week">›</button>
         </div>
         <button class="pill" id="myteam-week-live" style="display:none">This Week</button>
@@ -257,9 +257,9 @@
             <div class="ss-slot-row" id="startsit-chips"></div>
             <div class="startsit-actions">
               <div class="ss-mode" id="ss-mode" role="group" aria-label="What to optimize for">
-                <button type="button" class="ss-mode-btn" data-mode="safe" title="You're the favorite this week: minimize the chance of a dud">Protect a lead</button>
+                <button type="button" class="ss-mode-btn" data-mode="safe" title="You're the favorite this week: minimize the chance of a dud">Play it safe</button>
                 <button type="button" class="ss-mode-btn active" data-mode="balanced" title="Best typical outcome">Balanced</button>
-                <button type="button" class="ss-mode-btn" data-mode="upside" title="You're the underdog: maximize the chance of a big week">Chasing points</button>
+                <button type="button" class="ss-mode-btn" data-mode="upside" title="You're the underdog: maximize the chance of a big week">Need a big week</button>
               </div>
               <button class="primary-btn" id="startsit-compare" disabled>Compare</button>
             </div>
@@ -312,7 +312,7 @@
           <div class="trade-side">
             <div class="trade-side-header">
               <h3>Opponent</h3>
-              <select id="trade-opponent-select"></select>
+              <select id="trade-opponent-select" aria-label="Trade partner"></select>
             </div>
             <div id="trade-b-roster" class="trade-roster-list"></div>
             <div class="chip-row" id="trade-b-chips"></div>
@@ -325,7 +325,7 @@
 
     <section id="tab-waivers" style="display:none">
       <div class="page-header">
-        <h1>Waivers</h1>
+        <h1>Best pickups for your team</h1>
         <p>Top available players by position, synced to who's actually rostered in your league, with picks matched to your roster.</p>
       </div>
       <div id="wv-status" class="wv-status"></div>
@@ -418,8 +418,8 @@
           <details class="settings-details">
             <summary>Change password</summary>
             <div class="form-grid">
-              <input type="password" id="cp-current" placeholder="Current password">
-              <input type="password" id="cp-new" placeholder="New password (8+ characters)">
+              <input type="password" id="cp-current" aria-label="Current password" placeholder="Current password">
+              <input type="password" id="cp-new" aria-label="New password" placeholder="New password (8+ characters)">
               <button class="primary-btn" id="cp-submit">Update Password</button>
               <div class="form-msg" id="cp-msg"></div>
             </div>
@@ -429,8 +429,8 @@
             <summary>Delete account</summary>
             <div class="form-grid">
               <div class="hint" style="margin:0">Permanently deletes your account and everything saved to it — connected leagues, settings, and prediction history. This can't be undone.</div>
-              <input type="password" id="del-password" placeholder="Password" autocomplete="current-password">
-              <input type="text" id="del-confirm" placeholder="Type DELETE to confirm" autocapitalize="characters" autocomplete="off">
+              <input type="password" id="del-password" aria-label="Password" placeholder="Password" autocomplete="current-password">
+              <input type="text" id="del-confirm" aria-label="Type DELETE to confirm" placeholder="Type DELETE to confirm" autocapitalize="characters" autocomplete="off">
               <button class="primary-btn" id="del-submit" style="background:#b3261e">Delete My Account</button>
               <div class="form-msg" id="del-msg"></div>
             </div>
@@ -451,7 +451,7 @@
           </div>
           <div class="hint" id="set-espn-disclaimer" style="display:none;margin-top:8px">This isn't an official ESPN integration — it uses your own ESPN session cookies to read your league the same way your browser does, and may stop working if ESPN changes something on their end. Your cookies are encrypted at rest and never shown back to you or anyone else once saved. Disconnect anytime below.</div>
           <div class="form-grid" style="margin-top:10px;">
-            <input type="text" id="set-connect-input" placeholder="Paste Sleeper league URL or ID">
+            <input type="text" id="set-connect-input" aria-label="Sleeper or ESPN league URL or ID" placeholder="Paste Sleeper league URL or ID">
             <button class="primary-btn" id="set-connect-btn">Connect</button>
           </div>
           <div id="set-connect-results"></div>
@@ -470,8 +470,8 @@
             <li><strong>SWID</strong> and <strong>espn_s2</strong> — find them in your browser's dev tools (Application → Cookies → fantasy.espn.com) while logged into ESPN. Encrypted at rest, never shown back to you in full. Never type your actual ESPN password anywhere in this app.</li>
           </ul>
           <div class="form-grid">
-            <input type="password" id="set-espn-swid" placeholder="SWID cookie (private leagues only)">
-            <input type="password" id="set-espn-s2" placeholder="espn_s2 cookie (private leagues only)">
+            <input type="password" id="set-espn-swid" aria-label="ESPN SWID cookie" placeholder="SWID cookie (private leagues only)">
+            <input type="password" id="set-espn-s2" aria-label="ESPN s2 cookie" placeholder="espn_s2 cookie (private leagues only)">
             <button class="primary-btn" id="set-espn-save">Save</button>
           </div>
         </div>
@@ -497,6 +497,11 @@
           <li><strong>Base metrics</strong> — efficiency &amp; volume stats from real weekly box scores (nflverse).</li>
           <li><strong>Advanced metrics</strong> — real Next Gen Stats tracking data: separation, cushion, CPOE, rush yards over expected. The free, legal equivalent of what a paid grading service like PFF sells.</li>
           <li><strong>PVS</strong> (Player Value Score) — 0–100: how much more a player gives your lineup than a freely available replacement at his position, backed by usage, ceiling and stability. Comparable across QB, RB, WR and TE.</li>
+          <li><strong>Tier</strong> — a group of players who are close in value; players in the same tier are close calls.</li>
+          <li><strong>VOR</strong> (value over replacement) — points per game above a free replacement player at his position.</li>
+          <li><strong>ROS</strong> (rest of season) — projected fantasy points per week from now through the end of the season.</li>
+          <li><strong>xFP</strong> (expected fantasy points) — the points an average player would score on his targets and carries, given their depth and field position. Our own model.</li>
+          <li><strong>FAAB</strong> (free-agent acquisition budget) — the dollars you bid on free agents in leagues that use blind bidding.</li>
           <li><strong>Matchups</strong> — a real, multi-stat defensive profile (run defense, pass defense, pressure — many categories, not one blanket number), matched to the specific metrics each position's SCORE is built from.</li>
           <li><strong>My Team, Start/Sit, Trade, Waivers, News</strong> — decision tools built on the same board, synced to your real Sleeper roster, with real trending-add data from Sleeper on the waiver wire.</li>
           <li><strong>Multiple teams</strong> — connect every league you play in and switch which one is "active" any time in Settings above.</li>
