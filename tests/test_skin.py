@@ -49,7 +49,7 @@ class SkinWiringTests(unittest.TestCase):
     def test_the_bottom_tab_bar_exists_with_the_main_tabs_and_a_more_button(self):
         html = read("static/index.html")
         nav = html[html.index('id="bottom-nav"'):][:2200]
-        for tab in ("myteam", "live", "startsit", "trade"):
+        for tab in ("myteam", "waivers", "startsit", "trade"):
             self.assertIn(f'data-go="{tab}"', nav)
         self.assertIn('id="bn-more"', nav)
         self.assertIn('id="bn-live-dot"', nav)

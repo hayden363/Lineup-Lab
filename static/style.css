@@ -609,7 +609,9 @@ select:focus, input:focus {
 
 /* phones: iOS zooms the page when a field under 16px gets focus */
 @media (max-width: 900px) {
-  select, input, textarea { font-size: 16px; }
+  /* same specificity as the 13px rule above (attribute selectors), and later, so it wins */
+  select, input, textarea, input[type="text"], input[type="number"], input[type="password"],
+  input[type="email"], input[type="search"] { font-size: 16px; }
 }
 
 .spacer { flex: 1; }
@@ -5506,4 +5508,30 @@ body.tp-open .th-title::after { content: ""; position: absolute; left: 0; right:
 /* respect the OS "reduce motion" setting everywhere */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+}
+
+/* ------------------------------------------------ ease-of-use (Batch B) --- */
+/* one-time "next step" pointer on My Team after the first league connect */
+.next-step-card { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 0 0 14px; padding: 12px 14px; background: var(--panel); border: 1px solid var(--border-bright); border-radius: var(--radius); color: var(--text); font-size: 14px; }
+.next-step-card > span { flex: 1 1 180px; }
+.next-step-card .primary-btn { padding: 8px 14px; }
+.next-step-x { background: none; border: 0; color: var(--muted); font-size: 20px; line-height: 1; padding: 4px 6px; cursor: pointer; }
+.next-step-x:hover { color: var(--text); }
+
+/* startup failed before anything could render */
+.boot-fail { position: fixed; inset: 0; z-index: 300; display: flex; align-items: center; justify-content: center; padding: 16px; background: var(--bg); }
+.boot-fail-box { max-width: 360px; text-align: center; color: var(--text); }
+.boot-fail-box h2 { margin: 0 0 8px; }
+.boot-fail-box p { margin: 0 0 16px; color: var(--muted); }
+
+/* tap-to-read header notes (the hover-only `title` on phones) */
+.th-info { cursor: help; }
+.tip-pop { position: fixed; z-index: 260; padding: 8px 10px; background: var(--panel-2); border: 1px solid var(--border-bright); border-radius: 8px; color: var(--text); font-size: 13px; font-weight: 500; line-height: 1.4; text-transform: none; letter-spacing: 0; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45); pointer-events: none; }
+
+/* gate: Sleeper/ESPN choice above the league input */
+#gate-connect-platform { margin-bottom: 10px; }
+
+/* phones: the Trade opponent picker has an id-level 12px rule, so it needs its own 16px (iOS focus zoom) */
+@media (max-width: 900px) {
+  #trade-opponent-select { font-size: 16px; }
 }

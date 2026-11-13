@@ -77,10 +77,6 @@
 
     <div class="sidebar-nav">
       <div class="nav-active-indicator" id="nav-active-indicator"></div>
-      <button class="nav-item" data-tab="board">
-        <span class="nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16V9M10 16V4M16 16v-6"/></svg></span>
-        <span class="nav-label">Big Board</span>
-      </button>
       <button class="nav-item active" data-tab="myteam">
         <span class="nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2.5l6 2.2v4.4c0 4-2.6 6.6-6 8.4-3.4-1.8-6-4.4-6-8.4V4.7z"/></svg></span>
         <span class="nav-label">My Team</span>
@@ -100,6 +96,10 @@
       <button class="nav-item" data-tab="waivers">
         <span class="nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 13l5-5 3 3 6-6M17 5v4h-4"/></svg></span>
         <span class="nav-label">Waivers</span>
+      </button>
+      <button class="nav-item" data-tab="board">
+        <span class="nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16V9M10 16V4M16 16v-6"/></svg></span>
+        <span class="nav-label">Big Board</span>
       </button>
       <button class="nav-item" data-tab="news">
         <span class="nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="14" height="12" rx="1.5"/><path d="M6 7.5h8M6 10.5h8M6 13.5h5"/></svg></span>
@@ -404,6 +404,26 @@
 
       <div id="settings-logged-in" style="display:none">
         <div class="settings-block">
+          <div class="settings-block-title">My Leagues &amp; Teams</div>
+          <div class="hint">Connect as many teams as you play in, Sleeper or ESPN — paste the league's URL (from your browser's address bar) or just its ID. An ESPN league must be set to public (see the note when you pick ESPN). Switch which one is "active" any time; My Team, Waivers, and News all follow whichever team is active.</div>
+          <div id="set-teams-list"></div>
+          <div class="pill-group" id="set-connect-platform" style="margin-top:14px;">
+            <button type="button" class="pill active" data-platform="sleeper">Sleeper</button>
+            <button type="button" class="pill" data-platform="espn">ESPN <span class="soon-badge" style="margin-left:4px">beta</span></button>
+          </div>
+          <div class="espn-public-note" id="set-espn-public-note" role="note" style="display:none">
+            <strong>Your ESPN league must be set to public.</strong>
+            <span>This app can only read a league that anyone with the link can view. To turn that on: open your league on ESPN, go to <em>League → Settings → Basic Settings</em> (commissioner only), and tick <em>“Make League Viewable to Public”</em>. Then paste the league URL or ID here. Not the commissioner? Ask them to switch it on. You can switch it back off after connecting.</span>
+          </div>
+          <div class="hint" id="set-espn-disclaimer" style="display:none;margin-top:8px">This isn't an official ESPN integration — it uses your own ESPN session cookies to read your league the same way your browser does, and may stop working if ESPN changes something on their end. Your cookies are encrypted at rest and never shown back to you or anyone else once saved. Disconnect anytime below.</div>
+          <div class="form-grid" style="margin-top:10px;">
+            <input type="text" id="set-connect-input" aria-label="Sleeper or ESPN league URL or ID" placeholder="Paste Sleeper league URL or ID">
+            <button class="primary-btn" id="set-connect-btn">Connect</button>
+          </div>
+          <div id="set-connect-results"></div>
+        </div>
+
+        <div class="settings-block">
           <div class="settings-block-title">Account</div>
           <div class="settings-row"><span>Username</span><span id="set-username" class="mono"></span></div>
           <div class="settings-row"><span>Email</span><span id="set-email" class="mono"></span></div>
@@ -435,26 +455,6 @@
               <div class="form-msg" id="del-msg"></div>
             </div>
           </details>
-        </div>
-
-        <div class="settings-block">
-          <div class="settings-block-title">My Leagues &amp; Teams</div>
-          <div class="hint">Connect as many teams as you play in, Sleeper or ESPN — paste the league's URL (from your browser's address bar) or just its ID. An ESPN league must be set to public (see the note when you pick ESPN). Switch which one is "active" any time; My Team, Waivers, and News all follow whichever team is active.</div>
-          <div id="set-teams-list"></div>
-          <div class="pill-group" id="set-connect-platform" style="margin-top:14px;">
-            <button type="button" class="pill active" data-platform="sleeper">Sleeper</button>
-            <button type="button" class="pill" data-platform="espn">ESPN <span class="soon-badge" style="margin-left:4px">beta</span></button>
-          </div>
-          <div class="espn-public-note" id="set-espn-public-note" role="note" style="display:none">
-            <strong>Your ESPN league must be set to public.</strong>
-            <span>This app can only read a league that anyone with the link can view. To turn that on: open your league on ESPN, go to <em>League → Settings → Basic Settings</em> (commissioner only), and tick <em>“Make League Viewable to Public”</em>. Then paste the league URL or ID here. Not the commissioner? Ask them to switch it on. You can switch it back off after connecting.</span>
-          </div>
-          <div class="hint" id="set-espn-disclaimer" style="display:none;margin-top:8px">This isn't an official ESPN integration — it uses your own ESPN session cookies to read your league the same way your browser does, and may stop working if ESPN changes something on their end. Your cookies are encrypted at rest and never shown back to you or anyone else once saved. Disconnect anytime below.</div>
-          <div class="form-grid" style="margin-top:10px;">
-            <input type="text" id="set-connect-input" aria-label="Sleeper or ESPN league URL or ID" placeholder="Paste Sleeper league URL or ID">
-            <button class="primary-btn" id="set-connect-btn">Connect</button>
-          </div>
-          <div id="set-connect-results"></div>
         </div>
 
         <div class="settings-block">
@@ -515,10 +515,11 @@
 
   <nav id="bottom-nav" aria-label="Main tabs">
     <button type="button" data-go="myteam"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2.5l6 2.2v4.6c0 3.6-2.4 6.3-6 8.2-3.6-1.9-6-4.6-6-8.2V4.7z"/></svg><span>My Team</span></button>
-    <button type="button" data-go="live"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="4.5" width="15" height="11" rx="2"/><path d="M2.5 10h15M10 4.5v11"/></svg><span>NFL Games</span><i class="bn-live-dot" id="bn-live-dot" hidden></i></button>
+    <button type="button" data-go="waivers"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 13l5-5 3 3 6-6M17 5v4h-4"/></svg><span>Waivers</span></button>
     <button type="button" data-go="startsit"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 5l-3 3 3 3M3 8h9M14 12l3 3-3 3M17 15H8"/></svg><span>Start/Sit</span></button>
     <button type="button" data-go="trade"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M13 4l3 3-3 3M16 7H4M7 16l-3-3 3-3M4 13h12"/></svg><span>Trade</span></button>
-    <button type="button" id="bn-more"><svg viewBox="0 0 20 20" fill="currentColor"><circle cx="4.5" cy="10" r="1.6"/><circle cx="10" cy="10" r="1.6"/><circle cx="15.5" cy="10" r="1.6"/></svg><span>More</span></button>
+    <!-- NFL Games lives in the More drawer (the sidebar); its live dot rides on More. -->
+    <button type="button" id="bn-more"><svg viewBox="0 0 20 20" fill="currentColor"><circle cx="4.5" cy="10" r="1.6"/><circle cx="10" cy="10" r="1.6"/><circle cx="15.5" cy="10" r="1.6"/></svg><span>More</span><i class="bn-live-dot" id="bn-live-dot" hidden></i></button>
   </nav>
   <div id="modal-root"></div>
   <div id="gc-root"></div>

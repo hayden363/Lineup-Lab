@@ -335,11 +335,31 @@ const el = (tag, cls, html) => {
   return e;
 };
 
+// Error messages here are shown to users, so they never carry the request
+// URL. A JSON `detail` from the server wins; plain-text 500s and Render's
+// HTML 502/503 pages fall back to a friendly line.
+// 10s after a loading line appears, if it is still on screen, it says so.
+function stillWorking(node) {
+  if (!node) return;
+  setTimeout(() => { if (node.isConnected) node.append(" Still working — big leagues can take a bit."); }, 10000);
+}
+
 async function api(path, opts) {
-  const res = await fetch(path, opts);
+  let res;
+  try {
+    res = await fetch(path, opts);
+  } catch (e) {
+    throw new Error("Can't reach Lineup Lab. Check your connection and try again.");
+  }
   if (!res.ok) {
-    let msg = `${path} -> ${res.status}`;
-    try { const j = await res.json(); if (j.detail) msg = j.detail; } catch (e) {}
+    let msg = res.status >= 500
+      ? "Lineup Lab hit a problem on our side. Try again in a minute."
+      : `Something went wrong (code ${res.status}). Try again.`;
+    try {
+      const j = await res.json();
+      const m = j && (j.detail || j.message);
+      if (typeof m === "string" && m) msg = m;
+    } catch (e) {}
     const err = new Error(msg);
     err.status = res.status;
     throw err;
@@ -411,6 +431,12 @@ function switchTab(tab) {
   if (typeof ThemeFX !== "undefined") ThemeFX.tabWipe();
   window.scrollTo({ top: 0, behavior: reducedMotion() ? "auto" : "smooth" });
   document.querySelectorAll(".gate-card .primary-btn").forEach((b) => { b.textContent = state.user ? "Go to Settings" : "Sign in"; });
+  // Signed in, "Sign in, then connect Sleeper…" is half wrong; keep the
+  // markup's copy for signed-out visitors.
+  document.querySelectorAll("#myteam-gate .gate-sub, #startsit-gate .gate-sub, #trade-analyzer-gate .gate-sub").forEach((sub) => {
+    if (sub.dataset.def == null) sub.dataset.def = sub.textContent;
+    sub.textContent = state.user ? "Connect your league in Settings." : sub.dataset.def;
+  });
   if (tab !== "draft") stopDraftPolling();
   // chat.js is a separate script: if it failed to load, navigation must still work
   if (tab !== "chat" && typeof stopChatPolling === "function") stopChatPolling();
@@ -463,14 +489,19 @@ function initSidebar() {
 
   $("#notif-bell").addEventListener("click", toggleNotifDropdown);
 
-  $("#sidebar-add-league").addEventListener("click", () => {
-    switchTab("settings");
-    setTimeout(() => {
-      const input = $("#set-connect-input");
-      input?.scrollIntoView({ behavior: "smooth", block: "center" });
-      input?.focus();
-    }, 150); // after switchTab's own scroll-to-top + tab render
-  });
+  $("#sidebar-add-league").addEventListener("click", goToLeagueConnect);
+}
+
+// Settings with the league form in view: the form sits below other blocks,
+// so the gate cards' Settings buttons land on its input, not the top.
+function goToLeagueConnect() {
+  switchTab("settings");
+  if (!state.user) return; // signed out, Settings shows the sign-in card
+  setTimeout(() => {
+    const input = $("#set-connect-input");
+    input?.scrollIntoView({ behavior: "smooth", block: "center" });
+    input?.focus();
+  }, 150); // after switchTab's own scroll-to-top + tab render
 }
 
 // A connected team's league scoring, from whichever platform it lives on.
@@ -978,10 +1009,38 @@ async function loadBoard() {
     $("#board-table").style.display = "";
     animateScoreBars();
   } catch (e) {
-    loading.innerHTML = "Couldn't load data — is the server running with a live connection?";
+    loading.innerHTML = `Couldn't load the board. Check your connection and try again.
+      <div><button type="button" class="pill" data-board-retry="1">Try again</button></div>`;
     console.error(e);
   }
 }
+// Header notes on phones: a `title` only shows on hover, so tapping a table
+// header that has one (or its "ⓘ") opens the same one-line note in a small
+// popover; any other tap closes it. Tapping "ⓘ" shows the note without
+// also sorting the column; tapping the header itself still sorts. Capture
+// phase so it runs before the per-table sort listeners.
+document.addEventListener("click", (e) => {
+  const t = e.target instanceof Element ? e.target : null;
+  const info = t && t.closest(".th-info");
+  const th = t && t.closest("th[title]");
+  const pop = $("#tip-pop");
+  if (!th || !th.title) { pop?.remove(); return; }
+  if (info) e.stopPropagation();
+  const r = th.getBoundingClientRect();
+  const box = pop || el("div", "tip-pop");
+  box.id = "tip-pop";
+  box.setAttribute("role", "note");
+  box.textContent = th.title;
+  if (!pop) document.body.appendChild(box);
+  const w = Math.min(280, window.innerWidth - 32);
+  box.style.maxWidth = `${w}px`;
+  box.style.left = `${Math.max(16, Math.min(r.left, window.innerWidth - 16 - box.offsetWidth))}px`;
+  box.style.top = `${r.bottom + 6}px`;
+}, true);
+window.addEventListener("scroll", () => $("#tip-pop")?.remove(), { passive: true, capture: true });
+
+// Delegated so the retry button needs no inline handler (CSP: no unsafe-inline).
+$("#board-loading")?.addEventListener("click", (e) => { if (e.target.closest("[data-board-retry]")) loadBoard(); });
 
 // -------------------------------------------------------------- modal -----
 // Two independent modal roots (player detail, auth/reset-password) can't
@@ -994,6 +1053,62 @@ function syncModalScrollLock() {
   document.documentElement.classList.toggle("modal-open", anyOpen);
   document.body.classList.toggle("modal-open", anyOpen);
 }
+
+// Dialog semantics for every modal, in one place: each call site just sets
+// a root's innerHTML, so an observer on the two roots marks each new .modal
+// as a dialog named by its heading, moves focus to its close button, and
+// hands focus back to whatever opened it once the root empties. Tab and
+// Shift+Tab cycle inside the open modal (keydown handler below).
+const MODAL_ROOTS = ["#modal-root", "#auth-modal-root"];
+const modalOpeners = new Map();
+function decorateModalRoot(root) {
+  if (!root.firstElementChild) {
+    const opener = modalOpeners.get(root);
+    modalOpeners.delete(root);
+    if (opener && opener.isConnected && typeof opener.focus === "function") opener.focus();
+    return;
+  }
+  if (!modalOpeners.has(root)) {
+    const a = document.activeElement;
+    modalOpeners.set(root, a && a !== document.body && !root.contains(a) ? a : null);
+  }
+  root.querySelectorAll(".modal:not([role])").forEach((m) => {
+    m.setAttribute("role", "dialog");
+    m.setAttribute("aria-modal", "true");
+    const h = m.querySelector("h1, h2, h3");
+    const name = h && h.textContent.trim();
+    m.setAttribute("aria-label", name ? name.slice(0, 80) : (m.classList.contains("tp-modal") ? "Team details" : "Player details"));
+    if (m.contains(document.activeElement)) return;
+    const target = m.querySelector(".modal-close") || m;
+    if (target === m) m.tabIndex = -1;
+    target.focus({ preventScroll: true });
+  });
+}
+MODAL_ROOTS.forEach((sel) => {
+  const root = $(sel);
+  // childList only: every modal is set as the root's direct children, and
+  // skipping subtree keeps live box-score repaints from waking this.
+  if (root) new MutationObserver(() => decorateModalRoot(root)).observe(root, { childList: true });
+});
+function topOpenModal() {
+  for (const sel of [...MODAL_ROOTS].reverse()) {
+    const m = document.querySelector(`${sel} .modal`);
+    if (m) return m;
+  }
+  return null;
+}
+document.addEventListener("keydown", (e) => {
+  if (e.key !== "Tab") return;
+  const m = topOpenModal();
+  if (!m) return;
+  const items = [...m.querySelectorAll('a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])')]
+    .filter((x) => x.getClientRects().length);
+  if (!items.length) { e.preventDefault(); m.focus(); return; }
+  const first = items[0], last = items[items.length - 1];
+  if (!m.contains(document.activeElement)) { e.preventDefault(); first.focus(); }
+  else if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+  else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+});
 
 function closeModal() {
   clearInterval(gameModalTimer);      // a closed box score must stop polling
@@ -3096,7 +3211,7 @@ async function loadSuggestionIntoCompare(starterId, benchId) {
   runStartSit();
 }
 
-$("#startsit-gate-btn")?.addEventListener("click", () => switchTab("settings"));
+$("#startsit-gate-btn")?.addEventListener("click", goToLeagueConnect);
 
 function initStartSit() {
   $("#startsit-compare").addEventListener("click", runStartSit);
@@ -3494,7 +3609,7 @@ async function loadTradeAnalyzer() {
 
 function initTrade() {
   $("#trade-analyze").addEventListener("click", runTrade);
-  $("#trade-analyzer-gate-btn")?.addEventListener("click", () => switchTab("settings"));
+  $("#trade-analyzer-gate-btn")?.addEventListener("click", goToLeagueConnect);
 }
 
 // ------------------------------------------------------------- waivers ----
@@ -3684,7 +3799,7 @@ function wvDeepRender() {
       return (x > y ? 1 : x < y ? -1 : 0) * sort.dir;
     });
   } else if (sort.dir === 1) rows.reverse();
-  $("#wv-head").innerHTML = cols.map(([k, label]) => `<th data-k="${k}" class="${k === sort.key ? `sorted${sort.dir === 1 ? " asc" : ""}` : ""}" ${WV_TIPS[k] ? `title="${esc(WV_TIPS[k])}"` : ""}>${label}${WV_TIPS[k] && adv ? " ⓘ" : ""}</th>`).join("");
+  $("#wv-head").innerHTML = cols.map(([k, label]) => `<th data-k="${k}" class="${k === sort.key ? `sorted${sort.dir === 1 ? " asc" : ""}` : ""}" ${WV_TIPS[k] ? `title="${esc(WV_TIPS[k])}"` : ""}>${label}${WV_TIPS[k] && adv ? ` <span class="th-info" aria-hidden="true">ⓘ</span>` : ""}</th>`).join("");
   const n = (v, dec = 1, suf = "") => (v == null ? `<span class="muted">—</span>` : `${Number(v).toFixed(dec)}${suf}`);
   const cell = (p, k) => {
     switch (k) {
@@ -3785,6 +3900,7 @@ async function loadWaivers(pos) {
   const body = $("#waivers-body");
   body.innerHTML = `<tr><td colspan="6">${skeletonRows(8, 2)}</td></tr>`;
   $("#wv-smart").innerHTML = `<div class="loading">Scoring free agents against your roster…</div>`;
+  stillWorking($("#wv-smart .loading"));
   try {
     const d = await api(`/api/waivers/engine?${scoringQS().replace(/^&/, "")}`);
     state.wvData = d;
@@ -3989,9 +4105,32 @@ function renderMyTeamWeekSelector(data) {
   $("#myteam-week-controls").style.display = "flex";
 }
 
+// A gate card doubles as an error card when the server (or the network)
+// fails: no status or a 5xx means the league is still connected, so the
+// button retries instead of sending the user to Settings. A 4xx keeps the
+// normal "connect your league" gate. resetGate puts the defaults back.
+const isServerFailure = (e) => !e || !e.status || e.status >= 500;
+function resetGate(gate) {
+  const t = gate.querySelector(".gate-title"), b = gate.querySelector(".primary-btn");
+  if (gate.dataset.defTitle == null) gate.dataset.defTitle = t.textContent;
+  t.textContent = gate.dataset.defTitle;
+  b.textContent = state.user ? "Go to Settings" : "Sign in";
+  delete b.dataset.retry;
+}
+function showGateRetry(gate, title) {
+  resetGate(gate);
+  gate.querySelector(".gate-title").textContent = title;
+  gate.querySelector(".gate-sub").textContent = "Try again in a minute — your league is still connected.";
+  const b = gate.querySelector(".primary-btn");
+  b.textContent = "Try again";
+  b.dataset.retry = "1";
+  gate.style.display = "";
+}
+
 async function loadMyTeam(week, refresh) {
   const gate = $("#myteam-gate");
   const content = $("#myteam-content");
+  resetGate(gate);
   gate.style.display = "none";
   content.style.display = "none";
   $("#myteam-week-controls").style.display = "none";
@@ -4003,6 +4142,7 @@ async function loadMyTeam(week, refresh) {
   }
 
   content.innerHTML = `<div class="loading">Loading your team…</div>`;
+  stillWorking(content.querySelector(".loading"));
   content.style.display = "";
   try {
     const weekQS = (week ? `&week=${week}` : "") + (refresh ? "&refresh=1" : "");
@@ -4041,6 +4181,7 @@ async function loadMyTeam(week, refresh) {
     });
   } catch (e) {
     content.style.display = "none";
+    if (isServerFailure(e)) { showGateRetry(gate, "Couldn't load your team"); return; }
     gate.style.display = "";
     gate.querySelector(".gate-sub").textContent = e.message || "Connect a league in Settings first.";
   }
@@ -4084,7 +4225,7 @@ async function loadTradesPanel() {
   }
 }
 
-$("#myteam-gate-btn")?.addEventListener("click", () => switchTab("settings"));
+$("#myteam-gate-btn")?.addEventListener("click", (e) => (e.currentTarget.dataset.retry ? loadMyTeam() : goToLeagueConnect()));
 
 // ---------------------------------------------------------------- draft ----
 let draftPollHandle = null;
@@ -4202,6 +4343,7 @@ async function loadDraftTab() {
   const gate = $("#draft-gate");
   const picker = $("#draft-picker");
   const content = $("#draft-content");
+  resetGate(gate);
   gate.style.display = "none"; picker.style.display = "none"; content.style.display = "none";
 
   if (!state.user || !activeTeam()) {
@@ -4239,12 +4381,13 @@ async function loadDraftTab() {
       b.addEventListener("click", () => { picker.style.display = "none"; loadDraftBoard(b.dataset.draft); });
     });
   } catch (e) {
+    if (isServerFailure(e)) { showGateRetry(gate, "Couldn't load the draft board"); return; }
     gate.style.display = "";
     gate.querySelector(".gate-sub").textContent = e.message;
   }
 }
 
-$("#draft-gate-btn")?.addEventListener("click", () => switchTab("settings"));
+$("#draft-gate-btn")?.addEventListener("click", (e) => (e.currentTarget.dataset.retry ? loadDraftTab() : goToLeagueConnect()));
 
 // --------------------------------------------------------- trade finder ----
 // Player-driven only: nothing gets scanned until you pick your own player(s)
@@ -4286,6 +4429,7 @@ async function runAcquire(results) {
   const head = `<div class="tf-acquire"><div><span class="tf-acquire-k">Finding a trade for</span> <b>${esc(want.name)}</b></div>
     <button type="button" class="link-btn" id="tf-acquire-clear">Clear</button></div>`;
   results.innerHTML = head + `<div class="trade-analyzing"><div class="trade-scan-bar"></div><span>Looking for realistic offers for ${esc(want.name)}…</span></div>`;
+  stillWorking(results.querySelector(".trade-analyzing span"));
   $("#tf-acquire-clear").addEventListener("click", () => { state.tradeWant = null; loadTradeFinder(); });
   try {
     const data = await api(`/api/trade-finder?${(scoringQS() + `&want=${encodeURIComponent(want.player_id)}`).replace(/^&/, "")}`);
@@ -4329,6 +4473,7 @@ async function loadTradeFinder(giveIds) {
   // — this used to be a bare loading string, at a visibly lower visual tier
   // than the rest of the Trade tab.
   results.innerHTML = `<div class="trade-analyzing"><div class="trade-scan-bar"></div><span>Scanning the league for realistic trades…</span></div>`;
+  stillWorking(results.querySelector(".trade-analyzing span"));
   try {
     const giveQS = giveIds.map((id) => `&give=${encodeURIComponent(id)}`).join("");
     // NOT `scoringQS().replace("&","?")` — that's a no-op when scoringQS()
@@ -5518,22 +5663,46 @@ async function onGateAuthSuccess(user) {
 // league -> connect step; signed in with a league -> reveal the app.
 // Every gate success path (password login, signup, Google, connect a
 // league, or skipping that step) funnels back through here.
-async function proceedPastGate() {
+async function proceedPastGate(firstConnect) {
   if (!state.user) { renderGateAuth("login"); return; }
   if (!state.teams.length) { renderGateConnectLeague(); return; }
   hideGate();
   initScoringSelect();
   switchTab(DEFAULT_TAB);
+  if (firstConnect && state.tab === "myteam") showNextStepCard();
+}
+
+// One-time pointer shown on My Team right after the first league connect.
+// It sits above #myteam-content so loadMyTeam's re-renders leave it alone.
+const NEXT_STEP_KEY = "ll_next_step_seen";
+function showNextStepCard() {
+  try { if (localStorage.getItem(NEXT_STEP_KEY)) return; localStorage.setItem(NEXT_STEP_KEY, "1"); } catch (e) {}
+  if ($("#next-step-card")) return;
+  const card = el("div", "next-step-card", `<span>Next: <b>Start/Sit</b> → <b>Solve my lineup</b></span>
+    <button type="button" class="primary-btn" id="next-step-go">Open Start/Sit</button>
+    <button type="button" class="next-step-x" id="next-step-x" aria-label="Dismiss">×</button>`);
+  card.id = "next-step-card";
+  $("#myteam-content").before(card);
+  $("#next-step-go").addEventListener("click", () => { card.remove(); switchTab("startsit"); });
+  $("#next-step-x").addEventListener("click", () => card.remove());
 }
 
 function renderGateConnectLeague() {
   showGate();
   $("#gate-headline").textContent = "Sync your league";
-  $("#gate-subcopy").textContent = "Paste your Sleeper league's URL (or just its ID) and pick which team is yours — My Team, Waivers, Trade, and News all follow it from here.";
+  $("#gate-subcopy").textContent = "Paste your league's URL (or just its ID) and pick which team is yours — My Team, Waivers, Trade, and News all follow it from here.";
   const panel = $("#gate-panel");
   panel.innerHTML = `<div class="gate-form-wrap">
     <div class="gate-mobile-brand"><img src="/icons/icon-192.png" alt=""><span>Lineup Lab</span></div>
     <div class="modal-header"><h2>Connect Your League</h2></div>
+    <div class="pill-group" id="gate-connect-platform" role="group" aria-label="League platform">
+      <button type="button" class="pill active" data-platform="sleeper">Sleeper</button>
+      <button type="button" class="pill" data-platform="espn">ESPN <span class="soon-badge" style="margin-left:4px">beta</span></button>
+    </div>
+    <div class="espn-public-note" id="gate-espn-public-note" role="note" style="display:none">
+      <strong>Your ESPN league must be set to public.</strong>
+      <span>On ESPN go to <em>League → Settings → Basic Settings</em> (commissioner only) and tick <em>“Make League Viewable to Public”</em>. Private league? <button type="button" class="link-btn" id="gate-espn-private">Set it up in Settings</button></span>
+    </div>
     <div class="form-grid">
       <input type="text" id="gate-connect-input" aria-label="Sleeper or ESPN league URL or ID" placeholder="Paste Sleeper league URL or ID" autocomplete="off">
       <button class="primary-btn" id="gate-connect-btn">Connect</button>
@@ -5543,6 +5712,20 @@ function renderGateConnectLeague() {
   </div>`;
 
   const resultsArea = $("#gate-connect-results");
+  // Same Sleeper/ESPN choice as Settings; the lookup and the add both carry it.
+  let connectPlatform = "sleeper";
+  $("#gate-connect-platform").querySelectorAll(".pill").forEach((p) => {
+    p.addEventListener("click", () => {
+      connectPlatform = p.dataset.platform;
+      $("#gate-connect-platform").querySelectorAll(".pill").forEach((x) => x.classList.toggle("active", x === p));
+      $("#gate-connect-input").placeholder = connectPlatform === "espn"
+        ? "Paste ESPN league URL or ID" : "Paste Sleeper league URL or ID";
+      $("#gate-espn-public-note").style.display = connectPlatform === "espn" ? "" : "none";
+      resultsArea.innerHTML = "";
+    });
+  });
+  const leaveGateFor = (fn) => { hideGate(); initScoringSelect(); fn(); };
+  $("#gate-espn-private").addEventListener("click", () => leaveGateFor(goToLeagueConnect));
   $("#gate-connect-btn").addEventListener("click", async () => {
     const raw = $("#gate-connect-input").value.trim();
     if (!raw) return;
@@ -5552,7 +5735,7 @@ function renderGateConnectLeague() {
     try {
       const snap = await api("/api/teams/lookup", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ league_id_or_url: raw }),
+        body: JSON.stringify({ league_id_or_url: raw, platform: connectPlatform }),
       });
       resultsArea.innerHTML = `<div class="hint">Which team is yours in "${esc(snap.league_name)}"?</div>` +
         snap.teams.map((t) => `<div class="league-team-row">
@@ -5567,13 +5750,14 @@ function renderGateConnectLeague() {
             body: JSON.stringify({
               league_id: snap.league_id, league_name: snap.league_name,
               roster_id: parseInt(b.dataset.roster, 10), team_name: b.dataset.name, avatar_url: b.dataset.avatar || null,
+              platform: connectPlatform,
             }),
           });
           const teamsRes = await api("/api/teams");
           state.teams = teamsRes.teams;
           state.leagueScoringDict = snap.scoring;
           showToast(`Connected "${team.team_name}".`, "success");
-          await proceedPastGate();
+          await proceedPastGate(true);
         });
       });
     } catch (e) {
@@ -5582,11 +5766,7 @@ function renderGateConnectLeague() {
       btn.disabled = false; btn.textContent = "Connect";
     }
   });
-  $("#gate-skip-league").addEventListener("click", async () => {
-    hideGate();
-    initScoringSelect();
-    switchTab(DEFAULT_TAB);
-  });
+  $("#gate-skip-league").addEventListener("click", () => leaveGateFor(() => switchTab(DEFAULT_TAB)));
 }
 
 async function main() {
@@ -5603,6 +5783,12 @@ async function main() {
   // instead of leaving the page stuck on "Loading Lineup Lab…" forever
   // with no way out. Worse-looking (whatever was underneath, un-gated)
   // beats a permanently frozen spinner.
+  // A cold Render instance can take most of a minute to answer /api/meta,
+  // so after 8s the veil says why it is still up.
+  const slowBoot = setTimeout(() => {
+    const msg = $("#boot-veil span");
+    if (msg && document.body.classList.contains("auth-pending")) msg.textContent = "Waking the server — this can take up to a minute.";
+  }, 8000);
   try {
     handleUrlRedirects();
     initSidebar();
@@ -5636,10 +5822,26 @@ async function main() {
       return;
     }
     await proceedPastGate();
+  } catch (e) {
+    // Only when nothing was revealed yet (e.g. /api/meta failed): a friendly
+    // full-screen card instead of a blank shell.
+    console.error(e);
+    if (document.body.classList.contains("auth-pending")) showBootFailure();
   } finally {
+    clearTimeout(slowBoot);
     document.documentElement.classList.remove("auth-pending");
     document.body.classList.remove("auth-pending");
   }
+}
+
+function showBootFailure() {
+  const card = el("div", "boot-fail", `<div class="boot-fail-box" role="alert">
+    <h2>Couldn't start Lineup Lab</h2>
+    <p>The server didn't answer. Check your connection, then reload.</p>
+    <button type="button" class="primary-btn" id="boot-fail-reload">Reload</button>
+  </div>`);
+  document.body.appendChild(card);
+  $("#boot-fail-reload").addEventListener("click", () => window.location.reload());
 }
 
 main();
