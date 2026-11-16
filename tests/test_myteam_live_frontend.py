@@ -41,15 +41,15 @@ class ViewTests(unittest.TestCase):
         v = run_js('liveRowView({PROJ: 14.2}, {game_state: "in", points: 6.4, live_proj: 15.8, quarter: 3, clock: "10:42", pregame_proj: 14.2})')
         self.assertEqual((v["state"], v["main"], v["sub"], v["title"]), ("in", 6.4, 15.8, "Q3 10:42"))
 
-    def test_final_row_keeps_the_same_two_numbers_and_no_word(self):
+    def test_final_row_shows_only_the_white_score_and_no_word(self):
         v = run_js('liveRowView({PROJ: 14.2}, {game_state: "post", points: 19.1, live_proj: 19.1, pregame_proj: 14.2})')
-        self.assertEqual((v["state"], v["main"], v["sub"]), ("post", 19.1, 19.1))
+        self.assertEqual((v["state"], v["main"], v["sub"]), ("post", 19.1, None))
         self.assertNotIn("Final", json.dumps(v))
         self.assertNotIn("proj", json.dumps(v).replace("Projected", "").lower().replace("pregame_proj", ""))
 
     def test_server_settled_rows_are_post_without_live_data(self):
         v = run_js('liveRowView({PROJ: 17.3, final: true}, null)')
-        self.assertEqual((v["state"], v["main"], v["sub"]), ("post", 17.3, 17.3))
+        self.assertEqual((v["state"], v["main"], v["sub"]), ("post", 17.3, None))
 
     def test_unknown_points_fall_back_to_the_green_projection(self):
         v = run_js('liveRowView({PROJ: 9}, {game_state: "in", points: null, live_proj: null})')
@@ -66,7 +66,7 @@ class ViewTests(unittest.TestCase):
         live = run_js(f'liveTeamView({team}, {{points_total: 38.2, live_proj_total: 104.9, final: false, players: [{{game_state: "in"}}, {{game_state: "pre"}}]}})')
         self.assertEqual((live["state"], live["main"], live["sub"]), ("in", 38.2, 104.9))
         fin = run_js(f'liveTeamView({team}, {{points_total: 99.0, live_proj_total: 99.0, final: true, players: [{{game_state: "post"}}]}})')
-        self.assertEqual((fin["state"], fin["main"], fin["sub"]), ("post", 99.0, 99.0))
+        self.assertEqual((fin["state"], fin["main"], fin["sub"]), ("post", 99.0, None))
 
     def test_team_total_without_live_points(self):
         done = run_js('liveTeamView({total_proj: 88, players: [{is_starter: true, final: true}]}, null)')

@@ -4017,7 +4017,8 @@ function liveRowView(p, lv) {
   if (st === "pre") return { state: "pre", main: p.PROJ, sub: null, title: "" };
   const pts = lv && lv.points != null ? lv.points : p.PROJ;
   const sub = lv && lv.live_proj != null ? lv.live_proj : pts;
-  if (st === "post") return { state: "post", main: pts, sub, title: lv && lv.pregame_proj != null ? `Projected ${FMT.d1(lv.pregame_proj)} before the game` : "" };
+  // Game over: the projection would just repeat his real score, so only the white number shows.
+  if (st === "post") return { state: "post", main: pts, sub: null, title: lv && lv.pregame_proj != null ? `Projected ${FMT.d1(lv.pregame_proj)} before the game` : "" };
   const clk = lv.quarter ? `${lv.quarter > 4 ? "OT" : "Q" + lv.quarter}${lv.clock ? " " + lv.clock : ""}` : "";
   return { state: "in", main: pts, sub, title: clk };
 }
@@ -4026,12 +4027,13 @@ function liveRowView(p, lv) {
 function liveTeamView(team, lt) {
   const starters = (team.players || []).filter((p) => p.is_starter);
   if (!lt || lt.points_total == null) {
-    if (starters.length && starters.every((p) => p.final)) return { state: "post", main: team.total_proj, sub: team.total_proj };
+    if (starters.length && starters.every((p) => p.final)) return { state: "post", main: team.total_proj, sub: null };
     return { state: "pre", main: lt && lt.live_proj_total != null ? lt.live_proj_total : team.total_proj, sub: null };
   }
   const started = (lt.players || []).some((x) => x.game_state === "in" || x.game_state === "post");
   if (!started) return { state: "pre", main: lt.live_proj_total != null ? lt.live_proj_total : team.total_proj, sub: null };
-  return { state: lt.final ? "post" : "in", main: lt.points_total, sub: lt.live_proj_total != null ? lt.live_proj_total : lt.points_total };
+  if (lt.final) return { state: "post", main: lt.points_total, sub: null };
+  return { state: "in", main: lt.points_total, sub: lt.live_proj_total != null ? lt.live_proj_total : lt.points_total };
 }
 
 // Counts el's number from `from` to `to` (tabular). A newer call cancels an older one; reduced motion jumps.
