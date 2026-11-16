@@ -1,0 +1,1 @@
+window.react = window.React;

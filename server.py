@@ -1980,6 +1980,23 @@ def _index():
     return FileResponse("static/index.html", media_type="text/html", headers={"Cache-Control": "no-cache"})
 
 
+# The signed-out front door: app.js sends a bare "/" visit with no session here. Its script and stylesheet get the
+# same no-cache treatment as the app's own, so a deploy never leaves visitors on stale marketing code.
+@app.get("/welcome", include_in_schema=False)
+def _welcome():
+    return FileResponse("static/landing.html", media_type="text/html", headers={"Cache-Control": "no-cache"})
+
+
+@app.get("/landing.js", include_in_schema=False)
+def _landing_js():
+    return FileResponse("static/landing.js", media_type="text/javascript", headers={"Cache-Control": "no-cache"})
+
+
+@app.get("/landing.css", include_in_schema=False)
+def _landing_css():
+    return FileResponse("static/landing.css", media_type="text/css", headers={"Cache-Control": "no-cache"})
+
+
 
 _LEGAL_PAGES = {"terms": "legal/TERMS_OF_SERVICE.md", "privacy": "legal/PRIVACY_POLICY.md"}
 

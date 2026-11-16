@@ -5674,7 +5674,13 @@ async function onGateAuthSuccess(user) {
 // Every gate success path (password login, signup, Google, connect a
 // league, or skipping that step) funnels back through here.
 async function proceedPastGate(firstConnect) {
-  if (!state.user) { renderGateAuth("login"); return; }
+  if (!state.user) {
+    // A bare "/" visit from a signed-out person is the front door: show the landing page. Anything with a query
+    // (?auth=login|signup from the landing page, ?verified=, ?oauth_error= and the like) goes straight to the gate.
+    if (!window.location.search) { window.location.replace("/welcome"); return; }
+    renderGateAuth(new URLSearchParams(window.location.search).get("auth") === "signup" ? "signup" : "login");
+    return;
+  }
   if (!state.teams.length) { renderGateConnectLeague(); return; }
   hideGate();
   initScoringSelect();

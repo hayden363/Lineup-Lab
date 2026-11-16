@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Lineup Lab | Stop losing weeks you should have won</title>
+<meta name="description" content="Lineup Lab turns real NFL data into start/sit calls, matchup and weather numbers, and an optimal lineup for your fantasy league.">
+<meta name="theme-color" content="#040A08">
+<link rel="icon" href="/icons/favicon-32.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+/* Layout: one long dark scroll. Sticky glass nav, 3D hero stage, bento grid, playable sandbox, closing banner. */
+:root{
+  --obsidian:#040A08; --glass:#0B1813; --glass-2:#0F2019; --line:rgba(124,242,166,.14);
+  --em-1:#1C5E49; --em-2:#0E3226; --mint:#7CF2A6; --mint-2:#4ADE80; --white:#FFFFFF;
+  --muted:#8FA89C; --dim:#5E7A6C; --warn:#F5C26B; --bad:#FF7A7A;
+  --sans:'Plus Jakarta Sans','Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+  color-scheme:dark;
+}
+html{scroll-behavior:smooth;background:var(--obsidian);overflow-x:clip}
+body{background:var(--obsidian);color:var(--white);font-family:var(--sans);font-size:15px;line-height:1.55;
+  padding-left:0;padding-right:0;overflow-x:clip;-webkit-font-smoothing:antialiased}
+.gutter{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:1200px;margin:0 auto}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:60;background:var(--obsidian)}
+
+/* Atmosphere: emerald mesh, yard-line grid at .04, noise */
+#bg{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+#bg .mesh{position:absolute;inset:-10%;background:
+  radial-gradient(60% 45% at 18% 8%,rgba(28,94,73,.55),transparent 70%),
+  radial-gradient(50% 40% at 88% 22%,rgba(14,50,38,.7),transparent 70%),
+  radial-gradient(55% 40% at 50% 100%,rgba(28,94,73,.35),transparent 70%)}
+#bg .yards{position:absolute;inset:0;opacity:.04;background-image:repeating-linear-gradient(0deg,#fff 0 1px,transparent 1px 84px);
+  -webkit-mask-image:linear-gradient(90deg,transparent,#000 25%,#000 75%,transparent);mask-image:linear-gradient(90deg,transparent,#000 25%,#000 75%,transparent)}
+#bg .noise{position:absolute;inset:0;opacity:.07;mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .9 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>")}
+main,header,footer{position:relative;z-index:1}
+
+/* Glass */
+.glass{background:linear-gradient(180deg,rgba(15,32,25,.78),rgba(11,24,19,.78));border:1px solid var(--line);
+  -webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px)}
+.card{background:linear-gradient(180deg,#0D1C16,#0B1813);border:1px solid var(--line);border-radius:24px;position:relative;overflow:hidden}
+.eyebrow{font-family:var(--mono);font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--mint)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font-weight:700;border-radius:999px;cursor:pointer;
+  border:1px solid transparent;transition:box-shadow .25s,background .25s,border-color .25s;white-space:nowrap}
+.btn:focus-visible,.chip:focus-visible,input:focus-visible,button:focus-visible,a:focus-visible{outline:2px solid var(--mint);outline-offset:3px}
+.btn-mint{background:linear-gradient(180deg,#8CF7B2,#4ADE80);color:#04140D;padding:14px 24px;box-shadow:0 0 0 1px rgba(124,242,166,.5),0 10px 40px -8px rgba(74,222,128,.7)}
+.btn-mint:hover{box-shadow:0 0 0 1px rgba(124,242,166,.8),0 14px 60px -6px rgba(74,222,128,.95)}
+.btn-ghost{background:rgba(255,255,255,.04);border-color:rgba(255,255,255,.16);color:#fff;padding:14px 22px}
+.btn-ghost:hover{background:rgba(124,242,166,.09);border-color:rgba(124,242,166,.5)}
+.btn-sm{padding:9px 16px;font-size:13.5px}
+.chip{font-family:var(--mono);font-size:12px;padding:7px 12px;border-radius:999px;border:1px solid var(--line);color:var(--muted);cursor:pointer;position:relative;background:transparent}
+.chip.on{color:#04140D}
+.pill-bg{position:absolute;inset:0;border-radius:999px;background:linear-gradient(180deg,#8CF7B2,#4ADE80)}
+.tag{font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;padding:3px 8px;border-radius:999px;border:1px solid var(--line);color:var(--muted)}
+.mint{color:var(--mint)} .muted{color:var(--muted)} .dim{color:var(--dim)}
+.kinetic{display:inline-block;overflow:hidden;vertical-align:bottom;padding-bottom:.12em;margin-bottom:-.12em}
+.hl{background:linear-gradient(90deg,#B8FFD0,#7CF2A6 45%,#4ADE80);-webkit-background-clip:text;background-clip:text;color:transparent}
+input,select{font-family:inherit}
+.field{width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:12px 14px;color:#fff;font-size:15px}
+.field::placeholder{color:#58705F}
+input[type=range]{-webkit-appearance:none;appearance:none;height:6px;border-radius:999px;background:transparent;width:100%;cursor:pointer}
+input[type=range]::-webkit-slider-runnable-track{height:6px;border-radius:999px;background:var(--track,rgba(255,255,255,.12))}
+input[type=range]::-moz-range-track{height:6px;border-radius:999px;background:var(--track,rgba(255,255,255,.12))}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;border-radius:50%;background:#fff;margin-top:-8px;
+  border:5px solid var(--mint);box-shadow:0 0 0 6px rgba(124,242,166,.16),0 4px 18px rgba(0,0,0,.5)}
+input[type=range]::-moz-range-thumb{width:12px;height:12px;border-radius:50%;background:#fff;border:5px solid var(--mint);box-shadow:0 0 0 6px rgba(124,242,166,.16)}
+.scroll-x{overflow-x:auto;scrollbar-width:thin;scrollbar-color:#1C5E49 transparent}
+.row{display:grid;align-items:center}
+@keyframes pulse{0%,100%{opacity:.55;transform:scale(1)}50%{opacity:1;transform:scale(1.35)}}
+@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.001s!important;animation-iteration-count:1!important;transition-duration:.001s!important}html{scroll-behavior:auto}}
+</style>
+<link rel="stylesheet" href="/landing.css">
+</head>
+<body>
+<div id="bg" aria-hidden="true"><div class="mesh"></div><div class="yards"></div><div class="noise"></div></div>
+<div id="root"></div>
+<noscript><p style="padding:24px">Lineup Lab needs JavaScript for this page. <a href="/?auth=login">Open the app</a>.</p></noscript>
+<script src="/vendor/react.production.min.js"></script>
+<script src="/vendor/react-dom.production.min.js"></script>
+<script src="/vendor/react-shim.js"></script>
+<script src="/vendor/framer-motion.js"></script>
+<script src="/vendor/lucide-react.min.js"></script>
+<script src="/vendor/htm.js"></script>
+<script src="/landing.js"></script>
+</body>
+</html>
