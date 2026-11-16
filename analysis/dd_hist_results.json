@@ -1,0 +1,10257 @@
+{
+ "h_qb_pass_yds": {
+  "cat": "Season marks",
+  "variants": [
+   [
+    null,
+    4700,
+    21,
+    2,
+    "Tom Brady",
+    "Kurt Warner",
+    "Name a QB who threw for 4,700+ yards in a season since 2000"
+   ]
+  ]
+ },
+ "h_qb_pass_td": {
+  "cat": "Season marks",
+  "variants": [
+   [
+    null,
+    36,
+    19,
+    1,
+    "Tom Brady",
+    "Kurt Warner",
+    "Name a QB who threw 36+ touchdown passes in a season since 2000"
+   ]
+  ]
+ },
+ "h_qb_rush_yds": {
+  "cat": "Season marks",
+  "variants": [
+   [
+    null,
+    600,
+    15,
+    1,
+    "Russell Wilson",
+    "Tim Tebow",
+    "Name a QB who ran for 600+ yards in a season since 2000"
+   ]
+  ]
+ },
+ "h_qb_rush_td": {
+  "cat": "Season marks",
+  "variants": [
+   [
+    null,
+    7,
+    17,
+    1,
+    "Cam Newton",
+    "Jaxson Dart",
+    "Name a QB with 7+ rushing TDs in a season since 2000"
+   ]
+  ]
+ },
+ "h_qb_int": {
+  "cat": "Season marks",
+  "variants": [
+   [
+    null,
+    22,
+    20,
+    2,
+    "Drew Brees",
+    "DeShone Kizer",
+    "Name a QB who threw 22+ interceptions in a season since 2000"
+   ]
+  ]
+ },
+ "h_qb_sacked": {
+  "cat": "Season marks",
+  "variants": [
+   [
+    null,
+    55,
+    15,
+    1,
+    "Russell Wilson",
+    "Sam Howell",
+    "Name a QB who was sacked 55+ times in a season since 2000"
+   ]
+  ]
+ },
+ "h_rb_rush_yds": {
+  "cat": "Season marks",
+  "variants": [
+   [
+    null,
+    1600,
+    27,
+    2,
+    "LaDainian Tomlinson",
+    "Alfred Morris",
+    "Name a RB who ran for 1,600+ yards in a season since 2000"
+   ]
+  ]
+ },
+ "h_rb_rush_td": {
+  "cat": "Season marks",
+  "variants": [
+   [
+    null,
+    17,
+    15,
+    1,
+    "LaDainian Tomlinson",
+    "Raheem Mostert",
+    "Name a RB with 17+ rushing TDs in a season since 2000"
+   ]
+  ]
+ },
+ "h_rb_carries": {
+  "cat": "Season marks",
+  "variants": [
+   [
+    null,
+    350,
+    21,
+    2,
+    "LaDainian Tomlinson",
+    "Rudi Johnson",
+    "Name a RB with 350+ carries in a season since 2000"
+   ]
+  ]
+ },
+ "h_rb_rec": {
+  "cat": "Season marks",
+  "variants": [
+   [
+    null,
+    80,
+    20,
+    2,
+    "LaDainian Tomlinson",
+    "J.D. McKissic",
+    "Name a RB with 80+ catches in a season since 2000"
+   ]
+  ]
+ },
+ "h_rb_scrim": {
+  "cat": "Season marks",
+  "variants": [
+   [
+    null,
+    2200,
+    16,
+    1,
+    "LaDainian Tomlinson",
+    "Arian Foster",
+    "Name a RB with 2,200+ yards from scrimmage in a season since 2000"
+   ]
+  ]
+ },
+ "h_wr_rec_yds": {
+  "cat": "Season marks",
+  "variants": [
+   [
+    null,
+    1600,
+    17,
+    1,
+    "Randy Moss",
+    "Josh Gordon",
+    "Name a WR with 1,600+ receiving yards in a season since 2000"
+   ]
+  ]
+ },
+ "h_wr_rec": {
+  "cat": "Season marks",
+  "variants": [
+   [
+    null,
+    115,
+    21,
+    2,
+    "Davante Adams",
+    "Michael Thomas",
+    "Name a WR with 115+ catches in a season since 2000"
+   ]
+  ]
+ },
+ "h_wr_rec_td": {
+  "cat": "Season marks",
+  "variants": [
+   [
+    null,
+    14,
+    21,
+    2,
+    "Davante Adams",
+    "Braylon Edwards",
+    "Name a WR with 14+ receiving TDs in a season since 2000"
+   ]
+  ]
+ },
+ "h_wr_targets": {
+  "cat": "Season marks",
+  "variants": [
+   [
+    null,
+    180,
+    20,
+    2,
+    "Reggie Wayne",
+    "Michael Thomas",
+    "Name a WR who was targeted 180+ times in a season since 2000"
+   ]
+  ]
+ },
+ "h_te_rec_yds": {
+  "cat": "Season marks",
+  "variants": [
+   [
+    null,
+    1100,
+    15,
+    1,
+    "Tony Gonzalez",
+    "Kellen Winslow",
+    "Name a TE with 1,100+ receiving yards in a season since 2000"
+   ]
+  ]
+ },
+ "h_te_rec": {
+  "cat": "Season marks",
+  "variants": [
+   [
+    null,
+    90,
+    15,
+    1,
+    "Tony Gonzalez",
+    "Martellus Bennett",
+    "Name a TE with 90+ catches in a season since 2000"
+   ]
+  ]
+ },
+ "h_te_td": {
+  "cat": "Season marks",
+  "variants": [
+   [
+    null,
+    11,
+    16,
+    1,
+    "Travis Kelce",
+    "Robert Tonyan",
+    "Name a TE with 11+ receiving TDs in a season since 2000"
+   ]
+  ]
+ },
+ "h_any_td": {
+  "cat": "Season marks",
+  "variants": [
+   [
+    null,
+    20,
+    17,
+    1,
+    "LaDainian Tomlinson",
+    "Raheem Mostert",
+    "Name a player with 20+ rushing and receiving TDs in a season since 2000"
+   ]
+  ]
+ },
+ "h_sacks": {
+  "cat": "Season marks",
+  "variants": [
+   [
+    null,
+    18,
+    17,
+    1,
+    "Jared Allen",
+    "Aldon Smith",
+    "Name a defender with 18+ sacks in a season since 2000"
+   ]
+  ]
+ },
+ "h_def_int": {
+  "cat": "Season marks",
+  "variants": [
+   [
+    null,
+    9,
+    20,
+    2,
+    "Champ Bailey",
+    "Kwamie Lassiter",
+    "Name a defender with 9+ interceptions in a season since 2000"
+   ]
+  ]
+ },
+ "h_def_td": {
+  "cat": "Season marks",
+  "variants": [
+   [
+    null,
+    3,
+    17,
+    1,
+    "Charles Woodson",
+    "Kyle Brady",
+    "Name a defender with 3+ defensive TDs in a season since 2000"
+   ]
+  ]
+ },
+ "h_k_fg": {
+  "cat": "Season marks",
+  "variants": [
+   [
+    null,
+    36,
+    18,
+    1,
+    "Nick Folk",
+    "Younghoe Koo",
+    "Name a kicker who made 36+ field goals in a season since 2000"
+   ]
+  ]
+ },
+ "h_k_long": {
+  "cat": "Season marks",
+  "variants": [
+   [
+    null,
+    62,
+    15,
+    1,
+    "Sebastian Janikowski",
+    "Brett Maher",
+    "Name a kicker with a 62+ yard field goal in a season since 2000"
+   ]
+  ]
+ },
+ "h_p_in20": {
+  "cat": "Season marks",
+  "variants": [
+   [
+    null,
+    36,
+    25,
+    2,
+    "Andy Lee",
+    "Matthew Hayball",
+    "Name a punter with 36+ punts inside the 20 in a season since 2000"
+   ]
+  ]
+ },
+ "h_dec_qb_yds": {
+  "cat": "Decade marks",
+  "variants": [
+   [
+    "2000s",
+    4200,
+    18,
+    1,
+    "Tom Brady",
+    "Marc Bulger",
+    "Name a QB who threw for 4,200+ yards in a season of the 2000s"
+   ],
+   [
+    "2010s",
+    4500,
+    17,
+    1,
+    "Tom Brady",
+    "Jameis Winston",
+    "Name a QB who threw for 4,500+ yards in a season of the 2010s"
+   ],
+   [
+    "2020s",
+    4200,
+    20,
+    2,
+    "Tom Brady",
+    "Tua Tagovailoa",
+    "Name a QB who threw for 4,200+ yards in a season of the 2020s"
+   ]
+  ]
+ },
+ "h_dec_qb_td": {
+  "cat": "Decade marks",
+  "variants": [
+   [
+    "2000s",
+    28,
+    18,
+    1,
+    "Tom Brady",
+    "Derek Anderson",
+    "Name a QB who threw 28+ touchdown passes in a season of the 2000s"
+   ],
+   [
+    "2010s",
+    34,
+    16,
+    1,
+    "Tom Brady",
+    "Blake Bortles",
+    "Name a QB who threw 34+ touchdown passes in a season of the 2010s"
+   ],
+   [
+    "2020s",
+    32,
+    18,
+    1,
+    "Tom Brady",
+    "Deshaun Watson",
+    "Name a QB who threw 32+ touchdown passes in a season of the 2020s"
+   ]
+  ]
+ },
+ "h_dec_qb_rush": {
+  "cat": "Decade marks",
+  "variants": [
+   [
+    "2000s",
+    300,
+    17,
+    1,
+    "Aaron Rodgers",
+    "Cade McNown",
+    "Name a QB who ran for 300+ yards in a season of the 2000s"
+   ],
+   [
+    "2010s",
+    400,
+    15,
+    1,
+    "Russell Wilson",
+    "DeShone Kizer",
+    "Name a QB who ran for 400+ yards in a season of the 2010s"
+   ],
+   [
+    "2020s",
+    400,
+    19,
+    1,
+    "Russell Wilson",
+    "Anthony Richardson",
+    "Name a QB who ran for 400+ yards in a season of the 2020s"
+   ]
+  ]
+ },
+ "h_dec_rb_yds": {
+  "cat": "Decade marks",
+  "variants": [
+   [
+    "2000s",
+    1600,
+    16,
+    1,
+    "LaDainian Tomlinson",
+    "Larry Johnson",
+    "Name a RB who ran for 1,600+ yards in a season of the 2000s"
+   ],
+   [
+    "2010s",
+    1300,
+    22,
+    2,
+    "Adrian Peterson",
+    "Jordan Howard",
+    "Name a RB who ran for 1,300+ yards in a season of the 2010s"
+   ],
+   [
+    "2020s",
+    1200,
+    16,
+    1,
+    "Christian McCaffrey",
+    "De'Von Achane",
+    "Name a RB who ran for 1,200+ yards in a season of the 2020s"
+   ]
+  ]
+ },
+ "h_dec_rb_td": {
+  "cat": "Decade marks",
+  "variants": [
+   [
+    "2000s",
+    15,
+    15,
+    1,
+    "LaDainian Tomlinson",
+    "LenDale White",
+    "Name a RB with 15+ rushing TDs in a season of the 2000s"
+   ],
+   [
+    "2010s",
+    13,
+    16,
+    1,
+    "LeSean McCoy",
+    "BenJarvus Green-Ellis",
+    "Name a RB with 13+ rushing TDs in a season of the 2010s"
+   ],
+   [
+    "2020s",
+    13,
+    19,
+    1,
+    "Christian McCaffrey",
+    "Damien Harris",
+    "Name a RB with 13+ rushing TDs in a season of the 2020s"
+   ]
+  ]
+ },
+ "h_dec_rb_rec": {
+  "cat": "Decade marks",
+  "variants": [
+   [
+    "2000s",
+    70,
+    15,
+    1,
+    "LaDainian Tomlinson",
+    "Richie Anderson",
+    "Name a RB with 70+ catches in a season of the 2000s"
+   ],
+   [
+    "2010s",
+    75,
+    17,
+    1,
+    "LeSean McCoy",
+    "Tarik Cohen",
+    "Name a RB with 75+ catches in a season of the 2010s"
+   ],
+   [
+    "2020s",
+    60,
+    18,
+    1,
+    "Christian McCaffrey",
+    "J.D. McKissic",
+    "Name a RB with 60+ catches in a season of the 2020s"
+   ]
+  ]
+ },
+ "h_dec_wr_yds": {
+  "cat": "Decade marks",
+  "variants": [
+   [
+    "2000s",
+    1300,
+    31,
+    3,
+    "Larry Fitzgerald",
+    "Sidney Rice",
+    "Name a WR with 1,300+ receiving yards in a season of the 2000s"
+   ],
+   [
+    "2010s",
+    1400,
+    23,
+    2,
+    "Larry Fitzgerald",
+    "Josh Gordon",
+    "Name a WR with 1,400+ receiving yards in a season of the 2010s"
+   ],
+   [
+    "2020s",
+    1300,
+    19,
+    1,
+    "Davante Adams",
+    "Brandon Aiyuk",
+    "Name a WR with 1,300+ receiving yards in a season of the 2020s"
+   ]
+  ]
+ },
+ "h_dec_wr_rec": {
+  "cat": "Decade marks",
+  "variants": [
+   [
+    "2000s",
+    100,
+    22,
+    2,
+    "Larry Fitzgerald",
+    "Troy Brown",
+    "Name a WR with 100+ catches in a season of the 2000s"
+   ],
+   [
+    "2010s",
+    110,
+    16,
+    1,
+    "Reggie Wayne",
+    "JuJu Smith-Schuster",
+    "Name a WR with 110+ catches in a season of the 2010s"
+   ],
+   [
+    "2020s",
+    105,
+    16,
+    1,
+    "Davante Adams",
+    "Diontae Johnson",
+    "Name a WR with 105+ catches in a season of the 2020s"
+   ]
+  ]
+ },
+ "h_dec_wr_td": {
+  "cat": "Decade marks",
+  "variants": [
+   [
+    "2000s",
+    12,
+    15,
+    1,
+    "Larry Fitzgerald",
+    "Javon Walker",
+    "Name a WR with 12+ receiving TDs in a season of the 2000s"
+   ],
+   [
+    "2010s",
+    12,
+    18,
+    1,
+    "Davante Adams",
+    "Eric Decker",
+    "Name a WR with 12+ receiving TDs in a season of the 2010s"
+   ],
+   [
+    "2020s",
+    10,
+    20,
+    2,
+    "Davante Adams",
+    "Terry McLaurin",
+    "Name a WR with 10+ receiving TDs in a season of the 2020s"
+   ]
+  ]
+ },
+ "h_dec_te_yds": {
+  "cat": "Decade marks",
+  "variants": [
+   [
+    "2000s",
+    800,
+    15,
+    1,
+    "Tony Gonzalez",
+    "Eric Johnson",
+    "Name a TE with 800+ receiving yards in a season of the 2000s"
+   ],
+   [
+    "2010s",
+    900,
+    17,
+    1,
+    "Tony Gonzalez",
+    "Jordan Cameron",
+    "Name a TE with 900+ receiving yards in a season of the 2010s"
+   ],
+   [
+    "2020s",
+    800,
+    17,
+    1,
+    "Travis Kelce",
+    "Jonnu Smith",
+    "Name a TE with 800+ receiving yards in a season of the 2020s"
+   ]
+  ]
+ },
+ "h_dec_sacks": {
+  "cat": "Decade marks",
+  "variants": [
+   [
+    "2000s",
+    15,
+    18,
+    1,
+    "Jared Allen",
+    "Shawne Merriman",
+    "Name a defender with 15+ sacks in a season of the 2000s"
+   ],
+   [
+    "2010s",
+    15,
+    20,
+    2,
+    "Aaron Donald",
+    "Vic Beasley",
+    "Name a defender with 15+ sacks in a season of the 2010s"
+   ],
+   [
+    "2020s",
+    14,
+    17,
+    1,
+    "Khalil Mack",
+    "Nik Bonitto",
+    "Name a defender with 14+ sacks in a season of the 2020s"
+   ]
+  ]
+ },
+ "h_dec_int": {
+  "cat": "Decade marks",
+  "variants": [
+   [
+    "2000s",
+    8,
+    26,
+    2,
+    "Charles Woodson",
+    "Nathan Vasher",
+    "Name a defender with 8+ interceptions in a season of the 2000s"
+   ],
+   [
+    "2010s",
+    7,
+    22,
+    2,
+    "Charles Woodson",
+    "Stevie Brown",
+    "Name a defender with 7+ interceptions in a season of the 2010s"
+   ],
+   [
+    "2020s",
+    6,
+    17,
+    1,
+    "Tyrann Mathieu",
+    "Amani Oruwariye",
+    "Name a defender with 6+ interceptions in a season of the 2020s"
+   ]
+  ]
+ },
+ "h_c_qb_yds": {
+  "cat": "Career totals",
+  "variants": [
+   [
+    null,
+    40000,
+    15,
+    1,
+    "Tom Brady",
+    "Derek Carr",
+    "Name a QB with 40,000+ career passing yards counting only seasons since 2000"
+   ]
+  ]
+ },
+ "h_c_qb_td": {
+  "cat": "Career totals",
+  "variants": [
+   [
+    null,
+    250,
+    18,
+    1,
+    "Tom Brady",
+    "Derek Carr",
+    "Name a QB who has thrown 250+ touchdown passes since 2000"
+   ]
+  ]
+ },
+ "h_c_qb_rush": {
+  "cat": "Career totals",
+  "variants": [
+   [
+    null,
+    2000,
+    21,
+    2,
+    "Aaron Rodgers",
+    "Justin Fields",
+    "Name a QB with 2,000+ career rushing yards since 2000"
+   ]
+  ]
+ },
+ "h_c_rb_yds": {
+  "cat": "Career totals",
+  "variants": [
+   [
+    null,
+    9000,
+    18,
+    1,
+    "LaDainian Tomlinson",
+    "Jamal Lewis",
+    "Name a RB with 9,000+ career rushing yards since 2000"
+   ]
+  ]
+ },
+ "h_c_rb_td": {
+  "cat": "Career totals",
+  "variants": [
+   [
+    null,
+    60,
+    28,
+    2,
+    "LaDainian Tomlinson",
+    "Brandon Jacobs",
+    "Name a RB with 60+ career rushing TDs since 2000"
+   ]
+  ]
+ },
+ "h_c_rb_rec": {
+  "cat": "Career totals",
+  "variants": [
+   [
+    null,
+    400,
+    15,
+    1,
+    "LaDainian Tomlinson",
+    "Michael Pittman",
+    "Name a RB with 400+ career catches since 2000"
+   ]
+  ]
+ },
+ "h_c_wr_yds": {
+  "cat": "Career totals",
+  "variants": [
+   [
+    null,
+    12000,
+    15,
+    1,
+    "Larry Fitzgerald",
+    "Brandon Marshall",
+    "Name a WR with 12,000+ career receiving yards since 2000"
+   ]
+  ]
+ },
+ "h_c_wr_rec": {
+  "cat": "Career totals",
+  "variants": [
+   [
+    null,
+    800,
+    21,
+    2,
+    "Larry Fitzgerald",
+    "Wes Welker",
+    "Name a WR with 800+ career catches since 2000"
+   ]
+  ]
+ },
+ "h_c_wr_td": {
+  "cat": "Career totals",
+  "variants": [
+   [
+    null,
+    70,
+    22,
+    2,
+    "Larry Fitzgerald",
+    "Dez Bryant",
+    "Name a WR with 70+ career receiving TDs since 2000"
+   ]
+  ]
+ },
+ "h_c_te_yds": {
+  "cat": "Career totals",
+  "variants": [
+   [
+    null,
+    5000,
+    23,
+    2,
+    "Tony Gonzalez",
+    "Marcedes Lewis",
+    "Name a TE with 5,000+ career receiving yards since 2000"
+   ]
+  ]
+ },
+ "h_c_te_td": {
+  "cat": "Career totals",
+  "variants": [
+   [
+    null,
+    40,
+    19,
+    1,
+    "Tony Gonzalez",
+    "Marcedes Lewis",
+    "Name a TE with 40+ career receiving TDs since 2000"
+   ]
+  ]
+ },
+ "h_c_any_td": {
+  "cat": "Career totals",
+  "variants": [
+   [
+    null,
+    90,
+    17,
+    1,
+    "Larry Fitzgerald",
+    "Shaun Alexander",
+    "Name a player with 90+ career rushing and receiving TDs since 2000"
+   ]
+  ]
+ },
+ "h_c_sacks": {
+  "cat": "Career totals",
+  "variants": [
+   [
+    null,
+    110,
+    19,
+    1,
+    "Julius Peppers",
+    "Dwight Freeney",
+    "Name a defender with 110+ career sacks since 2000"
+   ]
+  ]
+ },
+ "h_c_int": {
+  "cat": "Career totals",
+  "variants": [
+   [
+    null,
+    35,
+    19,
+    1,
+    "Champ Bailey",
+    "Dre' Bly",
+    "Name a defender with 35+ career interceptions since 2000"
+   ]
+  ]
+ },
+ "h_c_k": {
+  "cat": "Career totals",
+  "variants": [
+   [
+    null,
+    300,
+    18,
+    1,
+    "Adam Vinatieri",
+    "Rian Lindell",
+    "Name a kicker with 300+ career field goals since 2000"
+   ]
+  ]
+ },
+ "h_dt_qb_yds": {
+  "cat": "Decade totals",
+  "variants": [
+   [
+    "2000s",
+    20000,
+    16,
+    1,
+    "Tom Brady",
+    "Marc Bulger",
+    "Name a QB with 20,000+ passing yards in the 2000s"
+   ],
+   [
+    "2010s",
+    25000,
+    15,
+    1,
+    "Tom Brady",
+    "Ryan Fitzpatrick",
+    "Name a QB with 25,000+ passing yards in the 2010s"
+   ],
+   [
+    "2020s",
+    15000,
+    18,
+    1,
+    "Aaron Rodgers",
+    "Tua Tagovailoa",
+    "Name a QB with 15,000+ passing yards in the 2020s"
+   ]
+  ]
+ },
+ "h_dt_qb_td": {
+  "cat": "Decade totals",
+  "variants": [
+   [
+    "2000s",
+    120,
+    20,
+    2,
+    "Tom Brady",
+    "Jake Delhomme",
+    "Name a QB with 120+ touchdown passes in the 2000s"
+   ],
+   [
+    "2010s",
+    150,
+    18,
+    1,
+    "Tom Brady",
+    "Andrew Luck",
+    "Name a QB with 150+ touchdown passes in the 2010s"
+   ],
+   [
+    "2020s",
+    100,
+    17,
+    1,
+    "Tom Brady",
+    "Tua Tagovailoa",
+    "Name a QB with 100+ touchdown passes in the 2020s"
+   ]
+  ]
+ },
+ "h_dt_rb_yds": {
+  "cat": "Decade totals",
+  "variants": [
+   [
+    "2000s",
+    6000,
+    18,
+    1,
+    "LaDainian Tomlinson",
+    "Travis Henry",
+    "Name a RB with 6,000+ rushing yards in the 2000s"
+   ],
+   [
+    "2010s",
+    5000,
+    20,
+    2,
+    "Frank Gore",
+    "Chris Ivory",
+    "Name a RB with 5,000+ rushing yards in the 2010s"
+   ],
+   [
+    "2020s",
+    4000,
+    17,
+    1,
+    "Christian McCaffrey",
+    "Najee Harris",
+    "Name a RB with 4,000+ rushing yards in the 2020s"
+   ]
+  ]
+ },
+ "h_dt_wr_yds": {
+  "cat": "Decade totals",
+  "variants": [
+   [
+    "2000s",
+    7000,
+    24,
+    2,
+    "Larry Fitzgerald",
+    "Darrell Jackson",
+    "Name a WR with 7,000+ receiving yards in the 2000s"
+   ],
+   [
+    "2010s",
+    7000,
+    17,
+    1,
+    "Larry Fitzgerald",
+    "Pierre Garcon",
+    "Name a WR with 7,000+ receiving yards in the 2010s"
+   ],
+   [
+    "2020s",
+    5000,
+    20,
+    2,
+    "Davante Adams",
+    "Terry McLaurin",
+    "Name a WR with 5,000+ receiving yards in the 2020s"
+   ]
+  ]
+ },
+ "h_dt_te_yds": {
+  "cat": "Decade totals",
+  "variants": [
+   [
+    "2000s",
+    2000,
+    29,
+    2,
+    "Tony Gonzalez",
+    "Billy Miller",
+    "Name a TE with 2,000+ receiving yards in the 2000s"
+   ],
+   [
+    "2010s",
+    3000,
+    24,
+    2,
+    "Tony Gonzalez",
+    "Jordan Matthews",
+    "Name a TE with 3,000+ receiving yards in the 2010s"
+   ],
+   [
+    "2020s",
+    2000,
+    27,
+    2,
+    "Travis Kelce",
+    "Tyler Conklin",
+    "Name a TE with 2,000+ receiving yards in the 2020s"
+   ]
+  ]
+ },
+ "h_dt_sacks": {
+  "cat": "Decade totals",
+  "variants": [
+   [
+    "2000s",
+    60,
+    20,
+    2,
+    "Julius Peppers",
+    "Adewale Ogunleye",
+    "Name a defender with 60+ sacks in the 2000s"
+   ],
+   [
+    "2010s",
+    70,
+    18,
+    1,
+    "Julius Peppers",
+    "Everson Griffen",
+    "Name a defender with 70+ sacks in the 2010s"
+   ],
+   [
+    "2020s",
+    50,
+    15,
+    1,
+    "Khalil Mack",
+    "Josh Sweat",
+    "Name a defender with 50+ sacks in the 2020s"
+   ]
+  ]
+ },
+ "h_dt_int": {
+  "cat": "Decade totals",
+  "variants": [
+   [
+    "2000s",
+    25,
+    22,
+    2,
+    "Champ Bailey",
+    "Tory James",
+    "Name a defender with 25+ interceptions in the 2000s"
+   ],
+   [
+    "2010s",
+    20,
+    25,
+    2,
+    "Charles Woodson",
+    "Trumaine Johnson",
+    "Name a defender with 20+ interceptions in the 2010s"
+   ],
+   [
+    "2020s",
+    15,
+    20,
+    2,
+    "Harrison Smith",
+    "Kerby Joseph",
+    "Name a defender with 15+ interceptions in the 2020s"
+   ]
+  ]
+ },
+ "h_n_wr_1000": {
+  "cat": "Repeat seasons",
+  "variants": [
+   [
+    null,
+    7,
+    20,
+    2,
+    "Larry Fitzgerald",
+    "Amari Cooper",
+    "Name a WR with 7+ seasons of 1,000+ receiving yards since 2000"
+   ]
+  ]
+ },
+ "h_n_rb_1000": {
+  "cat": "Repeat seasons",
+  "variants": [
+   [
+    null,
+    5,
+    23,
+    2,
+    "LaDainian Tomlinson",
+    "Jamaal Charles",
+    "Name a RB with 5+ seasons of 1,000+ rushing yards since 2000"
+   ]
+  ]
+ },
+ "h_n_qb_4000": {
+  "cat": "Repeat seasons",
+  "variants": [
+   [
+    null,
+    4,
+    19,
+    1,
+    "Tom Brady",
+    "Andrew Luck",
+    "Name a QB with 4+ seasons of 4,000+ passing yards since 2000"
+   ]
+  ]
+ },
+ "h_n_qb_30td": {
+  "cat": "Repeat seasons",
+  "variants": [
+   [
+    null,
+    3,
+    19,
+    1,
+    "Tom Brady",
+    "Andrew Luck",
+    "Name a QB with 3+ seasons of 30+ touchdown passes since 2000"
+   ]
+  ]
+ },
+ "h_n_sack10": {
+  "cat": "Repeat seasons",
+  "variants": [
+   [
+    null,
+    6,
+    15,
+    1,
+    "Julius Peppers",
+    "Danielle Hunter",
+    "Name a defender with 6+ seasons of 10+ sacks since 2000"
+   ]
+  ]
+ },
+ "h_n_te_700": {
+  "cat": "Repeat seasons",
+  "variants": [
+   [
+    null,
+    3,
+    25,
+    2,
+    "Tony Gonzalez",
+    "Jordan Matthews",
+    "Name a TE with 3+ seasons of 700+ receiving yards since 2000"
+   ]
+  ]
+ },
+ "h_n_td10": {
+  "cat": "Repeat seasons",
+  "variants": [
+   [
+    null,
+    4,
+    35,
+    3,
+    "Larry Fitzgerald",
+    "Arian Foster",
+    "Name a player with 4+ seasons of 10+ rushing and receiving TDs since 2000"
+   ]
+  ]
+ },
+ "h_n_rec90": {
+  "cat": "Repeat seasons",
+  "variants": [
+   [
+    null,
+    4,
+    20,
+    2,
+    "Larry Fitzgerald",
+    "Michael Thomas",
+    "Name a WR with 4+ seasons of 90+ catches since 2000"
+   ]
+  ]
+ },
+ "h_n_int5": {
+  "cat": "Repeat seasons",
+  "variants": [
+   [
+    null,
+    3,
+    29,
+    2,
+    "Champ Bailey",
+    "J.C. Jackson",
+    "Name a defender with 3+ seasons of 5+ interceptions since 2000"
+   ]
+  ]
+ },
+ "h_g_qb_yds": {
+  "cat": "Big games",
+  "variants": [
+   [
+    null,
+    500,
+    15,
+    1,
+    "Tom Brady",
+    "Elvis Grbac",
+    "Name a QB who threw for 500+ yards in a game since 2000"
+   ]
+  ]
+ },
+ "h_g_qb_td": {
+  "cat": "Big games",
+  "variants": [
+   [
+    "2000s",
+    5,
+    22,
+    2,
+    "Tom Brady",
+    "Kelly Holcomb",
+    "Name a QB who threw 5+ touchdown passes in a game of the 2000s"
+   ],
+   [
+    "2010s",
+    5,
+    28,
+    2,
+    "Tom Brady",
+    "Matt Flynn",
+    "Name a QB who threw 5+ touchdown passes in a game of the 2010s"
+   ],
+   [
+    "2020s",
+    5,
+    17,
+    1,
+    "Tom Brady",
+    "Tua Tagovailoa",
+    "Name a QB who threw 5+ touchdown passes in a game of the 2020s"
+   ]
+  ]
+ },
+ "h_g_qb_rush": {
+  "cat": "Big games",
+  "variants": [
+   [
+    null,
+    100,
+    19,
+    1,
+    "Russell Wilson",
+    "Kevin Hogan",
+    "Name a QB who ran for 100+ yards in a game since 2000"
+   ]
+  ]
+ },
+ "h_g_rb_yds": {
+  "cat": "Big games",
+  "variants": [
+   [
+    null,
+    230,
+    17,
+    1,
+    "LaDainian Tomlinson",
+    "Jerome Harrison",
+    "Name a RB who ran for 230+ yards in a game since 2000"
+   ]
+  ]
+ },
+ "h_g_rb_td": {
+  "cat": "Big games",
+  "variants": [
+   [
+    null,
+    4,
+    41,
+    4,
+    "LaDainian Tomlinson",
+    "Jonas Gray",
+    "Name a RB with 4+ rushing and receiving TDs in a game since 2000"
+   ]
+  ]
+ },
+ "h_g_rb_rec": {
+  "cat": "Big games",
+  "variants": [
+   [
+    null,
+    130,
+    22,
+    2,
+    "LaDainian Tomlinson",
+    "Patrick Cobbs",
+    "Name a RB with 130+ receiving yards in a game since 2000"
+   ]
+  ]
+ },
+ "h_g_wr_yds": {
+  "cat": "Big games",
+  "variants": [
+   [
+    null,
+    250,
+    15,
+    1,
+    "Andre Johnson",
+    "Josh Gordon",
+    "Name a WR with 250+ receiving yards in a game since 2000"
+   ]
+  ]
+ },
+ "h_g_wr_rec": {
+  "cat": "Big games",
+  "variants": [
+   [
+    null,
+    15,
+    16,
+    1,
+    "Reggie Wayne",
+    "Michael Wilson",
+    "Name a WR with 15+ catches in a game since 2000"
+   ]
+  ]
+ },
+ "h_g_wr_td": {
+  "cat": "Big games",
+  "variants": [
+   [
+    "2000s",
+    3,
+    34,
+    3,
+    "Steve Smith",
+    "Albert Connell",
+    "Name a WR with 3+ receiving TDs in a game of the 2000s"
+   ],
+   [
+    "2010s",
+    3,
+    47,
+    4,
+    "Larry Fitzgerald",
+    "Breshad Perriman",
+    "Name a WR with 3+ receiving TDs in a game of the 2010s"
+   ],
+   [
+    "2020s",
+    3,
+    21,
+    2,
+    "Davante Adams",
+    "Chase Claypool",
+    "Name a WR with 3+ receiving TDs in a game of the 2020s"
+   ]
+  ]
+ },
+ "h_g_te_yds": {
+  "cat": "Big games",
+  "variants": [
+   [
+    null,
+    160,
+    19,
+    1,
+    "Jason Witten",
+    "Ed Dickson",
+    "Name a TE with 160+ receiving yards in a game since 2000"
+   ]
+  ]
+ },
+ "h_g_ppr": {
+  "cat": "Big games",
+  "variants": [
+   [
+    null,
+    50,
+    31,
+    3,
+    "LaDainian Tomlinson",
+    "Jahvid Best",
+    "Name a player with a 50+ PPR point game since 2000"
+   ]
+  ]
+ },
+ "h_g_sacks": {
+  "cat": "Big games",
+  "variants": [
+   [
+    null,
+    4,
+    48,
+    4,
+    "Aaron Donald",
+    "Will McDonald IV",
+    "Name a defender with 4+ sacks in a game since 2000"
+   ]
+  ]
+ },
+ "h_ng_qb_400": {
+  "cat": "Big games",
+  "variants": [
+   [
+    null,
+    6,
+    16,
+    1,
+    "Tom Brady",
+    "Ryan Fitzpatrick",
+    "Name a QB with 6+ games of 400+ passing yards since 2000"
+   ]
+  ]
+ },
+ "h_ng_qb_5td": {
+  "cat": "Big games",
+  "variants": [
+   [
+    null,
+    2,
+    21,
+    2,
+    "Tom Brady",
+    "Jameis Winston",
+    "Name a QB with 2+ games of 5+ touchdown passes since 2000"
+   ]
+  ]
+ },
+ "h_ng_rb_200": {
+  "cat": "Big games",
+  "variants": [
+   [
+    null,
+    2,
+    21,
+    2,
+    "LaDainian Tomlinson",
+    "Jay Ajayi",
+    "Name a RB with 2+ games of 200+ rushing yards since 2000"
+   ]
+  ]
+ },
+ "h_ng_wr_200": {
+  "cat": "Big games",
+  "variants": [
+   [
+    null,
+    2,
+    19,
+    1,
+    "Reggie Wayne",
+    "Josh Gordon",
+    "Name a WR with 2+ games of 200+ receiving yards since 2000"
+   ]
+  ]
+ },
+ "h_ng_wr_150": {
+  "cat": "Big games",
+  "variants": [
+   [
+    null,
+    10,
+    15,
+    1,
+    "Steve Smith",
+    "T.Y. Hilton",
+    "Name a WR with 10+ games of 150+ receiving yards since 2000"
+   ]
+  ]
+ },
+ "h_ng_rb_150": {
+  "cat": "Big games",
+  "variants": [
+   [
+    null,
+    8,
+    18,
+    1,
+    "LaDainian Tomlinson",
+    "Larry Johnson",
+    "Name a RB with 8+ games of 150+ rushing yards since 2000"
+   ]
+  ]
+ },
+ "h_ng_sack3": {
+  "cat": "Big games",
+  "variants": [
+   [
+    null,
+    6,
+    17,
+    1,
+    "Julius Peppers",
+    "Cameron Wake",
+    "Name a defender with 6+ games of 3+ sacks since 2000"
+   ]
+  ]
+ },
+ "h_r_qb_yds": {
+  "cat": "Rookie seasons",
+  "variants": [
+   [
+    null,
+    3400,
+    16,
+    1,
+    "Matt Ryan",
+    "Mac Jones",
+    "Name a QB who threw for 3,400+ yards as a rookie (drafted since 2000)"
+   ]
+  ]
+ },
+ "h_r_qb_td": {
+  "cat": "Rookie seasons",
+  "variants": [
+   [
+    null,
+    20,
+    18,
+    1,
+    "Russell Wilson",
+    "Mac Jones",
+    "Name a QB who threw 20+ touchdown passes as a rookie (drafted since 2000)"
+   ]
+  ]
+ },
+ "h_r_rb_yds": {
+  "cat": "Rookie seasons",
+  "variants": [
+   [
+    null,
+    1200,
+    15,
+    1,
+    "LaDainian Tomlinson",
+    "Steve Slaton",
+    "Name a RB who ran for 1,200+ yards as a rookie (drafted since 2000)"
+   ]
+  ]
+ },
+ "h_r_wr_yds": {
+  "cat": "Rookie seasons",
+  "variants": [
+   [
+    null,
+    1000,
+    21,
+    2,
+    "Anquan Boldin",
+    "Michael Clayton",
+    "Name a WR with 1,000+ receiving yards as a rookie (drafted since 2000)"
+   ]
+  ]
+ },
+ "h_r_sacks": {
+  "cat": "Rookie seasons",
+  "variants": [
+   [
+    null,
+    10,
+    19,
+    1,
+    "Julius Peppers",
+    "James Pearce Jr.",
+    "Name a defender with 10+ sacks as a rookie (drafted since 2000)"
+   ]
+  ]
+ },
+ "h_r_int": {
+  "cat": "Rookie seasons",
+  "variants": [
+   [
+    null,
+    5,
+    26,
+    2,
+    "Ed Reed",
+    "Derek Ross",
+    "Name a defender with 5+ interceptions as a rookie (drafted since 2000)"
+   ]
+  ]
+ },
+ "h_p_r1_rb": {
+  "cat": "Draft pedigree",
+  "variants": [
+   [
+    null,
+    1400,
+    18,
+    1,
+    "LaDainian Tomlinson",
+    "Doug Martin",
+    "Name a first-round pick who ran for 1,400+ yards in a season since 2000"
+   ]
+  ]
+ },
+ "h_p_late_rb": {
+  "cat": "Draft pedigree",
+  "variants": [
+   [
+    null,
+    1100,
+    16,
+    1,
+    "Aaron Jones",
+    "Jay Ajayi",
+    "Name a RB drafted in round 4 or later who ran for 1,100+ yards in a season since 2000"
+   ]
+  ]
+ },
+ "h_p_late_qb": {
+  "cat": "Draft pedigree",
+  "variants": [
+   [
+    null,
+    3200,
+    16,
+    1,
+    "Tom Brady",
+    "Sam Howell",
+    "Name a QB drafted in round 3 or later who threw for 3,200+ yards in a season since 2000"
+   ]
+  ]
+ },
+ "h_p_r1_wr": {
+  "cat": "Draft pedigree",
+  "variants": [
+   [
+    null,
+    1400,
+    15,
+    1,
+    "Larry Fitzgerald",
+    "Odell Beckham Jr.",
+    "Name a first-round WR with 1,400+ receiving yards in a season since 2000"
+   ]
+  ]
+ },
+ "h_p_r1_qb": {
+  "cat": "Draft pedigree",
+  "variants": [
+   [
+    null,
+    4600,
+    15,
+    1,
+    "Aaron Rodgers",
+    "Tua Tagovailoa",
+    "Name a first-round QB who threw for 4,600+ yards in a season since 2000"
+   ]
+  ]
+ },
+ "h_p_late_sack": {
+  "cat": "Draft pedigree",
+  "variants": [
+   [
+    null,
+    13,
+    17,
+    1,
+    "Jared Allen",
+    "Greg Hardy",
+    "Name a defender drafted in round 3 or later with 13+ sacks in a season since 2000"
+   ]
+  ]
+ },
+ "h_p_r2_te": {
+  "cat": "Draft pedigree",
+  "variants": [
+   [
+    null,
+    900,
+    17,
+    1,
+    "Jason Witten",
+    "Jordan Cameron",
+    "Name a TE drafted in round 2 or later with 900+ receiving yards in a season since 2000"
+   ]
+  ]
+ },
+ "h_d_first_overall": {
+  "cat": "NFL Draft",
+  "variants": [
+   [
+    null,
+    0,
+    26,
+    2,
+    "Matthew Stafford",
+    "JaMarcus Russell",
+    "Name a #1 overall NFL draft pick since 2000"
+   ]
+  ]
+ },
+ "h_d_slot": {
+  "cat": "NFL Draft",
+  "variants": [
+   [
+    1,
+    0,
+    26,
+    2,
+    "Matthew Stafford",
+    "JaMarcus Russell",
+    "Name a player taken with the #1 overall pick since 2000"
+   ],
+   [
+    2,
+    0,
+    26,
+    2,
+    "Julius Peppers",
+    "Charles Rogers",
+    "Name a player taken with the #2 overall pick since 2000"
+   ],
+   [
+    3,
+    0,
+    26,
+    2,
+    "Matt Ryan",
+    "Abdul Carter",
+    "Name a player taken with the #3 overall pick since 2000"
+   ],
+   [
+    4,
+    0,
+    26,
+    2,
+    "Philip Rivers",
+    "Will Campbell",
+    "Name a player taken with the #4 overall pick since 2000"
+   ],
+   [
+    5,
+    0,
+    26,
+    2,
+    "LaDainian Tomlinson",
+    "Mason Graham",
+    "Name a player taken with the #5 overall pick since 2000"
+   ],
+   [
+    6,
+    0,
+    26,
+    2,
+    "Julio Jones",
+    "Vernon Gholston",
+    "Name a player taken with the #6 overall pick since 2000"
+   ],
+   [
+    7,
+    0,
+    26,
+    2,
+    "Josh Allen",
+    "Kevin White",
+    "Name a player taken with the #7 overall pick since 2000"
+   ],
+   [
+    8,
+    0,
+    26,
+    2,
+    "Ryan Tannehill",
+    "Justin Gilbert",
+    "Name a player taken with the #8 overall pick since 2000"
+   ],
+   [
+    9,
+    0,
+    26,
+    2,
+    "Brian Urlacher",
+    "Kelvin Banks",
+    "Name a player taken with the #9 overall pick since 2000"
+   ],
+   [
+    10,
+    0,
+    26,
+    2,
+    "Patrick Mahomes",
+    "Jamal Reynolds",
+    "Name a player taken with the #10 overall pick since 2000"
+   ],
+   [
+    11,
+    0,
+    26,
+    2,
+    "Ben Roethlisberger",
+    "Mykel Williams",
+    "Name a player taken with the #11 overall pick since 2000"
+   ],
+   [
+    12,
+    0,
+    26,
+    2,
+    "Haloti Ngata",
+    "Wendell Bryant",
+    "Name a player taken with the #12 overall pick since 2000"
+   ],
+   [
+    13,
+    0,
+    26,
+    2,
+    "Aaron Donald",
+    "Kenneth Grant",
+    "Name a player taken with the #13 overall pick since 2000"
+   ],
+   [
+    14,
+    0,
+    26,
+    2,
+    "Darrelle Revis",
+    "Michael Haynes",
+    "Name a player taken with the #14 overall pick since 2000"
+   ],
+   [
+    15,
+    0,
+    26,
+    2,
+    "Derrick Johnson",
+    "Jerome McDougle",
+    "Name a player taken with the #15 overall pick since 2000"
+   ],
+   [
+    16,
+    0,
+    26,
+    2,
+    "Zack Martin",
+    "Walter Nolen",
+    "Name a player taken with the #16 overall pick since 2000"
+   ],
+   [
+    17,
+    0,
+    26,
+    2,
+    "Steve Hutchinson",
+    "Shemar Stewart",
+    "Name a player taken with the #17 overall pick since 2000"
+   ],
+   [
+    18,
+    0,
+    26,
+    2,
+    "Joe Flacco",
+    "Erasmus James",
+    "Name a player taken with the #18 overall pick since 2000"
+   ],
+   [
+    19,
+    0,
+    26,
+    2,
+    "Casey Hampton",
+    "Damon Arnette",
+    "Name a player taken with the #19 overall pick since 2000"
+   ],
+   [
+    20,
+    0,
+    26,
+    2,
+    "Tamba Hali",
+    "Jahdae Barron",
+    "Name a player taken with the #20 overall pick since 2000"
+   ],
+   [
+    21,
+    0,
+    26,
+    2,
+    "Vince Wilfork",
+    "Derrick Harmon",
+    "Name a player taken with the #21 overall pick since 2000"
+   ],
+   [
+    22,
+    0,
+    26,
+    2,
+    "Demaryius Thomas",
+    "Caleb Farley",
+    "Name a player taken with the #22 overall pick since 2000"
+   ],
+   [
+    23,
+    0,
+    26,
+    2,
+    "Riley Reiff",
+    "Rashard Anderson",
+    "Name a player taken with the #23 overall pick since 2000"
+   ],
+   [
+    24,
+    0,
+    26,
+    2,
+    "Aaron Rodgers",
+    "Willie Middlebrooks",
+    "Name a player taken with the #24 overall pick since 2000"
+   ],
+   [
+    25,
+    0,
+    26,
+    2,
+    "Dont'a Hightower",
+    "Jordan Morgan",
+    "Name a player taken with the #25 overall pick since 2000"
+   ],
+   [
+    26,
+    0,
+    26,
+    2,
+    "Duane Brown",
+    "Paxton Lynch",
+    "Name a player taken with the #26 overall pick since 2000"
+   ],
+   [
+    27,
+    0,
+    26,
+    2,
+    "Roddy White",
+    "Darius Robinson",
+    "Name a player taken with the #27 overall pick since 2000"
+   ],
+   [
+    28,
+    0,
+    26,
+    2,
+    "Joe Staley",
+    "Payton Turner",
+    "Name a player taken with the #28 overall pick since 2000"
+   ],
+   [
+    29,
+    0,
+    26,
+    2,
+    "Nick Mangold",
+    "Isaiah Wilson",
+    "Name a player taken with the #29 overall pick since 2000"
+   ],
+   [
+    30,
+    0,
+    26,
+    2,
+    "Reggie Wayne",
+    "Maxwell Hairston",
+    "Name a player taken with the #30 overall pick since 2000"
+   ],
+   [
+    31,
+    0,
+    26,
+    2,
+    "Cameron Heyward",
+    "Rashaun Woods",
+    "Name a player taken with the #31 overall pick since 2000"
+   ],
+   [
+    32,
+    0,
+    26,
+    2,
+    "Drew Brees",
+    "Lewis Cine",
+    "Name a player taken with the #32 overall pick since 2000"
+   ]
+  ]
+ },
+ "h_d_top5_dec": {
+  "cat": "NFL Draft",
+  "variants": [
+   [
+    "2000s",
+    0,
+    50,
+    5,
+    "Philip Rivers",
+    "Charles Rogers",
+    "Name a top-5 NFL draft pick of the 2000s"
+   ],
+   [
+    "2010s",
+    0,
+    50,
+    5,
+    "Cam Newton",
+    "Dion Jordan",
+    "Name a top-5 NFL draft pick of the 2010s"
+   ],
+   [
+    "2020s",
+    0,
+    30,
+    3,
+    "Joe Burrow",
+    "Abdul Carter",
+    "Name a top-5 NFL draft pick of the 2020s"
+   ]
+  ]
+ },
+ "h_d_year_r1": {
+  "cat": "NFL Draft",
+  "variants": [
+   [
+    2000,
+    0,
+    31,
+    3,
+    "Brian Urlacher",
+    "R. Jay Soward",
+    "Name a first-round pick in the 2000 NFL Draft"
+   ],
+   [
+    2001,
+    0,
+    31,
+    3,
+    "LaDainian Tomlinson",
+    "Jamal Reynolds",
+    "Name a first-round pick in the 2001 NFL Draft"
+   ],
+   [
+    2002,
+    0,
+    32,
+    3,
+    "Julius Peppers",
+    "Wendell Bryant",
+    "Name a first-round pick in the 2002 NFL Draft"
+   ],
+   [
+    2003,
+    0,
+    32,
+    3,
+    "Terrell Suggs",
+    "Jerome McDougle",
+    "Name a first-round pick in the 2003 NFL Draft"
+   ],
+   [
+    2004,
+    0,
+    32,
+    3,
+    "Philip Rivers",
+    "Rashaun Woods",
+    "Name a first-round pick in the 2004 NFL Draft"
+   ],
+   [
+    2005,
+    0,
+    32,
+    3,
+    "Aaron Rodgers",
+    "David Pollack",
+    "Name a first-round pick in the 2005 NFL Draft"
+   ],
+   [
+    2006,
+    0,
+    32,
+    3,
+    "Haloti Ngata",
+    "John McCargo",
+    "Name a first-round pick in the 2006 NFL Draft"
+   ],
+   [
+    2007,
+    0,
+    32,
+    3,
+    "Adrian Peterson",
+    "Justin Harrell",
+    "Name a first-round pick in the 2007 NFL Draft"
+   ],
+   [
+    2008,
+    0,
+    31,
+    3,
+    "Matt Ryan",
+    "Vernon Gholston",
+    "Name a first-round pick in the 2008 NFL Draft"
+   ],
+   [
+    2009,
+    0,
+    32,
+    3,
+    "Matthew Stafford",
+    "Aaron Maybin",
+    "Name a first-round pick in the 2009 NFL Draft"
+   ],
+   [
+    2010,
+    0,
+    32,
+    3,
+    "Trent Williams",
+    "Tim Tebow",
+    "Name a first-round pick in the 2010 NFL Draft"
+   ],
+   [
+    2011,
+    0,
+    32,
+    3,
+    "Cam Newton",
+    "Derek Sherrod",
+    "Name a first-round pick in the 2011 NFL Draft"
+   ],
+   [
+    2012,
+    0,
+    32,
+    3,
+    "Fletcher Cox",
+    "A.J. Jenkins",
+    "Name a first-round pick in the 2012 NFL Draft"
+   ],
+   [
+    2013,
+    0,
+    32,
+    3,
+    "Lane Johnson",
+    "Dee Milliner",
+    "Name a first-round pick in the 2013 NFL Draft"
+   ],
+   [
+    2014,
+    0,
+    32,
+    3,
+    "Aaron Donald",
+    "Marcus Smith",
+    "Name a first-round pick in the 2014 NFL Draft"
+   ],
+   [
+    2015,
+    0,
+    32,
+    3,
+    "Leonard Williams",
+    "Kevin White",
+    "Name a first-round pick in the 2015 NFL Draft"
+   ],
+   [
+    2016,
+    0,
+    31,
+    3,
+    "Jared Goff",
+    "Paxton Lynch",
+    "Name a first-round pick in the 2016 NFL Draft"
+   ],
+   [
+    2017,
+    0,
+    32,
+    3,
+    "Patrick Mahomes",
+    "John Ross",
+    "Name a first-round pick in the 2017 NFL Draft"
+   ],
+   [
+    2018,
+    0,
+    32,
+    3,
+    "Josh Allen",
+    "Josh Rosen",
+    "Name a first-round pick in the 2018 NFL Draft"
+   ],
+   [
+    2019,
+    0,
+    32,
+    3,
+    "Kyler Murray",
+    "Dwayne Haskins",
+    "Name a first-round pick in the 2019 NFL Draft"
+   ],
+   [
+    2020,
+    0,
+    32,
+    3,
+    "Justin Herbert",
+    "Isaiah Wilson",
+    "Name a first-round pick in the 2020 NFL Draft"
+   ],
+   [
+    2021,
+    0,
+    32,
+    3,
+    "Micah Parsons",
+    "Caleb Farley",
+    "Name a first-round pick in the 2021 NFL Draft"
+   ],
+   [
+    2022,
+    0,
+    32,
+    3,
+    "Derek Stingley Jr.",
+    "Lewis Cine",
+    "Name a first-round pick in the 2022 NFL Draft"
+   ],
+   [
+    2023,
+    0,
+    31,
+    3,
+    "Jahmyr Gibbs",
+    "Lukas Van Ness",
+    "Name a first-round pick in the 2023 NFL Draft"
+   ],
+   [
+    2024,
+    0,
+    32,
+    3,
+    "Caleb Williams",
+    "Darius Robinson",
+    "Name a first-round pick in the 2024 NFL Draft"
+   ],
+   [
+    2025,
+    0,
+    32,
+    3,
+    "Jaxson Dart",
+    "Walter Nolen",
+    "Name a first-round pick in the 2025 NFL Draft"
+   ]
+  ]
+ },
+ "h_d_year_pb": {
+  "cat": "NFL Draft",
+  "variants": [
+   [
+    2000,
+    2,
+    16,
+    1,
+    "Tom Brady",
+    "Brian Jennings",
+    "Name a player from the 2000 NFL Draft class who made 2+ Pro Bowls"
+   ],
+   [
+    2001,
+    3,
+    18,
+    1,
+    "Drew Brees",
+    "Alge Crumpler",
+    "Name a player from the 2001 NFL Draft class who made 3+ Pro Bowls"
+   ],
+   [
+    2002,
+    1,
+    20,
+    2,
+    "Julius Peppers",
+    "LeCharles Bentley",
+    "Name a player from the 2002 NFL Draft class who made a Pro Bowl"
+   ],
+   [
+    2003,
+    2,
+    18,
+    1,
+    "Terrell Suggs",
+    "Ryan Pontbriand",
+    "Name a player from the 2003 NFL Draft class who made 2+ Pro Bowls"
+   ],
+   [
+    2004,
+    2,
+    22,
+    2,
+    "Philip Rivers",
+    "Nate Kaeding",
+    "Name a player from the 2004 NFL Draft class who made 2+ Pro Bowls"
+   ],
+   [
+    2005,
+    3,
+    16,
+    1,
+    "Aaron Rodgers",
+    "Shawne Merriman",
+    "Name a player from the 2005 NFL Draft class who made 3+ Pro Bowls"
+   ],
+   [
+    2006,
+    3,
+    16,
+    1,
+    "Jahri Evans",
+    "Stephen Gostkowski",
+    "Name a player from the 2006 NFL Draft class who made 3+ Pro Bowls"
+   ],
+   [
+    2007,
+    2,
+    20,
+    2,
+    "Adrian Peterson",
+    "Le'Ron McClain",
+    "Name a player from the 2007 NFL Draft class who made 2+ Pro Bowls"
+   ],
+   [
+    2008,
+    2,
+    17,
+    1,
+    "Matt Ryan",
+    "Matthew Slater",
+    "Name a player from the 2008 NFL Draft class who made 2+ Pro Bowls"
+   ],
+   [
+    2009,
+    1,
+    26,
+    2,
+    "Matthew Stafford",
+    "Cedric Peerman",
+    "Name a player from the 2009 NFL Draft class who made a Pro Bowl"
+   ],
+   [
+    2010,
+    3,
+    20,
+    2,
+    "Trent Williams",
+    "Andre Roberts",
+    "Name a player from the 2010 NFL Draft class who made 3+ Pro Bowls"
+   ],
+   [
+    2011,
+    3,
+    20,
+    2,
+    "Cam Newton",
+    "Mike Pouncey",
+    "Name a player from the 2011 NFL Draft class who made 3+ Pro Bowls"
+   ],
+   [
+    2012,
+    2,
+    22,
+    2,
+    "Russell Wilson",
+    "Justin Bethel",
+    "Name a player from the 2012 NFL Draft class who made 2+ Pro Bowls"
+   ],
+   [
+    2013,
+    3,
+    16,
+    1,
+    "Travis Kelce",
+    "Kyle Juszczyk",
+    "Name a player from the 2013 NFL Draft class who made 3+ Pro Bowls"
+   ],
+   [
+    2014,
+    3,
+    15,
+    1,
+    "Aaron Donald",
+    "Taylor Lewan",
+    "Name a player from the 2014 NFL Draft class who made 3+ Pro Bowls"
+   ],
+   [
+    2015,
+    1,
+    31,
+    3,
+    "Stefon Diggs",
+    "D.J. Alexander",
+    "Name a player from the 2015 NFL Draft class who made a Pro Bowl"
+   ],
+   [
+    2016,
+    3,
+    17,
+    1,
+    "Jared Goff",
+    "Ryan Kelly",
+    "Name a player from the 2016 NFL Draft class who made 3+ Pro Bowls"
+   ],
+   [
+    2017,
+    2,
+    21,
+    2,
+    "Patrick Mahomes",
+    "Marshon Lattimore",
+    "Name a player from the 2017 NFL Draft class who made 2+ Pro Bowls"
+   ],
+   [
+    2018,
+    3,
+    15,
+    1,
+    "Josh Allen",
+    "Wyatt Teller",
+    "Name a player from the 2018 NFL Draft class who made 3+ Pro Bowls"
+   ],
+   [
+    2019,
+    2,
+    16,
+    1,
+    "A.J. Brown",
+    "Erik McCoy",
+    "Name a player from the 2019 NFL Draft class who made 2+ Pro Bowls"
+   ],
+   [
+    2020,
+    1,
+    25,
+    2,
+    "Jalen Hurts",
+    "Devin Duvernay",
+    "Name a player from the 2020 NFL Draft class who made a Pro Bowl"
+   ],
+   [
+    2021,
+    1,
+    21,
+    2,
+    "Micah Parsons",
+    "Ben Skowronek",
+    "Name a player from the 2021 NFL Draft class who made a Pro Bowl"
+   ],
+   [
+    2022,
+    1,
+    19,
+    1,
+    "Brock Purdy",
+    "Jordan Stout",
+    "Name a player from the 2022 NFL Draft class who made a Pro Bowl"
+   ],
+   [
+    2023,
+    1,
+    18,
+    1,
+    "Jahmyr Gibbs",
+    "Marvin Mims",
+    "Name a player from the 2023 NFL Draft class who made a Pro Bowl"
+   ],
+   [
+    2024,
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    2025,
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ]
+  ]
+ },
+ "h_d_hof": {
+  "cat": "NFL Draft",
+  "variants": [
+   [
+    null,
+    0,
+    19,
+    1,
+    "Drew Brees",
+    "Devin Hester",
+    "Name a Hall of Famer drafted since 2000"
+   ]
+  ]
+ },
+ "h_d_top10_pos": {
+  "cat": "NFL Draft",
+  "variants": [
+   [
+    "QB",
+    2,
+    19,
+    1,
+    "Philip Rivers",
+    "Vince Young",
+    "Name a QB taken in the top 10 of the draft since 2000 who made 2+ Pro Bowls"
+   ],
+   [
+    "RB",
+    0,
+    18,
+    1,
+    "LaDainian Tomlinson",
+    "Trent Richardson",
+    "Name a running back taken in the top 10 of the draft since 2000"
+   ],
+   [
+    "WR",
+    0,
+    37,
+    3,
+    "Julio Jones",
+    "Kevin White",
+    "Name a wide receiver taken in the top 10 of the draft since 2000"
+   ],
+   [
+    "TE",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "OL",
+    2,
+    15,
+    1,
+    "Trent Williams",
+    "Jake Long",
+    "Name an offensive lineman taken in the top 10 of the draft since 2000 who made 2+ Pro Bowls"
+   ],
+   [
+    "DL",
+    2,
+    19,
+    1,
+    "Julius Peppers",
+    "Jalen Carter",
+    "Name a defensive lineman taken in the top 10 of the draft since 2000 who made 2+ Pro Bowls"
+   ],
+   [
+    "LB",
+    0,
+    24,
+    2,
+    "Brian Urlacher",
+    "Tyree Wilson",
+    "Name a linebacker taken in the top 10 of the draft since 2000"
+   ],
+   [
+    "DB",
+    2,
+    18,
+    1,
+    "Patrick Peterson",
+    "Jaycee Horn",
+    "Name a defensive back taken in the top 10 of the draft since 2000 who made 2+ Pro Bowls"
+   ]
+  ]
+ },
+ "h_d_round": {
+  "cat": "NFL Draft",
+  "variants": [
+   [
+    2,
+    5,
+    18,
+    1,
+    "Drew Brees",
+    "Jarvis Landry",
+    "Name a second-round NFL draft pick since 2000 who made 5+ Pro Bowls"
+   ],
+   [
+    3,
+    5,
+    15,
+    1,
+    "Russell Wilson",
+    "Trai Turner",
+    "Name a third-round NFL draft pick since 2000 who made 5+ Pro Bowls"
+   ],
+   [
+    4,
+    3,
+    17,
+    1,
+    "Jahri Evans",
+    "Kyle Juszczyk",
+    "Name a fourth-round NFL draft pick since 2000 who made 3+ Pro Bowls"
+   ],
+   [
+    5,
+    2,
+    20,
+    2,
+    "Tyreek Hill",
+    "Matthew Slater",
+    "Name a fifth-round NFL draft pick since 2000 who made 2+ Pro Bowls"
+   ],
+   [
+    6,
+    1,
+    32,
+    3,
+    "Tom Brady",
+    "Cedric Peerman",
+    "Name a sixth-round NFL draft pick since 2000 who made a Pro Bowl"
+   ],
+   [
+    7,
+    1,
+    21,
+    2,
+    "Scott Wells",
+    "Brian Jennings",
+    "Name a seventh-round NFL draft pick since 2000 who made a Pro Bowl"
+   ]
+  ]
+ },
+ "h_d_late_pos": {
+  "cat": "NFL Draft",
+  "variants": [
+   [
+    "QB",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "RB",
+    1,
+    22,
+    2,
+    "Aaron Jones",
+    "Jerome Felton",
+    "Name a running back drafted in round 4 or later since 2000 who made a Pro Bowl"
+   ],
+   [
+    "WR",
+    1,
+    24,
+    2,
+    "Tyreek Hill",
+    "Matthew Slater",
+    "Name a wide receiver drafted in round 4 or later since 2000 who made a Pro Bowl"
+   ],
+   [
+    "TE",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "OL",
+    1,
+    22,
+    2,
+    "Jahri Evans",
+    "Ryan Pontbriand",
+    "Name an offensive lineman drafted in round 4 or later since 2000 who made a Pro Bowl"
+   ],
+   [
+    "DL",
+    1,
+    23,
+    2,
+    "Jared Allen",
+    "Henry Melton",
+    "Name a defensive lineman drafted in round 4 or later since 2000 who made a Pro Bowl"
+   ],
+   [
+    "LB",
+    1,
+    12,
+    1,
+    "Adalius Thomas",
+    "D.J. Alexander",
+    "Name a linebacker drafted in round 4 or later since 2000 who made a Pro Bowl"
+   ],
+   [
+    "DB",
+    1,
+    28,
+    2,
+    "Richard Sherman",
+    "Hanik Milligan",
+    "Name a defensive back drafted in round 4 or later since 2000 who made a Pro Bowl"
+   ]
+  ]
+ },
+ "h_d_r1_pos": {
+  "cat": "NFL Draft",
+  "variants": [
+   [
+    "QB",
+    3,
+    17,
+    1,
+    "Aaron Rodgers",
+    "Andrew Luck",
+    "Name a QB taken in the first round since 2000 who made 3+ Pro Bowls"
+   ],
+   [
+    "RB",
+    2,
+    19,
+    1,
+    "LaDainian Tomlinson",
+    "Doug Martin",
+    "Name a running back taken in the first round since 2000 who made 2+ Pro Bowls"
+   ],
+   [
+    "WR",
+    4,
+    15,
+    1,
+    "Reggie Wayne",
+    "Cordarrelle Patterson",
+    "Name a wide receiver taken in the first round since 2000 who made 4+ Pro Bowls"
+   ],
+   [
+    "TE",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "OL",
+    5,
+    19,
+    1,
+    "Trent Williams",
+    "Travis Frederick",
+    "Name an offensive lineman taken in the first round since 2000 who made 5+ Pro Bowls"
+   ],
+   [
+    "DL",
+    5,
+    20,
+    2,
+    "Julius Peppers",
+    "Nick Bosa",
+    "Name a defensive lineman taken in the first round since 2000 who made 5+ Pro Bowls"
+   ],
+   [
+    "LB",
+    4,
+    16,
+    1,
+    "Brian Urlacher",
+    "Anthony Barr",
+    "Name a linebacker taken in the first round since 2000 who made 4+ Pro Bowls"
+   ],
+   [
+    "DB",
+    4,
+    18,
+    1,
+    "Patrick Peterson",
+    "Marshon Lattimore",
+    "Name a defensive back taken in the first round since 2000 who made 4+ Pro Bowls"
+   ]
+  ]
+ },
+ "h_d_r1_ap": {
+  "cat": "NFL Draft",
+  "variants": [
+   [
+    null,
+    4,
+    19,
+    1,
+    "Aaron Rodgers",
+    "Cordarrelle Patterson",
+    "Name a first-round pick since 2000 who was an All-Pro 4+ times"
+   ]
+  ]
+ },
+ "h_d_later_ap": {
+  "cat": "NFL Draft",
+  "variants": [
+   [
+    null,
+    3,
+    21,
+    2,
+    "Tom Brady",
+    "Andy Lee",
+    "Name a player drafted after the first round since 2000 who was an All-Pro 3+ times"
+   ]
+  ]
+ },
+ "h_d_r1_dec_qb": {
+  "cat": "NFL Draft",
+  "variants": [
+   [
+    "2000s",
+    0,
+    26,
+    2,
+    "Aaron Rodgers",
+    "Brady Quinn",
+    "Name a QB taken in the first round of the 2000s drafts"
+   ],
+   [
+    "2010s",
+    1,
+    16,
+    1,
+    "Cam Newton",
+    "Robert Griffin III",
+    "Name a QB taken in the first round of the 2010s drafts who made a Pro Bowl"
+   ],
+   [
+    "2020s",
+    0,
+    21,
+    2,
+    "Justin Herbert",
+    "Trey Lance",
+    "Name a QB taken in the first round of the 2020s drafts"
+   ]
+  ]
+ },
+ "h_d_r1_dec_rb": {
+  "cat": "NFL Draft",
+  "variants": [
+   [
+    "2000s",
+    1,
+    16,
+    1,
+    "LaDainian Tomlinson",
+    "Michael Bennett",
+    "Name a running back taken in the first round of the 2000s drafts who made a Pro Bowl"
+   ],
+   [
+    "2010s",
+    0,
+    16,
+    1,
+    "Christian McCaffrey",
+    "David Wilson",
+    "Name a running back taken in the first round of the 2010s drafts"
+   ],
+   [
+    "2020s",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ]
+  ]
+ },
+ "h_d_r1_dec_wr": {
+  "cat": "NFL Draft",
+  "variants": [
+   [
+    "2000s",
+    0,
+    43,
+    4,
+    "Reggie Wayne",
+    "Rashaun Woods",
+    "Name a wide receiver taken in the first round of the 2000s drafts"
+   ],
+   [
+    "2010s",
+    0,
+    34,
+    3,
+    "Julio Jones",
+    "A.J. Jenkins",
+    "Name a wide receiver taken in the first round of the 2010s drafts"
+   ],
+   [
+    "2020s",
+    0,
+    32,
+    3,
+    "Jaxon Smith-Njigba",
+    "Kadarius Toney",
+    "Name a wide receiver taken in the first round of the 2020s drafts"
+   ]
+  ]
+ },
+ "h_d_r12_dec_te": {
+  "cat": "NFL Draft",
+  "variants": [
+   [
+    "2000s",
+    0,
+    30,
+    3,
+    "Greg Olsen",
+    "Bennie Joppru",
+    "Name a tight end taken in the first two rounds of the 2000s drafts"
+   ],
+   [
+    "2010s",
+    0,
+    27,
+    2,
+    "Rob Gronkowski",
+    "Troy Niklas",
+    "Name a tight end taken in the first two rounds of the 2010s drafts"
+   ],
+   [
+    "2020s",
+    0,
+    17,
+    1,
+    "Trey McBride",
+    "Ben Sinnott",
+    "Name a tight end taken in the first two rounds of the 2020s drafts"
+   ]
+  ]
+ },
+ "h_d_r1_dec_ol": {
+  "cat": "NFL Draft",
+  "variants": [
+   [
+    "2000s",
+    2,
+    18,
+    1,
+    "Logan Mankins",
+    "Shawn Andrews",
+    "Name an offensive lineman taken in the first round of the 2000s drafts who made 2+ Pro Bowls"
+   ],
+   [
+    "2010s",
+    4,
+    15,
+    1,
+    "Trent Williams",
+    "Chris Lindstrom",
+    "Name an offensive lineman taken in the first round of the 2010s drafts who made 4+ Pro Bowls"
+   ],
+   [
+    "2020s",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ]
+  ]
+ },
+ "h_d_r1_dec_dl": {
+  "cat": "NFL Draft",
+  "variants": [
+   [
+    "2000s",
+    2,
+    16,
+    1,
+    "Julius Peppers",
+    "Albert Haynesworth",
+    "Name a defensive lineman taken in the first round of the 2000s drafts who made 2+ Pro Bowls"
+   ],
+   [
+    "2010s",
+    3,
+    23,
+    2,
+    "Aaron Donald",
+    "Brian Burns",
+    "Name a defensive lineman taken in the first round of the 2010s drafts who made 3+ Pro Bowls"
+   ],
+   [
+    "2020s",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ]
+  ]
+ },
+ "h_d_r1_dec_lb": {
+  "cat": "NFL Draft",
+  "variants": [
+   [
+    "2000s",
+    2,
+    16,
+    1,
+    "Brian Urlacher",
+    "Shawne Merriman",
+    "Name a linebacker taken in the first round of the 2000s drafts who made 2+ Pro Bowls"
+   ],
+   [
+    "2010s",
+    1,
+    17,
+    1,
+    "Khalil Mack",
+    "Dee Ford",
+    "Name a linebacker taken in the first round of the 2010s drafts who made a Pro Bowl"
+   ],
+   [
+    "2020s",
+    0,
+    17,
+    1,
+    "Micah Parsons",
+    "Jihaad Campbell",
+    "Name a linebacker taken in the first round of the 2020s drafts"
+   ]
+  ]
+ },
+ "h_d_r1_dec_db": {
+  "cat": "NFL Draft",
+  "variants": [
+   [
+    "2000s",
+    2,
+    21,
+    2,
+    "Ed Reed",
+    "Sean Taylor",
+    "Name a defensive back taken in the first round of the 2000s drafts who made 2+ Pro Bowls"
+   ],
+   [
+    "2010s",
+    3,
+    15,
+    1,
+    "Patrick Peterson",
+    "Marshon Lattimore",
+    "Name a defensive back taken in the first round of the 2010s drafts who made 3+ Pro Bowls"
+   ],
+   [
+    "2020s",
+    0,
+    28,
+    2,
+    "Patrick Surtain II",
+    "Lewis Cine",
+    "Name a defensive back taken in the first round of the 2020s drafts"
+   ]
+  ]
+ },
+ "h_d_late_dec": {
+  "cat": "NFL Draft",
+  "variants": [
+   [
+    "2000s",
+    2,
+    20,
+    2,
+    "Tom Brady",
+    "Brian Jennings",
+    "Name a player drafted in round 5 or later in the 2000s drafts who made 2+ Pro Bowls"
+   ],
+   [
+    "2010s",
+    1,
+    49,
+    4,
+    "Jason Kelce",
+    "Marc Mariani",
+    "Name a player drafted in round 5 or later in the 2010s drafts who made a Pro Bowl"
+   ],
+   [
+    "2020s",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ]
+  ]
+ },
+ "h_dc_pb": {
+  "cat": "Draft: colleges",
+  "variants": [
+   [
+    "Alabama",
+    3,
+    16,
+    1,
+    "Julio Jones",
+    "Landon Dickerson",
+    "Name a player from Alabama drafted since 2000 who made 3+ Pro Bowls"
+   ],
+   [
+    "Ohio St.",
+    1,
+    23,
+    2,
+    "Cameron Heyward",
+    "Ryan Shazier",
+    "Name a player from Ohio State drafted since 2000 who made a Pro Bowl"
+   ],
+   [
+    "LSU",
+    2,
+    15,
+    1,
+    "Patrick Peterson",
+    "Derek Stingley Jr.",
+    "Name a player from LSU drafted since 2000 who made 2+ Pro Bowls"
+   ],
+   [
+    "Georgia",
+    2,
+    15,
+    1,
+    "Matthew Stafford",
+    "Jalen Carter",
+    "Name a player from Georgia drafted since 2000 who made 2+ Pro Bowls"
+   ],
+   [
+    "USC",
+    1,
+    20,
+    2,
+    "Carson Palmer",
+    "Jordan Cameron",
+    "Name a player from USC drafted since 2000 who made a Pro Bowl"
+   ],
+   [
+    "Michigan",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "Florida",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "Clemson",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "Oklahoma",
+    2,
+    20,
+    2,
+    "Trent Williams",
+    "Marvin Mims",
+    "Name a player from Oklahoma drafted since 2000 who made 2+ Pro Bowls"
+   ],
+   [
+    "Texas",
+    1,
+    16,
+    1,
+    "Earl Thomas",
+    "Devin Duvernay",
+    "Name a player from Texas drafted since 2000 who made a Pro Bowl"
+   ],
+   [
+    "Miami (FL)",
+    2,
+    19,
+    1,
+    "Reggie Wayne",
+    "Bubba Franks",
+    "Name a player from Miami (FL) drafted since 2000 who made 2+ Pro Bowls"
+   ],
+   [
+    "Notre Dame",
+    1,
+    15,
+    1,
+    "Zack Martin",
+    "Ben Skowronek",
+    "Name a player from Notre Dame drafted since 2000 who made a Pro Bowl"
+   ],
+   [
+    "Florida St.",
+    1,
+    22,
+    2,
+    "Anquan Boldin",
+    "Jermaine Johnson II",
+    "Name a player from Florida State drafted since 2000 who made a Pro Bowl"
+   ],
+   [
+    "Auburn",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "Penn St.",
+    1,
+    15,
+    1,
+    "Tamba Hali",
+    "Michael Robinson",
+    "Name a player from Penn State drafted since 2000 who made a Pro Bowl"
+   ],
+   [
+    "Wisconsin",
+    1,
+    16,
+    1,
+    "Russell Wilson",
+    "Michael Bennett",
+    "Name a player from Wisconsin drafted since 2000 who made a Pro Bowl"
+   ],
+   [
+    "Oregon",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "Tennessee",
+    1,
+    17,
+    1,
+    "Jason Witten",
+    "Jalen Reeves-Maybin",
+    "Name a player from Tennessee drafted since 2000 who made a Pro Bowl"
+   ],
+   [
+    "Iowa",
+    1,
+    16,
+    1,
+    "Marshal Yanda",
+    "Cooper DeJean",
+    "Name a player from Iowa drafted since 2000 who made a Pro Bowl"
+   ],
+   [
+    "Virginia Tech",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "Stanford",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "Texas A&M",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "UCLA",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "South Carolina",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "Nebraska",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "North Carolina",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "Arkansas",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "California",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "Washington",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "Mississippi",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "Michigan St.",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "Utah",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "Pittsburgh",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "TCU",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "Louisville",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "North Carolina St.",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "Arizona St.",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "Mississippi St.",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "Maryland",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "Kansas St.",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "Missouri",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "Purdue",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "Oregon St.",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "West Virginia",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ]
+  ]
+ },
+ "h_dc_r1": {
+  "cat": "Draft: colleges",
+  "variants": [
+   [
+    "Alabama",
+    2,
+    17,
+    1,
+    "Julio Jones",
+    "Will Anderson",
+    "Name a first-round pick from Alabama since 2000 who made 2+ Pro Bowls"
+   ],
+   [
+    "Ohio St.",
+    1,
+    17,
+    1,
+    "Cameron Heyward",
+    "Ryan Shazier",
+    "Name a first-round pick from Ohio State since 2000 who made a Pro Bowl"
+   ],
+   [
+    "LSU",
+    1,
+    17,
+    1,
+    "Patrick Peterson",
+    "Eric Reid",
+    "Name a first-round pick from LSU since 2000 who made a Pro Bowl"
+   ],
+   [
+    "Georgia",
+    0,
+    35,
+    3,
+    "Matthew Stafford",
+    "Lewis Cine",
+    "Name a first-round pick from Georgia since 2000"
+   ],
+   [
+    "USC",
+    0,
+    27,
+    2,
+    "Carson Palmer",
+    "R. Jay Soward",
+    "Name a first-round pick from USC since 2000"
+   ],
+   [
+    "Michigan",
+    0,
+    23,
+    2,
+    "Steve Hutchinson",
+    "Kenneth Grant",
+    "Name a first-round pick from Michigan since 2000"
+   ],
+   [
+    "Florida",
+    0,
+    28,
+    2,
+    "Maurkice Pouncey",
+    "Jarvis Moss",
+    "Name a first-round pick from Florida since 2000"
+   ],
+   [
+    "Clemson",
+    0,
+    21,
+    2,
+    "DeAndre Hopkins",
+    "Nate Wiggins",
+    "Name a first-round pick from Clemson since 2000"
+   ],
+   [
+    "Oklahoma",
+    0,
+    20,
+    2,
+    "Trent Williams",
+    "Andre Woolfolk",
+    "Name a first-round pick from Oklahoma since 2000"
+   ],
+   [
+    "Texas",
+    0,
+    22,
+    2,
+    "Earl Thomas",
+    "Jahdae Barron",
+    "Name a first-round pick from Texas since 2000"
+   ],
+   [
+    "Miami (FL)",
+    1,
+    18,
+    1,
+    "Reggie Wayne",
+    "Bubba Franks",
+    "Name a first-round pick from Miami (FL) since 2000 who made a Pro Bowl"
+   ],
+   [
+    "Notre Dame",
+    0,
+    13,
+    1,
+    "Zack Martin",
+    "Brady Quinn",
+    "Name a first-round pick from Notre Dame since 2000"
+   ],
+   [
+    "Florida St.",
+    0,
+    26,
+    2,
+    "Jalen Ramsey",
+    "Jamal Reynolds",
+    "Name a first-round pick from Florida State since 2000"
+   ],
+   [
+    "Auburn",
+    0,
+    12,
+    1,
+    "Cam Newton",
+    "Noah Igbinoghene",
+    "Name a first-round pick from Auburn since 2000"
+   ],
+   [
+    "Penn St.",
+    0,
+    18,
+    1,
+    "Tamba Hali",
+    "Chop Robinson",
+    "Name a first-round pick from Penn State since 2000"
+   ],
+   [
+    "Wisconsin",
+    0,
+    15,
+    1,
+    "J.J. Watt",
+    "Wendell Bryant",
+    "Name a first-round pick from Wisconsin since 2000"
+   ],
+   [
+    "Oregon",
+    0,
+    15,
+    1,
+    "Haloti Ngata",
+    "Derrick Harmon",
+    "Name a first-round pick from Oregon since 2000"
+   ],
+   [
+    "Tennessee",
+    0,
+    17,
+    1,
+    "Shaun Ellis",
+    "Justin Harrell",
+    "Name a first-round pick from Tennessee since 2000"
+   ],
+   [
+    "Iowa",
+    0,
+    13,
+    1,
+    "Chad Greenway",
+    "Lukas Van Ness",
+    "Name a first-round pick from Iowa since 2000"
+   ],
+   [
+    "Virginia Tech",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "Stanford",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "Texas A&M",
+    0,
+    13,
+    1,
+    "Von Miller",
+    "Shemar Stewart",
+    "Name a first-round pick from Texas A&M since 2000"
+   ],
+   [
+    "UCLA",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "South Carolina",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "Nebraska",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "North Carolina",
+    0,
+    12,
+    1,
+    "Julius Peppers",
+    "Kentwan Balmer",
+    "Name a first-round pick from North Carolina since 2000"
+   ],
+   [
+    "Arkansas",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "California",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "Washington",
+    0,
+    15,
+    1,
+    "Marcus Peters",
+    "John Ross",
+    "Name a first-round pick from Washington since 2000"
+   ],
+   [
+    "Mississippi",
+    0,
+    12,
+    1,
+    "Eli Manning",
+    "Walter Nolen",
+    "Name a first-round pick from Ole Miss since 2000"
+   ],
+   [
+    "Michigan St.",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "Utah",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "Pittsburgh",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "TCU",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "Louisville",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "North Carolina St.",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "Arizona St.",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "Mississippi St.",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "Maryland",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "Kansas St.",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "Missouri",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "Purdue",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "Oregon St.",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "West Virginia",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ]
+  ]
+ },
+ "h_dc_def": {
+  "cat": "Draft: colleges",
+  "variants": [
+   [
+    "Alabama",
+    1,
+    18,
+    1,
+    "C.J. Mosley",
+    "Brian Branch",
+    "Name a defender from Alabama drafted since 2000 who made a Pro Bowl"
+   ],
+   [
+    "Ohio St.",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "LSU",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "Georgia",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "USC",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "Michigan",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "Florida",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "Clemson",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "Oklahoma",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "Texas",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "Miami (FL)",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "Notre Dame",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "Florida St.",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "Auburn",
+    0,
+    49,
+    4,
+    "Karlos Dansby",
+    "Zach Clayton",
+    "Name a defender from Auburn drafted since 2000"
+   ],
+   [
+    "Penn St.",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "Wisconsin",
+    0,
+    42,
+    4,
+    "J.J. Watt",
+    "Mike Echols",
+    "Name a defender from Wisconsin drafted since 2000"
+   ],
+   [
+    "Oregon",
+    0,
+    48,
+    4,
+    "Haloti Ngata",
+    "Thomas Graham",
+    "Name a defender from Oregon drafted since 2000"
+   ],
+   [
+    "Tennessee",
+    0,
+    47,
+    4,
+    "Shaun Ellis",
+    "Teddy Gaines",
+    "Name a defender from Tennessee drafted since 2000"
+   ],
+   [
+    "Iowa",
+    0,
+    47,
+    4,
+    "Chad Greenway",
+    "Mike Humpal",
+    "Name a defender from Iowa drafted since 2000"
+   ],
+   [
+    "Virginia Tech",
+    0,
+    44,
+    4,
+    "Tremaine Edmunds",
+    "Jonathan Lewis",
+    "Name a defender from Virginia Tech drafted since 2000"
+   ],
+   [
+    "Stanford",
+    0,
+    35,
+    3,
+    "Richard Sherman",
+    "Jared Newberry",
+    "Name a defender from Stanford drafted since 2000"
+   ],
+   [
+    "Texas A&M",
+    0,
+    38,
+    3,
+    "Von Miller",
+    "Shemar Turner",
+    "Name a defender from Texas A&M drafted since 2000"
+   ],
+   [
+    "UCLA",
+    0,
+    41,
+    4,
+    "Eric Kendricks",
+    "Jordan Zumwalt",
+    "Name a defender from UCLA drafted since 2000"
+   ],
+   [
+    "South Carolina",
+    0,
+    47,
+    4,
+    "John Abraham",
+    "T.J. Brunson",
+    "Name a defender from South Carolina drafted since 2000"
+   ],
+   [
+    "Nebraska",
+    0,
+    45,
+    4,
+    "Ndamukong Suh",
+    "Titus Adams",
+    "Name a defender from Nebraska drafted since 2000"
+   ],
+   [
+    "North Carolina",
+    0,
+    34,
+    3,
+    "Julius Peppers",
+    "Raymond Vohasek",
+    "Name a defender from North Carolina drafted since 2000"
+   ],
+   [
+    "Arkansas",
+    0,
+    29,
+    2,
+    "Deatrich Wise Jr.",
+    "Tevin Mitchel",
+    "Name a defender from Arkansas drafted since 2000"
+   ],
+   [
+    "California",
+    0,
+    39,
+    3,
+    "Cameron Jordan",
+    "Trevor Guyton",
+    "Name a defender from California drafted since 2000"
+   ],
+   [
+    "Washington",
+    0,
+    42,
+    4,
+    "Budda Baker",
+    "Travis Feeney",
+    "Name a defender from Washington drafted since 2000"
+   ],
+   [
+    "Mississippi",
+    0,
+    32,
+    3,
+    "Patrick Willis",
+    "Senquez Golson",
+    "Name a defender from Ole Miss drafted since 2000"
+   ],
+   [
+    "Michigan St.",
+    0,
+    28,
+    2,
+    "Julian Peterson",
+    "T.J. Turner",
+    "Name a defender from Michigan State drafted since 2000"
+   ],
+   [
+    "Utah",
+    0,
+    38,
+    3,
+    "Eric Weddle",
+    "Spencer Toone",
+    "Name a defender from Utah drafted since 2000"
+   ],
+   [
+    "Pittsburgh",
+    0,
+    31,
+    3,
+    "Aaron Donald",
+    "M.J. Devonshire",
+    "Name a defender from Pittsburgh drafted since 2000"
+   ],
+   [
+    "TCU",
+    0,
+    33,
+    3,
+    "Jerry Hughes",
+    "Stephen Hodge",
+    "Name a defender from TCU drafted since 2000"
+   ],
+   [
+    "Louisville",
+    0,
+    32,
+    3,
+    "Elvis Dumervil",
+    "Trevon Young",
+    "Name a defender from Louisville drafted since 2000"
+   ],
+   [
+    "North Carolina St.",
+    0,
+    37,
+    3,
+    "Mario Williams",
+    "Terrell Manning",
+    "Name a defender from North Carolina State drafted since 2000"
+   ],
+   [
+    "Arizona St.",
+    0,
+    26,
+    2,
+    "Terrell Suggs",
+    "Marcus Hardison",
+    "Name a defender from Arizona State drafted since 2000"
+   ],
+   [
+    "Mississippi St.",
+    0,
+    38,
+    3,
+    "Chris Jones",
+    "Matthew Wells",
+    "Name a defender from Mississippi State drafted since 2000"
+   ],
+   [
+    "Maryland",
+    0,
+    34,
+    3,
+    "Kris Jenkins",
+    "Tommy Akingbesote",
+    "Name a defender from Maryland drafted since 2000"
+   ],
+   [
+    "Kansas St.",
+    0,
+    30,
+    3,
+    "Terence Newman",
+    "Wyatt Hubert",
+    "Name a defender from Kansas State drafted since 2000"
+   ],
+   [
+    "Missouri",
+    0,
+    29,
+    2,
+    "Justin Smith",
+    "Terry Beckner",
+    "Name a defender from Missouri drafted since 2000"
+   ],
+   [
+    "Purdue",
+    0,
+    31,
+    3,
+    "Ryan Kerrigan",
+    "Jalen Graham",
+    "Name a defender from Purdue drafted since 2000"
+   ],
+   [
+    "Oregon St.",
+    0,
+    29,
+    2,
+    "Nick Barnett",
+    "Slade Norris",
+    "Name a defender from Oregon State drafted since 2000"
+   ],
+   [
+    "West Virginia",
+    0,
+    25,
+    2,
+    "Adam Jones",
+    "Shaquille Riddick",
+    "Name a defender from West Virginia drafted since 2000"
+   ]
+  ]
+ },
+ "h_dc_off": {
+  "cat": "Draft: colleges",
+  "variants": [
+   [
+    "Alabama",
+    1,
+    17,
+    1,
+    "Julio Jones",
+    "Le'Ron McClain",
+    "Name an offensive player from Alabama drafted since 2000 who made a Pro Bowl"
+   ],
+   [
+    "Ohio St.",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "LSU",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "Georgia",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "USC",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "Michigan",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "Florida",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "Clemson",
+    0,
+    40,
+    4,
+    "DeAndre Hopkins",
+    "Zac Brooks",
+    "Name an offensive player from Clemson drafted since 2000"
+   ],
+   [
+    "Oklahoma",
+    2,
+    16,
+    1,
+    "Trent Williams",
+    "Marvin Mims",
+    "Name an offensive player from Oklahoma drafted since 2000 who made 2+ Pro Bowls"
+   ],
+   [
+    "Texas",
+    0,
+    44,
+    4,
+    "Bijan Robinson",
+    "Sloan Thomas",
+    "Name an offensive player from Texas drafted since 2000"
+   ],
+   [
+    "Miami (FL)",
+    1,
+    15,
+    1,
+    "Reggie Wayne",
+    "Bubba Franks",
+    "Name an offensive player from Miami (FL) drafted since 2000 who made a Pro Bowl"
+   ],
+   [
+    "Notre Dame",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "Florida St.",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "Auburn",
+    0,
+    41,
+    4,
+    "Cam Newton",
+    "Jeris McIntyre",
+    "Name an offensive player from Auburn drafted since 2000"
+   ],
+   [
+    "Penn St.",
+    0,
+    49,
+    4,
+    "Saquon Barkley",
+    "Tyler Reed",
+    "Name an offensive player from Penn State drafted since 2000"
+   ],
+   [
+    "Wisconsin",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "Oregon",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "Tennessee",
+    0,
+    50,
+    5,
+    "Jason Witten",
+    "Reggie Coleman",
+    "Name an offensive player from Tennessee drafted since 2000"
+   ],
+   [
+    "Iowa",
+    0,
+    41,
+    4,
+    "Marshal Yanda",
+    "Ricky Stanzi",
+    "Name an offensive player from Iowa drafted since 2000"
+   ],
+   [
+    "Virginia Tech",
+    0,
+    39,
+    3,
+    "Michael Vick",
+    "Vinston Painter",
+    "Name an offensive player from Virginia Tech drafted since 2000"
+   ],
+   [
+    "Stanford",
+    0,
+    46,
+    4,
+    "Christian McCaffrey",
+    "Todd Husak",
+    "Name an offensive player from Stanford drafted since 2000"
+   ],
+   [
+    "Texas A&M",
+    0,
+    43,
+    4,
+    "Ryan Tannehill",
+    "Ryan Swope",
+    "Name an offensive player from Texas A&M drafted since 2000"
+   ],
+   [
+    "UCLA",
+    0,
+    40,
+    4,
+    "Maurice Jones-Drew",
+    "Thomas Duarte",
+    "Name an offensive player from UCLA drafted since 2000"
+   ],
+   [
+    "South Carolina",
+    0,
+    34,
+    3,
+    "Deebo Samuel",
+    "Rory Anderson",
+    "Name an offensive player from South Carolina drafted since 2000"
+   ],
+   [
+    "Nebraska",
+    0,
+    28,
+    2,
+    "Dominic Raiola",
+    "Thomas Fidone",
+    "Name an offensive player from Nebraska drafted since 2000"
+   ],
+   [
+    "North Carolina",
+    0,
+    44,
+    4,
+    "Giovani Bernard",
+    "Travis Bond",
+    "Name an offensive player from North Carolina drafted since 2000"
+   ],
+   [
+    "Arkansas",
+    0,
+    40,
+    4,
+    "Bobbie Williams",
+    "Tyler Wilson",
+    "Name an offensive player from Arkansas drafted since 2000"
+   ],
+   [
+    "California",
+    0,
+    32,
+    3,
+    "Aaron Rodgers",
+    "Mark Wilson",
+    "Name an offensive player from California drafted since 2000"
+   ],
+   [
+    "Washington",
+    0,
+    29,
+    2,
+    "Khalif Barnes",
+    "Jacob Eason",
+    "Name an offensive player from Washington drafted since 2000"
+   ],
+   [
+    "Mississippi",
+    0,
+    39,
+    3,
+    "Eli Manning",
+    "Chad Kelly",
+    "Name an offensive player from Ole Miss drafted since 2000"
+   ],
+   [
+    "Michigan St.",
+    0,
+    37,
+    3,
+    "Kirk Cousins",
+    "Jeff Smoker",
+    "Name an offensive player from Michigan State drafted since 2000"
+   ],
+   [
+    "Utah",
+    0,
+    27,
+    2,
+    "Steve Smith Sr.",
+    "Joe Williams",
+    "Name an offensive player from Utah drafted since 2000"
+   ],
+   [
+    "Pittsburgh",
+    0,
+    37,
+    3,
+    "Larry Fitzgerald",
+    "Gavin Bartholomew",
+    "Name an offensive player from Pittsburgh drafted since 2000"
+   ],
+   [
+    "TCU",
+    0,
+    35,
+    3,
+    "LaDainian Tomlinson",
+    "Tayo Fabuluje",
+    "Name an offensive player from TCU drafted since 2000"
+   ],
+   [
+    "Louisville",
+    0,
+    33,
+    3,
+    "Lamar Jackson",
+    "Brian Brohm",
+    "Name an offensive player from Louisville drafted since 2000"
+   ],
+   [
+    "North Carolina St.",
+    0,
+    25,
+    2,
+    "Philip Rivers",
+    "Dylan McMahon",
+    "Name an offensive player from North Carolina State drafted since 2000"
+   ],
+   [
+    "Arizona St.",
+    0,
+    35,
+    3,
+    "Kyle Kosier",
+    "Travis Scott",
+    "Name an offensive player from Arizona State drafted since 2000"
+   ],
+   [
+    "Mississippi St.",
+    0,
+    22,
+    2,
+    "Dak Prescott",
+    "Wes Shivers",
+    "Name an offensive player from Mississippi State drafted since 2000"
+   ],
+   [
+    "Maryland",
+    0,
+    25,
+    2,
+    "Stefon Diggs",
+    "Kaden Prather",
+    "Name an offensive player from Maryland drafted since 2000"
+   ],
+   [
+    "Kansas St.",
+    0,
+    29,
+    2,
+    "Jordy Nelson",
+    "Tavon Rooks",
+    "Name an offensive player from Kansas State drafted since 2000"
+   ],
+   [
+    "Missouri",
+    0,
+    27,
+    2,
+    "Mitch Morse",
+    "Tony Palmer",
+    "Name an offensive player from Missouri drafted since 2000"
+   ],
+   [
+    "Purdue",
+    0,
+    26,
+    2,
+    "Drew Brees",
+    "Nick Mondek",
+    "Name an offensive player from Purdue drafted since 2000"
+   ],
+   [
+    "Oregon St.",
+    0,
+    27,
+    2,
+    "Chad Johnson",
+    "Sean Canfield",
+    "Name an offensive player from Oregon State drafted since 2000"
+   ],
+   [
+    "West Virginia",
+    0,
+    27,
+    2,
+    "Geno Smith",
+    "Selvish Capers",
+    "Name an offensive player from West Virginia drafted since 2000"
+   ]
+  ]
+ },
+ "h_dc_late": {
+  "cat": "Draft: colleges",
+  "variants": [
+   [
+    "Alabama",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "Ohio St.",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "LSU",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "Georgia",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "USC",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "Michigan",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "Florida",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "Clemson",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "Oklahoma",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "Texas",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "Miami (FL)",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "Notre Dame",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "Florida St.",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "Auburn",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "Penn St.",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "Wisconsin",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "Oregon",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "Tennessee",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "Iowa",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "Virginia Tech",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "Stanford",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "Texas A&M",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "UCLA",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "South Carolina",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "Nebraska",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "North Carolina",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "Arkansas",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "California",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "Washington",
+    0,
+    37,
+    3,
+    "Dashon Goldson",
+    "Jacob Eason",
+    "Name a player from Washington drafted after round 2 since 2000"
+   ],
+   [
+    "Mississippi",
+    0,
+    45,
+    4,
+    "Mike Wallace",
+    "Chad Kelly",
+    "Name a player from Ole Miss drafted after round 2 since 2000"
+   ],
+   [
+    "Michigan St.",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "Utah",
+    0,
+    48,
+    4,
+    "Steve Smith Sr.",
+    "Spencer Toone",
+    "Name a player from Utah drafted after round 2 since 2000"
+   ],
+   [
+    "Pittsburgh",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "TCU",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "Louisville",
+    0,
+    50,
+    5,
+    "Elvis Dumervil",
+    "Trevon Young",
+    "Name a player from Louisville drafted after round 2 since 2000"
+   ],
+   [
+    "North Carolina St.",
+    0,
+    50,
+    5,
+    "Joe Thuney",
+    "Terrell Manning",
+    "Name a player from North Carolina State drafted after round 2 since 2000"
+   ],
+   [
+    "Arizona St.",
+    0,
+    50,
+    5,
+    "Lawrence Guy",
+    "Travis Scott",
+    "Name a player from Arizona State drafted after round 2 since 2000"
+   ],
+   [
+    "Mississippi St.",
+    0,
+    47,
+    4,
+    "Dak Prescott",
+    "Wes Shivers",
+    "Name a player from Mississippi State drafted after round 2 since 2000"
+   ],
+   [
+    "Maryland",
+    0,
+    47,
+    4,
+    "Stefon Diggs",
+    "Tommy Akingbesote",
+    "Name a player from Maryland drafted after round 2 since 2000"
+   ],
+   [
+    "Kansas St.",
+    0,
+    45,
+    4,
+    "Tyler Lockett",
+    "Wyatt Hubert",
+    "Name a player from Kansas State drafted after round 2 since 2000"
+   ],
+   [
+    "Missouri",
+    0,
+    36,
+    3,
+    "Connor McGovern",
+    "Tony Palmer",
+    "Name a player from Missouri drafted after round 2 since 2000"
+   ],
+   [
+    "Purdue",
+    0,
+    48,
+    4,
+    "Nick Hardwick",
+    "Travis Dorsch",
+    "Name a player from Purdue drafted after round 2 since 2000"
+   ],
+   [
+    "Oregon St.",
+    0,
+    46,
+    4,
+    "Jordan Poyer",
+    "Slade Norris",
+    "Name a player from Oregon State drafted after round 2 since 2000"
+   ],
+   [
+    "West Virginia",
+    0,
+    41,
+    4,
+    "Marc Bulger",
+    "Shaquille Riddick",
+    "Name a player from West Virginia drafted after round 2 since 2000"
+   ]
+  ]
+ },
+ "h_dtm_pb": {
+  "cat": "Draft: teams",
+  "variants": [
+   [
+    "ARI",
+    2,
+    17,
+    1,
+    "Calais Campbell",
+    "Justin Bethel",
+    "Name a player the Cardinals drafted since 2000 who made 2+ Pro Bowls"
+   ],
+   [
+    "ATL",
+    1,
+    21,
+    2,
+    "Matt Ryan",
+    "Keanu Neal",
+    "Name a player the Falcons drafted since 2000 who made a Pro Bowl"
+   ],
+   [
+    "BAL",
+    3,
+    15,
+    1,
+    "Lamar Jackson",
+    "Kyle Juszczyk",
+    "Name a player the Ravens drafted since 2000 who made 3+ Pro Bowls"
+   ],
+   [
+    "BUF",
+    1,
+    23,
+    2,
+    "Josh Allen",
+    "Dawson Knox",
+    "Name a player the Bills drafted since 2000 who made a Pro Bowl"
+   ],
+   [
+    "CAR",
+    2,
+    15,
+    1,
+    "Julius Peppers",
+    "Jaycee Horn",
+    "Name a player the Panthers drafted since 2000 who made 2+ Pro Bowls"
+   ],
+   [
+    "CHI",
+    1,
+    23,
+    2,
+    "Brian Urlacher",
+    "Johnny Knox",
+    "Name a player the Bears drafted since 2000 who made a Pro Bowl"
+   ],
+   [
+    "CIN",
+    1,
+    22,
+    2,
+    "Carson Palmer",
+    "Tyler Eifert",
+    "Name a player the Bengals drafted since 2000 who made a Pro Bowl"
+   ],
+   [
+    "CLE",
+    1,
+    18,
+    1,
+    "Myles Garrett",
+    "Shedeur Sanders",
+    "Name a player the Browns drafted since 2000 who made a Pro Bowl"
+   ],
+   [
+    "DAL",
+    3,
+    16,
+    1,
+    "Dak Prescott",
+    "Tyler Smith",
+    "Name a player the Cowboys drafted since 2000 who made 3+ Pro Bowls"
+   ],
+   [
+    "DEN",
+    2,
+    15,
+    1,
+    "Von Miller",
+    "Marvin Mims",
+    "Name a player the Broncos drafted since 2000 who made 2+ Pro Bowls"
+   ],
+   [
+    "DET",
+    1,
+    30,
+    3,
+    "Matthew Stafford",
+    "Jerome Felton",
+    "Name a player the Lions drafted since 2000 who made a Pro Bowl"
+   ],
+   [
+    "GB",
+    2,
+    15,
+    1,
+    "Aaron Rodgers",
+    "Bubba Franks",
+    "Name a player the Packers drafted since 2000 who made 2+ Pro Bowls"
+   ],
+   [
+    "HOU",
+    1,
+    25,
+    2,
+    "J.J. Watt",
+    "Jerome Mathis",
+    "Name a player the Texans drafted since 2000 who made a Pro Bowl"
+   ],
+   [
+    "IND",
+    1,
+    19,
+    1,
+    "Reggie Wayne",
+    "Pat McAfee",
+    "Name a player the Colts drafted since 2000 who made a Pro Bowl"
+   ],
+   [
+    "JAX",
+    1,
+    19,
+    1,
+    "Jalen Ramsey",
+    "Logan Cooke",
+    "Name a player the Jaguars drafted since 2000 who made a Pro Bowl"
+   ],
+   [
+    "KC",
+    2,
+    20,
+    2,
+    "Patrick Mahomes",
+    "Dustin Colquitt",
+    "Name a player the Chiefs drafted since 2000 who made 2+ Pro Bowls"
+   ],
+   [
+    "LA",
+    1,
+    16,
+    1,
+    "Aaron Donald",
+    "Pharoh Cooper",
+    "Name a player the Rams drafted since 2000 who made a Pro Bowl"
+   ],
+   [
+    "LAC",
+    2,
+    18,
+    1,
+    "Drew Brees",
+    "Nate Kaeding",
+    "Name a player the Chargers drafted since 2000 who made 2+ Pro Bowls"
+   ],
+   [
+    "LV",
+    1,
+    12,
+    1,
+    "Khalil Mack",
+    "Hunter Renfrow",
+    "Name a player the Raiders drafted since 2000 who made a Pro Bowl"
+   ],
+   [
+    "MIA",
+    1,
+    23,
+    2,
+    "Ryan Tannehill",
+    "Jakeem Grant",
+    "Name a player the Dolphins drafted since 2000 who made a Pro Bowl"
+   ],
+   [
+    "MIN",
+    1,
+    23,
+    2,
+    "Kevin Williams",
+    "Blair Walsh",
+    "Name a player the Vikings drafted since 2000 who made a Pro Bowl"
+   ],
+   [
+    "NE",
+    2,
+    16,
+    1,
+    "Tom Brady",
+    "Matthew Slater",
+    "Name a player the Patriots drafted since 2000 who made 2+ Pro Bowls"
+   ],
+   [
+    "NO",
+    2,
+    20,
+    2,
+    "Jahri Evans",
+    "LeCharles Bentley",
+    "Name a player the Saints drafted since 2000 who made 2+ Pro Bowls"
+   ],
+   [
+    "NYG",
+    1,
+    19,
+    1,
+    "Philip Rivers",
+    "David Tyree",
+    "Name a player the Giants drafted since 2000 who made a Pro Bowl"
+   ],
+   [
+    "NYJ",
+    1,
+    21,
+    2,
+    "Demario Davis",
+    "Justin Miller",
+    "Name a player the Jets drafted since 2000 who made a Pro Bowl"
+   ],
+   [
+    "PHI",
+    2,
+    15,
+    1,
+    "Jason Kelce",
+    "Cam Jurgens",
+    "Name a player the Eagles drafted since 2000 who made 2+ Pro Bowls"
+   ],
+   [
+    "PIT",
+    1,
+    25,
+    2,
+    "Ben Roethlisberger",
+    "Ryan Shazier",
+    "Name a player the Steelers drafted since 2000 who made a Pro Bowl"
+   ],
+   [
+    "SEA",
+    1,
+    26,
+    2,
+    "Russell Wilson",
+    "Alex Bannister",
+    "Name a player the Seahawks drafted since 2000 who made a Pro Bowl"
+   ],
+   [
+    "SF",
+    2,
+    16,
+    1,
+    "Alex Smith",
+    "Brian Jennings",
+    "Name a player the 49ers drafted since 2000 who made 2+ Pro Bowls"
+   ],
+   [
+    "TB",
+    1,
+    16,
+    1,
+    "Lavonte David",
+    "Doug Martin",
+    "Name a player the Buccaneers drafted since 2000 who made a Pro Bowl"
+   ],
+   [
+    "TEN",
+    1,
+    22,
+    2,
+    "Derrick Henry",
+    "Marc Mariani",
+    "Name a player the Titans drafted since 2000 who made a Pro Bowl"
+   ],
+   [
+    "WAS",
+    1,
+    20,
+    2,
+    "Trent Williams",
+    "Jordan Reed",
+    "Name a player the Commanders drafted since 2000 who made a Pro Bowl"
+   ]
+  ]
+ },
+ "h_dtm_r1": {
+  "cat": "Draft: teams",
+  "variants": [
+   [
+    "ARI",
+    0,
+    27,
+    2,
+    "Patrick Peterson",
+    "Walter Nolen",
+    "Name a first-round pick of the Cardinals since 2000"
+   ],
+   [
+    "ATL",
+    0,
+    26,
+    2,
+    "Matt Ryan",
+    "James Pearce",
+    "Name a first-round pick of the Falcons since 2000"
+   ],
+   [
+    "BAL",
+    0,
+    28,
+    2,
+    "Lamar Jackson",
+    "Malaki Starks",
+    "Name a first-round pick of the Ravens since 2000"
+   ],
+   [
+    "BUF",
+    0,
+    26,
+    2,
+    "Josh Allen",
+    "Maxwell Hairston",
+    "Name a first-round pick of the Bills since 2000"
+   ],
+   [
+    "CAR",
+    0,
+    25,
+    2,
+    "Julius Peppers",
+    "Rashard Anderson",
+    "Name a first-round pick of the Panthers since 2000"
+   ],
+   [
+    "CHI",
+    0,
+    22,
+    2,
+    "Brian Urlacher",
+    "Kevin White",
+    "Name a first-round pick of the Bears since 2000"
+   ],
+   [
+    "CIN",
+    0,
+    27,
+    2,
+    "Carson Palmer",
+    "Shemar Stewart",
+    "Name a first-round pick of the Bengals since 2000"
+   ],
+   [
+    "CLE",
+    0,
+    28,
+    2,
+    "Myles Garrett",
+    "Brady Quinn",
+    "Name a first-round pick of the Browns since 2000"
+   ],
+   [
+    "DAL",
+    0,
+    23,
+    2,
+    "Zack Martin",
+    "Tyler Booker",
+    "Name a first-round pick of the Cowboys since 2000"
+   ],
+   [
+    "DEN",
+    0,
+    24,
+    2,
+    "Von Miller",
+    "Paxton Lynch",
+    "Name a first-round pick of the Broncos since 2000"
+   ],
+   [
+    "DET",
+    0,
+    31,
+    3,
+    "Matthew Stafford",
+    "Tyleik Williams",
+    "Name a first-round pick of the Lions since 2000"
+   ],
+   [
+    "GB",
+    0,
+    27,
+    2,
+    "Aaron Rodgers",
+    "Justin Harrell",
+    "Name a first-round pick of the Packers since 2000"
+   ],
+   [
+    "HOU",
+    0,
+    22,
+    2,
+    "J.J. Watt",
+    "Kenyon Green",
+    "Name a first-round pick of the Texans since 2000"
+   ],
+   [
+    "IND",
+    0,
+    20,
+    2,
+    "Reggie Wayne",
+    "Anthony Richardson",
+    "Name a first-round pick of the Colts since 2000"
+   ],
+   [
+    "JAX",
+    0,
+    29,
+    2,
+    "Jalen Ramsey",
+    "R. Jay Soward",
+    "Name a first-round pick of the Jaguars since 2000"
+   ],
+   [
+    "KC",
+    0,
+    22,
+    2,
+    "Patrick Mahomes",
+    "Josh Simmons",
+    "Name a first-round pick of the Chiefs since 2000"
+   ],
+   [
+    "LA",
+    0,
+    22,
+    2,
+    "Aaron Donald",
+    "Tye Hill",
+    "Name a first-round pick of the Rams since 2000"
+   ],
+   [
+    "LAC",
+    0,
+    27,
+    2,
+    "LaDainian Tomlinson",
+    "Larry English",
+    "Name a first-round pick of the Chargers since 2000"
+   ],
+   [
+    "LV",
+    0,
+    28,
+    2,
+    "Khalil Mack",
+    "Damon Arnette",
+    "Name a first-round pick of the Raiders since 2000"
+   ],
+   [
+    "MIA",
+    0,
+    24,
+    2,
+    "Ryan Tannehill",
+    "Kenneth Grant",
+    "Name a first-round pick of the Dolphins since 2000"
+   ],
+   [
+    "MIN",
+    0,
+    30,
+    3,
+    "Kevin Williams",
+    "Lewis Cine",
+    "Name a first-round pick of the Vikings since 2000"
+   ],
+   [
+    "NE",
+    0,
+    23,
+    2,
+    "Logan Mankins",
+    "Dominique Easley",
+    "Name a first-round pick of the Patriots since 2000"
+   ],
+   [
+    "NO",
+    0,
+    28,
+    2,
+    "Cameron Jordan",
+    "Payton Turner",
+    "Name a first-round pick of the Saints since 2000"
+   ],
+   [
+    "NYG",
+    0,
+    29,
+    2,
+    "Philip Rivers",
+    "Abdul Carter",
+    "Name a first-round pick of the Giants since 2000"
+   ],
+   [
+    "NYJ",
+    0,
+    34,
+    3,
+    "Darrelle Revis",
+    "Vernon Gholston",
+    "Name a first-round pick of the Jets since 2000"
+   ],
+   [
+    "PHI",
+    0,
+    24,
+    2,
+    "Fletcher Cox",
+    "Jerome McDougle",
+    "Name a first-round pick of the Eagles since 2000"
+   ],
+   [
+    "PIT",
+    0,
+    25,
+    2,
+    "Ben Roethlisberger",
+    "Derrick Harmon",
+    "Name a first-round pick of the Steelers since 2000"
+   ],
+   [
+    "SEA",
+    0,
+    24,
+    2,
+    "Steve Hutchinson",
+    "Grey Zabel",
+    "Name a first-round pick of the Seahawks since 2000"
+   ],
+   [
+    "SF",
+    0,
+    31,
+    3,
+    "Alex Smith",
+    "Rashaun Woods",
+    "Name a first-round pick of the 49ers since 2000"
+   ],
+   [
+    "TB",
+    0,
+    22,
+    2,
+    "Mike Evans",
+    "Calijah Kancey",
+    "Name a first-round pick of the Buccaneers since 2000"
+   ],
+   [
+    "TEN",
+    0,
+    25,
+    2,
+    "Keith Bulluck",
+    "Isaiah Wilson",
+    "Name a first-round pick of the Titans since 2000"
+   ],
+   [
+    "WAS",
+    0,
+    24,
+    2,
+    "Trent Williams",
+    "Dwayne Haskins",
+    "Name a first-round pick of the Commanders since 2000"
+   ]
+  ]
+ },
+ "h_dtm_r1_pb": {
+  "cat": "Draft: teams",
+  "variants": [
+   [
+    "ARI",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "ATL",
+    1,
+    12,
+    1,
+    "Matt Ryan",
+    "Keanu Neal",
+    "Name a first-round pick of the Falcons since 2000 who made a Pro Bowl"
+   ],
+   [
+    "BAL",
+    1,
+    15,
+    1,
+    "Lamar Jackson",
+    "Kyle Hamilton",
+    "Name a first-round pick of the Ravens since 2000 who made a Pro Bowl"
+   ],
+   [
+    "BUF",
+    1,
+    12,
+    1,
+    "Josh Allen",
+    "C.J. Spiller",
+    "Name a first-round pick of the Bills since 2000 who made a Pro Bowl"
+   ],
+   [
+    "CAR",
+    1,
+    13,
+    1,
+    "Julius Peppers",
+    "Jaycee Horn",
+    "Name a first-round pick of the Panthers since 2000 who made a Pro Bowl"
+   ],
+   [
+    "CHI",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "CIN",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "CLE",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "DAL",
+    1,
+    15,
+    1,
+    "Zack Martin",
+    "Mike Jenkins",
+    "Name a first-round pick of the Cowboys since 2000 who made a Pro Bowl"
+   ],
+   [
+    "DEN",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "DET",
+    1,
+    14,
+    1,
+    "Matthew Stafford",
+    "Jack Campbell",
+    "Name a first-round pick of the Lions since 2000 who made a Pro Bowl"
+   ],
+   [
+    "GB",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "HOU",
+    1,
+    12,
+    1,
+    "J.J. Watt",
+    "Derek Stingley Jr.",
+    "Name a first-round pick of the Texans since 2000 who made a Pro Bowl"
+   ],
+   [
+    "IND",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "JAX",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "KC",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "LA",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "LAC",
+    1,
+    13,
+    1,
+    "LaDainian Tomlinson",
+    "Joe Alt",
+    "Name a first-round pick of the Chargers since 2000 who made a Pro Bowl"
+   ],
+   [
+    "LV",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "MIA",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "MIN",
+    1,
+    13,
+    1,
+    "Kevin Williams",
+    "Matt Kalil",
+    "Name a first-round pick of the Vikings since 2000 who made a Pro Bowl"
+   ],
+   [
+    "NE",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "NO",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "NYG",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "NYJ",
+    1,
+    15,
+    1,
+    "Darrelle Revis",
+    "Jermaine Johnson II",
+    "Name a first-round pick of the Jets since 2000 who made a Pro Bowl"
+   ],
+   [
+    "PHI",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "PIT",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "SEA",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "SF",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "TB",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "TEN",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "WAS",
+    1,
+    15,
+    1,
+    "Trent Williams",
+    "Chase Young",
+    "Name a first-round pick of the Commanders since 2000 who made a Pro Bowl"
+   ]
+  ]
+ },
+ "h_dtm_day2": {
+  "cat": "Draft: teams",
+  "variants": [
+   [
+    "ARI",
+    1,
+    13,
+    1,
+    "Calais Campbell",
+    "Andre Roberts",
+    "Name a player the Cardinals drafted in rounds 2-4 since 2000 who made a Pro Bowl"
+   ],
+   [
+    "ATL",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "BAL",
+    1,
+    13,
+    1,
+    "Marshal Yanda",
+    "Ovie Mughelli",
+    "Name a player the Ravens drafted in rounds 2-4 since 2000 who made a Pro Bowl"
+   ],
+   [
+    "BUF",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "CAR",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "CHI",
+    1,
+    12,
+    1,
+    "Lance Briggs",
+    "Tarik Cohen",
+    "Name a player the Bears drafted in rounds 2-4 since 2000 who made a Pro Bowl"
+   ],
+   [
+    "CIN",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "CLE",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "DAL",
+    1,
+    16,
+    1,
+    "Dak Prescott",
+    "Nahshon Wright",
+    "Name a player the Cowboys drafted in rounds 2-4 since 2000 who made a Pro Bowl"
+   ],
+   [
+    "DEN",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "DET",
+    1,
+    13,
+    1,
+    "Darius Slay",
+    "Brian Branch",
+    "Name a player the Lions drafted in rounds 2-4 since 2000 who made a Pro Bowl"
+   ],
+   [
+    "GB",
+    1,
+    13,
+    1,
+    "Davante Adams",
+    "Eddie Lacy",
+    "Name a player the Packers drafted in rounds 2-4 since 2000 who made a Pro Bowl"
+   ],
+   [
+    "HOU",
+    1,
+    13,
+    1,
+    "Ben Jones",
+    "Jerome Mathis",
+    "Name a player the Texans drafted in rounds 2-4 since 2000 who made a Pro Bowl"
+   ],
+   [
+    "IND",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "JAX",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "KC",
+    1,
+    14,
+    1,
+    "Jared Allen",
+    "Dexter McCluster",
+    "Name a player the Chiefs drafted in rounds 2-4 since 2000 who made a Pro Bowl"
+   ],
+   [
+    "LA",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "LAC",
+    1,
+    13,
+    1,
+    "Drew Brees",
+    "Darrell Stuckey",
+    "Name a player the Chargers drafted in rounds 2-4 since 2000 who made a Pro Bowl"
+   ],
+   [
+    "LV",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "MIA",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "MIN",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "NE",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "NO",
+    1,
+    13,
+    1,
+    "Jahri Evans",
+    "LeCharles Bentley",
+    "Name a player the Saints drafted in rounds 2-4 since 2000 who made a Pro Bowl"
+   ],
+   [
+    "NYG",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "NYJ",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "PHI",
+    1,
+    14,
+    1,
+    "LeSean McCoy",
+    "Cooper DeJean",
+    "Name a player the Eagles drafted in rounds 2-4 since 2000 who made a Pro Bowl"
+   ],
+   [
+    "PIT",
+    1,
+    12,
+    1,
+    "Emmanuel Sanders",
+    "Diontae Johnson",
+    "Name a player the Steelers drafted in rounds 2-4 since 2000 who made a Pro Bowl"
+   ],
+   [
+    "SEA",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "SF",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "TB",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "TEN",
+    1,
+    12,
+    1,
+    "Derrick Henry",
+    "Jonnu Smith",
+    "Name a player the Titans drafted in rounds 2-4 since 2000 who made a Pro Bowl"
+   ],
+   [
+    "WAS",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ]
+  ]
+ },
+ "h_dtm_ap": {
+  "cat": "Draft: teams",
+  "variants": [
+   [
+    "ARI",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "ATL",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "BAL",
+    1,
+    16,
+    1,
+    "Lamar Jackson",
+    "Jordan Stout",
+    "Name a player the Ravens drafted since 2000 who was an All-Pro"
+   ],
+   [
+    "BUF",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "CAR",
+    1,
+    12,
+    1,
+    "Julius Peppers",
+    "Josh Norman",
+    "Name a player the Panthers drafted since 2000 who was an All-Pro"
+   ],
+   [
+    "CHI",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "CIN",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "CLE",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "DAL",
+    1,
+    15,
+    1,
+    "Zack Martin",
+    "DaRon Bland",
+    "Name a player the Cowboys drafted since 2000 who was an All-Pro"
+   ],
+   [
+    "DEN",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "DET",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "GB",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "HOU",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "IND",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "JAX",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "KC",
+    1,
+    14,
+    1,
+    "Patrick Mahomes",
+    "Dante Hall",
+    "Name a player the Chiefs drafted since 2000 who was an All-Pro"
+   ],
+   [
+    "LA",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "LAC",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "LV",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "MIA",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "MIN",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "NE",
+    1,
+    15,
+    1,
+    "Tom Brady",
+    "Matthew Slater",
+    "Name a player the Patriots drafted since 2000 who was an All-Pro"
+   ],
+   [
+    "NO",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "NYG",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "NYJ",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "PHI",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "PIT",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "SEA",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "SF",
+    1,
+    13,
+    1,
+    "Patrick Willis",
+    "Talanoa Hufanga",
+    "Name a player the 49ers drafted since 2000 who was an All-Pro"
+   ],
+   [
+    "TB",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "TEN",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "WAS",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ]
+  ]
+ },
+ "h_dk_qb_yds": {
+  "cat": "Draft careers",
+  "variants": [
+   [
+    null,
+    30000,
+    23,
+    2,
+    "Tom Brady",
+    "Ryan Fitzpatrick",
+    "Name a QB drafted since 2000 with 30,000+ career passing yards"
+   ]
+  ]
+ },
+ "h_dk_rb_yds": {
+  "cat": "Draft careers",
+  "variants": [
+   [
+    null,
+    8000,
+    19,
+    1,
+    "LaDainian Tomlinson",
+    "Willis McGahee",
+    "Name a RB drafted since 2000 with 8,000+ career rushing yards"
+   ]
+  ]
+ },
+ "h_dk_wr_yds": {
+  "cat": "Draft careers",
+  "variants": [
+   [
+    null,
+    10000,
+    21,
+    2,
+    "Reggie Wayne",
+    "Amari Cooper",
+    "Name a WR drafted since 2000 with 10,000+ career receiving yards"
+   ]
+  ]
+ },
+ "h_dk_te_yds": {
+  "cat": "Draft careers",
+  "variants": [
+   [
+    null,
+    5000,
+    20,
+    2,
+    "Travis Kelce",
+    "Marcedes Lewis",
+    "Name a TE drafted since 2000 with 5,000+ career receiving yards"
+   ]
+  ]
+ },
+ "h_dk_sacks": {
+  "cat": "Draft careers",
+  "variants": [
+   [
+    null,
+    100,
+    21,
+    2,
+    "Julius Peppers",
+    "Elvis Dumervil",
+    "Name a player drafted since 2000 with 100+ career sacks"
+   ]
+  ]
+ },
+ "h_dk_int": {
+  "cat": "Draft careers",
+  "variants": [
+   [
+    null,
+    30,
+    26,
+    2,
+    "Patrick Peterson",
+    "Anthony Henry",
+    "Name a player drafted since 2000 with 30+ career interceptions"
+   ]
+  ]
+ },
+ "h_po_qb_yds": {
+  "cat": "Playoffs",
+  "variants": [
+   [
+    null,
+    375,
+    17,
+    1,
+    "Tom Brady",
+    "Kelly Holcomb",
+    "Name a QB who threw for 375+ yards in a playoff game since 2000"
+   ]
+  ]
+ },
+ "h_po_qb_td": {
+  "cat": "Playoffs",
+  "variants": [
+   [
+    null,
+    4,
+    20,
+    2,
+    "Tom Brady",
+    "Aaron Brooks",
+    "Name a QB who threw 4+ touchdown passes in a playoff game since 2000"
+   ]
+  ]
+ },
+ "h_po_rb_yds": {
+  "cat": "Playoffs",
+  "variants": [
+   [
+    null,
+    150,
+    17,
+    1,
+    "Derrick Henry",
+    "Thomas Rawls",
+    "Name a RB who ran for 150+ yards in a playoff game since 2000"
+   ]
+  ]
+ },
+ "h_po_wr_yds": {
+  "cat": "Playoffs",
+  "variants": [
+   [
+    null,
+    160,
+    19,
+    1,
+    "Larry Fitzgerald",
+    "Chris Hogan",
+    "Name a WR with 160+ receiving yards in a playoff game since 2000"
+   ]
+  ]
+ },
+ "h_po_te_yds": {
+  "cat": "Playoffs",
+  "variants": [
+   [
+    null,
+    100,
+    17,
+    1,
+    "Travis Kelce",
+    "Vance McDonald",
+    "Name a TE with 100+ receiving yards in a playoff game since 2000"
+   ]
+  ]
+ },
+ "h_po_td_game": {
+  "cat": "Playoffs",
+  "variants": [
+   [
+    null,
+    3,
+    23,
+    2,
+    "Larry Fitzgerald",
+    "Sony Michel",
+    "Name a player with 3+ rushing and receiving TDs in a playoff game since 2000"
+   ]
+  ]
+ },
+ "h_po_sack_game": {
+  "cat": "Playoffs",
+  "variants": [
+   [
+    null,
+    3,
+    16,
+    1,
+    "Terrell Suggs",
+    "Kony Ealy",
+    "Name a defender with 3+ sacks in a playoff game since 2000"
+   ]
+  ]
+ },
+ "h_po_qb_300_n": {
+  "cat": "Playoffs",
+  "variants": [
+   [
+    null,
+    3,
+    16,
+    1,
+    "Tom Brady",
+    "Kurt Warner",
+    "Name a QB with 3+ playoff games of 300+ passing yards since 2000"
+   ]
+  ]
+ },
+ "h_po_rb_100_n": {
+  "cat": "Playoffs",
+  "variants": [
+   [
+    null,
+    2,
+    25,
+    2,
+    "Frank Gore",
+    "Sony Michel",
+    "Name a RB with 2+ playoff games of 100+ rushing yards since 2000"
+   ]
+  ]
+ },
+ "h_po_qb_sum": {
+  "cat": "Playoffs",
+  "variants": [
+   [
+    null,
+    2500,
+    16,
+    1,
+    "Tom Brady",
+    "Kurt Warner",
+    "Name a QB with 2,500+ career playoff passing yards since 2000"
+   ]
+  ]
+ },
+ "h_po_rb_sum": {
+  "cat": "Playoffs",
+  "variants": [
+   [
+    null,
+    500,
+    23,
+    2,
+    "Frank Gore",
+    "Isiah Pacheco",
+    "Name a RB with 500+ career playoff rushing yards since 2000"
+   ]
+  ]
+ },
+ "h_po_wr_sum": {
+  "cat": "Playoffs",
+  "variants": [
+   [
+    null,
+    800,
+    16,
+    1,
+    "Larry Fitzgerald",
+    "Deion Branch",
+    "Name a WR with 800+ career playoff receiving yards since 2000"
+   ]
+  ]
+ },
+ "h_po_te_sum": {
+  "cat": "Playoffs",
+  "variants": [
+   [
+    null,
+    300,
+    23,
+    2,
+    "Jason Witten",
+    "Aaron Hernandez",
+    "Name a TE with 300+ career playoff receiving yards since 2000"
+   ]
+  ]
+ },
+ "h_po_td_sum": {
+  "cat": "Playoffs",
+  "variants": [
+   [
+    null,
+    8,
+    20,
+    2,
+    "Larry Fitzgerald",
+    "Damien Williams",
+    "Name a player with 8+ career playoff rushing and receiving TDs since 2000"
+   ]
+  ]
+ },
+ "h_po_sack_sum": {
+  "cat": "Playoffs",
+  "variants": [
+   [
+    null,
+    7,
+    23,
+    2,
+    "Michael Strahan",
+    "George Karlaftis",
+    "Name a defender with 7+ career playoff sacks since 2000"
+   ]
+  ]
+ },
+ "h_po_int_sum": {
+  "cat": "Playoffs",
+  "variants": [
+   [
+    null,
+    3,
+    44,
+    4,
+    "Aeneas Williams",
+    "Cobie Durant",
+    "Name a defender with 3+ career playoff interceptions since 2000"
+   ]
+  ]
+ },
+ "h_po_dec_qb": {
+  "cat": "Playoffs",
+  "variants": [
+   [
+    "2000s",
+    300,
+    19,
+    1,
+    "Tom Brady",
+    "Kelly Holcomb",
+    "Name a QB who threw for 300+ yards in a playoff game of the 2000s"
+   ],
+   [
+    "2010s",
+    325,
+    21,
+    2,
+    "Tom Brady",
+    "Nick Foles",
+    "Name a QB who threw for 325+ yards in a playoff game of the 2010s"
+   ],
+   [
+    "2020s",
+    300,
+    20,
+    2,
+    "Tom Brady",
+    "Taylor Heinicke",
+    "Name a QB who threw for 300+ yards in a playoff game of the 2020s"
+   ]
+  ]
+ },
+ "h_po_dec_rb": {
+  "cat": "Playoffs",
+  "variants": [
+   [
+    "2000s",
+    140,
+    15,
+    1,
+    "Ahman Green",
+    "Felix Jones",
+    "Name a RB who ran for 140+ yards in a playoff game of the 2000s"
+   ],
+   [
+    "2010s",
+    120,
+    19,
+    1,
+    "Derrick Henry",
+    "Thomas Rawls",
+    "Name a RB who ran for 120+ yards in a playoff game of the 2010s"
+   ],
+   [
+    "2020s",
+    90,
+    19,
+    1,
+    "Christian McCaffrey",
+    "Elijah Mitchell",
+    "Name a RB who ran for 90+ yards in a playoff game of the 2020s"
+   ]
+  ]
+ },
+ "h_po_dec_wr": {
+  "cat": "Playoffs",
+  "variants": [
+   [
+    "2000s",
+    140,
+    17,
+    1,
+    "Larry Fitzgerald",
+    "Willie Jackson",
+    "Name a WR with 140+ receiving yards in a playoff game of the 2000s"
+   ],
+   [
+    "2010s",
+    140,
+    22,
+    2,
+    "Larry Fitzgerald",
+    "Jeff Janis",
+    "Name a WR with 140+ receiving yards in a playoff game of the 2010s"
+   ],
+   [
+    "2020s",
+    130,
+    18,
+    1,
+    "Mike Evans",
+    "Gabe Davis",
+    "Name a WR with 130+ receiving yards in a playoff game of the 2020s"
+   ]
+  ]
+ },
+ "h_po_dec_td": {
+  "cat": "Playoffs",
+  "variants": [
+   [
+    "2000s",
+    4,
+    20,
+    2,
+    "Larry Fitzgerald",
+    "David Givens",
+    "Name a player who scored a rushing or receiving TD in 4+ playoff games of the 2000s"
+   ],
+   [
+    "2010s",
+    4,
+    26,
+    2,
+    "Tom Brady",
+    "John Kuhn",
+    "Name a player who scored a rushing or receiving TD in 4+ playoff games of the 2010s"
+   ],
+   [
+    "2020s",
+    4,
+    19,
+    1,
+    "Travis Kelce",
+    "Isiah Pacheco",
+    "Name a player who scored a rushing or receiving TD in 4+ playoff games of the 2020s"
+   ]
+  ]
+ },
+ "h_sb_qb_played": {
+  "cat": "Super Bowls",
+  "variants": [
+   [
+    null,
+    1,
+    33,
+    3,
+    "Tom Brady",
+    "Kenny Pickett",
+    "Name a QB who threw a pass in a Super Bowl since 2000"
+   ]
+  ]
+ },
+ "h_sb_qb_won": {
+  "cat": "Super Bowls",
+  "variants": [
+   [
+    null,
+    1,
+    18,
+    1,
+    "Tom Brady",
+    "Kenny Pickett",
+    "Name a QB who threw a pass in a Super Bowl win since 2000"
+   ]
+  ]
+ },
+ "h_sb_qb_lost": {
+  "cat": "Super Bowls",
+  "variants": [
+   [
+    null,
+    1,
+    21,
+    2,
+    "Tom Brady",
+    "Rex Grossman",
+    "Name a QB who threw a pass in a Super Bowl loss since 2000"
+   ]
+  ]
+ },
+ "h_sb_qb_yds": {
+  "cat": "Super Bowls",
+  "variants": [
+   [
+    null,
+    275,
+    16,
+    1,
+    "Tom Brady",
+    "Nick Foles",
+    "Name a QB who threw for 275+ yards in a Super Bowl since 2000"
+   ]
+  ]
+ },
+ "h_sb_pass_td": {
+  "cat": "Super Bowls",
+  "variants": [
+   [
+    null,
+    1,
+    27,
+    2,
+    "Tom Brady",
+    "Rex Grossman",
+    "Name a QB who threw a touchdown pass in a Super Bowl since 2000"
+   ]
+  ]
+ },
+ "h_sb_td_dec": {
+  "cat": "Super Bowls",
+  "variants": [
+   [
+    "2000s",
+    1,
+    37,
+    3,
+    "Ben Roethlisberger",
+    "Gary Russell",
+    "Name a player who scored a rushing or receiving TD in a Super Bowl of the 2000s"
+   ],
+   [
+    "2010s",
+    1,
+    42,
+    4,
+    "Frank Gore",
+    "Chris Matthews",
+    "Name a player who scored a rushing or receiving TD in a Super Bowl of the 2010s"
+   ],
+   [
+    "2020s",
+    1,
+    22,
+    2,
+    "Travis Kelce",
+    "Skyy Moore",
+    "Name a player who scored a rushing or receiving TD in a Super Bowl of the 2020s"
+   ]
+  ]
+ },
+ "h_sb_rec_yds": {
+  "cat": "Super Bowls",
+  "variants": [
+   [
+    null,
+    110,
+    16,
+    1,
+    "Larry Fitzgerald",
+    "Chris Hogan",
+    "Name a player with 110+ receiving yards in a Super Bowl since 2000"
+   ]
+  ]
+ },
+ "h_sb_sack_dec": {
+  "cat": "Super Bowls",
+  "variants": [
+   [
+    "2000s",
+    1,
+    30,
+    3,
+    "Dwight Freeney",
+    "Jay Alford",
+    "Name a defender who sacked the QB in a Super Bowl of the 2000s"
+   ],
+   [
+    "2010s",
+    1,
+    36,
+    3,
+    "DeMarcus Ware",
+    "Brandon Deaderick",
+    "Name a defender who sacked the QB in a Super Bowl of the 2010s"
+   ],
+   [
+    "2020s",
+    1,
+    24,
+    2,
+    "Aaron Donald",
+    "Rylie Mills",
+    "Name a defender who sacked the QB in a Super Bowl of the 2020s"
+   ]
+  ]
+ },
+ "h_sb_int": {
+  "cat": "Super Bowls",
+  "variants": [
+   [
+    null,
+    1,
+    33,
+    3,
+    "Derrick Brooks",
+    "Cooper DeJean",
+    "Name a defender who intercepted a pass in a Super Bowl win since 2000"
+   ]
+  ]
+ },
+ "h_sb_k": {
+  "cat": "Super Bowls",
+  "variants": [
+   [
+    null,
+    1,
+    27,
+    2,
+    "Adam Vinatieri",
+    "Jake Moody",
+    "Name a kicker who made a field goal in a Super Bowl since 2000"
+   ]
+  ]
+ },
+ "h_sb_rb_champ": {
+  "cat": "Super Bowls",
+  "variants": [
+   [
+    null,
+    1,
+    35,
+    3,
+    "Marshawn Lynch",
+    "Bernard Pierce",
+    "Name a RB who carried the ball 5+ times in a Super Bowl win since 2000"
+   ]
+  ]
+ },
+ "h_sb_wr_champ": {
+  "cat": "Super Bowls",
+  "variants": [
+   [
+    null,
+    1,
+    36,
+    3,
+    "Reggie Wayne",
+    "Malcolm Mitchell",
+    "Name a receiver (WR, TE or RB) with 60+ receiving yards in a Super Bowl win since 2000"
+   ]
+  ]
+ },
+ "h_t_rb": {
+  "cat": "Team history",
+  "variants": [
+   [
+    "ARI",
+    400,
+    16,
+    1,
+    "Adrian Peterson",
+    "Kerwynn Williams",
+    "Name a RB who ran for 400+ yards in a season for the Cardinals since 2000"
+   ],
+   [
+    "ATL",
+    500,
+    15,
+    1,
+    "Steven Jackson",
+    "Maurice Smith",
+    "Name a RB who ran for 500+ yards in a season for the Falcons since 2000"
+   ],
+   [
+    "BAL",
+    500,
+    19,
+    1,
+    "Derrick Henry",
+    "Jason Brookins",
+    "Name a RB who ran for 500+ yards in a season for the Ravens since 2000"
+   ],
+   [
+    "BUF",
+    400,
+    15,
+    1,
+    "Frank Gore",
+    "Karlos Williams",
+    "Name a RB who ran for 400+ yards in a season for the Bills since 2000"
+   ],
+   [
+    "CAR",
+    400,
+    15,
+    1,
+    "Christian McCaffrey",
+    "Richard Huntley",
+    "Name a RB who ran for 400+ yards in a season for the Panthers since 2000"
+   ],
+   [
+    "CHI",
+    400,
+    16,
+    1,
+    "Matt Forte",
+    "Jeremy Langford",
+    "Name a RB who ran for 400+ yards in a season for the Bears since 2000"
+   ],
+   [
+    "CIN",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "CLE",
+    500,
+    16,
+    1,
+    "Jamal Lewis",
+    "Travis Prentice",
+    "Name a RB who ran for 500+ yards in a season for the Browns since 2000"
+   ],
+   [
+    "DAL",
+    500,
+    12,
+    1,
+    "Ezekiel Elliott",
+    "Troy Hambrick",
+    "Name a RB who ran for 500+ yards in a season for the Cowboys since 2000"
+   ],
+   [
+    "DEN",
+    700,
+    15,
+    1,
+    "Clinton Portis",
+    "Selvin Young",
+    "Name a RB who ran for 700+ yards in a season for the Broncos since 2000"
+   ],
+   [
+    "DET",
+    500,
+    15,
+    1,
+    "Adrian Peterson",
+    "Mikel Leshoure",
+    "Name a RB who ran for 500+ yards in a season for the Lions since 2000"
+   ],
+   [
+    "GB",
+    400,
+    14,
+    1,
+    "Ahman Green",
+    "Alex Green",
+    "Name a RB who ran for 400+ yards in a season for the Packers since 2000"
+   ],
+   [
+    "HOU",
+    500,
+    16,
+    1,
+    "Joe Mixon",
+    "Jonathan Wells",
+    "Name a RB who ran for 500+ yards in a season for the Texans since 2000"
+   ],
+   [
+    "IND",
+    400,
+    12,
+    1,
+    "Frank Gore",
+    "Kenton Keith",
+    "Name a RB who ran for 400+ yards in a season for the Colts since 2000"
+   ],
+   [
+    "JAX",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "KC",
+    400,
+    17,
+    1,
+    "LeSean McCoy",
+    "Kolby Smith",
+    "Name a RB who ran for 400+ yards in a season for the Chiefs since 2000"
+   ],
+   [
+    "LA",
+    400,
+    13,
+    1,
+    "Steven Jackson",
+    "Daryl Richardson",
+    "Name a RB who ran for 400+ yards in a season for the Rams since 2000"
+   ],
+   [
+    "LAC",
+    400,
+    12,
+    1,
+    "LaDainian Tomlinson",
+    "Kimani Vidal",
+    "Name a RB who ran for 400+ yards in a season for the Chargers since 2000"
+   ],
+   [
+    "LV",
+    400,
+    19,
+    1,
+    "Marshawn Lynch",
+    "Zamir White",
+    "Name a RB who ran for 400+ yards in a season for the Raiders since 2000"
+   ],
+   [
+    "MIA",
+    500,
+    14,
+    1,
+    "Frank Gore",
+    "Jesse Chatman",
+    "Name a RB who ran for 500+ yards in a season for the Dolphins since 2000"
+   ],
+   [
+    "MIN",
+    500,
+    15,
+    1,
+    "Adrian Peterson",
+    "Onterrio Smith",
+    "Name a RB who ran for 500+ yards in a season for the Vikings since 2000"
+   ],
+   [
+    "NE",
+    500,
+    16,
+    1,
+    "Ezekiel Elliott",
+    "Damien Harris",
+    "Name a RB who ran for 500+ yards in a season for the Patriots since 2000"
+   ],
+   [
+    "NO",
+    500,
+    12,
+    1,
+    "Alvin Kamara",
+    "Mike Bell",
+    "Name a RB who ran for 500+ yards in a season for the Saints since 2000"
+   ],
+   [
+    "NYG",
+    400,
+    16,
+    1,
+    "Tiki Barber",
+    "Paul Perkins",
+    "Name a RB who ran for 400+ yards in a season for the Giants since 2000"
+   ],
+   [
+    "NYJ",
+    400,
+    15,
+    1,
+    "LaDainian Tomlinson",
+    "Michael Carter",
+    "Name a RB who ran for 400+ yards in a season for the Jets since 2000"
+   ],
+   [
+    "PHI",
+    400,
+    16,
+    1,
+    "LeSean McCoy",
+    "Josh Adams",
+    "Name a RB who ran for 400+ yards in a season for the Eagles since 2000"
+   ],
+   [
+    "PIT",
+    400,
+    17,
+    1,
+    "Le'Veon Bell",
+    "Jonathan Dwyer",
+    "Name a RB who ran for 400+ yards in a season for the Steelers since 2000"
+   ],
+   [
+    "SEA",
+    500,
+    12,
+    1,
+    "Marshawn Lynch",
+    "Thomas Rawls",
+    "Name a RB who ran for 500+ yards in a season for the Seahawks since 2000"
+   ],
+   [
+    "SF",
+    400,
+    16,
+    1,
+    "Frank Gore",
+    "Isaac Guerendo",
+    "Name a RB who ran for 400+ yards in a season for the 49ers since 2000"
+   ],
+   [
+    "TB",
+    500,
+    16,
+    1,
+    "Thomas Jones",
+    "Bobby Rainey",
+    "Name a RB who ran for 500+ yards in a season for the Buccaneers since 2000"
+   ],
+   [
+    "TEN",
+    500,
+    13,
+    1,
+    "Derrick Henry",
+    "Antonio Andrews",
+    "Name a RB who ran for 500+ yards in a season for the Titans since 2000"
+   ],
+   [
+    "WAS",
+    500,
+    15,
+    1,
+    "Adrian Peterson",
+    "Rob Kelley",
+    "Name a RB who ran for 500+ yards in a season for the Commanders since 2000"
+   ]
+  ]
+ },
+ "h_t_wr": {
+  "cat": "Team history",
+  "variants": [
+   [
+    "ARI",
+    700,
+    15,
+    1,
+    "Larry Fitzgerald",
+    "Michael Wilson",
+    "Name a WR with 700+ receiving yards in a season for the Cardinals since 2000"
+   ],
+   [
+    "ATL",
+    700,
+    12,
+    1,
+    "Julio Jones",
+    "Russell Gage",
+    "Name a WR with 700+ receiving yards in a season for the Falcons since 2000"
+   ],
+   [
+    "BAL",
+    600,
+    15,
+    1,
+    "Steve Smith",
+    "Kamar Aiken",
+    "Name a WR with 600+ receiving yards in a season for the Ravens since 2000"
+   ],
+   [
+    "BUF",
+    600,
+    17,
+    1,
+    "Terrell Owens",
+    "Jeremy McDaniel",
+    "Name a WR with 600+ receiving yards in a season for the Bills since 2000"
+   ],
+   [
+    "CAR",
+    700,
+    13,
+    1,
+    "Steve Smith",
+    "Keary Colbert",
+    "Name a WR with 700+ receiving yards in a season for the Panthers since 2000"
+   ],
+   [
+    "CHI",
+    700,
+    15,
+    1,
+    "Brandon Marshall",
+    "Cameron Meredith",
+    "Name a WR with 700+ receiving yards in a season for the Bears since 2000"
+   ],
+   [
+    "CIN",
+    600,
+    15,
+    1,
+    "Terrell Owens",
+    "Jordan Shipley",
+    "Name a WR with 600+ receiving yards in a season for the Bengals since 2000"
+   ],
+   [
+    "CLE",
+    700,
+    15,
+    1,
+    "Amari Cooper",
+    "Greg Little",
+    "Name a WR with 700+ receiving yards in a season for the Browns since 2000"
+   ],
+   [
+    "DAL",
+    800,
+    16,
+    1,
+    "Terrell Owens",
+    "Raghib Ismail",
+    "Name a WR with 800+ receiving yards in a season for the Cowboys since 2000"
+   ],
+   [
+    "DEN",
+    700,
+    16,
+    1,
+    "Brandon Marshall",
+    "Troy Franklin",
+    "Name a WR with 700+ receiving yards in a season for the Broncos since 2000"
+   ],
+   [
+    "DET",
+    600,
+    15,
+    1,
+    "Calvin Johnson",
+    "Titus Young",
+    "Name a WR with 600+ receiving yards in a season for the Lions since 2000"
+   ],
+   [
+    "GB",
+    600,
+    16,
+    1,
+    "Davante Adams",
+    "Jarrett Boykin",
+    "Name a WR with 600+ receiving yards in a season for the Packers since 2000"
+   ],
+   [
+    "HOU",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "IND",
+    600,
+    15,
+    1,
+    "Reggie Wayne",
+    "Parris Campbell",
+    "Name a WR with 600+ receiving yards in a season for the Colts since 2000"
+   ],
+   [
+    "JAX",
+    800,
+    16,
+    1,
+    "Marvin Jones",
+    "Justin Blackmon",
+    "Name a WR with 800+ receiving yards in a season for the Jaguars since 2000"
+   ],
+   [
+    "KC",
+    600,
+    14,
+    1,
+    "Tyreek Hill",
+    "Mecole Hardman",
+    "Name a WR with 600+ receiving yards in a season for the Chiefs since 2000"
+   ],
+   [
+    "LA",
+    600,
+    17,
+    1,
+    "Davante Adams",
+    "Chris Givens",
+    "Name a WR with 600+ receiving yards in a season for the Rams since 2000"
+   ],
+   [
+    "LAC",
+    700,
+    15,
+    1,
+    "Keenan Allen",
+    "Jeff Graham",
+    "Name a WR with 700+ receiving yards in a season for the Chargers since 2000"
+   ],
+   [
+    "LV",
+    700,
+    15,
+    1,
+    "Davante Adams",
+    "Rod Streater",
+    "Name a WR with 700+ receiving yards in a season for the Raiders since 2000"
+   ],
+   [
+    "MIA",
+    600,
+    17,
+    1,
+    "Brandon Marshall",
+    "Greg Camarillo",
+    "Name a WR with 600+ receiving yards in a season for the Dolphins since 2000"
+   ],
+   [
+    "MIN",
+    600,
+    17,
+    1,
+    "Randy Moss",
+    "D'Wayne Bates",
+    "Name a WR with 600+ receiving yards in a season for the Vikings since 2000"
+   ],
+   [
+    "NE",
+    700,
+    16,
+    1,
+    "Randy Moss",
+    "Reche Caldwell",
+    "Name a WR with 700+ receiving yards in a season for the Patriots since 2000"
+   ],
+   [
+    "NO",
+    700,
+    16,
+    1,
+    "Brandin Cooks",
+    "Robert Meachem",
+    "Name a WR with 700+ receiving yards in a season for the Saints since 2000"
+   ],
+   [
+    "NYG",
+    600,
+    15,
+    1,
+    "Golden Tate",
+    "Rueben Randle",
+    "Name a WR with 600+ receiving yards in a season for the Giants since 2000"
+   ],
+   [
+    "NYJ",
+    800,
+    15,
+    1,
+    "Davante Adams",
+    "Quincy Enunwa",
+    "Name a WR with 800+ receiving yards in a season for the Jets since 2000"
+   ],
+   [
+    "PHI",
+    600,
+    17,
+    1,
+    "Terrell Owens",
+    "Quez Watkins",
+    "Name a WR with 600+ receiving yards in a season for the Eagles since 2000"
+   ],
+   [
+    "PIT",
+    600,
+    18,
+    1,
+    "Antonio Brown",
+    "James Washington",
+    "Name a WR with 600+ receiving yards in a season for the Steelers since 2000"
+   ],
+   [
+    "SEA",
+    700,
+    15,
+    1,
+    "Tyler Lockett",
+    "Mike Williams",
+    "Name a WR with 700+ receiving yards in a season for the Seahawks since 2000"
+   ],
+   [
+    "SF",
+    600,
+    18,
+    1,
+    "Anquan Boldin",
+    "Arnaz Battle",
+    "Name a WR with 600+ receiving yards in a season for the 49ers since 2000"
+   ],
+   [
+    "TB",
+    600,
+    15,
+    1,
+    "Mike Evans",
+    "Breshad Perriman",
+    "Name a WR with 600+ receiving yards in a season for the Buccaneers since 2000"
+   ],
+   [
+    "TEN",
+    700,
+    14,
+    1,
+    "DeAndre Hopkins",
+    "Roydell Williams",
+    "Name a WR with 700+ receiving yards in a season for the Titans since 2000"
+   ],
+   [
+    "WAS",
+    600,
+    16,
+    1,
+    "DeSean Jackson",
+    "Albert Connell",
+    "Name a WR with 600+ receiving yards in a season for the Commanders since 2000"
+   ]
+  ]
+ },
+ "h_t_qb": {
+  "cat": "Team history",
+  "variants": [
+   [
+    "ARI",
+    1000,
+    15,
+    1,
+    "Carson Palmer",
+    "Josh Rosen",
+    "Name a QB who threw for 1,000+ yards in a season for the Cardinals since 2000"
+   ],
+   [
+    "ATL",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "BAL",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "BUF",
+    1500,
+    12,
+    1,
+    "Josh Allen",
+    "Alex Van Pelt",
+    "Name a QB who threw for 1,500+ yards in a season for the Bills since 2000"
+   ],
+   [
+    "CAR",
+    1000,
+    12,
+    1,
+    "Cam Newton",
+    "Jimmy Clausen",
+    "Name a QB who threw for 1,000+ yards in a season for the Panthers since 2000"
+   ],
+   [
+    "CHI",
+    1000,
+    16,
+    1,
+    "Andy Dalton",
+    "Matt Barkley",
+    "Name a QB who threw for 1,000+ yards in a season for the Bears since 2000"
+   ],
+   [
+    "CIN",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "CLE",
+    1500,
+    17,
+    1,
+    "Joe Flacco",
+    "Johnny Manziel",
+    "Name a QB who threw for 1,500+ yards in a season for the Browns since 2000"
+   ],
+   [
+    "DAL",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "DEN",
+    1500,
+    15,
+    1,
+    "Peyton Manning",
+    "Tim Tebow",
+    "Name a QB who threw for 1,500+ yards in a season for the Broncos since 2000"
+   ],
+   [
+    "DET",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "GB",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "HOU",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "IND",
+    1500,
+    12,
+    1,
+    "Peyton Manning",
+    "Curtis Painter",
+    "Name a QB who threw for 1,500+ yards in a season for the Colts since 2000"
+   ],
+   [
+    "JAX",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "KC",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "LA",
+    1000,
+    13,
+    1,
+    "Matthew Stafford",
+    "Austin Davis",
+    "Name a QB who threw for 1,000+ yards in a season for the Rams since 2000"
+   ],
+   [
+    "LAC",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "LV",
+    1000,
+    17,
+    1,
+    "Carson Palmer",
+    "Andrew Walter",
+    "Name a QB who threw for 1,000+ yards in a season for the Raiders since 2000"
+   ],
+   [
+    "MIA",
+    1000,
+    15,
+    1,
+    "Ryan Tannehill",
+    "Ray Lucas",
+    "Name a QB who threw for 1,000+ yards in a season for the Dolphins since 2000"
+   ],
+   [
+    "MIN",
+    1000,
+    16,
+    1,
+    "Kirk Cousins",
+    "Nick Mullens",
+    "Name a QB who threw for 1,000+ yards in a season for the Vikings since 2000"
+   ],
+   [
+    "NE",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "NO",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "NYG",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "NYJ",
+    1000,
+    15,
+    1,
+    "Aaron Rodgers",
+    "Mike White",
+    "Name a QB who threw for 1,000+ yards in a season for the Jets since 2000"
+   ],
+   [
+    "PHI",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "PIT",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "SEA",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "SF",
+    1000,
+    16,
+    1,
+    "Alex Smith",
+    "Ken Dorsey",
+    "Name a QB who threw for 1,000+ yards in a season for the 49ers since 2000"
+   ],
+   [
+    "TB",
+    2000,
+    12,
+    1,
+    "Tom Brady",
+    "Chris Simms",
+    "Name a QB who threw for 2,000+ yards in a season for the Buccaneers since 2000"
+   ],
+   [
+    "TEN",
+    1500,
+    12,
+    1,
+    "Ryan Tannehill",
+    "Billy Volek",
+    "Name a QB who threw for 1,500+ yards in a season for the Titans since 2000"
+   ],
+   [
+    "WAS",
+    1500,
+    16,
+    1,
+    "Kirk Cousins",
+    "Sam Howell",
+    "Name a QB who threw for 1,500+ yards in a season for the Commanders since 2000"
+   ]
+  ]
+ },
+ "h_t_te": {
+  "cat": "Team history",
+  "variants": [
+   [
+    "ARI",
+    200,
+    17,
+    1,
+    "Zach Ertz",
+    "Adam Bergen",
+    "Name a TE with 200+ receiving yards in a season for the Cardinals since 2000"
+   ],
+   [
+    "ATL",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "BAL",
+    200,
+    15,
+    1,
+    "Mark Andrews",
+    "Quinn Sypniewski",
+    "Name a TE with 200+ receiving yards in a season for the Ravens since 2000"
+   ],
+   [
+    "BUF",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "CAR",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "CHI",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "CIN",
+    250,
+    13,
+    1,
+    "Jermaine Gresham",
+    "J.P. Foschi",
+    "Name a TE with 250+ receiving yards in a season for the Bengals since 2000"
+   ],
+   [
+    "CLE",
+    200,
+    15,
+    1,
+    "Benjamin Watson",
+    "Jim Dray",
+    "Name a TE with 200+ receiving yards in a season for the Browns since 2000"
+   ],
+   [
+    "DAL",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "DEN",
+    250,
+    17,
+    1,
+    "Owen Daniels",
+    "Matt LaCosse",
+    "Name a TE with 250+ receiving yards in a season for the Broncos since 2000"
+   ],
+   [
+    "DET",
+    200,
+    16,
+    1,
+    "T.J. Hockenson",
+    "Sean McHugh",
+    "Name a TE with 200+ receiving yards in a season for the Lions since 2000"
+   ],
+   [
+    "GB",
+    200,
+    17,
+    1,
+    "Jimmy Graham",
+    "Tom Crabtree",
+    "Name a TE with 200+ receiving yards in a season for the Packers since 2000"
+   ],
+   [
+    "HOU",
+    200,
+    12,
+    1,
+    "Owen Daniels",
+    "Brevin Jordan",
+    "Name a TE with 200+ receiving yards in a season for the Texans since 2000"
+   ],
+   [
+    "IND",
+    250,
+    15,
+    1,
+    "Dallas Clark",
+    "Jelani Woods",
+    "Name a TE with 250+ receiving yards in a season for the Colts since 2000"
+   ],
+   [
+    "JAX",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "KC",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "LA",
+    200,
+    12,
+    1,
+    "Jared Cook",
+    "Joe Klopfenstein",
+    "Name a TE with 200+ receiving yards in a season for the Rams since 2000"
+   ],
+   [
+    "LAC",
+    200,
+    14,
+    1,
+    "Antonio Gates",
+    "Josh Norman",
+    "Name a TE with 200+ receiving yards in a season for the Chargers since 2000"
+   ],
+   [
+    "LV",
+    250,
+    15,
+    1,
+    "Jared Cook",
+    "Randal Williams",
+    "Name a TE with 250+ receiving yards in a season for the Raiders since 2000"
+   ],
+   [
+    "MIA",
+    250,
+    12,
+    1,
+    "Randy McMichael",
+    "Dion Sims",
+    "Name a TE with 250+ receiving yards in a season for the Dolphins since 2000"
+   ],
+   [
+    "MIN",
+    200,
+    13,
+    1,
+    "Kyle Rudolph",
+    "Chase Ford",
+    "Name a TE with 200+ receiving yards in a season for the Vikings since 2000"
+   ],
+   [
+    "NE",
+    200,
+    15,
+    1,
+    "Rob Gronkowski",
+    "Pharaoh Brown",
+    "Name a TE with 200+ receiving yards in a season for the Patriots since 2000"
+   ],
+   [
+    "NO",
+    250,
+    16,
+    1,
+    "Jimmy Graham",
+    "Zach Hilton",
+    "Name a TE with 250+ receiving yards in a season for the Saints since 2000"
+   ],
+   [
+    "NYG",
+    200,
+    15,
+    1,
+    "Jeremy Shockey",
+    "Kaden Smith",
+    "Name a TE with 200+ receiving yards in a season for the Giants since 2000"
+   ],
+   [
+    "NYJ",
+    300,
+    12,
+    1,
+    "Kellen Winslow",
+    "Jace Amaro",
+    "Name a TE with 300+ receiving yards in a season for the Jets since 2000"
+   ],
+   [
+    "PHI",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "PIT",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "SEA",
+    250,
+    15,
+    1,
+    "Jimmy Graham",
+    "Anthony McCoy",
+    "Name a TE with 250+ receiving yards in a season for the Seahawks since 2000"
+   ],
+   [
+    "SF",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "TB",
+    250,
+    12,
+    1,
+    "Rob Gronkowski",
+    "Timothy Wright",
+    "Name a TE with 250+ receiving yards in a season for the Buccaneers since 2000"
+   ],
+   [
+    "TEN",
+    200,
+    16,
+    1,
+    "Jared Cook",
+    "Josh Whyle",
+    "Name a TE with 200+ receiving yards in a season for the Titans since 2000"
+   ],
+   [
+    "WAS",
+    200,
+    13,
+    1,
+    "Zach Ertz",
+    "Jeremy Sprinkle",
+    "Name a TE with 200+ receiving yards in a season for the Commanders since 2000"
+   ]
+  ]
+ },
+ "h_t_sacks": {
+  "cat": "Team history",
+  "variants": [
+   [
+    "ARI",
+    8,
+    15,
+    1,
+    "Calais Campbell",
+    "Alex Okafor",
+    "Name a defender with 8+ sacks in a season for the Cardinals since 2000"
+   ],
+   [
+    "ATL",
+    6,
+    18,
+    1,
+    "Calais Campbell",
+    "James Pearce Jr.",
+    "Name a defender with 6+ sacks in a season for the Falcons since 2000"
+   ],
+   [
+    "BAL",
+    8,
+    15,
+    1,
+    "Terrell Suggs",
+    "Odafe Oweh",
+    "Name a defender with 8+ sacks in a season for the Ravens since 2000"
+   ],
+   [
+    "BUF",
+    6,
+    18,
+    1,
+    "Von Miller",
+    "A.J. Epenesa",
+    "Name a defender with 6+ sacks in a season for the Bills since 2000"
+   ],
+   [
+    "CAR",
+    6,
+    16,
+    1,
+    "Julius Peppers",
+    "Vernon Butler",
+    "Name a defender with 6+ sacks in a season for the Panthers since 2000"
+   ],
+   [
+    "CHI",
+    7,
+    19,
+    1,
+    "Julius Peppers",
+    "Trevis Gipson",
+    "Name a defender with 7+ sacks in a season for the Bears since 2000"
+   ],
+   [
+    "CIN",
+    6,
+    17,
+    1,
+    "Carlos Dunlap",
+    "Jonathan Fanene",
+    "Name a defender with 6+ sacks in a season for the Bengals since 2000"
+   ],
+   [
+    "CLE",
+    6,
+    18,
+    1,
+    "Myles Garrett",
+    "Mark Word",
+    "Name a defender with 6+ sacks in a season for the Browns since 2000"
+   ],
+   [
+    "DAL",
+    6,
+    20,
+    2,
+    "DeMarcus Ware",
+    "David Irving",
+    "Name a defender with 6+ sacks in a season for the Cowboys since 2000"
+   ],
+   [
+    "DEN",
+    7,
+    19,
+    1,
+    "DeMarcus Ware",
+    "Shane Ray",
+    "Name a defender with 7+ sacks in a season for the Broncos since 2000"
+   ],
+   [
+    "DET",
+    7,
+    19,
+    1,
+    "Ndamukong Suh",
+    "James Houston",
+    "Name a defender with 7+ sacks in a season for the Lions since 2000"
+   ],
+   [
+    "GB",
+    6,
+    18,
+    1,
+    "Julius Peppers",
+    "Kyler Fackrell",
+    "Name a defender with 6+ sacks in a season for the Packers since 2000"
+   ],
+   [
+    "HOU",
+    6,
+    16,
+    1,
+    "J.J. Watt",
+    "Shantee Orr",
+    "Name a defender with 6+ sacks in a season for the Texans since 2000"
+   ],
+   [
+    "IND",
+    7,
+    16,
+    1,
+    "Dwight Freeney",
+    "Laiatu Latu",
+    "Name a defender with 7+ sacks in a season for the Colts since 2000"
+   ],
+   [
+    "JAX",
+    6,
+    21,
+    2,
+    "Calais Campbell",
+    "Ryan Davis",
+    "Name a defender with 6+ sacks in a season for the Jaguars since 2000"
+   ],
+   [
+    "KC",
+    6,
+    16,
+    1,
+    "Jared Allen",
+    "Tershawn Wharton",
+    "Name a defender with 6+ sacks in a season for the Chiefs since 2000"
+   ],
+   [
+    "LA",
+    7,
+    17,
+    1,
+    "Aaron Donald",
+    "Braden Fiske",
+    "Name a defender with 7+ sacks in a season for the Rams since 2000"
+   ],
+   [
+    "LAC",
+    6,
+    23,
+    2,
+    "Khalil Mack",
+    "Darren Mickell",
+    "Name a defender with 6+ sacks in a season for the Chargers since 2000"
+   ],
+   [
+    "LV",
+    7,
+    17,
+    1,
+    "Warren Sapp",
+    "Malcolm Koonce",
+    "Name a defender with 7+ sacks in a season for the Raiders since 2000"
+   ],
+   [
+    "MIA",
+    7,
+    15,
+    1,
+    "Jason Taylor",
+    "Jaelan Phillips",
+    "Name a defender with 7+ sacks in a season for the Dolphins since 2000"
+   ],
+   [
+    "MIN",
+    7,
+    15,
+    1,
+    "Jared Allen",
+    "Dallas Turner",
+    "Name a defender with 7+ sacks in a season for the Vikings since 2000"
+   ],
+   [
+    "NE",
+    7,
+    22,
+    2,
+    "Chandler Jones",
+    "Joshua Uche",
+    "Name a defender with 7+ sacks in a season for the Patriots since 2000"
+   ],
+   [
+    "NO",
+    7,
+    16,
+    1,
+    "Cameron Jordan",
+    "Bryan Bresee",
+    "Name a defender with 7+ sacks in a season for the Saints since 2000"
+   ],
+   [
+    "NYG",
+    8,
+    15,
+    1,
+    "Jason Pierre-Paul",
+    "Azeez Ojulari",
+    "Name a defender with 8+ sacks in a season for the Giants since 2000"
+   ],
+   [
+    "NYJ",
+    7,
+    15,
+    1,
+    "John Abraham",
+    "Will McDonald IV",
+    "Name a defender with 7+ sacks in a season for the Jets since 2000"
+   ],
+   [
+    "PHI",
+    8,
+    16,
+    1,
+    "Fletcher Cox",
+    "N. D. Kalu",
+    "Name a defender with 8+ sacks in a season for the Eagles since 2000"
+   ],
+   [
+    "PIT",
+    8,
+    15,
+    1,
+    "Cameron Heyward",
+    "Jason Worilds",
+    "Name a defender with 8+ sacks in a season for the Steelers since 2000"
+   ],
+   [
+    "SEA",
+    9,
+    16,
+    1,
+    "Julian Peterson",
+    "Darrell Taylor",
+    "Name a defender with 9+ sacks in a season for the Seahawks since 2000"
+   ],
+   [
+    "SF",
+    6,
+    21,
+    2,
+    "Justin Smith",
+    "Aaron Lynch",
+    "Name a defender with 6+ sacks in a season for the 49ers since 2000"
+   ],
+   [
+    "TB",
+    7,
+    16,
+    1,
+    "Warren Sapp",
+    "Calijah Kancey",
+    "Name a defender with 7+ sacks in a season for the Buccaneers since 2000"
+   ],
+   [
+    "TEN",
+    7,
+    18,
+    1,
+    "Brian Orakpo",
+    "Jacob Ford",
+    "Name a defender with 7+ sacks in a season for the Titans since 2000"
+   ],
+   [
+    "WAS",
+    8,
+    16,
+    1,
+    "Bruce Smith",
+    "Matthew Ioannidis",
+    "Name a defender with 8+ sacks in a season for the Commanders since 2000"
+   ]
+  ]
+ },
+ "h_t_int": {
+  "cat": "Team history",
+  "variants": [
+   [
+    "ARI",
+    4,
+    18,
+    1,
+    "Aeneas Williams",
+    "Marcus Cooper",
+    "Name a defender with 4+ interceptions in a season for the Cardinals since 2000"
+   ],
+   [
+    "ATL",
+    4,
+    16,
+    1,
+    "Keith Brooking",
+    "Xavier Watts",
+    "Name a defender with 4+ interceptions in a season for the Falcons since 2000"
+   ],
+   [
+    "BAL",
+    4,
+    18,
+    1,
+    "Ray Lewis",
+    "Domonique Foxworth",
+    "Name a defender with 4+ interceptions in a season for the Ravens since 2000"
+   ],
+   [
+    "BUF",
+    4,
+    18,
+    1,
+    "London Fletcher",
+    "Aaron Williams",
+    "Name a defender with 4+ interceptions in a season for the Bills since 2000"
+   ],
+   [
+    "CAR",
+    4,
+    19,
+    1,
+    "Luke Kuechly",
+    "Jaycee Horn",
+    "Name a defender with 4+ interceptions in a season for the Panthers since 2000"
+   ],
+   [
+    "CHI",
+    4,
+    20,
+    2,
+    "Brian Urlacher",
+    "Kevin Payne",
+    "Name a defender with 4+ interceptions in a season for the Bears since 2000"
+   ],
+   [
+    "CIN",
+    4,
+    15,
+    1,
+    "Johnathan Joseph",
+    "Darius Phillips",
+    "Name a defender with 4+ interceptions in a season for the Bengals since 2000"
+   ],
+   [
+    "CLE",
+    4,
+    16,
+    1,
+    "Joe Haden",
+    "Daven Holly",
+    "Name a defender with 4+ interceptions in a season for the Browns since 2000"
+   ],
+   [
+    "DAL",
+    3,
+    22,
+    2,
+    "Terence Newman",
+    "Derek Ross",
+    "Name a defender with 3+ interceptions in a season for the Cowboys since 2000"
+   ],
+   [
+    "DEN",
+    3,
+    24,
+    2,
+    "Champ Bailey",
+    "Billy Jenkins",
+    "Name a defender with 3+ interceptions in a season for the Broncos since 2000"
+   ],
+   [
+    "DET",
+    3,
+    25,
+    2,
+    "Dre' Bly",
+    "Jerry Jacobs",
+    "Name a defender with 3+ interceptions in a season for the Lions since 2000"
+   ],
+   [
+    "GB",
+    4,
+    18,
+    1,
+    "Charles Woodson",
+    "Charlie Peprah",
+    "Name a defender with 4+ interceptions in a season for the Packers since 2000"
+   ],
+   [
+    "HOU",
+    4,
+    16,
+    1,
+    "Aaron Glenn",
+    "Kamari Lassiter",
+    "Name a defender with 4+ interceptions in a season for the Texans since 2000"
+   ],
+   [
+    "IND",
+    4,
+    16,
+    1,
+    "Antoine Bethea",
+    "Rodney Thomas",
+    "Name a defender with 4+ interceptions in a season for the Colts since 2000"
+   ],
+   [
+    "JAX",
+    4,
+    16,
+    1,
+    "Jalen Ramsey",
+    "Antonio Johnson",
+    "Name a defender with 4+ interceptions in a season for the Jaguars since 2000"
+   ],
+   [
+    "KC",
+    4,
+    15,
+    1,
+    "Ty Law",
+    "Jarrad Page",
+    "Name a defender with 4+ interceptions in a season for the Chiefs since 2000"
+   ],
+   [
+    "LA",
+    4,
+    19,
+    1,
+    "London Fletcher",
+    "Mike Furrey",
+    "Name a defender with 4+ interceptions in a season for the Rams since 2000"
+   ],
+   [
+    "LAC",
+    4,
+    15,
+    1,
+    "Eric Weddle",
+    "Tarheeb Still",
+    "Name a defender with 4+ interceptions in a season for the Chargers since 2000"
+   ],
+   [
+    "LV",
+    3,
+    26,
+    2,
+    "Charles Woodson",
+    "Kyu Blu Kelly",
+    "Name a defender with 3+ interceptions in a season for the Raiders since 2000"
+   ],
+   [
+    "MIA",
+    3,
+    25,
+    2,
+    "Zach Thomas",
+    "Tony Lippett",
+    "Name a defender with 3+ interceptions in a season for the Dolphins since 2000"
+   ],
+   [
+    "MIN",
+    3,
+    25,
+    2,
+    "Patrick Peterson",
+    "Josh Robinson",
+    "Name a defender with 3+ interceptions in a season for the Vikings since 2000"
+   ],
+   [
+    "NE",
+    4,
+    21,
+    2,
+    "Devin McCourty",
+    "Jaylinn Hawkins",
+    "Name a defender with 4+ interceptions in a season for the Patriots since 2000"
+   ],
+   [
+    "NO",
+    3,
+    27,
+    2,
+    "Darren Sharper",
+    "Delvin Breaux",
+    "Name a defender with 3+ interceptions in a season for the Saints since 2000"
+   ],
+   [
+    "NYG",
+    4,
+    19,
+    1,
+    "Janoris Jenkins",
+    "Curtis Riley",
+    "Name a defender with 4+ interceptions in a season for the Giants since 2000"
+   ],
+   [
+    "NYJ",
+    4,
+    15,
+    1,
+    "David Harris",
+    "Marcus Williams",
+    "Name a defender with 4+ interceptions in a season for the Jets since 2000"
+   ],
+   [
+    "PHI",
+    3,
+    31,
+    3,
+    "Brian Dawkins",
+    "Jalyx Hunt",
+    "Name a defender with 3+ interceptions in a season for the Eagles since 2000"
+   ],
+   [
+    "PIT",
+    3,
+    27,
+    2,
+    "Joey Porter",
+    "Beanie Bishop Jr.",
+    "Name a defender with 3+ interceptions in a season for the Steelers since 2000"
+   ],
+   [
+    "SEA",
+    4,
+    19,
+    1,
+    "Earl Thomas",
+    "Coby Bryant",
+    "Name a defender with 4+ interceptions in a season for the Seahawks since 2000"
+   ],
+   [
+    "SF",
+    4,
+    20,
+    2,
+    "Antoine Bethea",
+    "Chris Culliver",
+    "Name a defender with 4+ interceptions in a season for the 49ers since 2000"
+   ],
+   [
+    "TB",
+    4,
+    17,
+    1,
+    "Derrick Brooks",
+    "Keith Tandy",
+    "Name a defender with 4+ interceptions in a season for the Buccaneers since 2000"
+   ],
+   [
+    "TEN",
+    4,
+    15,
+    1,
+    "Kevin Byard",
+    "Lamont Thompson",
+    "Name a defender with 4+ interceptions in a season for the Titans since 2000"
+   ],
+   [
+    "WAS",
+    4,
+    15,
+    1,
+    "London Fletcher",
+    "Darrick Forrest",
+    "Name a defender with 4+ interceptions in a season for the Commanders since 2000"
+   ]
+  ]
+ },
+ "h_t_td": {
+  "cat": "Team history",
+  "variants": [
+   [
+    "ARI",
+    8,
+    15,
+    1,
+    "Larry Fitzgerald",
+    "Chris Wells",
+    "Name a player with 8+ rushing and receiving TDs in a season for the Cardinals since 2000"
+   ],
+   [
+    "ATL",
+    8,
+    16,
+    1,
+    "Tony Gonzalez",
+    "T.J. Duckett",
+    "Name a player with 8+ rushing and receiving TDs in a season for the Falcons since 2000"
+   ],
+   [
+    "BAL",
+    7,
+    21,
+    2,
+    "Anquan Boldin",
+    "Marlon Brown",
+    "Name a player with 7+ rushing and receiving TDs in a season for the Ravens since 2000"
+   ],
+   [
+    "BUF",
+    9,
+    16,
+    1,
+    "Josh Allen",
+    "Karlos Williams",
+    "Name a player with 9+ rushing and receiving TDs in a season for the Bills since 2000"
+   ],
+   [
+    "CAR",
+    7,
+    20,
+    2,
+    "Steve Smith",
+    "Nick Goings",
+    "Name a player with 7+ rushing and receiving TDs in a season for the Panthers since 2000"
+   ],
+   [
+    "CHI",
+    7,
+    19,
+    1,
+    "Brandon Marshall",
+    "Jeremy Langford",
+    "Name a player with 7+ rushing and receiving TDs in a season for the Bears since 2000"
+   ],
+   [
+    "CIN",
+    8,
+    16,
+    1,
+    "Terrell Owens",
+    "Chris Henry",
+    "Name a player with 8+ rushing and receiving TDs in a season for the Bengals since 2000"
+   ],
+   [
+    "CLE",
+    7,
+    19,
+    1,
+    "Amari Cooper",
+    "Travis Prentice",
+    "Name a player with 7+ rushing and receiving TDs in a season for the Browns since 2000"
+   ],
+   [
+    "DAL",
+    8,
+    19,
+    1,
+    "Jason Witten",
+    "Laurent Robinson",
+    "Name a player with 8+ rushing and receiving TDs in a season for the Cowboys since 2000"
+   ],
+   [
+    "DEN",
+    10,
+    15,
+    1,
+    "Brandon Marshall",
+    "Phillip Lindsay",
+    "Name a player with 10+ rushing and receiving TDs in a season for the Broncos since 2000"
+   ],
+   [
+    "DET",
+    8,
+    17,
+    1,
+    "Anquan Boldin",
+    "Mikel Leshoure",
+    "Name a player with 8+ rushing and receiving TDs in a season for the Lions since 2000"
+   ],
+   [
+    "GB",
+    9,
+    18,
+    1,
+    "Davante Adams",
+    "Robert Tonyan",
+    "Name a player with 9+ rushing and receiving TDs in a season for the Packers since 2000"
+   ],
+   [
+    "HOU",
+    6,
+    22,
+    2,
+    "Andre Johnson",
+    "Jayden Higgins",
+    "Name a player with 6+ rushing and receiving TDs in a season for the Texans since 2000"
+   ],
+   [
+    "IND",
+    8,
+    19,
+    1,
+    "Frank Gore",
+    "James Mungro",
+    "Name a player with 8+ rushing and receiving TDs in a season for the Colts since 2000"
+   ],
+   [
+    "JAX",
+    8,
+    15,
+    1,
+    "Maurice Jones-Drew",
+    "James Robinson",
+    "Name a player with 8+ rushing and receiving TDs in a season for the Jaguars since 2000"
+   ],
+   [
+    "KC",
+    8,
+    17,
+    1,
+    "Tony Gonzalez",
+    "Marc Boerigter",
+    "Name a player with 8+ rushing and receiving TDs in a season for the Chiefs since 2000"
+   ],
+   [
+    "LA",
+    8,
+    15,
+    1,
+    "Davante Adams",
+    "Zac Stacy",
+    "Name a player with 8+ rushing and receiving TDs in a season for the Rams since 2000"
+   ],
+   [
+    "LAC",
+    7,
+    21,
+    2,
+    "LaDainian Tomlinson",
+    "Danario Alexander",
+    "Name a player with 7+ rushing and receiving TDs in a season for the Chargers since 2000"
+   ],
+   [
+    "LV",
+    9,
+    15,
+    1,
+    "Davante Adams",
+    "Hunter Renfrow",
+    "Name a player with 9+ rushing and receiving TDs in a season for the Raiders since 2000"
+   ],
+   [
+    "MIA",
+    8,
+    17,
+    1,
+    "Tyreek Hill",
+    "Jay Ajayi",
+    "Name a player with 8+ rushing and receiving TDs in a season for the Dolphins since 2000"
+   ],
+   [
+    "MIN",
+    9,
+    15,
+    1,
+    "Randy Moss",
+    "Matt Asiata",
+    "Name a player with 9+ rushing and receiving TDs in a season for the Vikings since 2000"
+   ],
+   [
+    "NE",
+    9,
+    16,
+    1,
+    "Randy Moss",
+    "Damien Harris",
+    "Name a player with 9+ rushing and receiving TDs in a season for the Patriots since 2000"
+   ],
+   [
+    "NO",
+    9,
+    16,
+    1,
+    "Alvin Kamara",
+    "Robert Meachem",
+    "Name a player with 9+ rushing and receiving TDs in a season for the Saints since 2000"
+   ],
+   [
+    "NYG",
+    8,
+    16,
+    1,
+    "Tiki Barber",
+    "Andre Brown",
+    "Name a player with 8+ rushing and receiving TDs in a season for the Giants since 2000"
+   ],
+   [
+    "NYJ",
+    7,
+    18,
+    1,
+    "Davante Adams",
+    "Shonn Greene",
+    "Name a player with 7+ rushing and receiving TDs in a season for the Jets since 2000"
+   ],
+   [
+    "PHI",
+    9,
+    15,
+    1,
+    "Terrell Owens",
+    "Reggie Brown",
+    "Name a player with 9+ rushing and receiving TDs in a season for the Eagles since 2000"
+   ],
+   [
+    "PIT",
+    8,
+    19,
+    1,
+    "Antonio Brown",
+    "Martavis Bryant",
+    "Name a player with 8+ rushing and receiving TDs in a season for the Steelers since 2000"
+   ],
+   [
+    "SEA",
+    8,
+    15,
+    1,
+    "Jimmy Graham",
+    "T.J. Duckett",
+    "Name a player with 8+ rushing and receiving TDs in a season for the Seahawks since 2000"
+   ],
+   [
+    "SF",
+    7,
+    22,
+    2,
+    "Frank Gore",
+    "Jeff Wilson",
+    "Name a player with 7+ rushing and receiving TDs in a season for the 49ers since 2000"
+   ],
+   [
+    "TB",
+    8,
+    19,
+    1,
+    "Mike Evans",
+    "Sean Tucker",
+    "Name a player with 8+ rushing and receiving TDs in a season for the Buccaneers since 2000"
+   ],
+   [
+    "TEN",
+    7,
+    21,
+    2,
+    "DeAndre Hopkins",
+    "LenDale White",
+    "Name a player with 7+ rushing and receiving TDs in a season for the Titans since 2000"
+   ],
+   [
+    "WAS",
+    7,
+    18,
+    1,
+    "Adrian Peterson",
+    "Rob Kelley",
+    "Name a player with 7+ rushing and receiving TDs in a season for the Commanders since 2000"
+   ]
+  ]
+ },
+ "h_t_c_rush": {
+  "cat": "Team history",
+  "variants": [
+   [
+    "ARI",
+    1000,
+    14,
+    1,
+    "Edgerrin James",
+    "Chris Wells",
+    "Name a player with 1,000+ rushing yards for the Cardinals since 2000"
+   ],
+   [
+    "ATL",
+    1000,
+    15,
+    1,
+    "Matt Ryan",
+    "Jerious Norwood",
+    "Name a player with 1,000+ rushing yards for the Falcons since 2000"
+   ],
+   [
+    "BAL",
+    1000,
+    16,
+    1,
+    "Derrick Henry",
+    "Bernard Pierce",
+    "Name a player with 1,000+ rushing yards for the Ravens since 2000"
+   ],
+   [
+    "BUF",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "CAR",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "CHI",
+    1000,
+    14,
+    1,
+    "Matt Forte",
+    "Adrian Peterson",
+    "Name a player with 1,000+ rushing yards for the Bears since 2000"
+   ],
+   [
+    "CIN",
+    1000,
+    12,
+    1,
+    "Andy Dalton",
+    "Bernard Scott",
+    "Name a player with 1,000+ rushing yards for the Bengals since 2000"
+   ],
+   [
+    "CLE",
+    1000,
+    14,
+    1,
+    "Jamal Lewis",
+    "Lee Suggs",
+    "Name a player with 1,000+ rushing yards for the Browns since 2000"
+   ],
+   [
+    "DAL",
+    1000,
+    13,
+    1,
+    "Dak Prescott",
+    "Troy Hambrick",
+    "Name a player with 1,000+ rushing yards for the Cowboys since 2000"
+   ],
+   [
+    "DEN",
+    1000,
+    15,
+    1,
+    "Clinton Portis",
+    "Selvin Young",
+    "Name a player with 1,000+ rushing yards for the Broncos since 2000"
+   ],
+   [
+    "DET",
+    1000,
+    15,
+    1,
+    "Matthew Stafford",
+    "Kerryon Johnson",
+    "Name a player with 1,000+ rushing yards for the Lions since 2000"
+   ],
+   [
+    "GB",
+    1000,
+    12,
+    1,
+    "Aaron Rodgers",
+    "Emanuel Wilson",
+    "Name a player with 1,000+ rushing yards for the Packers since 2000"
+   ],
+   [
+    "HOU",
+    1000,
+    13,
+    1,
+    "Joe Mixon",
+    "Jonathan Wells",
+    "Name a player with 1,000+ rushing yards for the Texans since 2000"
+   ],
+   [
+    "IND",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "JAX",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "KC",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "LA",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "LAC",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "LV",
+    1000,
+    12,
+    1,
+    "Marshawn Lynch",
+    "DeAndre Washington",
+    "Name a player with 1,000+ rushing yards for the Raiders since 2000"
+   ],
+   [
+    "MIA",
+    1000,
+    13,
+    1,
+    "Ryan Tannehill",
+    "Travis Minor",
+    "Name a player with 1,000+ rushing yards for the Dolphins since 2000"
+   ],
+   [
+    "MIN",
+    1000,
+    15,
+    1,
+    "Adrian Peterson",
+    "Onterrio Smith",
+    "Name a player with 1,000+ rushing yards for the Vikings since 2000"
+   ],
+   [
+    "NE",
+    1000,
+    17,
+    1,
+    "Tom Brady",
+    "Damien Harris",
+    "Name a player with 1,000+ rushing yards for the Patriots since 2000"
+   ],
+   [
+    "NO",
+    1000,
+    12,
+    1,
+    "Alvin Kamara",
+    "Aaron Stecker",
+    "Name a player with 1,000+ rushing yards for the Saints since 2000"
+   ],
+   [
+    "NYG",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "NYJ",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "PHI",
+    1000,
+    15,
+    1,
+    "Donovan McNabb",
+    "Boston Scott",
+    "Name a player with 1,000+ rushing yards for the Eagles since 2000"
+   ],
+   [
+    "PIT",
+    1000,
+    12,
+    1,
+    "Ben Roethlisberger",
+    "Isaac Redman",
+    "Name a player with 1,000+ rushing yards for the Steelers since 2000"
+   ],
+   [
+    "SEA",
+    1000,
+    13,
+    1,
+    "Russell Wilson",
+    "Thomas Rawls",
+    "Name a player with 1,000+ rushing yards for the Seahawks since 2000"
+   ],
+   [
+    "SF",
+    1000,
+    15,
+    1,
+    "Frank Gore",
+    "Elijah Mitchell",
+    "Name a player with 1,000+ rushing yards for the 49ers since 2000"
+   ],
+   [
+    "TB",
+    1500,
+    12,
+    1,
+    "Warrick Dunn",
+    "Ronald Jones",
+    "Name a player with 1,500+ rushing yards for the Buccaneers since 2000"
+   ],
+   [
+    "TEN",
+    1000,
+    12,
+    1,
+    "Derrick Henry",
+    "LenDale White",
+    "Name a player with 1,000+ rushing yards for the Titans since 2000"
+   ],
+   [
+    "WAS",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ]
+  ]
+ },
+ "h_t_c_rec": {
+  "cat": "Team history",
+  "variants": [
+   [
+    "ARI",
+    2000,
+    13,
+    1,
+    "Larry Fitzgerald",
+    "Michael Wilson",
+    "Name a player with 2,000+ receiving yards for the Cardinals since 2000"
+   ],
+   [
+    "ATL",
+    1500,
+    17,
+    1,
+    "Tony Gonzalez",
+    "Russell Gage",
+    "Name a player with 1,500+ receiving yards for the Falcons since 2000"
+   ],
+   [
+    "BAL",
+    1500,
+    18,
+    1,
+    "Steve Smith",
+    "Kamar Aiken",
+    "Name a player with 1,500+ receiving yards for the Ravens since 2000"
+   ],
+   [
+    "BUF",
+    1500,
+    17,
+    1,
+    "Stefon Diggs",
+    "Scott Chandler",
+    "Name a player with 1,500+ receiving yards for the Bills since 2000"
+   ],
+   [
+    "CAR",
+    1500,
+    14,
+    1,
+    "Steve Smith",
+    "Donald Hayes",
+    "Name a player with 1,500+ receiving yards for the Panthers since 2000"
+   ],
+   [
+    "CHI",
+    2000,
+    15,
+    1,
+    "Brandon Marshall",
+    "Johnny Knox",
+    "Name a player with 2,000+ receiving yards for the Bears since 2000"
+   ],
+   [
+    "CIN",
+    1500,
+    15,
+    1,
+    "Chad Johnson",
+    "Chris Henry",
+    "Name a player with 1,500+ receiving yards for the Bengals since 2000"
+   ],
+   [
+    "CLE",
+    1500,
+    22,
+    2,
+    "Amari Cooper",
+    "Mohamed Massaquoi",
+    "Name a player with 1,500+ receiving yards for the Browns since 2000"
+   ],
+   [
+    "DAL",
+    2000,
+    15,
+    1,
+    "Jason Witten",
+    "Terrance Williams",
+    "Name a player with 2,000+ receiving yards for the Cowboys since 2000"
+   ],
+   [
+    "DEN",
+    1500,
+    16,
+    1,
+    "Brandon Marshall",
+    "Tim Patrick",
+    "Name a player with 1,500+ receiving yards for the Broncos since 2000"
+   ],
+   [
+    "DET",
+    1500,
+    18,
+    1,
+    "Calvin Johnson",
+    "Mike Furrey",
+    "Name a player with 1,500+ receiving yards for the Lions since 2000"
+   ],
+   [
+    "GB",
+    2000,
+    15,
+    1,
+    "Davante Adams",
+    "Bubba Franks",
+    "Name a player with 2,000+ receiving yards for the Packers since 2000"
+   ],
+   [
+    "HOU",
+    1500,
+    13,
+    1,
+    "Andre Johnson",
+    "Jordan Akins",
+    "Name a player with 1,500+ receiving yards for the Texans since 2000"
+   ],
+   [
+    "IND",
+    1500,
+    18,
+    1,
+    "Reggie Wayne",
+    "Mo Alie-Cox",
+    "Name a player with 1,500+ receiving yards for the Colts since 2000"
+   ],
+   [
+    "JAX",
+    1500,
+    21,
+    2,
+    "Maurice Jones-Drew",
+    "Mike Sims-Walker",
+    "Name a player with 1,500+ receiving yards for the Jaguars since 2000"
+   ],
+   [
+    "KC",
+    1500,
+    19,
+    1,
+    "Tony Gonzalez",
+    "Samie Parker",
+    "Name a player with 1,500+ receiving yards for the Chiefs since 2000"
+   ],
+   [
+    "LA",
+    1500,
+    18,
+    1,
+    "Torry Holt",
+    "Lance Kendricks",
+    "Name a player with 1,500+ receiving yards for the Rams since 2000"
+   ],
+   [
+    "LAC",
+    1500,
+    19,
+    1,
+    "LaDainian Tomlinson",
+    "Jeff Graham",
+    "Name a player with 1,500+ receiving yards for the Chargers since 2000"
+   ],
+   [
+    "LV",
+    1500,
+    23,
+    2,
+    "Davante Adams",
+    "Rod Streater",
+    "Name a player with 1,500+ receiving yards for the Raiders since 2000"
+   ],
+   [
+    "MIA",
+    1500,
+    17,
+    1,
+    "Brandon Marshall",
+    "Oronde Gadsden",
+    "Name a player with 1,500+ receiving yards for the Dolphins since 2000"
+   ],
+   [
+    "MIN",
+    1500,
+    21,
+    2,
+    "Randy Moss",
+    "K.J. Osborn",
+    "Name a player with 1,500+ receiving yards for the Vikings since 2000"
+   ],
+   [
+    "NE",
+    1500,
+    18,
+    1,
+    "Randy Moss",
+    "Aaron Hernandez",
+    "Name a player with 1,500+ receiving yards for the Patriots since 2000"
+   ],
+   [
+    "NO",
+    2000,
+    15,
+    1,
+    "Alvin Kamara",
+    "Robert Meachem",
+    "Name a player with 2,000+ receiving yards for the Saints since 2000"
+   ],
+   [
+    "NYG",
+    2000,
+    16,
+    1,
+    "Tiki Barber",
+    "Rueben Randle",
+    "Name a player with 2,000+ receiving yards for the Giants since 2000"
+   ],
+   [
+    "NYJ",
+    1500,
+    20,
+    2,
+    "Brandon Marshall",
+    "Quincy Enunwa",
+    "Name a player with 1,500+ receiving yards for the Jets since 2000"
+   ],
+   [
+    "PHI",
+    2000,
+    19,
+    1,
+    "LeSean McCoy",
+    "Chad Lewis",
+    "Name a player with 2,000+ receiving yards for the Eagles since 2000"
+   ],
+   [
+    "PIT",
+    1500,
+    18,
+    1,
+    "Antonio Brown",
+    "James Washington",
+    "Name a player with 1,500+ receiving yards for the Steelers since 2000"
+   ],
+   [
+    "SEA",
+    1500,
+    15,
+    1,
+    "Jimmy Graham",
+    "Itula Mili",
+    "Name a player with 1,500+ receiving yards for the Seahawks since 2000"
+   ],
+   [
+    "SF",
+    1500,
+    18,
+    1,
+    "Frank Gore",
+    "Arnaz Battle",
+    "Name a player with 1,500+ receiving yards for the 49ers since 2000"
+   ],
+   [
+    "TB",
+    1500,
+    16,
+    1,
+    "Mike Evans",
+    "O.J. Howard",
+    "Name a player with 1,500+ receiving yards for the Buccaneers since 2000"
+   ],
+   [
+    "TEN",
+    1500,
+    18,
+    1,
+    "Derrick Mason",
+    "Erron Kinney",
+    "Name a player with 1,500+ receiving yards for the Titans since 2000"
+   ],
+   [
+    "WAS",
+    1500,
+    15,
+    1,
+    "DeSean Jackson",
+    "Fred Davis",
+    "Name a player with 1,500+ receiving yards for the Commanders since 2000"
+   ]
+  ]
+ },
+ "h_t_c_sacks": {
+  "cat": "Team history",
+  "variants": [
+   [
+    "ARI",
+    15,
+    13,
+    1,
+    "Calais Campbell",
+    "Dennis Gardeck",
+    "Name a defender with 15+ sacks for the Cardinals since 2000"
+   ],
+   [
+    "ATL",
+    15,
+    13,
+    1,
+    "John Abraham",
+    "Arnold Ebiketie",
+    "Name a defender with 15+ sacks for the Falcons since 2000"
+   ],
+   [
+    "BAL",
+    15,
+    19,
+    1,
+    "Ray Lewis",
+    "Tyus Bowser",
+    "Name a defender with 15+ sacks for the Ravens since 2000"
+   ],
+   [
+    "BUF",
+    20,
+    12,
+    1,
+    "Mario Williams",
+    "A.J. Epenesa",
+    "Name a defender with 20+ sacks for the Bills since 2000"
+   ],
+   [
+    "CAR",
+    15,
+    12,
+    1,
+    "Julius Peppers",
+    "Wes Horton",
+    "Name a defender with 15+ sacks for the Panthers since 2000"
+   ],
+   [
+    "CHI",
+    15,
+    18,
+    1,
+    "Julius Peppers",
+    "Willie Young",
+    "Name a defender with 15+ sacks for the Bears since 2000"
+   ],
+   [
+    "CIN",
+    15,
+    13,
+    1,
+    "Carlos Dunlap",
+    "Carl Lawson",
+    "Name a defender with 15+ sacks for the Bengals since 2000"
+   ],
+   [
+    "CLE",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "DAL",
+    15,
+    13,
+    1,
+    "DeMarcus Ware",
+    "Randy Gregory",
+    "Name a defender with 15+ sacks for the Cowboys since 2000"
+   ],
+   [
+    "DEN",
+    15,
+    18,
+    1,
+    "DeMarcus Ware",
+    "Malik Reed",
+    "Name a defender with 15+ sacks for the Broncos since 2000"
+   ],
+   [
+    "DET",
+    15,
+    13,
+    1,
+    "Ndamukong Suh",
+    "Devin Taylor",
+    "Name a defender with 15+ sacks for the Lions since 2000"
+   ],
+   [
+    "GB",
+    15,
+    20,
+    2,
+    "Julius Peppers",
+    "Devonte Wyatt",
+    "Name a defender with 15+ sacks for the Packers since 2000"
+   ],
+   [
+    "HOU",
+    null,
+    0,
+    0,
+    "",
+    "",
+    ""
+   ],
+   [
+    "IND",
+    15,
+    15,
+    1,
+    "Dwight Freeney",
+    "Brad Scioli",
+    "Name a defender with 15+ sacks for the Colts since 2000"
+   ],
+   [
+    "JAX",
+    15,
+    17,
+    1,
+    "Calais Campbell",
+    "Bobby McCray",
+    "Name a defender with 15+ sacks for the Jaguars since 2000"
+   ],
+   [
+    "KC",
+    15,
+    13,
+    1,
+    "Jared Allen",
+    "Michael Danna",
+    "Name a defender with 15+ sacks for the Chiefs since 2000"
+   ],
+   [
+    "LA",
+    15,
+    13,
+    1,
+    "Aaron Donald",
+    "Tyoka Jackson",
+    "Name a defender with 15+ sacks for the Rams since 2000"
+   ],
+   [
+    "LAC",
+    15,
+    14,
+    1,
+    "Khalil Mack",
+    "Antwan Barnes",
+    "Name a defender with 15+ sacks for the Chargers since 2000"
+   ],
+   [
+    "LV",
+    15,
+    12,
+    1,
+    "Warren Sapp",
+    "Matt Shaughnessy",
+    "Name a defender with 15+ sacks for the Raiders since 2000"
+   ],
+   [
+    "MIA",
+    15,
+    17,
+    1,
+    "Jason Taylor",
+    "Jaelan Phillips",
+    "Name a defender with 15+ sacks for the Dolphins since 2000"
+   ],
+   [
+    "MIN",
+    15,
+    18,
+    1,
+    "Jared Allen",
+    "Tom Johnson",
+    "Name a defender with 15+ sacks for the Vikings since 2000"
+   ],
+   [
+    "NE",
+    20,
+    15,
+    1,
+    "Chandler Jones",
+    "Joshua Uche",
+    "Name a defender with 20+ sacks for the Patriots since 2000"
+   ],
+   [
+    "NO",
+    15,
+    16,
+    1,
+    "Cameron Jordan",
+    "Willie Whitehead",
+    "Name a defender with 15+ sacks for the Saints since 2000"
+   ],
+   [
+    "NYG",
+    15,
+    15,
+    1,
+    "Jason Pierre-Paul",
+    "Azeez Ojulari",
+    "Name a defender with 15+ sacks for the Giants since 2000"
+   ],
+   [
+    "NYJ",
+    15,
+    14,
+    1,
+    "John Abraham",
+    "Will McDonald IV",
+    "Name a defender with 15+ sacks for the Jets since 2000"
+   ],
+   [
+    "PHI",
+    20,
+    16,
+    1,
+    "Fletcher Cox",
+    "Vinny Curry",
+    "Name a defender with 20+ sacks for the Eagles since 2000"
+   ],
+   [
+    "PIT",
+    25,
+    15,
+    1,
+    "Cameron Heyward",
+    "Jason Worilds",
+    "Name a defender with 25+ sacks for the Steelers since 2000"
+   ],
+   [
+    "SEA",
+    20,
+    15,
+    1,
+    "Bobby Wagner",
+    "Darrell Taylor",
+    "Name a defender with 20+ sacks for the Seahawks since 2000"
+   ],
+   [
+    "SF",
+    15,
+    16,
+    1,
+    "Justin Smith",
+    "Aaron Lynch",
+    "Name a defender with 15+ sacks for the 49ers since 2000"
+   ],
+   [
+    "TB",
+    15,
+    20,
+    2,
+    "Warren Sapp",
+    "Yaya Diaby",
+    "Name a defender with 15+ sacks for the Buccaneers since 2000"
+   ],
+   [
+    "TEN",
+    15,
+    19,
+    1,
+    "Keith Bulluck",
+    "Jacob Ford",
+    "Name a defender with 15+ sacks for the Titans since 2000"
+   ],
+   [
+    "WAS",
+    15,
+    15,
+    1,
+    "Bruce Smith",
+    "Matthew Ioannidis",
+    "Name a defender with 15+ sacks for the Commanders since 2000"
+   ]
+  ]
+ }
+}
