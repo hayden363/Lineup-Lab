@@ -439,12 +439,29 @@ def fmt_threshold(t):
 def render_text(tpl, t, through, scope=None):
     fields = {"t": fmt_threshold(t), "times": "" if t == 1 else f", {fmt_threshold(t)}+ times", "min": min_volume(tpl, through), "scope": scope_label(tpl.get("scope"), scope) if scope else ""}
     text = tpl["text"].format(**fields)
-    return re.sub(r"\b([Aa]) (8|11|18)(?=[\d,]*\+)", lambda m: m.group(1) + "n " + m.group(2), text)    # "a 80+" -> "an 80+"
+    text = re.sub(r"\b([Aa]) (8|11|18)(?=[\d,]*\+)", lambda m: m.group(1) + "n " + m.group(2), text)    # "a 80+" -> "an 80+"
+    return tidy_text(text)
+
+
+_TIDY = [
+    (r"\b1\+ (rushing|receiving|passing) TDs\b", r"a \1 TD"),       # "with 1+ rushing TDs" -> "with a rushing TD"
+    (r"\b1\+ touchdowns\b", "a touchdown"),
+    (r"\bwith 1\+ games of ", "with a game of "),
+    (r" 1\+ times\b", " at least once"),
+    (r"\b([Aa]) (AFC|NFC|ACC|SEC)\b", lambda m: m.group(1) + "n " + m.group(2)),   # "a NFC North" -> "an NFC North"
+]
+
+
+def tidy_text(text):
+    """Plain English for the bottom rung of a ladder: no "1+ TDs", no "a NFC"."""
+    for pat, rep in _TIDY:
+        text = re.sub(pat, rep, text)
+    return text
 
 
 def build_pool_prompt(tpl, ctx, ecr_rank=None, fame=None, scope=None):
     """One prompt through the real tiering path (dd.pick_threshold). Returns None when no ladder rung leaves
-    dd.MIN_ANSWERS answers with a tier-6 (Hall of Famer) answer."""
+    dd.MIN_ANSWERS answers with a tier-6 (Highlight Reel TD) answer."""
     through, season = ctx["through"], ctx["season"]
     per = evaluate(tpl, ctx, scope)
     if per.empty:

@@ -233,5 +233,28 @@ class TieringPathTests(unittest.TestCase):
             self.assertEqual(len(dd.pick_day("2026-10-01", cands)), dd.day_size())
 
 
+
+class WiringTests(unittest.TestCase):
+    def test_bottom_rung_reads_as_plain_english(self):
+        from engine.daily_drive_pool import tidy_text
+        self.assertEqual(tidy_text("Name a NFC North player with 1+ receiving TDs"), "Name an NFC North player with a receiving TD")
+        self.assertEqual(tidy_text("Name a QB who has rushed for 1+ touchdowns"), "Name a QB who has rushed for a touchdown")
+        self.assertEqual(tidy_text("Name a TE who finished top-6 in PPR scoring 1+ times"), "Name a TE who finished top-6 in PPR scoring at least once")
+        self.assertEqual(tidy_text("Name a WR with 12+ receiving TDs"), "Name a WR with 12+ receiving TDs")      # untouched above 1
+
+    def test_pick_day_takes_at_most_one_prompt_per_category(self):
+        from engine import daily_drive as dd
+        ans = [{"id": f"a{i}", "name": f"P {i}", "tier": 6 if i == 0 else 1} for i in range(dd.MIN_ANSWERS)]
+        cands = [{"id": f"p:{c}{k}", "template": f"{c}{k}", "kind": "fantasy", "cat": c, "answers": ans, "text": "x"}
+                 for c in "ABCDEFGHIJ" for k in range(5)]
+        day = dd.pick_day("2026-11-20", cands)
+        self.assertEqual(len(day), dd.day_size())
+        self.assertEqual(len({p["cat"] for p in day}), len(day))
+
+    def test_pool_starts_tomorrow_not_today(self):
+        from engine import daily_drive as dd
+        self.assertEqual(dd.POOL_START, "2026-11-17")
+
+
 if __name__ == "__main__":
     unittest.main()

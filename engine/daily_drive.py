@@ -24,6 +24,8 @@ import pandas as pd
 MIN_ANSWERS = 12          # a prompt is used only if at least this many answers exist
 N_FANTASY, N_HISTORY = 4, 3     # the mix when HISTORY_ENABLED; otherwise the whole day is fantasy season prompts
 HISTORY_ENABLED = False         # owner decision 2026-11-16: every prompt is about THIS season's stats. Flip to bring back history + draft
+MAX_PER_CAT = 1                 # one prompt per pool category per day (14 categories, 7 prompts) so a day is varied
+POOL_START = "2026-11-17"       # owner approved the 100-prompt pool 2026-11-16; from the next day on (today's game stays as is)
 PUZZLE_VERSION = 2              # bump when the cached puzzle shape changes: older cached days are regenerated
 TARGET_MIN, TARGET_MAX = 15, 50  # the answer count a threshold rung should land in (the hard floor stays MIN_ANSWERS)
 
@@ -363,11 +365,14 @@ def pick_day(date_str, candidates, avoid_templates=()):
         rng.shuffle(pool)
         pool.sort(key=lambda c: c["template"] in avoid)   # fresh templates first; stable, so the shuffle still decides
         used = set()                                      # template groups: near-duplicates (WR rec TDs vs WR/TE rec TDs) count as one
+        per_cat = {}                                      # pool prompts carry a category: at most MAX_PER_CAT a day
         for c in pool:
             grp = c.get("group", c["template"])
-            if grp in used:
+            if grp in used or (c.get("cat") and per_cat.get(c["cat"], 0) >= MAX_PER_CAT):
                 continue
             used.add(grp)
+            if c.get("cat"):
+                per_cat[c["cat"]] = per_cat.get(c["cat"], 0) + 1
             out.append(c)
             if len(used) == n:
                 break
@@ -532,10 +537,22 @@ def live_candidates(date_str):
             fame = (career_points(history, wk), av_by_id)
         except Exception as e:
             print(f"[daily_drive] career data unavailable, rarity from consensus only: {e}")
-        for tpl in FANTASY_TEMPLATES:
-            p = build_season_prompt(tpl, wk, season, through, ecr_rank, fame)
-            if p:
-                cands.append(p)
+        built = None
+        if date_str >= POOL_START:                         # the 100-prompt pool (engine/daily_drive_pool.py)
+            try:
+                from engine import daily_drive_pool
+                try:
+                    picks_tbl = data.load_draft_picks()
+                except Exception:
+                    picks_tbl = None                       # rookie/college prompts drop out; never guessed
+                ctx = daily_drive_pool.build_context(wk, sched, season, through, picks_tbl)
+                built = daily_drive_pool.pool_candidates(ctx, date_str, ecr_rank, fame)
+            except Exception as e:
+                print(f"[daily_drive] prompt pool failed, using the original templates: {type(e).__name__}: {e}")
+                built = None
+        if not built:
+            built = [p for p in (build_season_prompt(tpl, wk, season, through, ecr_rank, fame) for tpl in FANTASY_TEMPLATES) if p]
+        cands.extend(built)
     if not HISTORY_ENABLED:
         return cands
     try:
