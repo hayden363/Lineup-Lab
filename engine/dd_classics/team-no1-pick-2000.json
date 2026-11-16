@@ -1,0 +1,238 @@
+{
+ "version": 1,
+ "key": "team-no1-pick-2000",
+ "cat": "NFL Draft",
+ "text": "Name a team that has made the No. 1 overall pick in the NFL Draft since 2000",
+ "era": "2000+",
+ "group": "no1",
+ "sources": [
+  "https://en.wikipedia.org/wiki/List_of_first_overall_NFL_draft_picks",
+  "https://www.espn.ph/nfl/story/_/id/39958676/no-1-nfl-draft-picks-history-know"
+ ],
+ "answers": [
+  {
+   "id": "cleveland-browns",
+   "name": "Cleveland Browns",
+   "aliases": [
+    "Cleveland",
+    "Browns"
+   ],
+   "tier": 1,
+   "note": "2000, 2017, 2018",
+   "source": "https://en.wikipedia.org/wiki/List_of_first_overall_NFL_draft_picks"
+  },
+  {
+   "id": "houston-texans",
+   "name": "Houston Texans",
+   "aliases": [
+    "Houston",
+    "Texans"
+   ],
+   "tier": 1,
+   "note": "2002, 2006, 2014",
+   "source": "https://en.wikipedia.org/wiki/List_of_first_overall_NFL_draft_picks"
+  },
+  {
+   "id": "cincinnati-bengals",
+   "name": "Cincinnati Bengals",
+   "aliases": [
+    "Cincinnati",
+    "Bengals"
+   ],
+   "tier": 1,
+   "note": "2003, 2020",
+   "source": "https://en.wikipedia.org/wiki/List_of_first_overall_NFL_draft_picks"
+  },
+  {
+   "id": "las-vegas-raiders",
+   "name": "Las Vegas Raiders",
+   "aliases": [
+    "Raiders",
+    "LV Raiders",
+    "Oakland Raiders",
+    "Los Angeles Raiders",
+    "LA Raiders",
+    "Vegas Raiders"
+   ],
+   "tier": 1,
+   "note": "2007 (Oakland), 2026",
+   "source": "https://en.wikipedia.org/wiki/List_of_first_overall_NFL_draft_picks"
+  },
+  {
+   "id": "los-angeles-rams",
+   "name": "Los Angeles Rams",
+   "aliases": [
+    "Rams",
+    "LA Rams",
+    "St. Louis Rams",
+    "Saint Louis Rams",
+    "Cleveland Rams"
+   ],
+   "tier": 2,
+   "note": "2010 (St. Louis), 2016",
+   "source": "https://en.wikipedia.org/wiki/List_of_first_overall_NFL_draft_picks"
+  },
+  {
+   "id": "carolina-panthers",
+   "name": "Carolina Panthers",
+   "aliases": [
+    "Carolina",
+    "Panthers"
+   ],
+   "tier": 2,
+   "note": "2011, 2023",
+   "source": "https://en.wikipedia.org/wiki/List_of_first_overall_NFL_draft_picks"
+  },
+  {
+   "id": "jacksonville-jaguars",
+   "name": "Jacksonville Jaguars",
+   "aliases": [
+    "Jacksonville",
+    "Jaguars",
+    "Jags"
+   ],
+   "tier": 2,
+   "note": "2021, 2022",
+   "source": "https://en.wikipedia.org/wiki/List_of_first_overall_NFL_draft_picks"
+  },
+  {
+   "id": "indianapolis-colts",
+   "name": "Indianapolis Colts",
+   "aliases": [
+    "Indianapolis",
+    "Colts",
+    "Baltimore Colts"
+   ],
+   "tier": 2,
+   "note": "2012",
+   "source": "https://en.wikipedia.org/wiki/List_of_first_overall_NFL_draft_picks"
+  },
+  {
+   "id": "kansas-city-chiefs",
+   "name": "Kansas City Chiefs",
+   "aliases": [
+    "Kansas City",
+    "Chiefs"
+   ],
+   "tier": 3,
+   "note": "2013",
+   "source": "https://en.wikipedia.org/wiki/List_of_first_overall_NFL_draft_picks"
+  },
+  {
+   "id": "tampa-bay-buccaneers",
+   "name": "Tampa Bay Buccaneers",
+   "aliases": [
+    "Tampa Bay",
+    "Buccaneers",
+    "Bucs",
+    "Tampa"
+   ],
+   "tier": 3,
+   "note": "2015",
+   "source": "https://en.wikipedia.org/wiki/List_of_first_overall_NFL_draft_picks"
+  },
+  {
+   "id": "arizona-cardinals",
+   "name": "Arizona Cardinals",
+   "aliases": [
+    "Arizona",
+    "Cardinals",
+    "Phoenix Cardinals",
+    "St. Louis Cardinals",
+    "Chicago Cardinals",
+    "Cards"
+   ],
+   "tier": 3,
+   "note": "2019",
+   "source": "https://en.wikipedia.org/wiki/List_of_first_overall_NFL_draft_picks"
+  },
+  {
+   "id": "chicago-bears",
+   "name": "Chicago Bears",
+   "aliases": [
+    "Chicago",
+    "Bears",
+    "Decatur Staleys",
+    "Chicago Staleys",
+    "Staleys"
+   ],
+   "tier": 4,
+   "note": "2024",
+   "source": "https://en.wikipedia.org/wiki/List_of_first_overall_NFL_draft_picks"
+  },
+  {
+   "id": "tennessee-titans",
+   "name": "Tennessee Titans",
+   "aliases": [
+    "Tennessee",
+    "Titans",
+    "Houston Oilers",
+    "Tennessee Oilers",
+    "Oilers"
+   ],
+   "tier": 4,
+   "note": "2025",
+   "source": "https://en.wikipedia.org/wiki/List_of_first_overall_NFL_draft_picks"
+  },
+  {
+   "id": "detroit-lions",
+   "name": "Detroit Lions",
+   "aliases": [
+    "Detroit",
+    "Lions",
+    "Portsmouth Spartans"
+   ],
+   "tier": 4,
+   "note": "2009",
+   "source": "https://en.wikipedia.org/wiki/List_of_first_overall_NFL_draft_picks"
+  },
+  {
+   "id": "los-angeles-chargers",
+   "name": "Los Angeles Chargers",
+   "aliases": [
+    "Chargers",
+    "LA Chargers",
+    "San Diego Chargers"
+   ],
+   "tier": 5,
+   "note": "2004 (San Diego)",
+   "source": "https://en.wikipedia.org/wiki/List_of_first_overall_NFL_draft_picks"
+  },
+  {
+   "id": "san-francisco-49ers",
+   "name": "San Francisco 49ers",
+   "aliases": [
+    "San Francisco",
+    "49ers",
+    "Niners",
+    "SF 49ers",
+    "Forty Niners"
+   ],
+   "tier": 5,
+   "note": "2005",
+   "source": "https://en.wikipedia.org/wiki/List_of_first_overall_NFL_draft_picks"
+  },
+  {
+   "id": "atlanta-falcons",
+   "name": "Atlanta Falcons",
+   "aliases": [
+    "Atlanta",
+    "Falcons"
+   ],
+   "tier": 5,
+   "note": "2001",
+   "source": "https://en.wikipedia.org/wiki/List_of_first_overall_NFL_draft_picks"
+  },
+  {
+   "id": "miami-dolphins",
+   "name": "Miami Dolphins",
+   "aliases": [
+    "Miami",
+    "Dolphins"
+   ],
+   "tier": 6,
+   "note": "2008",
+   "source": "https://en.wikipedia.org/wiki/List_of_first_overall_NFL_draft_picks"
+  }
+ ]
+}

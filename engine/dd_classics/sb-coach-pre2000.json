@@ -1,0 +1,202 @@
+{
+ "version": 1,
+ "key": "sb-coach-pre2000",
+ "cat": "Super Bowl",
+ "text": "Name a head coach who won a Super Bowl before the 2000 season",
+ "era": "pre2000",
+ "group": "sb-coach-old",
+ "sources": [
+  "https://en.wikipedia.org/wiki/List_of_Super_Bowl_head_coaches",
+  "https://en.wikipedia.org/wiki/Category:Super_Bowl%E2%80%93winning_head_coaches"
+ ],
+ "answers": [
+  {
+   "id": "vince-lombardi",
+   "name": "Vince Lombardi",
+   "aliases": [
+    "Lombardi"
+   ],
+   "tier": 1,
+   "note": "I, II (Packers)",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_head_coaches"
+  },
+  {
+   "id": "don-shula",
+   "name": "Don Shula",
+   "aliases": [
+    "Shula"
+   ],
+   "tier": 1,
+   "note": "VII, VIII (Dolphins)",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_head_coaches"
+  },
+  {
+   "id": "bill-walsh",
+   "name": "Bill Walsh",
+   "aliases": [
+    "Walsh"
+   ],
+   "tier": 1,
+   "note": "XVI, XIX, XXIII (49ers)",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_head_coaches"
+  },
+  {
+   "id": "chuck-noll",
+   "name": "Chuck Noll",
+   "aliases": [
+    "Noll"
+   ],
+   "tier": 1,
+   "note": "IX, X, XIII, XIV (Steelers)",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_head_coaches"
+  },
+  {
+   "id": "tom-landry",
+   "name": "Tom Landry",
+   "aliases": [
+    "Landry"
+   ],
+   "tier": 2,
+   "note": "VI, XII (Cowboys)",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_head_coaches"
+  },
+  {
+   "id": "joe-gibbs",
+   "name": "Joe Gibbs",
+   "aliases": [
+    "Gibbs"
+   ],
+   "tier": 2,
+   "note": "XVII, XXII, XXVI (Redskins)",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_head_coaches"
+  },
+  {
+   "id": "bill-parcells",
+   "name": "Bill Parcells",
+   "aliases": [
+    "Parcells"
+   ],
+   "tier": 2,
+   "note": "XXI, XXV (Giants)",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_head_coaches"
+  },
+  {
+   "id": "jimmy-johnson",
+   "name": "Jimmy Johnson",
+   "aliases": [],
+   "tier": 2,
+   "note": "XXVII, XXVIII (Cowboys)",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_head_coaches"
+  },
+  {
+   "id": "mike-ditka",
+   "name": "Mike Ditka",
+   "aliases": [
+    "Ditka"
+   ],
+   "tier": 3,
+   "note": "XX (Bears)",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_head_coaches"
+  },
+  {
+   "id": "john-madden",
+   "name": "John Madden",
+   "aliases": [
+    "Madden"
+   ],
+   "tier": 3,
+   "note": "XI (Raiders)",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_head_coaches"
+  },
+  {
+   "id": "george-seifert",
+   "name": "George Seifert",
+   "aliases": [
+    "Seifert"
+   ],
+   "tier": 3,
+   "note": "XXIV, XXIX (49ers)",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_head_coaches"
+  },
+  {
+   "id": "mike-shanahan",
+   "name": "Mike Shanahan",
+   "aliases": [
+    "Shanahan"
+   ],
+   "tier": 3,
+   "note": "XXXII, XXXIII (Broncos)",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_head_coaches"
+  },
+  {
+   "id": "dick-vermeil",
+   "name": "Dick Vermeil",
+   "aliases": [
+    "Vermeil"
+   ],
+   "tier": 4,
+   "note": "XXXIV (Rams, January 2000)",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_head_coaches"
+  },
+  {
+   "id": "mike-holmgren",
+   "name": "Mike Holmgren",
+   "aliases": [
+    "Holmgren"
+   ],
+   "tier": 4,
+   "note": "XXXI (Packers)",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_head_coaches"
+  },
+  {
+   "id": "barry-switzer",
+   "name": "Barry Switzer",
+   "aliases": [
+    "Switzer"
+   ],
+   "tier": 4,
+   "note": "XXX (Cowboys)",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_head_coaches"
+  },
+  {
+   "id": "tom-flores",
+   "name": "Tom Flores",
+   "aliases": [
+    "Flores"
+   ],
+   "tier": 5,
+   "note": "XV, XVIII (Raiders)",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_head_coaches"
+  },
+  {
+   "id": "hank-stram",
+   "name": "Hank Stram",
+   "aliases": [
+    "Stram"
+   ],
+   "tier": 5,
+   "note": "IV (Chiefs)",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_head_coaches"
+  },
+  {
+   "id": "weeb-ewbank",
+   "name": "Weeb Ewbank",
+   "aliases": [
+    "Ewbank"
+   ],
+   "tier": 5,
+   "note": "III (Jets)",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_head_coaches"
+  },
+  {
+   "id": "don-mccafferty",
+   "name": "Don McCafferty",
+   "aliases": [
+    "McCafferty"
+   ],
+   "tier": 6,
+   "note": "V (Colts)",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_head_coaches"
+  }
+ ]
+}

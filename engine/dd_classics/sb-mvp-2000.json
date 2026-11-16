@@ -1,0 +1,202 @@
+{
+ "version": 1,
+ "key": "sb-mvp-2000",
+ "cat": "Super Bowl",
+ "text": "Name a Super Bowl MVP since the 2000 season",
+ "era": "2000+",
+ "group": "sb-mvp",
+ "sources": [
+  "https://en.wikipedia.org/wiki/Super_Bowl_Most_Valuable_Player_Award",
+  "https://www.cbssports.com/nfl/news/super-bowl-results-winners-mvps-history-full-list/",
+  "https://www.nfl.com/news/list-of-nfl-honors-award-winners-from-2025-nfl-season"
+ ],
+ "answers": [
+  {
+   "id": "tom-brady",
+   "name": "Tom Brady",
+   "aliases": [
+    "Brady"
+   ],
+   "tier": 1,
+   "note": "5 MVPs: XXXVI, XXXVIII, XLIX, LI, LV",
+   "source": "https://en.wikipedia.org/wiki/Super_Bowl_Most_Valuable_Player_Award"
+  },
+  {
+   "id": "patrick-mahomes",
+   "name": "Patrick Mahomes",
+   "aliases": [
+    "Mahomes"
+   ],
+   "tier": 1,
+   "note": "LIV, LVII, LVIII",
+   "source": "https://en.wikipedia.org/wiki/Super_Bowl_Most_Valuable_Player_Award"
+  },
+  {
+   "id": "eli-manning",
+   "name": "Eli Manning",
+   "aliases": [
+    "Eli"
+   ],
+   "tier": 1,
+   "note": "XLII, XLVI",
+   "source": "https://en.wikipedia.org/wiki/Super_Bowl_Most_Valuable_Player_Award"
+  },
+  {
+   "id": "peyton-manning",
+   "name": "Peyton Manning",
+   "aliases": [
+    "Peyton"
+   ],
+   "tier": 1,
+   "note": "XLI",
+   "source": "https://en.wikipedia.org/wiki/Super_Bowl_Most_Valuable_Player_Award"
+  },
+  {
+   "id": "aaron-rodgers",
+   "name": "Aaron Rodgers",
+   "aliases": [
+    "Rodgers"
+   ],
+   "tier": 2,
+   "note": "XLV",
+   "source": "https://en.wikipedia.org/wiki/Super_Bowl_Most_Valuable_Player_Award"
+  },
+  {
+   "id": "drew-brees",
+   "name": "Drew Brees",
+   "aliases": [
+    "Brees"
+   ],
+   "tier": 2,
+   "note": "XLIV",
+   "source": "https://en.wikipedia.org/wiki/Super_Bowl_Most_Valuable_Player_Award"
+  },
+  {
+   "id": "jalen-hurts",
+   "name": "Jalen Hurts",
+   "aliases": [
+    "Hurts"
+   ],
+   "tier": 2,
+   "note": "LIX",
+   "source": "https://en.wikipedia.org/wiki/Super_Bowl_Most_Valuable_Player_Award"
+  },
+  {
+   "id": "ray-lewis",
+   "name": "Ray Lewis",
+   "aliases": [
+    "Lewis"
+   ],
+   "tier": 2,
+   "note": "XXXV (Ravens LB)",
+   "source": "https://en.wikipedia.org/wiki/Super_Bowl_Most_Valuable_Player_Award"
+  },
+  {
+   "id": "von-miller",
+   "name": "Von Miller",
+   "aliases": [
+    "Miller"
+   ],
+   "tier": 3,
+   "note": "50 (Broncos LB)",
+   "source": "https://en.wikipedia.org/wiki/Super_Bowl_Most_Valuable_Player_Award"
+  },
+  {
+   "id": "julian-edelman",
+   "name": "Julian Edelman",
+   "aliases": [
+    "Edelman"
+   ],
+   "tier": 3,
+   "note": "LIII (Patriots WR)",
+   "source": "https://en.wikipedia.org/wiki/Super_Bowl_Most_Valuable_Player_Award"
+  },
+  {
+   "id": "cooper-kupp",
+   "name": "Cooper Kupp",
+   "aliases": [
+    "Kupp"
+   ],
+   "tier": 3,
+   "note": "LVI (Rams WR)",
+   "source": "https://en.wikipedia.org/wiki/Super_Bowl_Most_Valuable_Player_Award"
+  },
+  {
+   "id": "nick-foles",
+   "name": "Nick Foles",
+   "aliases": [
+    "Foles"
+   ],
+   "tier": 3,
+   "note": "LII (Eagles QB)",
+   "source": "https://en.wikipedia.org/wiki/Super_Bowl_Most_Valuable_Player_Award"
+  },
+  {
+   "id": "joe-flacco",
+   "name": "Joe Flacco",
+   "aliases": [
+    "Flacco"
+   ],
+   "tier": 4,
+   "note": "XLVII (Ravens QB)",
+   "source": "https://en.wikipedia.org/wiki/Super_Bowl_Most_Valuable_Player_Award"
+  },
+  {
+   "id": "kenneth-walker-iii",
+   "name": "Kenneth Walker III",
+   "aliases": [
+    "Kenneth Walker",
+    "Ken Walker"
+   ],
+   "tier": 4,
+   "note": "LX (Seahawks RB)",
+   "source": "https://en.wikipedia.org/wiki/Super_Bowl_Most_Valuable_Player_Award"
+  },
+  {
+   "id": "santonio-holmes",
+   "name": "Santonio Holmes",
+   "aliases": [
+    "Holmes"
+   ],
+   "tier": 4,
+   "note": "XLIII (Steelers WR)",
+   "source": "https://en.wikipedia.org/wiki/Super_Bowl_Most_Valuable_Player_Award"
+  },
+  {
+   "id": "hines-ward",
+   "name": "Hines Ward",
+   "aliases": [
+    "Ward"
+   ],
+   "tier": 5,
+   "note": "XL (Steelers WR)",
+   "source": "https://en.wikipedia.org/wiki/Super_Bowl_Most_Valuable_Player_Award"
+  },
+  {
+   "id": "malcolm-smith",
+   "name": "Malcolm Smith",
+   "aliases": [],
+   "tier": 5,
+   "note": "XLVIII (Seahawks LB)",
+   "source": "https://en.wikipedia.org/wiki/Super_Bowl_Most_Valuable_Player_Award"
+  },
+  {
+   "id": "deion-branch",
+   "name": "Deion Branch",
+   "aliases": [
+    "Branch"
+   ],
+   "tier": 5,
+   "note": "XXXIX (Patriots WR)",
+   "source": "https://en.wikipedia.org/wiki/Super_Bowl_Most_Valuable_Player_Award"
+  },
+  {
+   "id": "dexter-jackson",
+   "name": "Dexter Jackson",
+   "aliases": [],
+   "tier": 6,
+   "note": "XXXVII (Buccaneers S)",
+   "source": "https://en.wikipedia.org/wiki/Super_Bowl_Most_Valuable_Player_Award"
+  }
+ ]
+}

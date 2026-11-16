@@ -399,7 +399,7 @@ def levenshtein(a, b):
 
 
 def check_answer(answers, typed, used=()):
-    """Judge one typed answer against a prompt's answer set (`[{id, name, tier}]`).
+    """Judge one typed answer against a prompt's answer set (`[{id, name, tier, aliases?}]`).
 
     Order: exact full name -> "F. Last" -> last name alone (only if it names exactly one answer; two or more is
     ambiguous and returns suggestions) -> typo within Levenshtein 2 (1 for names under 6 letters). A typo may
@@ -411,13 +411,18 @@ def check_answer(answers, typed, used=()):
     if not t:
         return {"ok": False, "reason": "type a player's name", "suggestions": []}
     used = set(used)
-    by_full, by_last, by_initial = {}, {}, {}
+    by_full, by_last, by_initial, by_alias = {}, {}, {}, {}
     for a in answers:
         n = norm_name(a["name"])
         by_full[n] = a
         toks = n.split()
         by_last.setdefault(toks[-1], []).append(a)
         by_initial.setdefault(toks[0][0] + " " + toks[-1], []).append(a)
+    for a in answers:       # optional "aliases": other accepted spellings, e.g. a team's old city; an exact alias is an exact answer
+        for al in a.get("aliases") or ():
+            k = norm_name(al)
+            if k and k not in by_full and a not in by_alias.setdefault(k, []):
+                by_alias[k].append(a)
 
     def hit(a):
         if a["id"] in used:
@@ -426,6 +431,12 @@ def check_answer(answers, typed, used=()):
 
     if t in by_full:
         return hit(by_full[t])
+    if t in by_alias:
+        pool = by_alias[t]
+        if len(pool) == 1:
+            return hit(pool[0])
+        return {"ok": False, "reason": "more than one answer fits - which one?",
+                "suggestions": [a["name"] for a in sorted(pool, key=lambda a: -a["tier"])[:4]]}
     toks = t.split()
     for pool in ((by_initial.get(toks[0][0] + " " + toks[-1], []) if len(toks) >= 2 and len(toks[0]) == 1 else []),
                  (by_last.get(t, []) if len(toks) == 1 else [])):
@@ -434,10 +445,19 @@ def check_answer(answers, typed, used=()):
         if len(pool) > 1:
             return {"ok": False, "reason": "more than one answer fits - which one?",
                     "suggestions": [a["name"] for a in sorted(pool, key=lambda a: -a["tier"])[:4]]}
-    # typo tolerance
+    # typo tolerance (against names; aliases count too, once per answer)
     limit = 1 if len(t) < 6 else 2
-    best = sorted(((levenshtein(t, n), n) for n in by_full), key=lambda x: x[0])
-    near = [by_full[n] for d, n in best if d <= limit]
+    keyed = dict(by_full)
+    for k, pool in by_alias.items():
+        for a in pool:
+            keyed.setdefault(k, a)
+    dist = {}
+    for n, a in keyed.items():
+        d = levenshtein(t, n)
+        if a["id"] not in dist or d < dist[a["id"]][0]:
+            dist[a["id"]] = (d, a)
+    best = sorted(dist.values(), key=lambda x: x[0])
+    near = [a for d, a in best if d <= limit]
     if len(near) == 1 or (near and best[0][0] < best[1][0]):
         a = near[0]
         if a["tier"] >= 5:

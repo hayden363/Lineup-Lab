@@ -1,0 +1,227 @@
+{
+ "version": 1,
+ "key": "career-receiving-13k",
+ "cat": "Career records",
+ "text": "Name a player with 13,000 or more career receiving yards",
+ "era": "all",
+ "group": "records-off",
+ "sources": [
+  "https://www.pro-football-reference.com/leaders/rec_yds_career.htm",
+  "https://www.pro-football-reference.com/leaders/rec_yds_career_2016.htm"
+ ],
+ "answers": [
+  {
+   "id": "jerry-rice",
+   "name": "Jerry Rice",
+   "aliases": [
+    "Rice"
+   ],
+   "tier": 1,
+   "note": "22,895, the NFL record",
+   "source": "https://www.pro-football-reference.com/leaders/rec_yds_career.htm"
+  },
+  {
+   "id": "larry-fitzgerald",
+   "name": "Larry Fitzgerald",
+   "aliases": [
+    "Fitzgerald",
+    "Fitz"
+   ],
+   "tier": 1,
+   "note": "17,492",
+   "source": "https://www.pro-football-reference.com/leaders/rec_yds_career.htm"
+  },
+  {
+   "id": "terrell-owens",
+   "name": "Terrell Owens",
+   "aliases": [
+    "T.O.",
+    "TO",
+    "Owens"
+   ],
+   "tier": 1,
+   "note": "15,934",
+   "source": "https://www.pro-football-reference.com/leaders/rec_yds_career.htm"
+  },
+  {
+   "id": "randy-moss",
+   "name": "Randy Moss",
+   "aliases": [
+    "Moss"
+   ],
+   "tier": 1,
+   "note": "15,292",
+   "source": "https://www.pro-football-reference.com/leaders/rec_yds_career.htm"
+  },
+  {
+   "id": "tony-gonzalez",
+   "name": "Tony Gonzalez",
+   "aliases": [
+    "Gonzalez"
+   ],
+   "tier": 1,
+   "note": "15,127, a tight end",
+   "source": "https://www.pro-football-reference.com/leaders/rec_yds_career.htm"
+  },
+  {
+   "id": "marvin-harrison",
+   "name": "Marvin Harrison",
+   "aliases": [
+    "Harrison"
+   ],
+   "tier": 2,
+   "note": "14,580",
+   "source": "https://www.pro-football-reference.com/leaders/rec_yds_career.htm"
+  },
+  {
+   "id": "tim-brown",
+   "name": "Tim Brown",
+   "aliases": [],
+   "tier": 2,
+   "note": "14,934",
+   "source": "https://www.pro-football-reference.com/leaders/rec_yds_career.htm"
+  },
+  {
+   "id": "isaac-bruce",
+   "name": "Isaac Bruce",
+   "aliases": [
+    "Bruce"
+   ],
+   "tier": 2,
+   "note": "15,208",
+   "source": "https://www.pro-football-reference.com/leaders/rec_yds_career.htm"
+  },
+  {
+   "id": "steve-smith-sr",
+   "name": "Steve Smith Sr.",
+   "aliases": [
+    "Steve Smith",
+    "Smith"
+   ],
+   "tier": 2,
+   "note": "14,731",
+   "source": "https://www.pro-football-reference.com/leaders/rec_yds_career.htm"
+  },
+  {
+   "id": "andre-johnson",
+   "name": "Andre Johnson",
+   "aliases": [
+    "Johnson"
+   ],
+   "tier": 3,
+   "note": "14,185",
+   "source": "https://www.pro-football-reference.com/leaders/rec_yds_career.htm"
+  },
+  {
+   "id": "julio-jones",
+   "name": "Julio Jones",
+   "aliases": [
+    "Jones"
+   ],
+   "tier": 3,
+   "note": "13,703",
+   "source": "https://www.pro-football-reference.com/leaders/rec_yds_career.htm"
+  },
+  {
+   "id": "reggie-wayne",
+   "name": "Reggie Wayne",
+   "aliases": [
+    "Wayne"
+   ],
+   "tier": 3,
+   "note": "14,345",
+   "source": "https://www.pro-football-reference.com/leaders/rec_yds_career.htm"
+  },
+  {
+   "id": "cris-carter",
+   "name": "Cris Carter",
+   "aliases": [
+    "Carter"
+   ],
+   "tier": 3,
+   "note": "13,899",
+   "source": "https://www.pro-football-reference.com/leaders/rec_yds_career.htm"
+  },
+  {
+   "id": "anquan-boldin",
+   "name": "Anquan Boldin",
+   "aliases": [
+    "Boldin"
+   ],
+   "tier": 4,
+   "note": "13,779",
+   "source": "https://www.pro-football-reference.com/leaders/rec_yds_career.htm"
+  },
+  {
+   "id": "jason-witten",
+   "name": "Jason Witten",
+   "aliases": [
+    "Witten"
+   ],
+   "tier": 4,
+   "note": "13,046, a tight end",
+   "source": "https://www.pro-football-reference.com/leaders/rec_yds_career.htm"
+  },
+  {
+   "id": "deandre-hopkins",
+   "name": "DeAndre Hopkins",
+   "aliases": [
+    "Hopkins",
+    "Nuk Hopkins"
+   ],
+   "tier": 4,
+   "note": "13,295",
+   "source": "https://www.pro-football-reference.com/leaders/rec_yds_career.htm"
+  },
+  {
+   "id": "steve-largent",
+   "name": "Steve Largent",
+   "aliases": [
+    "Largent"
+   ],
+   "tier": 5,
+   "note": "13,089",
+   "source": "https://www.pro-football-reference.com/leaders/rec_yds_career.htm"
+  },
+  {
+   "id": "torry-holt",
+   "name": "Torry Holt",
+   "aliases": [
+    "Holt"
+   ],
+   "tier": 5,
+   "note": "13,382",
+   "source": "https://www.pro-football-reference.com/leaders/rec_yds_career.htm"
+  },
+  {
+   "id": "james-lofton",
+   "name": "James Lofton",
+   "aliases": [
+    "Lofton"
+   ],
+   "tier": 5,
+   "note": "14,004",
+   "source": "https://www.pro-football-reference.com/leaders/rec_yds_career.htm"
+  },
+  {
+   "id": "andre-reed",
+   "name": "Andre Reed",
+   "aliases": [
+    "Reed"
+   ],
+   "tier": 6,
+   "note": "13,198",
+   "source": "https://www.pro-football-reference.com/leaders/rec_yds_career.htm"
+  },
+  {
+   "id": "henry-ellard",
+   "name": "Henry Ellard",
+   "aliases": [
+    "Ellard"
+   ],
+   "tier": 6,
+   "note": "13,777",
+   "source": "https://www.pro-football-reference.com/leaders/rec_yds_career.htm"
+  }
+ ]
+}

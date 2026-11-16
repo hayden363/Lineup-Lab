@@ -1,0 +1,257 @@
+{
+ "version": 1,
+ "key": "team-new-stadium-2000",
+ "cat": "Stadiums & teams",
+ "text": "Name a team whose current home stadium opened in 2000 or later",
+ "era": "2000+",
+ "group": "stadiums",
+ "sources": [
+  "https://en.wikipedia.org/wiki/List_of_current_NFL_stadiums",
+  "https://sportsfoundation.org/nfl-teams-map/",
+  "https://en.wikipedia.org/wiki/Chronology_of_home_stadiums_for_current_NFL_teams"
+ ],
+ "answers": [
+  {
+   "id": "dallas-cowboys",
+   "name": "Dallas Cowboys",
+   "aliases": [
+    "Dallas",
+    "Cowboys",
+    "Americas Team"
+   ],
+   "tier": 1,
+   "note": "AT&T Stadium, 2009",
+   "source": "https://en.wikipedia.org/wiki/List_of_current_NFL_stadiums"
+  },
+  {
+   "id": "las-vegas-raiders",
+   "name": "Las Vegas Raiders",
+   "aliases": [
+    "Raiders",
+    "LV Raiders",
+    "Oakland Raiders",
+    "Los Angeles Raiders",
+    "LA Raiders",
+    "Vegas Raiders"
+   ],
+   "tier": 1,
+   "note": "Allegiant Stadium, 2020",
+   "source": "https://en.wikipedia.org/wiki/List_of_current_NFL_stadiums"
+  },
+  {
+   "id": "los-angeles-rams",
+   "name": "Los Angeles Rams",
+   "aliases": [
+    "Rams",
+    "LA Rams",
+    "St. Louis Rams",
+    "Saint Louis Rams",
+    "Cleveland Rams"
+   ],
+   "tier": 1,
+   "note": "SoFi Stadium, 2020",
+   "source": "https://en.wikipedia.org/wiki/List_of_current_NFL_stadiums"
+  },
+  {
+   "id": "los-angeles-chargers",
+   "name": "Los Angeles Chargers",
+   "aliases": [
+    "Chargers",
+    "LA Chargers",
+    "San Diego Chargers"
+   ],
+   "tier": 1,
+   "note": "SoFi Stadium, 2020",
+   "source": "https://en.wikipedia.org/wiki/List_of_current_NFL_stadiums"
+  },
+  {
+   "id": "san-francisco-49ers",
+   "name": "San Francisco 49ers",
+   "aliases": [
+    "San Francisco",
+    "49ers",
+    "Niners",
+    "SF 49ers",
+    "Forty Niners"
+   ],
+   "tier": 2,
+   "note": "Levi's Stadium, 2014",
+   "source": "https://en.wikipedia.org/wiki/List_of_current_NFL_stadiums"
+  },
+  {
+   "id": "atlanta-falcons",
+   "name": "Atlanta Falcons",
+   "aliases": [
+    "Atlanta",
+    "Falcons"
+   ],
+   "tier": 2,
+   "note": "Mercedes-Benz Stadium, 2017",
+   "source": "https://en.wikipedia.org/wiki/List_of_current_NFL_stadiums"
+  },
+  {
+   "id": "minnesota-vikings",
+   "name": "Minnesota Vikings",
+   "aliases": [
+    "Minnesota",
+    "Vikings"
+   ],
+   "tier": 2,
+   "note": "U.S. Bank Stadium, 2016",
+   "source": "https://en.wikipedia.org/wiki/List_of_current_NFL_stadiums"
+  },
+  {
+   "id": "new-york-giants",
+   "name": "New York Giants",
+   "aliases": [
+    "Giants",
+    "NY Giants"
+   ],
+   "tier": 2,
+   "note": "MetLife Stadium, 2010",
+   "source": "https://en.wikipedia.org/wiki/List_of_current_NFL_stadiums"
+  },
+  {
+   "id": "new-york-jets",
+   "name": "New York Jets",
+   "aliases": [
+    "Jets",
+    "NY Jets",
+    "New York Titans"
+   ],
+   "tier": 3,
+   "note": "MetLife Stadium, 2010",
+   "source": "https://en.wikipedia.org/wiki/List_of_current_NFL_stadiums"
+  },
+  {
+   "id": "philadelphia-eagles",
+   "name": "Philadelphia Eagles",
+   "aliases": [
+    "Philadelphia",
+    "Eagles"
+   ],
+   "tier": 3,
+   "note": "Lincoln Financial Field, 2003",
+   "source": "https://en.wikipedia.org/wiki/List_of_current_NFL_stadiums"
+  },
+  {
+   "id": "new-england-patriots",
+   "name": "New England Patriots",
+   "aliases": [
+    "New England",
+    "Patriots",
+    "Boston Patriots",
+    "Pats"
+   ],
+   "tier": 3,
+   "note": "Gillette Stadium, 2002",
+   "source": "https://en.wikipedia.org/wiki/List_of_current_NFL_stadiums"
+  },
+  {
+   "id": "seattle-seahawks",
+   "name": "Seattle Seahawks",
+   "aliases": [
+    "Seattle",
+    "Seahawks"
+   ],
+   "tier": 3,
+   "note": "Lumen Field, 2002",
+   "source": "https://en.wikipedia.org/wiki/List_of_current_NFL_stadiums"
+  },
+  {
+   "id": "pittsburgh-steelers",
+   "name": "Pittsburgh Steelers",
+   "aliases": [
+    "Pittsburgh",
+    "Steelers",
+    "Pittsburgh Pirates"
+   ],
+   "tier": 4,
+   "note": "Acrisure Stadium, 2001",
+   "source": "https://en.wikipedia.org/wiki/List_of_current_NFL_stadiums"
+  },
+  {
+   "id": "denver-broncos",
+   "name": "Denver Broncos",
+   "aliases": [
+    "Denver",
+    "Broncos"
+   ],
+   "tier": 4,
+   "note": "Empower Field at Mile High, 2001",
+   "source": "https://en.wikipedia.org/wiki/List_of_current_NFL_stadiums"
+  },
+  {
+   "id": "detroit-lions",
+   "name": "Detroit Lions",
+   "aliases": [
+    "Detroit",
+    "Lions",
+    "Portsmouth Spartans"
+   ],
+   "tier": 4,
+   "note": "Ford Field, 2002",
+   "source": "https://en.wikipedia.org/wiki/List_of_current_NFL_stadiums"
+  },
+  {
+   "id": "arizona-cardinals",
+   "name": "Arizona Cardinals",
+   "aliases": [
+    "Arizona",
+    "Cardinals",
+    "Phoenix Cardinals",
+    "St. Louis Cardinals",
+    "Chicago Cardinals",
+    "Cards"
+   ],
+   "tier": 5,
+   "note": "State Farm Stadium, 2006",
+   "source": "https://en.wikipedia.org/wiki/List_of_current_NFL_stadiums"
+  },
+  {
+   "id": "indianapolis-colts",
+   "name": "Indianapolis Colts",
+   "aliases": [
+    "Indianapolis",
+    "Colts",
+    "Baltimore Colts"
+   ],
+   "tier": 5,
+   "note": "Lucas Oil Stadium, 2008",
+   "source": "https://en.wikipedia.org/wiki/List_of_current_NFL_stadiums"
+  },
+  {
+   "id": "houston-texans",
+   "name": "Houston Texans",
+   "aliases": [
+    "Houston",
+    "Texans"
+   ],
+   "tier": 5,
+   "note": "NRG Stadium, 2002",
+   "source": "https://en.wikipedia.org/wiki/List_of_current_NFL_stadiums"
+  },
+  {
+   "id": "cincinnati-bengals",
+   "name": "Cincinnati Bengals",
+   "aliases": [
+    "Cincinnati",
+    "Bengals"
+   ],
+   "tier": 6,
+   "note": "Paycor Stadium, 2000",
+   "source": "https://en.wikipedia.org/wiki/List_of_current_NFL_stadiums"
+  },
+  {
+   "id": "buffalo-bills",
+   "name": "Buffalo Bills",
+   "aliases": [
+    "Buffalo",
+    "Bills"
+   ],
+   "tier": 6,
+   "note": "Highmark Stadium, 2026",
+   "source": "https://en.wikipedia.org/wiki/List_of_current_NFL_stadiums"
+  }
+ ]
+}

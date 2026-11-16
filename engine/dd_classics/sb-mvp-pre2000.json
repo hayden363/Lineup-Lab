@@ -1,0 +1,304 @@
+{
+ "version": 1,
+ "key": "sb-mvp-pre2000",
+ "cat": "Super Bowl",
+ "text": "Name a Super Bowl MVP from before the 2000 season",
+ "era": "pre2000",
+ "group": "sb-mvp-old",
+ "sources": [
+  "https://en.wikipedia.org/wiki/Super_Bowl_Most_Valuable_Player_Award",
+  "https://www.cbssports.com/nfl/news/super-bowl-results-winners-mvps-history-full-list/"
+ ],
+ "answers": [
+  {
+   "id": "joe-montana",
+   "name": "Joe Montana",
+   "aliases": [
+    "Montana"
+   ],
+   "tier": 1,
+   "note": "XVI, XIX, XXIV",
+   "source": "https://en.wikipedia.org/wiki/Super_Bowl_Most_Valuable_Player_Award"
+  },
+  {
+   "id": "bart-starr",
+   "name": "Bart Starr",
+   "aliases": [
+    "Starr"
+   ],
+   "tier": 1,
+   "note": "I, II",
+   "source": "https://en.wikipedia.org/wiki/Super_Bowl_Most_Valuable_Player_Award"
+  },
+  {
+   "id": "terry-bradshaw",
+   "name": "Terry Bradshaw",
+   "aliases": [
+    "Bradshaw"
+   ],
+   "tier": 1,
+   "note": "XIII, XIV",
+   "source": "https://en.wikipedia.org/wiki/Super_Bowl_Most_Valuable_Player_Award"
+  },
+  {
+   "id": "joe-namath",
+   "name": "Joe Namath",
+   "aliases": [
+    "Namath"
+   ],
+   "tier": 1,
+   "note": "III",
+   "source": "https://en.wikipedia.org/wiki/Super_Bowl_Most_Valuable_Player_Award"
+  },
+  {
+   "id": "troy-aikman",
+   "name": "Troy Aikman",
+   "aliases": [
+    "Aikman"
+   ],
+   "tier": 1,
+   "note": "XXVII",
+   "source": "https://en.wikipedia.org/wiki/Super_Bowl_Most_Valuable_Player_Award"
+  },
+  {
+   "id": "steve-young",
+   "name": "Steve Young",
+   "aliases": [],
+   "tier": 1,
+   "note": "XXIX",
+   "source": "https://en.wikipedia.org/wiki/Super_Bowl_Most_Valuable_Player_Award"
+  },
+  {
+   "id": "john-elway",
+   "name": "John Elway",
+   "aliases": [
+    "Elway"
+   ],
+   "tier": 1,
+   "note": "XXXIII",
+   "source": "https://en.wikipedia.org/wiki/Super_Bowl_Most_Valuable_Player_Award"
+  },
+  {
+   "id": "emmitt-smith",
+   "name": "Emmitt Smith",
+   "aliases": [],
+   "tier": 2,
+   "note": "XXVIII",
+   "source": "https://en.wikipedia.org/wiki/Super_Bowl_Most_Valuable_Player_Award"
+  },
+  {
+   "id": "jerry-rice",
+   "name": "Jerry Rice",
+   "aliases": [
+    "Rice"
+   ],
+   "tier": 2,
+   "note": "XXIII",
+   "source": "https://en.wikipedia.org/wiki/Super_Bowl_Most_Valuable_Player_Award"
+  },
+  {
+   "id": "terrell-davis",
+   "name": "Terrell Davis",
+   "aliases": [],
+   "tier": 2,
+   "note": "XXXII",
+   "source": "https://en.wikipedia.org/wiki/Super_Bowl_Most_Valuable_Player_Award"
+  },
+  {
+   "id": "roger-staubach",
+   "name": "Roger Staubach",
+   "aliases": [
+    "Staubach"
+   ],
+   "tier": 2,
+   "note": "VI",
+   "source": "https://en.wikipedia.org/wiki/Super_Bowl_Most_Valuable_Player_Award"
+  },
+  {
+   "id": "marcus-allen",
+   "name": "Marcus Allen",
+   "aliases": [
+    "Allen"
+   ],
+   "tier": 2,
+   "note": "XVIII",
+   "source": "https://en.wikipedia.org/wiki/Super_Bowl_Most_Valuable_Player_Award"
+  },
+  {
+   "id": "lynn-swann",
+   "name": "Lynn Swann",
+   "aliases": [
+    "Swann"
+   ],
+   "tier": 2,
+   "note": "X",
+   "source": "https://en.wikipedia.org/wiki/Super_Bowl_Most_Valuable_Player_Award"
+  },
+  {
+   "id": "franco-harris",
+   "name": "Franco Harris",
+   "aliases": [
+    "Harris"
+   ],
+   "tier": 3,
+   "note": "IX",
+   "source": "https://en.wikipedia.org/wiki/Super_Bowl_Most_Valuable_Player_Award"
+  },
+  {
+   "id": "larry-csonka",
+   "name": "Larry Csonka",
+   "aliases": [
+    "Csonka"
+   ],
+   "tier": 3,
+   "note": "VIII",
+   "source": "https://en.wikipedia.org/wiki/Super_Bowl_Most_Valuable_Player_Award"
+  },
+  {
+   "id": "richard-dent",
+   "name": "Richard Dent",
+   "aliases": [
+    "Dent"
+   ],
+   "tier": 3,
+   "note": "XX",
+   "source": "https://en.wikipedia.org/wiki/Super_Bowl_Most_Valuable_Player_Award"
+  },
+  {
+   "id": "phil-simms",
+   "name": "Phil Simms",
+   "aliases": [
+    "Simms"
+   ],
+   "tier": 3,
+   "note": "XXI",
+   "source": "https://en.wikipedia.org/wiki/Super_Bowl_Most_Valuable_Player_Award"
+  },
+  {
+   "id": "doug-williams",
+   "name": "Doug Williams",
+   "aliases": [],
+   "tier": 3,
+   "note": "XXII",
+   "source": "https://en.wikipedia.org/wiki/Super_Bowl_Most_Valuable_Player_Award"
+  },
+  {
+   "id": "ottis-anderson",
+   "name": "Ottis Anderson",
+   "aliases": [],
+   "tier": 3,
+   "note": "XXV",
+   "source": "https://en.wikipedia.org/wiki/Super_Bowl_Most_Valuable_Player_Award"
+  },
+  {
+   "id": "mark-rypien",
+   "name": "Mark Rypien",
+   "aliases": [
+    "Rypien"
+   ],
+   "tier": 4,
+   "note": "XXVI",
+   "source": "https://en.wikipedia.org/wiki/Super_Bowl_Most_Valuable_Player_Award"
+  },
+  {
+   "id": "len-dawson",
+   "name": "Len Dawson",
+   "aliases": [
+    "Dawson"
+   ],
+   "tier": 4,
+   "note": "IV",
+   "source": "https://en.wikipedia.org/wiki/Super_Bowl_Most_Valuable_Player_Award"
+  },
+  {
+   "id": "kurt-warner",
+   "name": "Kurt Warner",
+   "aliases": [
+    "Warner"
+   ],
+   "tier": 4,
+   "note": "XXXIV (January 2000)",
+   "source": "https://en.wikipedia.org/wiki/Super_Bowl_Most_Valuable_Player_Award"
+  },
+  {
+   "id": "jim-plunkett",
+   "name": "Jim Plunkett",
+   "aliases": [
+    "Plunkett"
+   ],
+   "tier": 4,
+   "note": "XV",
+   "source": "https://en.wikipedia.org/wiki/Super_Bowl_Most_Valuable_Player_Award"
+  },
+  {
+   "id": "john-riggins",
+   "name": "John Riggins",
+   "aliases": [
+    "Riggins"
+   ],
+   "tier": 4,
+   "note": "XVII",
+   "source": "https://en.wikipedia.org/wiki/Super_Bowl_Most_Valuable_Player_Award"
+  },
+  {
+   "id": "fred-biletnikoff",
+   "name": "Fred Biletnikoff",
+   "aliases": [
+    "Biletnikoff"
+   ],
+   "tier": 5,
+   "note": "XI",
+   "source": "https://en.wikipedia.org/wiki/Super_Bowl_Most_Valuable_Player_Award"
+  },
+  {
+   "id": "harvey-martin",
+   "name": "Harvey Martin",
+   "aliases": [],
+   "tier": 5,
+   "note": "XII (co-MVP)",
+   "source": "https://en.wikipedia.org/wiki/Super_Bowl_Most_Valuable_Player_Award"
+  },
+  {
+   "id": "randy-white",
+   "name": "Randy White",
+   "aliases": [],
+   "tier": 5,
+   "note": "XII (co-MVP)",
+   "source": "https://en.wikipedia.org/wiki/Super_Bowl_Most_Valuable_Player_Award"
+  },
+  {
+   "id": "larry-brown",
+   "name": "Larry Brown",
+   "aliases": [],
+   "tier": 5,
+   "note": "XXX (Cowboys CB)",
+   "source": "https://en.wikipedia.org/wiki/Super_Bowl_Most_Valuable_Player_Award"
+  },
+  {
+   "id": "desmond-howard",
+   "name": "Desmond Howard",
+   "aliases": [],
+   "tier": 6,
+   "note": "XXXI (Packers returner)",
+   "source": "https://en.wikipedia.org/wiki/Super_Bowl_Most_Valuable_Player_Award"
+  },
+  {
+   "id": "chuck-howley",
+   "name": "Chuck Howley",
+   "aliases": [
+    "Howley"
+   ],
+   "tier": 6,
+   "note": "V (Cowboys LB, MVP despite the loss)",
+   "source": "https://en.wikipedia.org/wiki/Super_Bowl_Most_Valuable_Player_Award"
+  },
+  {
+   "id": "jake-scott",
+   "name": "Jake Scott",
+   "aliases": [],
+   "tier": 6,
+   "note": "VII (Dolphins S)",
+   "source": "https://en.wikipedia.org/wiki/Super_Bowl_Most_Valuable_Player_Award"
+  }
+ ]
+}

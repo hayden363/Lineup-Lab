@@ -1,0 +1,176 @@
+{
+ "version": 1,
+ "key": "nfl-mvp-2000",
+ "cat": "NFL awards",
+ "text": "Name a player who has won AP NFL MVP since the 2000 season",
+ "era": "2000+",
+ "group": "mvp",
+ "sources": [
+  "https://apnews.com/article/ap-nfl-mvp-f0c84ba614bcd6c3d17ec53c04451046",
+  "https://en.wikipedia.org/wiki/AP_NFL_Most_Valuable_Player"
+ ],
+ "answers": [
+  {
+   "id": "patrick-mahomes",
+   "name": "Patrick Mahomes",
+   "aliases": [
+    "Mahomes"
+   ],
+   "tier": 1,
+   "note": "2018, 2022",
+   "source": "https://apnews.com/article/ap-nfl-mvp-f0c84ba614bcd6c3d17ec53c04451046"
+  },
+  {
+   "id": "tom-brady",
+   "name": "Tom Brady",
+   "aliases": [
+    "Brady"
+   ],
+   "tier": 1,
+   "note": "2007, 2010, 2017",
+   "source": "https://apnews.com/article/ap-nfl-mvp-f0c84ba614bcd6c3d17ec53c04451046"
+  },
+  {
+   "id": "peyton-manning",
+   "name": "Peyton Manning",
+   "aliases": [
+    "Peyton"
+   ],
+   "tier": 1,
+   "note": "2003 (co), 2004, 2008, 2009, 2013",
+   "source": "https://apnews.com/article/ap-nfl-mvp-f0c84ba614bcd6c3d17ec53c04451046"
+  },
+  {
+   "id": "aaron-rodgers",
+   "name": "Aaron Rodgers",
+   "aliases": [
+    "Rodgers"
+   ],
+   "tier": 1,
+   "note": "2011, 2014, 2020, 2021",
+   "source": "https://apnews.com/article/ap-nfl-mvp-f0c84ba614bcd6c3d17ec53c04451046"
+  },
+  {
+   "id": "lamar-jackson",
+   "name": "Lamar Jackson",
+   "aliases": [
+    "Lamar"
+   ],
+   "tier": 2,
+   "note": "2019, 2023",
+   "source": "https://apnews.com/article/ap-nfl-mvp-f0c84ba614bcd6c3d17ec53c04451046"
+  },
+  {
+   "id": "josh-allen",
+   "name": "Josh Allen",
+   "aliases": [
+    "Allen"
+   ],
+   "tier": 2,
+   "note": "2024",
+   "source": "https://apnews.com/article/ap-nfl-mvp-f0c84ba614bcd6c3d17ec53c04451046"
+  },
+  {
+   "id": "cam-newton",
+   "name": "Cam Newton",
+   "aliases": [
+    "Newton"
+   ],
+   "tier": 2,
+   "note": "2015",
+   "source": "https://apnews.com/article/ap-nfl-mvp-f0c84ba614bcd6c3d17ec53c04451046"
+  },
+  {
+   "id": "adrian-peterson",
+   "name": "Adrian Peterson",
+   "aliases": [
+    "AP",
+    "Peterson"
+   ],
+   "tier": 3,
+   "note": "2012",
+   "source": "https://apnews.com/article/ap-nfl-mvp-f0c84ba614bcd6c3d17ec53c04451046"
+  },
+  {
+   "id": "ladainian-tomlinson",
+   "name": "LaDainian Tomlinson",
+   "aliases": [
+    "LT",
+    "Tomlinson"
+   ],
+   "tier": 3,
+   "note": "2006",
+   "source": "https://apnews.com/article/ap-nfl-mvp-f0c84ba614bcd6c3d17ec53c04451046"
+  },
+  {
+   "id": "matthew-stafford",
+   "name": "Matthew Stafford",
+   "aliases": [
+    "Matt Stafford"
+   ],
+   "tier": 3,
+   "note": "2025",
+   "source": "https://apnews.com/article/ap-nfl-mvp-f0c84ba614bcd6c3d17ec53c04451046"
+  },
+  {
+   "id": "matt-ryan",
+   "name": "Matt Ryan",
+   "aliases": [
+    "Ryan"
+   ],
+   "tier": 4,
+   "note": "2016",
+   "source": "https://apnews.com/article/ap-nfl-mvp-f0c84ba614bcd6c3d17ec53c04451046"
+  },
+  {
+   "id": "kurt-warner",
+   "name": "Kurt Warner",
+   "aliases": [
+    "Warner"
+   ],
+   "tier": 4,
+   "note": "2001",
+   "source": "https://apnews.com/article/ap-nfl-mvp-f0c84ba614bcd6c3d17ec53c04451046"
+  },
+  {
+   "id": "marshall-faulk",
+   "name": "Marshall Faulk",
+   "aliases": [
+    "Faulk"
+   ],
+   "tier": 5,
+   "note": "2000",
+   "source": "https://apnews.com/article/ap-nfl-mvp-f0c84ba614bcd6c3d17ec53c04451046"
+  },
+  {
+   "id": "shaun-alexander",
+   "name": "Shaun Alexander",
+   "aliases": [
+    "Alexander"
+   ],
+   "tier": 5,
+   "note": "2005",
+   "source": "https://apnews.com/article/ap-nfl-mvp-f0c84ba614bcd6c3d17ec53c04451046"
+  },
+  {
+   "id": "rich-gannon",
+   "name": "Rich Gannon",
+   "aliases": [
+    "Gannon"
+   ],
+   "tier": 5,
+   "note": "2002",
+   "source": "https://apnews.com/article/ap-nfl-mvp-f0c84ba614bcd6c3d17ec53c04451046"
+  },
+  {
+   "id": "steve-mcnair",
+   "name": "Steve McNair",
+   "aliases": [
+    "McNair"
+   ],
+   "tier": 6,
+   "note": "2003 (co-MVP with Peyton Manning)",
+   "source": "https://apnews.com/article/ap-nfl-mvp-f0c84ba614bcd6c3d17ec53c04451046"
+  }
+ ]
+}

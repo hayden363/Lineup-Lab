@@ -1,0 +1,165 @@
+{
+ "version": 1,
+ "key": "career-fg-400",
+ "cat": "Career records",
+ "text": "Name a kicker with 400 or more career field goals made",
+ "era": "all",
+ "group": "records-kick",
+ "sources": [
+  "https://www.pro-football-reference.com/leaders/fgm_career.htm",
+  "https://en.wikipedia.org/wiki/List_of_most_career_field_goals_in_NFL_history"
+ ],
+ "answers": [
+  {
+   "id": "adam-vinatieri",
+   "name": "Adam Vinatieri",
+   "aliases": [
+    "Vinatieri"
+   ],
+   "tier": 1,
+   "note": "599, the NFL record",
+   "source": "https://www.pro-football-reference.com/leaders/fgm_career.htm"
+  },
+  {
+   "id": "justin-tucker",
+   "name": "Justin Tucker",
+   "aliases": [
+    "Tucker"
+   ],
+   "tier": 1,
+   "note": "417",
+   "source": "https://www.pro-football-reference.com/leaders/fgm_career.htm"
+  },
+  {
+   "id": "sebastian-janikowski",
+   "name": "Sebastian Janikowski",
+   "aliases": [
+    "Janikowski",
+    "Sea Bass"
+   ],
+   "tier": 1,
+   "note": "436",
+   "source": "https://www.pro-football-reference.com/leaders/fgm_career.htm"
+  },
+  {
+   "id": "morten-andersen",
+   "name": "Morten Andersen",
+   "aliases": [
+    "Andersen"
+   ],
+   "tier": 2,
+   "note": "565",
+   "source": "https://www.pro-football-reference.com/leaders/fgm_career.htm"
+  },
+  {
+   "id": "gary-anderson",
+   "name": "Gary Anderson",
+   "aliases": [
+    "Anderson"
+   ],
+   "tier": 2,
+   "note": "538",
+   "source": "https://www.pro-football-reference.com/leaders/fgm_career.htm"
+  },
+  {
+   "id": "phil-dawson",
+   "name": "Phil Dawson",
+   "aliases": [
+    "Dawson"
+   ],
+   "tier": 2,
+   "note": "441",
+   "source": "https://www.pro-football-reference.com/leaders/fgm_career.htm"
+  },
+  {
+   "id": "mason-crosby",
+   "name": "Mason Crosby",
+   "aliases": [
+    "Crosby"
+   ],
+   "tier": 3,
+   "note": "400",
+   "source": "https://www.pro-football-reference.com/leaders/fgm_career.htm"
+  },
+  {
+   "id": "jason-elam",
+   "name": "Jason Elam",
+   "aliases": [
+    "Elam"
+   ],
+   "tier": 3,
+   "note": "436",
+   "source": "https://www.pro-football-reference.com/leaders/fgm_career.htm"
+  },
+  {
+   "id": "robbie-gould",
+   "name": "Robbie Gould",
+   "aliases": [
+    "Gould"
+   ],
+   "tier": 3,
+   "note": "447",
+   "source": "https://www.pro-football-reference.com/leaders/fgm_career.htm"
+  },
+  {
+   "id": "nick-folk",
+   "name": "Nick Folk",
+   "aliases": [
+    "Folk"
+   ],
+   "tier": 4,
+   "note": "400+",
+   "source": "https://www.pro-football-reference.com/leaders/fgm_career.htm"
+  },
+  {
+   "id": "matt-prater",
+   "name": "Matt Prater",
+   "aliases": [
+    "Prater"
+   ],
+   "tier": 4,
+   "note": "410+",
+   "source": "https://www.pro-football-reference.com/leaders/fgm_career.htm"
+  },
+  {
+   "id": "jason-hanson",
+   "name": "Jason Hanson",
+   "aliases": [
+    "Hanson"
+   ],
+   "tier": 4,
+   "note": "495",
+   "source": "https://www.pro-football-reference.com/leaders/fgm_career.htm"
+  },
+  {
+   "id": "matt-stover",
+   "name": "Matt Stover",
+   "aliases": [
+    "Stover"
+   ],
+   "tier": 5,
+   "note": "471",
+   "source": "https://www.pro-football-reference.com/leaders/fgm_career.htm"
+  },
+  {
+   "id": "john-kasay",
+   "name": "John Kasay",
+   "aliases": [
+    "Kasay"
+   ],
+   "tier": 5,
+   "note": "461",
+   "source": "https://www.pro-football-reference.com/leaders/fgm_career.htm"
+  },
+  {
+   "id": "john-carney",
+   "name": "John Carney",
+   "aliases": [
+    "Carney"
+   ],
+   "tier": 6,
+   "note": "478",
+   "source": "https://www.pro-football-reference.com/leaders/fgm_career.htm"
+  }
+ ]
+}

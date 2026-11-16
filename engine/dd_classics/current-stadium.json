@@ -1,0 +1,331 @@
+{
+ "version": 1,
+ "key": "current-stadium",
+ "cat": "Stadiums & teams",
+ "text": "Name a current NFL stadium",
+ "era": "all",
+ "group": "stadiums",
+ "sources": [
+  "https://en.wikipedia.org/wiki/List_of_current_NFL_stadiums",
+  "https://sportsfoundation.org/nfl-teams-map/",
+  "https://en.wikipedia.org/wiki/Chronology_of_home_stadiums_for_current_NFL_teams"
+ ],
+ "answers": [
+  {
+   "id": "at-t-stadium",
+   "name": "AT&T Stadium",
+   "aliases": [
+    "ATT Stadium",
+    "Cowboys Stadium"
+   ],
+   "tier": 1,
+   "note": "Cowboys, Arlington TX",
+   "source": "https://en.wikipedia.org/wiki/List_of_current_NFL_stadiums"
+  },
+  {
+   "id": "lambeau-field",
+   "name": "Lambeau Field",
+   "aliases": [
+    "Lambeau"
+   ],
+   "tier": 1,
+   "note": "Packers, Green Bay WI",
+   "source": "https://en.wikipedia.org/wiki/List_of_current_NFL_stadiums"
+  },
+  {
+   "id": "sofi-stadium",
+   "name": "SoFi Stadium",
+   "aliases": [
+    "Sofi"
+   ],
+   "tier": 1,
+   "note": "Rams and Chargers, Inglewood CA",
+   "source": "https://en.wikipedia.org/wiki/List_of_current_NFL_stadiums"
+  },
+  {
+   "id": "arrowhead-stadium",
+   "name": "Arrowhead Stadium",
+   "aliases": [
+    "Arrowhead",
+    "GEHA Field at Arrowhead Stadium",
+    "GEHA Field"
+   ],
+   "tier": 1,
+   "note": "Chiefs, Kansas City MO",
+   "source": "https://en.wikipedia.org/wiki/List_of_current_NFL_stadiums"
+  },
+  {
+   "id": "soldier-field",
+   "name": "Soldier Field",
+   "aliases": [],
+   "tier": 1,
+   "note": "Bears, Chicago IL",
+   "source": "https://en.wikipedia.org/wiki/List_of_current_NFL_stadiums"
+  },
+  {
+   "id": "metlife-stadium",
+   "name": "MetLife Stadium",
+   "aliases": [
+    "Met Life Stadium"
+   ],
+   "tier": 1,
+   "note": "Giants and Jets, East Rutherford NJ",
+   "source": "https://en.wikipedia.org/wiki/List_of_current_NFL_stadiums"
+  },
+  {
+   "id": "allegiant-stadium",
+   "name": "Allegiant Stadium",
+   "aliases": [],
+   "tier": 2,
+   "note": "Raiders, Paradise NV",
+   "source": "https://en.wikipedia.org/wiki/List_of_current_NFL_stadiums"
+  },
+  {
+   "id": "caesars-superdome",
+   "name": "Caesars Superdome",
+   "aliases": [
+    "Superdome",
+    "Mercedes-Benz Superdome",
+    "Mercedes Benz Superdome",
+    "Louisiana Superdome"
+   ],
+   "tier": 2,
+   "note": "Saints, New Orleans LA",
+   "source": "https://en.wikipedia.org/wiki/List_of_current_NFL_stadiums"
+  },
+  {
+   "id": "lincoln-financial-field",
+   "name": "Lincoln Financial Field",
+   "aliases": [
+    "The Linc",
+    "Linc"
+   ],
+   "tier": 2,
+   "note": "Eagles, Philadelphia PA",
+   "source": "https://en.wikipedia.org/wiki/List_of_current_NFL_stadiums"
+  },
+  {
+   "id": "gillette-stadium",
+   "name": "Gillette Stadium",
+   "aliases": [],
+   "tier": 2,
+   "note": "Patriots, Foxborough MA",
+   "source": "https://en.wikipedia.org/wiki/List_of_current_NFL_stadiums"
+  },
+  {
+   "id": "mercedes-benz-stadium",
+   "name": "Mercedes-Benz Stadium",
+   "aliases": [
+    "Mercedes Benz Stadium"
+   ],
+   "tier": 2,
+   "note": "Falcons, Atlanta GA",
+   "source": "https://en.wikipedia.org/wiki/List_of_current_NFL_stadiums"
+  },
+  {
+   "id": "hard-rock-stadium",
+   "name": "Hard Rock Stadium",
+   "aliases": [
+    "Sun Life Stadium",
+    "Dolphin Stadium",
+    "Pro Player Stadium",
+    "Joe Robbie Stadium"
+   ],
+   "tier": 2,
+   "note": "Dolphins, Miami Gardens FL",
+   "source": "https://en.wikipedia.org/wiki/List_of_current_NFL_stadiums"
+  },
+  {
+   "id": "lumen-field",
+   "name": "Lumen Field",
+   "aliases": [
+    "CenturyLink Field",
+    "Qwest Field"
+   ],
+   "tier": 3,
+   "note": "Seahawks, Seattle WA",
+   "source": "https://en.wikipedia.org/wiki/List_of_current_NFL_stadiums"
+  },
+  {
+   "id": "levi-s-stadium",
+   "name": "Levi's Stadium",
+   "aliases": [
+    "Levis Stadium"
+   ],
+   "tier": 3,
+   "note": "49ers, Santa Clara CA",
+   "source": "https://en.wikipedia.org/wiki/List_of_current_NFL_stadiums"
+  },
+  {
+   "id": "highmark-stadium",
+   "name": "Highmark Stadium",
+   "aliases": [
+    "Ralph Wilson Stadium",
+    "New Era Field",
+    "Bills Stadium",
+    "Rich Stadium"
+   ],
+   "tier": 3,
+   "note": "Bills, Orchard Park NY (new stadium opened 2026)",
+   "source": "https://en.wikipedia.org/wiki/List_of_current_NFL_stadiums"
+  },
+  {
+   "id": "acrisure-stadium",
+   "name": "Acrisure Stadium",
+   "aliases": [
+    "Heinz Field"
+   ],
+   "tier": 3,
+   "note": "Steelers, Pittsburgh PA",
+   "source": "https://en.wikipedia.org/wiki/List_of_current_NFL_stadiums"
+  },
+  {
+   "id": "empower-field-at-mile-high",
+   "name": "Empower Field at Mile High",
+   "aliases": [
+    "Mile High",
+    "Mile High Stadium",
+    "Invesco Field",
+    "Sports Authority Field"
+   ],
+   "tier": 3,
+   "note": "Broncos, Denver CO",
+   "source": "https://en.wikipedia.org/wiki/List_of_current_NFL_stadiums"
+  },
+  {
+   "id": "raymond-james-stadium",
+   "name": "Raymond James Stadium",
+   "aliases": [
+    "Ray Jay"
+   ],
+   "tier": 3,
+   "note": "Buccaneers, Tampa FL",
+   "source": "https://en.wikipedia.org/wiki/List_of_current_NFL_stadiums"
+  },
+  {
+   "id": "u-s-bank-stadium",
+   "name": "U.S. Bank Stadium",
+   "aliases": [
+    "US Bank Stadium"
+   ],
+   "tier": 4,
+   "note": "Vikings, Minneapolis MN",
+   "source": "https://en.wikipedia.org/wiki/List_of_current_NFL_stadiums"
+  },
+  {
+   "id": "lucas-oil-stadium",
+   "name": "Lucas Oil Stadium",
+   "aliases": [],
+   "tier": 4,
+   "note": "Colts, Indianapolis IN",
+   "source": "https://en.wikipedia.org/wiki/List_of_current_NFL_stadiums"
+  },
+  {
+   "id": "state-farm-stadium",
+   "name": "State Farm Stadium",
+   "aliases": [
+    "University of Phoenix Stadium",
+    "Univ of Phoenix Stadium"
+   ],
+   "tier": 4,
+   "note": "Cardinals, Glendale AZ",
+   "source": "https://en.wikipedia.org/wiki/List_of_current_NFL_stadiums"
+  },
+  {
+   "id": "ford-field",
+   "name": "Ford Field",
+   "aliases": [],
+   "tier": 4,
+   "note": "Lions, Detroit MI",
+   "source": "https://en.wikipedia.org/wiki/List_of_current_NFL_stadiums"
+  },
+  {
+   "id": "bank-of-america-stadium",
+   "name": "Bank of America Stadium",
+   "aliases": [
+    "BofA Stadium"
+   ],
+   "tier": 4,
+   "note": "Panthers, Charlotte NC",
+   "source": "https://en.wikipedia.org/wiki/List_of_current_NFL_stadiums"
+  },
+  {
+   "id": "m-t-bank-stadium",
+   "name": "M&T Bank Stadium",
+   "aliases": [
+    "MT Bank Stadium",
+    "Ravens Stadium"
+   ],
+   "tier": 5,
+   "note": "Ravens, Baltimore MD",
+   "source": "https://en.wikipedia.org/wiki/List_of_current_NFL_stadiums"
+  },
+  {
+   "id": "huntington-bank-field",
+   "name": "Huntington Bank Field",
+   "aliases": [
+    "FirstEnergy Stadium",
+    "Cleveland Browns Stadium"
+   ],
+   "tier": 5,
+   "note": "Browns, Cleveland OH",
+   "source": "https://en.wikipedia.org/wiki/List_of_current_NFL_stadiums"
+  },
+  {
+   "id": "nissan-stadium",
+   "name": "Nissan Stadium",
+   "aliases": [
+    "LP Field",
+    "Adelphia Coliseum"
+   ],
+   "tier": 5,
+   "note": "Titans, Nashville TN",
+   "source": "https://en.wikipedia.org/wiki/List_of_current_NFL_stadiums"
+  },
+  {
+   "id": "nrg-stadium",
+   "name": "NRG Stadium",
+   "aliases": [
+    "Reliant Stadium"
+   ],
+   "tier": 5,
+   "note": "Texans, Houston TX",
+   "source": "https://en.wikipedia.org/wiki/List_of_current_NFL_stadiums"
+  },
+  {
+   "id": "everbank-stadium",
+   "name": "EverBank Stadium",
+   "aliases": [
+    "TIAA Bank Field",
+    "EverBank Field",
+    "Alltel Stadium",
+    "Jacksonville Municipal Stadium"
+   ],
+   "tier": 6,
+   "note": "Jaguars, Jacksonville FL",
+   "source": "https://en.wikipedia.org/wiki/List_of_current_NFL_stadiums"
+  },
+  {
+   "id": "northwest-stadium",
+   "name": "Northwest Stadium",
+   "aliases": [
+    "FedExField",
+    "FedEx Field",
+    "Jack Kent Cooke Stadium"
+   ],
+   "tier": 6,
+   "note": "Commanders, Landover MD",
+   "source": "https://en.wikipedia.org/wiki/List_of_current_NFL_stadiums"
+  },
+  {
+   "id": "paycor-stadium",
+   "name": "Paycor Stadium",
+   "aliases": [
+    "Paul Brown Stadium"
+   ],
+   "tier": 6,
+   "note": "Bengals, Cincinnati OH",
+   "source": "https://en.wikipedia.org/wiki/List_of_current_NFL_stadiums"
+  }
+ ]
+}

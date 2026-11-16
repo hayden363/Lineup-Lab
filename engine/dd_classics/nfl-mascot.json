@@ -1,0 +1,297 @@
+{
+ "version": 1,
+ "key": "nfl-mascot",
+ "cat": "Stadiums & teams",
+ "text": "Name an NFL team mascot",
+ "era": "all",
+ "group": "mascots",
+ "sources": [
+  "https://en.wikipedia.org/wiki/List_of_NFL_mascots",
+  "https://sportmascots.com/nfl/"
+ ],
+ "answers": [
+  {
+   "id": "swoop",
+   "name": "Swoop",
+   "aliases": [],
+   "tier": 1,
+   "note": "Eagles",
+   "source": "https://en.wikipedia.org/wiki/List_of_NFL_mascots"
+  },
+  {
+   "id": "rowdy",
+   "name": "Rowdy",
+   "aliases": [],
+   "tier": 1,
+   "note": "Cowboys",
+   "source": "https://en.wikipedia.org/wiki/List_of_NFL_mascots"
+  },
+  {
+   "id": "blitz",
+   "name": "Blitz",
+   "aliases": [],
+   "tier": 1,
+   "note": "Seahawks",
+   "source": "https://en.wikipedia.org/wiki/List_of_NFL_mascots"
+  },
+  {
+   "id": "k-c-wolf",
+   "name": "K.C. Wolf",
+   "aliases": [
+    "KC Wolf",
+    "Wolf"
+   ],
+   "tier": 1,
+   "note": "Chiefs",
+   "source": "https://en.wikipedia.org/wiki/List_of_NFL_mascots"
+  },
+  {
+   "id": "freddie-falcon",
+   "name": "Freddie Falcon",
+   "aliases": [],
+   "tier": 1,
+   "note": "Falcons",
+   "source": "https://en.wikipedia.org/wiki/List_of_NFL_mascots"
+  },
+  {
+   "id": "sir-purr",
+   "name": "Sir Purr",
+   "aliases": [],
+   "tier": 1,
+   "note": "Panthers",
+   "source": "https://en.wikipedia.org/wiki/List_of_NFL_mascots"
+  },
+  {
+   "id": "pat-patriot",
+   "name": "Pat Patriot",
+   "aliases": [],
+   "tier": 1,
+   "note": "Patriots",
+   "source": "https://en.wikipedia.org/wiki/List_of_NFL_mascots"
+  },
+  {
+   "id": "steely-mcbeam",
+   "name": "Steely McBeam",
+   "aliases": [],
+   "tier": 2,
+   "note": "Steelers",
+   "source": "https://en.wikipedia.org/wiki/List_of_NFL_mascots"
+  },
+  {
+   "id": "billy-buffalo",
+   "name": "Billy Buffalo",
+   "aliases": [],
+   "tier": 2,
+   "note": "Bills",
+   "source": "https://en.wikipedia.org/wiki/List_of_NFL_mascots"
+  },
+  {
+   "id": "captain-fear",
+   "name": "Captain Fear",
+   "aliases": [],
+   "tier": 2,
+   "note": "Buccaneers",
+   "source": "https://en.wikipedia.org/wiki/List_of_NFL_mascots"
+  },
+  {
+   "id": "viktor-the-viking",
+   "name": "Viktor the Viking",
+   "aliases": [
+    "Viktor",
+    "Victor"
+   ],
+   "tier": 2,
+   "note": "Vikings",
+   "source": "https://en.wikipedia.org/wiki/List_of_NFL_mascots"
+  },
+  {
+   "id": "sourdough-sam",
+   "name": "Sourdough Sam",
+   "aliases": [],
+   "tier": 2,
+   "note": "49ers",
+   "source": "https://en.wikipedia.org/wiki/List_of_NFL_mascots"
+  },
+  {
+   "id": "big-red",
+   "name": "Big Red",
+   "aliases": [],
+   "tier": 2,
+   "note": "Cardinals",
+   "source": "https://en.wikipedia.org/wiki/List_of_NFL_mascots"
+  },
+  {
+   "id": "rampage",
+   "name": "Rampage",
+   "aliases": [],
+   "tier": 2,
+   "note": "Rams",
+   "source": "https://en.wikipedia.org/wiki/List_of_NFL_mascots"
+  },
+  {
+   "id": "jaxson-de-ville",
+   "name": "Jaxson de Ville",
+   "aliases": [
+    "Jaxson",
+    "Jaxon de Ville"
+   ],
+   "tier": 3,
+   "note": "Jaguars",
+   "source": "https://en.wikipedia.org/wiki/List_of_NFL_mascots"
+  },
+  {
+   "id": "roary",
+   "name": "Roary",
+   "aliases": [],
+   "tier": 3,
+   "note": "Lions",
+   "source": "https://en.wikipedia.org/wiki/List_of_NFL_mascots"
+  },
+  {
+   "id": "staley-da-bear",
+   "name": "Staley Da Bear",
+   "aliases": [
+    "Staley",
+    "Staley the Bear"
+   ],
+   "tier": 3,
+   "note": "Bears",
+   "source": "https://en.wikipedia.org/wiki/List_of_NFL_mascots"
+  },
+  {
+   "id": "who-dey",
+   "name": "Who Dey",
+   "aliases": [],
+   "tier": 3,
+   "note": "Bengals",
+   "source": "https://en.wikipedia.org/wiki/List_of_NFL_mascots"
+  },
+  {
+   "id": "toro",
+   "name": "Toro",
+   "aliases": [],
+   "tier": 3,
+   "note": "Texans",
+   "source": "https://en.wikipedia.org/wiki/List_of_NFL_mascots"
+  },
+  {
+   "id": "miles",
+   "name": "Miles",
+   "aliases": [],
+   "tier": 3,
+   "note": "Broncos",
+   "source": "https://en.wikipedia.org/wiki/List_of_NFL_mascots"
+  },
+  {
+   "id": "poe",
+   "name": "Poe",
+   "aliases": [],
+   "tier": 4,
+   "note": "Ravens",
+   "source": "https://en.wikipedia.org/wiki/List_of_NFL_mascots"
+  },
+  {
+   "id": "blue",
+   "name": "Blue",
+   "aliases": [],
+   "tier": 4,
+   "note": "Colts",
+   "source": "https://en.wikipedia.org/wiki/List_of_NFL_mascots"
+  },
+  {
+   "id": "t-rac",
+   "name": "T-Rac",
+   "aliases": [
+    "Trac",
+    "T Rac"
+   ],
+   "tier": 4,
+   "note": "Titans",
+   "source": "https://en.wikipedia.org/wiki/List_of_NFL_mascots"
+  },
+  {
+   "id": "t-d",
+   "name": "T.D.",
+   "aliases": [
+    "TD"
+   ],
+   "tier": 4,
+   "note": "Dolphins",
+   "source": "https://en.wikipedia.org/wiki/List_of_NFL_mascots"
+  },
+  {
+   "id": "gumbo",
+   "name": "Gumbo",
+   "aliases": [],
+   "tier": 4,
+   "note": "Saints",
+   "source": "https://en.wikipedia.org/wiki/List_of_NFL_mascots"
+  },
+  {
+   "id": "chomps",
+   "name": "Chomps",
+   "aliases": [],
+   "tier": 5,
+   "note": "Browns",
+   "source": "https://en.wikipedia.org/wiki/List_of_NFL_mascots"
+  },
+  {
+   "id": "raider-rusher",
+   "name": "Raider Rusher",
+   "aliases": [],
+   "tier": 5,
+   "note": "Raiders",
+   "source": "https://en.wikipedia.org/wiki/List_of_NFL_mascots"
+  },
+  {
+   "id": "major-tuddy",
+   "name": "Major Tuddy",
+   "aliases": [],
+   "tier": 5,
+   "note": "Commanders (introduced 2023)",
+   "source": "https://en.wikipedia.org/wiki/List_of_NFL_mascots"
+  },
+  {
+   "id": "sir-saint",
+   "name": "Sir Saint",
+   "aliases": [],
+   "tier": 5,
+   "note": "Saints",
+   "source": "https://en.wikipedia.org/wiki/List_of_NFL_mascots"
+  },
+  {
+   "id": "thunder",
+   "name": "Thunder",
+   "aliases": [],
+   "tier": 5,
+   "note": "Broncos (live horse)",
+   "source": "https://en.wikipedia.org/wiki/List_of_NFL_mascots"
+  },
+  {
+   "id": "boom",
+   "name": "Boom",
+   "aliases": [],
+   "tier": 6,
+   "note": "Seahawks",
+   "source": "https://en.wikipedia.org/wiki/List_of_NFL_mascots"
+  },
+  {
+   "id": "taima",
+   "name": "Taima",
+   "aliases": [],
+   "tier": 6,
+   "note": "Seahawks (live hawk)",
+   "source": "https://en.wikipedia.org/wiki/List_of_NFL_mascots"
+  },
+  {
+   "id": "brownie-the-elf",
+   "name": "Brownie the Elf",
+   "aliases": [
+    "Brownie"
+   ],
+   "tier": 6,
+   "note": "Browns",
+   "source": "https://en.wikipedia.org/wiki/List_of_NFL_mascots"
+  }
+ ]
+}

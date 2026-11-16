@@ -1,0 +1,273 @@
+{
+ "version": 1,
+ "key": "nfl-droy-2000",
+ "cat": "NFL awards",
+ "text": "Name a player who has won AP Defensive Rookie of the Year since the 2000 season",
+ "era": "2000+",
+ "group": "droy",
+ "sources": [
+  "https://en.wikipedia.org/wiki/AP_NFL_Rookie_of_the_Year",
+  "https://www.footballdb.com/awards/ap-nfl-defensive-rookie-of-the-year",
+  "https://www.nfl.com/news/list-of-nfl-honors-award-winners-from-2025-nfl-season"
+ ],
+ "answers": [
+  {
+   "id": "micah-parsons",
+   "name": "Micah Parsons",
+   "aliases": [
+    "Parsons"
+   ],
+   "tier": 1,
+   "note": "2021",
+   "source": "https://en.wikipedia.org/wiki/AP_NFL_Rookie_of_the_Year"
+  },
+  {
+   "id": "nick-bosa",
+   "name": "Nick Bosa",
+   "aliases": [
+    "Bosa"
+   ],
+   "tier": 1,
+   "note": "2019",
+   "source": "https://en.wikipedia.org/wiki/AP_NFL_Rookie_of_the_Year"
+  },
+  {
+   "id": "von-miller",
+   "name": "Von Miller",
+   "aliases": [
+    "Miller"
+   ],
+   "tier": 1,
+   "note": "2011",
+   "source": "https://en.wikipedia.org/wiki/AP_NFL_Rookie_of_the_Year"
+  },
+  {
+   "id": "aaron-donald",
+   "name": "Aaron Donald",
+   "aliases": [
+    "Donald"
+   ],
+   "tier": 1,
+   "note": "2014",
+   "source": "https://en.wikipedia.org/wiki/AP_NFL_Rookie_of_the_Year"
+  },
+  {
+   "id": "luke-kuechly",
+   "name": "Luke Kuechly",
+   "aliases": [
+    "Kuechly"
+   ],
+   "tier": 1,
+   "note": "2012",
+   "source": "https://en.wikipedia.org/wiki/AP_NFL_Rookie_of_the_Year"
+  },
+  {
+   "id": "ndamukong-suh",
+   "name": "Ndamukong Suh",
+   "aliases": [
+    "Suh"
+   ],
+   "tier": 1,
+   "note": "2010",
+   "source": "https://en.wikipedia.org/wiki/AP_NFL_Rookie_of_the_Year"
+  },
+  {
+   "id": "brian-urlacher",
+   "name": "Brian Urlacher",
+   "aliases": [
+    "Urlacher"
+   ],
+   "tier": 2,
+   "note": "2000",
+   "source": "https://en.wikipedia.org/wiki/AP_NFL_Rookie_of_the_Year"
+  },
+  {
+   "id": "julius-peppers",
+   "name": "Julius Peppers",
+   "aliases": [
+    "Peppers"
+   ],
+   "tier": 2,
+   "note": "2002",
+   "source": "https://en.wikipedia.org/wiki/AP_NFL_Rookie_of_the_Year"
+  },
+  {
+   "id": "patrick-willis",
+   "name": "Patrick Willis",
+   "aliases": [
+    "Willis"
+   ],
+   "tier": 2,
+   "note": "2007",
+   "source": "https://en.wikipedia.org/wiki/AP_NFL_Rookie_of_the_Year"
+  },
+  {
+   "id": "chase-young",
+   "name": "Chase Young",
+   "aliases": [],
+   "tier": 2,
+   "note": "2020",
+   "source": "https://en.wikipedia.org/wiki/AP_NFL_Rookie_of_the_Year"
+  },
+  {
+   "id": "joey-bosa",
+   "name": "Joey Bosa",
+   "aliases": [],
+   "tier": 2,
+   "note": "2016",
+   "source": "https://en.wikipedia.org/wiki/AP_NFL_Rookie_of_the_Year"
+  },
+  {
+   "id": "sauce-gardner",
+   "name": "Sauce Gardner",
+   "aliases": [
+    "Ahmad Gardner",
+    "Gardner"
+   ],
+   "tier": 3,
+   "note": "2022",
+   "source": "https://en.wikipedia.org/wiki/AP_NFL_Rookie_of_the_Year"
+  },
+  {
+   "id": "will-anderson-jr",
+   "name": "Will Anderson Jr.",
+   "aliases": [
+    "Will Anderson",
+    "Anderson"
+   ],
+   "tier": 3,
+   "note": "2023",
+   "source": "https://en.wikipedia.org/wiki/AP_NFL_Rookie_of_the_Year"
+  },
+  {
+   "id": "terrell-suggs",
+   "name": "Terrell Suggs",
+   "aliases": [
+    "Suggs"
+   ],
+   "tier": 3,
+   "note": "2003",
+   "source": "https://en.wikipedia.org/wiki/AP_NFL_Rookie_of_the_Year"
+  },
+  {
+   "id": "marshon-lattimore",
+   "name": "Marshon Lattimore",
+   "aliases": [
+    "Lattimore"
+   ],
+   "tier": 3,
+   "note": "2017",
+   "source": "https://en.wikipedia.org/wiki/AP_NFL_Rookie_of_the_Year"
+  },
+  {
+   "id": "jared-verse",
+   "name": "Jared Verse",
+   "aliases": [
+    "Verse"
+   ],
+   "tier": 3,
+   "note": "2024",
+   "source": "https://en.wikipedia.org/wiki/AP_NFL_Rookie_of_the_Year"
+  },
+  {
+   "id": "marcus-peters",
+   "name": "Marcus Peters",
+   "aliases": [
+    "Peters"
+   ],
+   "tier": 4,
+   "note": "2015",
+   "source": "https://en.wikipedia.org/wiki/AP_NFL_Rookie_of_the_Year"
+  },
+  {
+   "id": "shawne-merriman",
+   "name": "Shawne Merriman",
+   "aliases": [
+    "Merriman"
+   ],
+   "tier": 4,
+   "note": "2005",
+   "source": "https://en.wikipedia.org/wiki/AP_NFL_Rookie_of_the_Year"
+  },
+  {
+   "id": "brian-cushing",
+   "name": "Brian Cushing",
+   "aliases": [
+    "Cushing"
+   ],
+   "tier": 4,
+   "note": "2009",
+   "source": "https://en.wikipedia.org/wiki/AP_NFL_Rookie_of_the_Year"
+  },
+  {
+   "id": "demeco-ryans",
+   "name": "DeMeco Ryans",
+   "aliases": [
+    "Ryans"
+   ],
+   "tier": 4,
+   "note": "2006",
+   "source": "https://en.wikipedia.org/wiki/AP_NFL_Rookie_of_the_Year"
+  },
+  {
+   "id": "sheldon-richardson",
+   "name": "Sheldon Richardson",
+   "aliases": [
+    "Richardson"
+   ],
+   "tier": 5,
+   "note": "2013",
+   "source": "https://en.wikipedia.org/wiki/AP_NFL_Rookie_of_the_Year"
+  },
+  {
+   "id": "jerod-mayo",
+   "name": "Jerod Mayo",
+   "aliases": [
+    "Mayo"
+   ],
+   "tier": 5,
+   "note": "2008",
+   "source": "https://en.wikipedia.org/wiki/AP_NFL_Rookie_of_the_Year"
+  },
+  {
+   "id": "jonathan-vilma",
+   "name": "Jonathan Vilma",
+   "aliases": [
+    "Vilma"
+   ],
+   "tier": 5,
+   "note": "2004",
+   "source": "https://en.wikipedia.org/wiki/AP_NFL_Rookie_of_the_Year"
+  },
+  {
+   "id": "shaquille-leonard",
+   "name": "Shaquille Leonard",
+   "aliases": [
+    "Darius Leonard",
+    "Shaq Leonard",
+    "Leonard"
+   ],
+   "tier": 5,
+   "note": "2018",
+   "source": "https://en.wikipedia.org/wiki/AP_NFL_Rookie_of_the_Year"
+  },
+  {
+   "id": "carson-schwesinger",
+   "name": "Carson Schwesinger",
+   "aliases": [
+    "Schwesinger"
+   ],
+   "tier": 6,
+   "note": "2025",
+   "source": "https://en.wikipedia.org/wiki/AP_NFL_Rookie_of_the_Year"
+  },
+  {
+   "id": "kendrell-bell",
+   "name": "Kendrell Bell",
+   "aliases": [],
+   "tier": 6,
+   "note": "2001",
+   "source": "https://en.wikipedia.org/wiki/AP_NFL_Rookie_of_the_Year"
+  }
+ ]
+}

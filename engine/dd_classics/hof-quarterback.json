@@ -1,0 +1,357 @@
+{
+ "version": 1,
+ "key": "hof-quarterback",
+ "cat": "Hall of Fame",
+ "text": "Name a Pro Football Hall of Fame quarterback",
+ "era": "pre2000",
+ "group": "hof-qb",
+ "sources": [
+  "https://www.profootballhof.com/hall-of-famers/positions",
+  "https://en.wikipedia.org/wiki/List_of_Pro_Football_Hall_of_Fame_inductees",
+  "https://en.as.com/nfl/who-made-the-pro-football-hall-of-fame-class-of-2026-full-list-of-inductees-f202608-n/"
+ ],
+ "answers": [
+  {
+   "id": "joe-montana",
+   "name": "Joe Montana",
+   "aliases": [
+    "Montana"
+   ],
+   "tier": 1,
+   "note": "Class of 2000",
+   "source": "https://www.profootballhof.com/hall-of-famers/positions"
+  },
+  {
+   "id": "dan-marino",
+   "name": "Dan Marino",
+   "aliases": [
+    "Marino"
+   ],
+   "tier": 1,
+   "note": "Class of 2005",
+   "source": "https://www.profootballhof.com/hall-of-famers/positions"
+  },
+  {
+   "id": "john-elway",
+   "name": "John Elway",
+   "aliases": [
+    "Elway"
+   ],
+   "tier": 1,
+   "note": "Class of 2004",
+   "source": "https://www.profootballhof.com/hall-of-famers/positions"
+  },
+  {
+   "id": "peyton-manning",
+   "name": "Peyton Manning",
+   "aliases": [
+    "Peyton"
+   ],
+   "tier": 1,
+   "note": "Class of 2021",
+   "source": "https://www.profootballhof.com/hall-of-famers/positions"
+  },
+  {
+   "id": "brett-favre",
+   "name": "Brett Favre",
+   "aliases": [
+    "Favre"
+   ],
+   "tier": 1,
+   "note": "Class of 2016",
+   "source": "https://www.profootballhof.com/hall-of-famers/positions"
+  },
+  {
+   "id": "troy-aikman",
+   "name": "Troy Aikman",
+   "aliases": [
+    "Aikman"
+   ],
+   "tier": 1,
+   "note": "Class of 2006",
+   "source": "https://www.profootballhof.com/hall-of-famers/positions"
+  },
+  {
+   "id": "steve-young",
+   "name": "Steve Young",
+   "aliases": [],
+   "tier": 1,
+   "note": "Class of 2005",
+   "source": "https://www.profootballhof.com/hall-of-famers/positions"
+  },
+  {
+   "id": "terry-bradshaw",
+   "name": "Terry Bradshaw",
+   "aliases": [
+    "Bradshaw"
+   ],
+   "tier": 2,
+   "note": "Class of 1989",
+   "source": "https://www.profootballhof.com/hall-of-famers/positions"
+  },
+  {
+   "id": "joe-namath",
+   "name": "Joe Namath",
+   "aliases": [
+    "Namath",
+    "Broadway Joe"
+   ],
+   "tier": 2,
+   "note": "Class of 1985",
+   "source": "https://www.profootballhof.com/hall-of-famers/positions"
+  },
+  {
+   "id": "johnny-unitas",
+   "name": "Johnny Unitas",
+   "aliases": [
+    "Unitas",
+    "Johnny U"
+   ],
+   "tier": 2,
+   "note": "Class of 1979",
+   "source": "https://www.profootballhof.com/hall-of-famers/positions"
+  },
+  {
+   "id": "bart-starr",
+   "name": "Bart Starr",
+   "aliases": [
+    "Starr"
+   ],
+   "tier": 2,
+   "note": "Class of 1977",
+   "source": "https://www.profootballhof.com/hall-of-famers/positions"
+  },
+  {
+   "id": "roger-staubach",
+   "name": "Roger Staubach",
+   "aliases": [
+    "Staubach"
+   ],
+   "tier": 2,
+   "note": "Class of 1985",
+   "source": "https://www.profootballhof.com/hall-of-famers/positions"
+  },
+  {
+   "id": "jim-kelly",
+   "name": "Jim Kelly",
+   "aliases": [],
+   "tier": 2,
+   "note": "Class of 2002",
+   "source": "https://www.profootballhof.com/hall-of-famers/positions"
+  },
+  {
+   "id": "kurt-warner",
+   "name": "Kurt Warner",
+   "aliases": [
+    "Warner"
+   ],
+   "tier": 2,
+   "note": "Class of 2017",
+   "source": "https://www.profootballhof.com/hall-of-famers/positions"
+  },
+  {
+   "id": "dan-fouts",
+   "name": "Dan Fouts",
+   "aliases": [
+    "Fouts"
+   ],
+   "tier": 3,
+   "note": "Class of 1993",
+   "source": "https://www.profootballhof.com/hall-of-famers/positions"
+  },
+  {
+   "id": "warren-moon",
+   "name": "Warren Moon",
+   "aliases": [
+    "Moon"
+   ],
+   "tier": 3,
+   "note": "Class of 2006",
+   "source": "https://www.profootballhof.com/hall-of-famers/positions"
+  },
+  {
+   "id": "fran-tarkenton",
+   "name": "Fran Tarkenton",
+   "aliases": [
+    "Tarkenton"
+   ],
+   "tier": 3,
+   "note": "Class of 1986",
+   "source": "https://www.profootballhof.com/hall-of-famers/positions"
+  },
+  {
+   "id": "drew-brees",
+   "name": "Drew Brees",
+   "aliases": [
+    "Brees"
+   ],
+   "tier": 3,
+   "note": "Class of 2026",
+   "source": "https://www.profootballhof.com/hall-of-famers/positions"
+  },
+  {
+   "id": "len-dawson",
+   "name": "Len Dawson",
+   "aliases": [
+    "Dawson"
+   ],
+   "tier": 3,
+   "note": "Class of 1987",
+   "source": "https://www.profootballhof.com/hall-of-famers/positions"
+  },
+  {
+   "id": "bob-griese",
+   "name": "Bob Griese",
+   "aliases": [
+    "Griese"
+   ],
+   "tier": 3,
+   "note": "Class of 1990",
+   "source": "https://www.profootballhof.com/hall-of-famers/positions"
+  },
+  {
+   "id": "ken-stabler",
+   "name": "Ken Stabler",
+   "aliases": [
+    "Stabler",
+    "Snake Stabler"
+   ],
+   "tier": 3,
+   "note": "Class of 2016",
+   "source": "https://www.profootballhof.com/hall-of-famers/positions"
+  },
+  {
+   "id": "otto-graham",
+   "name": "Otto Graham",
+   "aliases": [
+    "Graham"
+   ],
+   "tier": 4,
+   "note": "Class of 1965",
+   "source": "https://www.profootballhof.com/hall-of-famers/positions"
+  },
+  {
+   "id": "sammy-baugh",
+   "name": "Sammy Baugh",
+   "aliases": [
+    "Baugh",
+    "Slingin Sammy Baugh"
+   ],
+   "tier": 4,
+   "note": "Class of 1963",
+   "source": "https://www.profootballhof.com/hall-of-famers/positions"
+  },
+  {
+   "id": "sonny-jurgensen",
+   "name": "Sonny Jurgensen",
+   "aliases": [
+    "Jurgensen"
+   ],
+   "tier": 4,
+   "note": "Class of 1983",
+   "source": "https://www.profootballhof.com/hall-of-famers/positions"
+  },
+  {
+   "id": "y-a-tittle",
+   "name": "Y.A. Tittle",
+   "aliases": [
+    "YA Tittle",
+    "Tittle"
+   ],
+   "tier": 4,
+   "note": "Class of 1971",
+   "source": "https://www.profootballhof.com/hall-of-famers/positions"
+  },
+  {
+   "id": "bobby-layne",
+   "name": "Bobby Layne",
+   "aliases": [
+    "Layne"
+   ],
+   "tier": 4,
+   "note": "Class of 1967",
+   "source": "https://www.profootballhof.com/hall-of-famers/positions"
+  },
+  {
+   "id": "norm-van-brocklin",
+   "name": "Norm Van Brocklin",
+   "aliases": [
+    "Van Brocklin"
+   ],
+   "tier": 5,
+   "note": "Class of 1971",
+   "source": "https://www.profootballhof.com/hall-of-famers/positions"
+  },
+  {
+   "id": "george-blanda",
+   "name": "George Blanda",
+   "aliases": [
+    "Blanda"
+   ],
+   "tier": 5,
+   "note": "Class of 1981",
+   "source": "https://www.profootballhof.com/hall-of-famers/positions"
+  },
+  {
+   "id": "sid-luckman",
+   "name": "Sid Luckman",
+   "aliases": [
+    "Luckman"
+   ],
+   "tier": 5,
+   "note": "Class of 1965",
+   "source": "https://www.profootballhof.com/hall-of-famers/positions"
+  },
+  {
+   "id": "bob-waterfield",
+   "name": "Bob Waterfield",
+   "aliases": [
+    "Waterfield"
+   ],
+   "tier": 5,
+   "note": "Class of 1965",
+   "source": "https://www.profootballhof.com/hall-of-famers/positions"
+  },
+  {
+   "id": "arnie-herber",
+   "name": "Arnie Herber",
+   "aliases": [
+    "Herber"
+   ],
+   "tier": 5,
+   "note": "Class of 1966",
+   "source": "https://www.profootballhof.com/hall-of-famers/positions"
+  },
+  {
+   "id": "benny-friedman",
+   "name": "Benny Friedman",
+   "aliases": [
+    "Friedman"
+   ],
+   "tier": 6,
+   "note": "Class of 2005",
+   "source": "https://www.profootballhof.com/hall-of-famers/positions"
+  },
+  {
+   "id": "jimmy-conzelman",
+   "name": "Jimmy Conzelman",
+   "aliases": [
+    "Conzelman"
+   ],
+   "tier": 6,
+   "note": "Class of 1964",
+   "source": "https://www.profootballhof.com/hall-of-famers/positions"
+  },
+  {
+   "id": "paddy-driscoll",
+   "name": "Paddy Driscoll",
+   "aliases": [
+    "John Driscoll",
+    "Driscoll"
+   ],
+   "tier": 6,
+   "note": "Class of 1965",
+   "source": "https://www.profootballhof.com/hall-of-famers/positions"
+  }
+ ]
+}

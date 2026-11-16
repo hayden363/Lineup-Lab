@@ -1,0 +1,195 @@
+{
+ "version": 1,
+ "key": "sb-coach-2000",
+ "cat": "Super Bowl",
+ "text": "Name a head coach who has won a Super Bowl since the 2000 season",
+ "era": "2000+",
+ "group": "sb-coach",
+ "sources": [
+  "https://en.wikipedia.org/wiki/List_of_Super_Bowl_head_coaches",
+  "https://en.wikipedia.org/wiki/Category:Super_Bowl%E2%80%93winning_head_coaches"
+ ],
+ "answers": [
+  {
+   "id": "bill-belichick",
+   "name": "Bill Belichick",
+   "aliases": [
+    "Belichick"
+   ],
+   "tier": 1,
+   "note": "6 titles with the Patriots",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_head_coaches"
+  },
+  {
+   "id": "andy-reid",
+   "name": "Andy Reid",
+   "aliases": [
+    "Reid"
+   ],
+   "tier": 1,
+   "note": "LIV, LVII, LVIII (Chiefs)",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_head_coaches"
+  },
+  {
+   "id": "mike-tomlin",
+   "name": "Mike Tomlin",
+   "aliases": [
+    "Tomlin"
+   ],
+   "tier": 1,
+   "note": "XLIII (Steelers)",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_head_coaches"
+  },
+  {
+   "id": "sean-payton",
+   "name": "Sean Payton",
+   "aliases": [
+    "Payton"
+   ],
+   "tier": 1,
+   "note": "XLIV (Saints)",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_head_coaches"
+  },
+  {
+   "id": "sean-mcvay",
+   "name": "Sean McVay",
+   "aliases": [
+    "McVay"
+   ],
+   "tier": 2,
+   "note": "LVI (Rams)",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_head_coaches"
+  },
+  {
+   "id": "pete-carroll",
+   "name": "Pete Carroll",
+   "aliases": [
+    "Carroll"
+   ],
+   "tier": 2,
+   "note": "XLVIII (Seahawks)",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_head_coaches"
+  },
+  {
+   "id": "john-harbaugh",
+   "name": "John Harbaugh",
+   "aliases": [
+    "Harbaugh"
+   ],
+   "tier": 2,
+   "note": "XLVII (Ravens)",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_head_coaches"
+  },
+  {
+   "id": "tom-coughlin",
+   "name": "Tom Coughlin",
+   "aliases": [
+    "Coughlin"
+   ],
+   "tier": 2,
+   "note": "XLII and XLVI (Giants)",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_head_coaches"
+  },
+  {
+   "id": "jon-gruden",
+   "name": "Jon Gruden",
+   "aliases": [
+    "Gruden"
+   ],
+   "tier": 3,
+   "note": "XXXVII (Buccaneers)",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_head_coaches"
+  },
+  {
+   "id": "tony-dungy",
+   "name": "Tony Dungy",
+   "aliases": [
+    "Dungy"
+   ],
+   "tier": 3,
+   "note": "XLI (Colts)",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_head_coaches"
+  },
+  {
+   "id": "mike-mccarthy",
+   "name": "Mike McCarthy",
+   "aliases": [
+    "McCarthy"
+   ],
+   "tier": 3,
+   "note": "XLV (Packers)",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_head_coaches"
+  },
+  {
+   "id": "bruce-arians",
+   "name": "Bruce Arians",
+   "aliases": [
+    "Arians"
+   ],
+   "tier": 4,
+   "note": "LV (Buccaneers)",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_head_coaches"
+  },
+  {
+   "id": "nick-sirianni",
+   "name": "Nick Sirianni",
+   "aliases": [
+    "Sirianni"
+   ],
+   "tier": 4,
+   "note": "LIX (Eagles)",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_head_coaches"
+  },
+  {
+   "id": "bill-cowher",
+   "name": "Bill Cowher",
+   "aliases": [
+    "Cowher"
+   ],
+   "tier": 4,
+   "note": "XL (Steelers)",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_head_coaches"
+  },
+  {
+   "id": "doug-pederson",
+   "name": "Doug Pederson",
+   "aliases": [
+    "Pederson"
+   ],
+   "tier": 5,
+   "note": "LII (Eagles)",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_head_coaches"
+  },
+  {
+   "id": "gary-kubiak",
+   "name": "Gary Kubiak",
+   "aliases": [
+    "Kubiak"
+   ],
+   "tier": 5,
+   "note": "50 (Broncos)",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_head_coaches"
+  },
+  {
+   "id": "mike-macdonald",
+   "name": "Mike Macdonald",
+   "aliases": [
+    "Macdonald",
+    "Mike McDonald"
+   ],
+   "tier": 5,
+   "note": "LX (Seahawks)",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_head_coaches"
+  },
+  {
+   "id": "brian-billick",
+   "name": "Brian Billick",
+   "aliases": [
+    "Billick"
+   ],
+   "tier": 6,
+   "note": "XXXV (Ravens)",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_head_coaches"
+  }
+ ]
+}
