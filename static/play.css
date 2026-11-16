@@ -31,6 +31,10 @@ button { font-family: inherit; }
 .dd[data-mode="intro"] .dd-hud, .dd[data-mode="result"] .dd-hud, .dd[data-mode="intro"] .dd-prompt, .dd[data-mode="result"] .dd-prompt,
 .dd[data-mode="play"] .dd-scroll, .dd[data-mode="practice"] .dd-scroll, .dd[data-mode="intro"] .dd-resslot, .dd[data-mode="result"] .dd-resslot { display: none; }
 .sb { justify-self: start; min-width: 86px; padding: 5px 12px 6px 10px; background: linear-gradient(180deg, rgba(14, 22, 36, 0.92), rgba(6, 10, 18, 0.94)); border: 1px solid rgba(255, 255, 255, 0.16); border-left: 4px solid var(--accent); border-radius: 4px 10px 10px 4px; box-shadow: 0 8px 20px -10px #000; }
+.dd[data-mode="play"] .sb:first-child, .dd[data-mode="practice"] .sb:first-child { animation: hudL 0.45s cubic-bezier(0.2, 0.9, 0.25, 1) both; }
+.dd[data-mode="play"] .sb-r, .dd[data-mode="practice"] .sb-r { animation: hudR 0.45s 0.08s cubic-bezier(0.2, 0.9, 0.25, 1) both; }
+.dd[data-mode="play"] .hud-c, .dd[data-mode="practice"] .hud-c { animation: hudC 0.45s 0.04s cubic-bezier(0.2, 0.9, 0.25, 1) both; }
+.sb b.pop { animation: ydsPop 0.5s ease-out; transform-origin: left center; }
 .sb small { display: block; font: 700 10.5px/1 var(--cond); letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); }
 .sb b { display: block; margin-top: 2px; font: 800 28px/1 var(--cond); letter-spacing: 0.01em; color: #fff; }
 .sb-r { justify-self: end; text-align: right; border-left: 1px solid rgba(255, 255, 255, 0.16); border-right: 4px solid var(--gold); border-radius: 10px 4px 4px 10px; padding: 5px 10px 6px 12px; }
@@ -146,9 +150,14 @@ button { font-family: inherit; }
 .dd-resslot { position: absolute; inset: 0; z-index: 5; pointer-events: none; }
 .dd-res { position: absolute; inset: 0; pointer-events: auto; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; text-align: center; padding: clamp(88px, 16vh, 150px) 18px 96px; cursor: pointer;
   background: radial-gradient(ellipse 90% 55% at 50% 34%, rgba(3, 6, 12, 0.78), rgba(3, 6, 12, 0.3) 70%, rgba(3, 6, 12, 0.05)); animation: fadeIn 0.25s ease-out; }
-.rs-play { font: 800 clamp(44px, 14vw, 72px)/0.95 var(--cond); font-style: italic; letter-spacing: 0.015em; text-transform: uppercase; color: var(--tc); text-shadow: 0 0 28px color-mix(in srgb, var(--tc) 70%, transparent), 0 4px 0 rgba(0, 0, 0, 0.55); animation: bannerIn 0.6s cubic-bezier(0.2, 1.2, 0.3, 1) both; }
+.rs-play { position: relative; display: inline-block; padding: 0 0.12em; font: 800 clamp(44px, 14vw, 72px)/0.95 var(--cond); font-style: italic; letter-spacing: 0.015em; text-transform: uppercase; color: var(--tc); text-shadow: 0 0 28px color-mix(in srgb, var(--tc) 70%, transparent), 0 4px 0 rgba(0, 0, 0, 0.55); animation: tvWipe 0.55s cubic-bezier(0.2, 0.9, 0.25, 1) both; }
+/* TV-graphic bar that slides under the play name, and a light sweep across the letters in the tier colour */
+.rs-play::before { content: ""; position: absolute; left: -8%; right: -8%; bottom: -8px; height: 5px; background: linear-gradient(90deg, transparent, var(--tc) 18%, var(--tc) 82%, transparent); box-shadow: 0 0 14px var(--tc); transform-origin: left; animation: barGrow 0.6s 0.15s cubic-bezier(0.2, 0.9, 0.25, 1) both; }
+.rs-play::after { content: attr(data-t); position: absolute; inset: 0 0.12em; text-shadow: none; color: transparent; background: linear-gradient(100deg, transparent 38%, rgba(255, 255, 255, 0.95) 50%, transparent 62%) no-repeat; background-size: 260% 100%; -webkit-background-clip: text; background-clip: text; animation: lightSweep 0.9s 0.55s ease-out both; pointer-events: none; }
+.dd-res.t6 .rs-play::after, .dd-res.t5 .rs-play::after { animation: lightSweep 0.9s 0.55s ease-out 3 both; }
 .dd-res.t1 .rs-play, .dd-res.t5 .rs-play { text-shadow: 0 0 22px color-mix(in srgb, var(--tc) 55%, transparent), 0 4px 0 rgba(0, 0, 0, 0.6); }
 .rs-who { display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 16px; max-width: 100%; animation: fadeUp 0.4s 0.25s ease-out both; }
+.dd-res.t1 .rs-play::after, .dd-res.sacked .rs-play::after { animation-iteration-count: 1; }
 .rs-ph { position: relative; flex: none; width: 52px; height: 52px; border-radius: 50%; overflow: hidden; background: linear-gradient(160deg, var(--tm, var(--tc)), #0a1020); box-shadow: 0 0 0 2px var(--tc), 0 6px 16px -4px #000; }
 .rs-ph img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 12%; }
 .rs-ph span { position: absolute; inset: 0; display: grid; place-items: center; font: 800 20px/1 var(--cond); color: #fff; text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6); }
@@ -261,6 +270,13 @@ button { font-family: inherit; }
 @keyframes grow { 0% { transform: scaleX(0); } 100% { transform: scaleX(1); } }
 @keyframes alertp { 0%, 100% { opacity: 0.1; } 50% { opacity: 0.9; } }
 @keyframes fadeIn { 0% { opacity: 0; } 100% { opacity: 1; } }
+@keyframes tvWipe { 0% { clip-path: inset(0 100% 0 0); transform: translateX(-46px) skewX(-10deg) scale(1.08); opacity: 0; } 60% { clip-path: inset(0 0 0 0); transform: translateX(6px) skewX(-2deg) scale(1.03); opacity: 1; } 100% { clip-path: inset(-20px -20px -20px -20px); transform: none; opacity: 1; } }
+@keyframes barGrow { 0% { transform: scaleX(0); } 100% { transform: scaleX(1); } }
+@keyframes lightSweep { 0% { background-position: 130% 0; } 100% { background-position: -130% 0; } }
+@keyframes hudL { 0% { transform: translateX(-46px); opacity: 0; } 100% { transform: none; opacity: 1; } }
+@keyframes hudR { 0% { transform: translateX(46px); opacity: 0; } 100% { transform: none; opacity: 1; } }
+@keyframes hudC { 0% { transform: translateY(-30px); opacity: 0; } 100% { transform: none; opacity: 1; } }
+@keyframes ydsPop { 0% { transform: scale(1); } 40% { transform: scale(1.18); color: #fff04d; } 100% { transform: scale(1); } }
 @keyframes bannerIn { 0% { transform: scale(0.25); opacity: 0; } 55% { transform: scale(1.2); opacity: 1; } 78% { transform: scale(0.95); } 100% { transform: scale(1); opacity: 1; } }
 .shake { animation: shake 0.35s; }
 
