@@ -1,0 +1,104 @@
+/* The Daily Drive: tokens copied from the "Sleeper skin" block at the end of style.css (navy, one teal accent). */
+:root {
+  --bg: #101520; --panel: #171d2b; --panel-2: #1f2637; --border: rgba(255, 255, 255, 0.07);
+  --text: #f2f5fa; --muted: #8f9bb3; --accent: #00ceb8; --accent-dim: #00a897; --on-accent: #04201c;
+  --pos: #2fd9a0; --neg: #ff5d7a; --avg: #ffb84d; --info: #58a7ff; --violet: #bd66ff;
+  --radius: 16px; --radius-sm: 10px;
+  --sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Inter, Roboto, "Helvetica Neue", Arial, sans-serif;
+  --t1: #aab4c8; --t2: #ffd84d; --t3: #2fd9a0; --t4: #58a7ff; --t5: #bd66ff; --t6: #ffb84d;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--sans); font-variant-numeric: tabular-nums; }
+body { min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; -webkit-text-size-adjust: 100%; }
+a { color: var(--accent); }
+.dd { width: 100%; max-width: 520px; margin: 0 auto; padding: 14px 16px 24px; flex: 1; position: relative; }
+.dd-foot { text-align: center; padding: 12px 16px 28px; font-size: 13px; }
+.dd-foot a { color: var(--muted); text-decoration: none; }
+.dd-foot a:hover { color: var(--accent); }
+
+.dd-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+.dd-brand { font-weight: 800; font-size: 19px; letter-spacing: -0.01em; }
+.dd-brand span { color: var(--accent); }
+.dd-chip { font-size: 13px; font-weight: 700; color: var(--muted); background: var(--panel); border-radius: 999px; padding: 6px 12px; }
+.dd-chip b { color: var(--text); }
+
+.dd-card { background: var(--panel); border-radius: var(--radius); padding: 18px; margin-bottom: 12px; box-shadow: 0 8px 22px -14px rgba(0, 0, 0, 0.7); }
+.dd h1 { margin: 0 0 6px; font-size: 30px; letter-spacing: -0.02em; line-height: 1.1; }
+.dd h2 { margin: 0 0 8px; font-size: 18px; }
+.dd p { margin: 0 0 10px; color: var(--muted); line-height: 1.45; }
+.dd-btn { appearance: none; border: 0; cursor: pointer; font: inherit; font-weight: 800; font-size: 17px; background: var(--accent); color: var(--on-accent);
+  border-radius: 14px; padding: 15px 20px; width: 100%; min-height: 52px; }
+.dd-btn:hover { filter: brightness(1.08); }
+.dd-btn.alt { background: var(--panel-2); color: var(--text); }
+.dd-btn[disabled] { opacity: 0.5; cursor: default; }
+.dd-row { display: flex; gap: 10px; }
+.dd-row > * { flex: 1; }
+.dd-tiers { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; font-size: 14px; margin: 10px 0 14px; }
+.dd-tiers span:nth-child(even) { text-align: right; color: var(--muted); }
+
+/* field bar */
+.dd-field { position: relative; height: 22px; border-radius: 999px; background: var(--panel-2); overflow: hidden; margin-bottom: 6px;
+  background-image: repeating-linear-gradient(90deg, transparent 0, transparent calc(14.2857% - 1px), rgba(255, 255, 255, 0.08) calc(14.2857% - 1px), rgba(255, 255, 255, 0.08) 14.2857%); }
+.dd-field i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--accent-dim), var(--accent)); border-radius: 999px; transition: width 0.9s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.dd-field-meta { display: flex; justify-content: space-between; font-size: 13px; color: var(--muted); font-weight: 700; margin-bottom: 14px; }
+.dd-field-meta b { color: var(--text); font-size: 15px; }
+
+/* prompt */
+.dd-cat { font-size: 13px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent); margin-bottom: 6px; }
+.dd-prompt { font-size: 24px; font-weight: 800; line-height: 1.2; letter-spacing: -0.01em; min-height: 3.6em; margin: 0 0 10px; }
+.dd-prompt.hidden { visibility: hidden; }
+.dd-clock { display: flex; justify-content: center; margin: 4px 0 12px; }
+.dd-ring { position: relative; width: 150px; height: 150px; }
+.dd-ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.dd-ring circle { fill: none; stroke-width: 9; }
+.dd-ring .bg { stroke: var(--panel-2); }
+.dd-ring .fg { stroke: var(--accent); stroke-linecap: round; }
+.dd-ring.low .fg { stroke: var(--neg); }
+.dd-ring b { position: absolute; inset: 0; display: grid; place-items: center; font-size: 46px; font-weight: 800; }
+.dd-form { display: flex; gap: 8px; }
+.dd-input { flex: 1; min-width: 0; font: inherit; font-size: 16px; color: var(--text); background: var(--panel-2); border: 2px solid transparent; border-radius: 14px; padding: 14px 14px; min-height: 52px; }
+.dd-input:focus { outline: none; border-color: var(--accent); }
+.dd-go { width: auto; padding: 0 22px; }
+.dd-msg { min-height: 24px; margin: 8px 2px 0; font-size: 14px; font-weight: 700; color: var(--neg); }
+.dd-sugg { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+.dd-sugg button { font: inherit; font-weight: 700; font-size: 14px; color: var(--text); background: var(--panel-2); border: 1px solid var(--accent-dim); border-radius: 999px; padding: 8px 14px; cursor: pointer; min-height: 40px; }
+.dd-pre { text-align: center; padding: 24px 8px 10px; }
+.dd-pre .big { font-size: 80px; font-weight: 800; color: var(--accent); line-height: 1; margin-top: 10px; }
+
+/* result card */
+.dd-res { text-align: center; padding: 22px 12px; }
+.dd-badge { display: inline-block; font-size: 22px; font-weight: 800; padding: 10px 18px; border-radius: 999px; background: var(--panel-2); margin-bottom: 8px; }
+.dd-badge.t1 { color: var(--t1); } .dd-badge.t2 { color: var(--t2); } .dd-badge.t3 { color: var(--t3); }
+.dd-badge.t4 { color: var(--t4); } .dd-badge.t5 { color: var(--t5); } .dd-badge.t6 { color: var(--t6); } .dd-badge.t0 { color: var(--neg); }
+.dd-badge.pop { animation: pop 0.5s cubic-bezier(0.2, 1.6, 0.4, 1); }
+.dd-yds { font-size: 56px; font-weight: 800; line-height: 1; margin: 6px 0; }
+.dd-who { color: var(--muted); font-weight: 700; margin-bottom: 14px; }
+.dd-td { position: fixed; inset: 0; pointer-events: none; display: grid; place-items: center; z-index: 5; overflow: hidden; }
+.dd-td strong { font-size: 52px; font-weight: 900; letter-spacing: 0.04em; color: var(--t6); text-shadow: 0 4px 30px rgba(255, 184, 77, 0.6); animation: tdIn 1.8s ease forwards; }
+.dd-td i { position: absolute; top: 45%; left: 50%; width: 9px; height: 14px; border-radius: 2px; animation: burst 1.3s ease-out forwards; }
+
+/* end screen */
+.dd-total { text-align: center; }
+.dd-total .num { font-size: 68px; font-weight: 800; line-height: 1; color: var(--accent); }
+.dd-share { white-space: pre-wrap; font-size: 17px; line-height: 1.5; background: var(--panel-2); border-radius: 12px; padding: 14px; margin: 12px 0; text-align: center; word-break: break-word; }
+.dd-rev details { background: var(--panel-2); border-radius: 12px; margin-bottom: 8px; padding: 12px 14px; }
+.dd-rev summary { cursor: pointer; font-weight: 700; display: flex; justify-content: space-between; gap: 10px; }
+.dd-rev h3 { margin: 12px 0 2px; font-size: 14px; }
+.dd-rev p { font-size: 14px; margin: 0; color: var(--text); line-height: 1.5; }
+.dd-rev .mine { color: var(--accent); font-weight: 800; }
+.dd-small { font-size: 13px; color: var(--muted); }
+
+@keyframes pop { 0% { transform: scale(0.4); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+@keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
+@keyframes tdIn { 0% { transform: scale(0.3); opacity: 0; } 20% { transform: scale(1.15); opacity: 1; } 80% { opacity: 1; } 100% { transform: scale(1); opacity: 0; } }
+@keyframes burst { 0% { transform: translate(0, 0) rotate(0); opacity: 1; } 100% { transform: translate(var(--dx), var(--dy)) rotate(540deg); opacity: 0; } }
+.shake { animation: shake 0.3s; }
+
+@media (min-width: 700px) {
+  .dd { padding-top: 32px; }
+  .dd-prompt { font-size: 28px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  .dd-td i { display: none; }
+}

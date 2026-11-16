@@ -735,7 +735,7 @@ function Footer(){
   return html`<footer className="gutter pb-12"><div className="wrap pt-8 flex flex-wrap items-center justify-between gap-4" style=${{borderTop:'1px solid rgba(255,255,255,.07)'}}>
     <div className="flex items-center gap-2.5"><${Logo} size=${28}/><span className="font-extrabold">Lineup Lab</span></div>
     <div className="mono text-[12px] dim max-w-[560px]">Lineup Lab is an independent fantasy football tool. Not affiliated with the NFL, Sleeper, ESPN or Yahoo. Numbers on this page come from a sample slate.</div>
-    <div className="flex gap-5 text-[13px]"><a className="muted no-underline hover:text-white" href="#product">Product</a><a className="muted no-underline hover:text-white" href="#sandbox">Try it</a><a className="muted no-underline hover:text-white" href=${APP_URL}>Open app</a></div>
+    <div className="flex gap-5 text-[13px]"><a className="muted no-underline hover:text-white" href="#product">Product</a><a className="muted no-underline hover:text-white" href="#sandbox">Try it</a><a className="muted no-underline hover:text-white" href="/play">Play The Daily Drive</a><a className="muted no-underline hover:text-white" href=${APP_URL}>Open app</a></div>
   </div></footer>`;
 }
 

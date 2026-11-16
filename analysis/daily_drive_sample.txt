@@ -1,0 +1,79 @@
+[data] using season 2026 (10376 weekly rows available)
+THE DAILY DRIVE sample day 2026-11-16  (7 prompts; every answer computed from nflverse data; season 2026 weeks through 10, history 1999-2025)
+
+1. [fantasy/qb_2_td] Name a QB who threw 2+ TD passes in Week 7
+   category: Fantasy · Week 7   id: f:qb_2_td:2026:w7
+   answers: 12   tiers 6..1: 6:1 5:2 4:1 3:3 2:2 1:3
+   re-derived from source: 12 distinct names; builder set == source set: True
+   🏆 Hall of Famer  (100 yds,  1): Malik Willis
+   🟣 All-Pro        ( 85 yds,  2): Michael Penix Jr., Geno Smith
+   🔵 Pro Bowler     ( 60 yds,  1): Kirk Cousins
+   🟢 Starter        ( 30 yds,  3): Dak Prescott, C.J. Stroud, Matthew Stafford
+   🟡 Rotation       ( 15 yds,  2): Drake Maye, Jared Goff
+   ⚪ Benchwarmer    ( 10 yds,  3): Joe Burrow, Caleb Williams, Jordan Love
+
+2. [fantasy/rb_80_rush] Name a RB with 80+ rushing yards in Week 7
+   category: Fantasy · Week 7   id: f:rb_80_rush:2026:w7
+   answers: 14   tiers 6..1: 6:1 5:2 4:2 3:3 2:3 1:3
+   re-derived from source: 14 distinct names; builder set == source set: True
+   🏆 Hall of Famer  (100 yds,  1): Emanuel Wilson
+   🟣 All-Pro        ( 85 yds,  2): Braelon Allen, Kenny Gainwell
+   🔵 Pro Bowler     ( 60 yds,  2): Cam Skattebo, Ollie Gordon II
+   🟢 Starter        ( 30 yds,  3): Tony Pollard, Quinshon Judkins, Blake Corum
+   🟡 Rotation       ( 15 yds,  3): Bucky Irving, Kyren Williams, Jaylen Warren
+   ⚪ Benchwarmer    ( 10 yds,  3): Jahmyr Gibbs, Javonte Williams, Jonathan Taylor
+
+3. [history/d_rb_r1] Name a RB drafted in the first round since 2005
+   category: History · NFL Draft   id: d:d_rb_r1
+   answers: 42   tiers 6..1: 6:4 5:6 4:6 3:9 2:8 1:9
+   re-derived from source: 42 distinct names; builder set == source set: True
+   🏆 Hall of Famer  (100 yds,  4): Rashaad Penny, Jahvid Best, David Wilson, Jadarian Price
+   🟣 All-Pro        ( 85 yds,  6): Felix Jones, Sony Michel, Trent Richardson, Clyde Edwards-Helaire
+   🔵 Pro Bowler     ( 60 yds,  6): Najee Harris, Knowshon Moreno, C.J. Spiller, Rashard Mendenhall
+   🟢 Starter        ( 30 yds,  9): Leonard Fournette, Ronnie Brown, Omarion Hampton, Darren McFadden
+   🟡 Rotation       ( 15 yds,  8): Josh Jacobs, Reggie Bush, Ashton Jeanty, DeAngelo Williams
+   ⚪ Benchwarmer    ( 10 yds,  9): Adrian Peterson, Jahmyr Gibbs, Bijan Robinson, Christian McCaffrey
+
+4. [history/h_wr_1300] Name a WR with 1,300+ receiving yards in a season since 1999
+   category: History · NFL seasons since 1999   id: h:h_wr_1300
+   answers: 78   tiers 6..1: 6:7 5:12 4:12 3:15 2:16 1:16
+   re-derived from source: 78 distinct names; builder set == source set: True
+   🏆 Hall of Famer  (100 yds,  7): Brandon Aiyuk, Javon Walker, Josh Gordon, Sidney Rice
+   🟣 All-Pro        ( 85 yds, 12): Jeremy Maclin, Alshon Jeffery, Michael Thomas, JuJu Smith-Schuster
+   🔵 Pro Bowler     ( 60 yds, 12): Jordy Nelson, Rod Smith, Golden Tate, Amani Toomer
+   🟢 Starter        ( 30 yds, 15): Chad Johnson, Roddy White, Wes Welker, DeSean Jackson
+   🟡 Rotation       ( 15 yds, 16): DeAndre Hopkins, Keenan Allen, DJ Moore, Marvin Harrison
+   ⚪ Benchwarmer    ( 10 yds, 16): Larry Fitzgerald, Jaxon Smith-Njigba, Randy Moss, Ja'Marr Chase
+
+5. [fantasy/wr_rec_td] Name a WR who caught a TD in Week 1
+   category: Fantasy · Week 1   id: f:wr_rec_td:2026:w1
+   answers: 26   tiers 6..1: 6:2 5:4 4:4 3:5 2:5 1:6
+   re-derived from source: 26 distinct names; builder set == source set: True
+   🏆 Hall of Famer  (100 yds,  2): Josh Cameron, Jahdae Walker
+   🟣 All-Pro        ( 85 yds,  4): Elic Ayomanor, Jack Bech, Demarcus Robinson, Josh Palmer
+   🔵 Pro Bowler     ( 60 yds,  4): Deebo Samuel Sr., Antonio Williams, Devaughn Vele, Dontayvion Wicks
+   🟢 Starter        ( 30 yds,  5): Stefon Diggs, Jalen Coker, Ladd McConkey, Denzel Boston
+   🟡 Rotation       ( 15 yds,  5): Zay Flowers, Parker Washington, DJ Moore, Rashee Rice
+   ⚪ Benchwarmer    ( 10 yds,  6): Jaxon Smith-Njigba, Amon-Ra St. Brown, CeeDee Lamb, Justin Jefferson
+
+6. [history/d_qb_r1] Name a QB drafted in the first round since 2000
+   category: History · NFL Draft   id: d:d_qb_r1
+   answers: 79   tiers 6..1: 6:7 5:12 4:12 3:16 2:16 1:16
+   re-derived from source: 79 distinct names; builder set == source set: True
+   🏆 Hall of Famer  (100 yds,  7): Dwayne Haskins, Josh Rosen, Johnny Manziel, Trey Lance
+   🟣 All-Pro        ( 85 yds, 12): Jake Locker, Brandon Weeden, Patrick Ramsey, Tim Tebow
+   🔵 Pro Bowler     ( 60 yds, 12): David Carr, Joey Harrington, Mac Jones, Robert Griffin III
+   🟢 Starter        ( 30 yds, 16): Sam Darnold, Bryce Young, Daniel Jones, Blake Bortles
+   🟡 Rotation       ( 15 yds, 16): Jordan Love, Drake Maye, Alex Smith, Trevor Lawrence
+   ⚪ Benchwarmer    ( 10 yds, 16): Aaron Rodgers, Matthew Stafford, Ben Roethlisberger, Philip Rivers
+
+7. [fantasy/qb_250_pass] Name a QB with 250+ passing yards in Week 6
+   category: Fantasy · Week 6   id: f:qb_250_pass:2026:w6
+   answers: 15   tiers 6..1: 6:1 5:2 4:3 3:3 2:3 1:3
+   re-derived from source: 15 distinct names; builder set == source set: True
+   🏆 Hall of Famer  (100 yds,  1): Daniel Jones
+   🟣 All-Pro        ( 85 yds,  2): Geno Smith, Sam Darnold
+   🔵 Pro Bowler     ( 60 yds,  3): Kirk Cousins, Bryce Young, Aaron Rodgers
+   🟢 Starter        ( 30 yds,  3): Jayden Daniels, C.J. Stroud, Patrick Mahomes
+   🟡 Rotation       ( 15 yds,  3): Jordan Love, Trevor Lawrence, Dak Prescott
+   ⚪ Benchwarmer    ( 10 yds,  3): Josh Allen, Brock Purdy, Caleb Williams
