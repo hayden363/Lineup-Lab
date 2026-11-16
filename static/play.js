@@ -161,7 +161,7 @@
     if (!me || me.available === false) { box.appendChild(h("p", { "class": "dd-small" }, "Your history is unavailable right now. Scores you finish are still saved on this device.")); return; }
     if (!me.games) { box.appendChild(h("p", { "class": "dd-small" }, "No saved drives yet. Finish today's game and it lands here.")); return; }
     box.appendChild(h("div", { "class": "dd-tiles" }, tile("played", me.games), tile("average", avgText(me.average_yards)), tile("best", me.best_yards),
-      tile("streak", me.current_streak + " (best " + me.longest_streak + ")")));
+      tile("streak · best " + me.longest_streak, me.current_streak)));
     var sp = sparkline(me.spark); if (sp) box.appendChild(h("div", { "class": "dd-spark-wrap" }, h("span", { "class": "dd-small" }, "Last " + me.spark.length + " drives"), sp));
     var list = h("div", { "class": "dd-past" });
     me.history.forEach(function (g, i) {
