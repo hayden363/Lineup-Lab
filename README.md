@@ -272,6 +272,23 @@ than defending against the open internet. What's actually implemented:
   multiple server processes — fine for one local instance, not for a
   horizontally-scaled deployment.
 
+## Live projection
+
+`engine/live_proj.py` turns a pregame projection into an in-game one: **live final = points so far + expected rest-of-game points**. Rest-of-game is the pregame projection times a table learned from real play-by-play (2023-2025) by position, game clock and score margin from the player's team's side, times a small "is he ahead of or behind his pace" adjustment. Nothing is hand-set: `analysis/live_proj_fit.py` (rerunnable) builds per-play fantasy points, snapshots every QB/RB/WR/TE game every 5 game minutes, fits on 2023+2024, picks its one knob on 2025, and is scored on 2026 weeks 1-7, which it never tunes on. The pbp-built points match the weekly stats line to within 0.05 points for 97.5% of 2026 player-games (fumbles lost taken from the weekly stats, since the cached play-by-play has no fumble columns). Full output: `analysis/live_proj_results.txt`.
+
+Held-out 2026 (2,054 player-games), mean absolute error of the predicted FINAL points. Naive = pregame x time left / 60:00.
+
+| Checkpoint | Naive MAE | Model MAE |
+|---|---|---|
+| Kickoff | 4.77 | 4.75 |
+| End Q1 | 4.07 | 4.05 |
+| Halftime | 3.23 | 3.14 |
+| End Q3 | 2.32 | 2.26 |
+| 5:00 left Q4 | 1.29 | 1.31 |
+| **All five pooled** | **3.14** | **3.10** |
+
+The pooled gain is small (about 0.04 points, paired 95% interval -0.05 to -0.02), largest at halftime and the end of Q3, and the model is slightly worse than naive at 5:00 left. What it learned: trailing teams' WR/TE/QB keep scoring late and leading teams' stop (WR with 5:00 left: 0.21 of the pregame projection still to come when trailing by 8-13, 0.16 tied, 0.03 leading by 14+, against 0.083 naive); RBs barely move with the score. Rules: a final game or an expired clock returns the points so far, the result is never below points so far, and K/DEF or a missing pregame number fall back to naive time scaling. Caveats: weeks 8+ of 2026 are not in the held-out set (the cached game-clock file is a stale snapshot); overtime is treated as outside the clock; fumble timing inside points-so-far is spread evenly (true timing is not in the cached data).
+
 ## Weight tuning on real data
 
 `engine/metrics.py`'s `WEIGHTS` start hand-picked, but don't have to stay

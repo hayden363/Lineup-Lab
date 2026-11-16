@@ -1,0 +1,108 @@
+LIVE PROJECTION FIT  (analysis/live_proj_fit.py)
+==============================================================================
+
+1. PLAY-BY-PLAY POINTS vs WEEKLY STATS LINE (fantasy_points_ppr), QB/RB/WR/TE regular-season player-games
+   raw = points from the cached pbp only; +fum = plus the weekly fumbles-lost (not in the cached pbp)
+   2023: n=5801  within 0.05 pts: raw 94.3%, +fum 98.2%;  within 1.0: raw 94.6%, +fum 98.4%;  mean abs err raw 0.124, +fum 0.041
+   2024: n=5864  within 0.05 pts: raw 94.1%, +fum 97.7%;  within 1.0: raw 94.5%, +fum 98.1%;  mean abs err raw 0.129, +fum 0.055
+   2025: n=6037  within 0.05 pts: raw 94.7%, +fum 97.7%;  within 1.0: raw 95.0%, +fum 98.1%;  mean abs err raw 0.118, +fum 0.053
+   2026: n=2394  within 0.05 pts: raw 94.1%, +fum 97.5%;  within 1.0: raw 94.5%, +fum 97.9%;  mean abs err raw 0.128, +fum 0.057
+   QB: n=2233  within 0.05 +fum 93.7%, mean abs err +fum 0.130, mean fumble pts -0.353
+   RB: n=5190  within 0.05 +fum 99.0%, mean abs err +fum 0.023, mean fumble pts -0.086
+   TE: n=4242  within 0.05 +fum 98.9%, mean abs err +fum 0.020, mean fumble pts -0.031
+   WR: n=8431  within 0.05 +fum 97.7%, mean abs err +fum 0.062, mean fumble pts -0.028
+   player-games dropped (his team not in the game): {2023: 0, 2024: 0, 2025: 0, 2026: 0}
+
+2. PREGAME PROJECTION COVERAGE (player-games with a pregame number; others excluded)
+   2023: 5801 player-games; with pregame 5385 (projmodel 4206, season-to-date 489, last-season 690); excluded (no pregame) 416
+   2024: 5864 player-games; with pregame 5468 (projmodel 4227, season-to-date 506, last-season 735); excluded (no pregame) 396
+   2025: 6037 player-games; with pregame 5581 (projmodel 4325, season-to-date 532, last-season 724); excluded (no pregame) 456
+   2026: 2394 player-games; with pregame 2120 (projmodel 1005, season-to-date 406, last-season 709); excluded (no pregame) 274
+   kept 18260 player-games with pregame > 0 (237380 snapshots)
+
+3. SHRINKAGE k (pregame-projection points) CHOSEN ON 2025 -- fit on 2023+2024
+   k=       0: 2025 MAE over the 12 in-game checkpoints 3.1780
+   k=       5: 2025 MAE over the 12 in-game checkpoints 3.1781
+   k=      15: 2025 MAE over the 12 in-game checkpoints 3.1782
+   k=      40: 2025 MAE over the 12 in-game checkpoints 3.1785
+   k=     100: 2025 MAE over the 12 in-game checkpoints 3.1790
+   k=     300: 2025 MAE over the 12 in-game checkpoints 3.1807
+   k=    1000: 2025 MAE over the 12 in-game checkpoints 3.1853
+   k= 1000000: 2025 MAE over the 12 in-game checkpoints 3.2127
+   -> k = 100: the largest k within 0.001 MAE of the best (k=1000000 is the time-only curve, no margin effect)
+   2025 naive MAE over the same checkpoints: 3.1766
+
+4. OPTIONAL IN-GAME USAGE TERM: table x (1 + beta x z), z = clip((points so far - pregame x elapsed share) / pregame, -1, 1)
+   betas fit on 2023+2024: QB +0.296, RB +0.222, WR +0.224, TE +0.239
+   2025 MAE without 3.1790, with 3.1511  ->  INCLUDED
+
+5. FINAL FIT on 2023-2025 (k=100, usage term); REPORT ON 2026 weeks 1-7 (2054 player-games, never tuned on)
+   MAE / bias of predicted FINAL points vs actual final (points; bias = predicted - actual)
+   checkpoint    pos       n  naive MAE  model MAE  naive bias  model bias
+   kickoff       ALL    2054      4.766      4.747      -0.065      -0.191
+   kickoff       QB      209      6.470      6.468      -0.148      -0.188
+   kickoff       RB      516      4.648      4.636      -0.216      -0.353
+   kickoff       WR      862      4.717      4.684      -0.072      -0.268
+   kickoff       TE      467      4.223      4.218      +0.153      +0.130
+   end Q1        ALL    2054      4.069      4.049      -0.380      -0.281
+   end Q1        QB      209      5.626      5.540      -1.066      -0.669
+   end Q1        RB      516      4.028      4.022      -0.228      -0.164
+   end Q1        WR      862      4.004      3.968      -0.408      -0.370
+   end Q1        TE      467      3.537      3.560      -0.190      -0.070
+   halftime      ALL    2054      3.233      3.141      -0.171      -0.256
+   halftime      QB      209      4.678      4.520      -0.503      -0.614
+   halftime      RB      516      3.164      3.127      -0.058      -0.037
+   halftime      WR      862      3.214      3.109      -0.157      -0.299
+   halftime      TE      467      2.696      2.598      -0.174      -0.258
+   end Q3        ALL    2054      2.321      2.256      -0.396      -0.225
+   end Q3        QB      209      3.684      3.411      -0.989      -0.592
+   end Q3        RB      516      2.087      2.074      -0.209      -0.096
+   end Q3        WR      862      2.348      2.286      -0.435      -0.277
+   end Q3        TE      467      1.918      1.886      -0.266      -0.107
+   5:00 left Q4  ALL    2054      1.294      1.308      -0.385      -0.097
+   5:00 left Q4  QB      209      2.347      2.228      -0.898      -0.248
+   5:00 left Q4  RB      516      1.076      1.132      -0.217      -0.031
+   5:00 left Q4  WR      862      1.336      1.358      -0.443      -0.131
+   5:00 left Q4  TE      467      0.986      0.999      -0.236      -0.040
+
+   OVERALL 2026 MAE, five reported checkpoints pooled: naive 3.1365  model 3.1003
+   OVERALL 2026 MAE, all 12 in-game checkpoints (3600..300): naive 3.2977  model 3.2562
+   model minus naive MAE, paired by player-game (five checkpoints): -0.0361, 95% bootstrap interval [-0.0506, -0.0212]
+
+   SHIP MODEL? YES: the model beats naive on 2026 overall MAE
+
+6. WHAT THE TABLE LEARNED (fit on 2023-2025): expected rest-of-game points as a share of the pregame projection
+
+   end Q1  (naive share = 0.750)
+           trail 14+  trail 8-13   trail 4-7    within 3    lead 4-8   lead 9-13    lead 14+
+   QB          0.895       0.819       0.843       0.799       0.763       0.651       0.617
+   RB          0.800       0.734       0.775       0.751       0.746       0.818       0.792
+   WR          0.849       0.818       0.797       0.773       0.736       0.626       0.661
+   TE          1.009       0.954       0.763       0.812       0.718       0.674       0.756
+
+   halftime  (naive share = 0.500)
+           trail 14+  trail 8-13   trail 4-7    within 3    lead 4-8   lead 9-13    lead 14+
+   QB          0.541       0.589       0.574       0.530       0.465       0.412       0.347
+   RB          0.496       0.475       0.511       0.516       0.497       0.490       0.507
+   WR          0.538       0.559       0.566       0.497       0.446       0.403       0.354
+   TE          0.614       0.610       0.553       0.488       0.472       0.356       0.357
+
+   end Q3  (naive share = 0.250)
+           trail 14+  trail 8-13   trail 4-7    within 3    lead 4-8   lead 9-13    lead 14+
+   QB          0.366       0.351       0.374       0.320       0.240       0.200       0.144
+   RB          0.256       0.253       0.305       0.271       0.253       0.253       0.261
+   WR          0.348       0.367       0.351       0.293       0.244       0.197       0.143
+   TE          0.382       0.369       0.329       0.307       0.237       0.170       0.149
+
+   5:00 left Q4  (naive share = 0.083)
+           trail 14+  trail 8-13   trail 4-7    within 3    lead 4-8   lead 9-13    lead 14+
+   QB          0.132       0.235       0.208       0.149       0.093       0.066       0.020
+   RB          0.090       0.110       0.119       0.126       0.103       0.103       0.080
+   WR          0.124       0.208       0.195       0.159       0.095       0.052       0.033
+   TE          0.130       0.200       0.180       0.131       0.076       0.069       0.032
+
+   WR, 5:00 left: share of pregame still to come, by margin (naive 0.083): trail 14+ 0.124, trail 8-13 0.208, trail 4-7 0.195, within 3 0.159, lead 4-8 0.095, lead 9-13 0.052, lead 14+ 0.033
+   RB, 15:00 left (end Q3): by margin (naive 0.250): trail 14+ 0.256, trail 8-13 0.253, trail 4-7 0.305, within 3 0.271, lead 4-8 0.253, lead 9-13 0.253, lead 14+ 0.261
+   Sample sizes behind those bins (player-game snapshots, 2023-2025): trail 14+ 2787, trail 8-13 1745, trail 4-7 1758, within 3 3562, lead 4-8 2114, lead 9-13 1424, lead 14+ 2816  (5:00 left)
+
+   wrote engine/live_proj_params.json (ship_model=True)
