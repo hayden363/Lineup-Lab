@@ -26,6 +26,7 @@ SECURITY POSTURE (see README for the full writeup):
 """
 
 import copy
+import datetime
 import hashlib
 import json
 import threading
@@ -44,10 +45,11 @@ from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Query, Req
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse, PlainTextResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, Field, field_validator
 
 from engine import chat as chat_layer
 from engine import correlation
+from engine import daily_drive
 from engine import data as data_layer
 from engine import db
 from engine import espn as espn_layer
@@ -2028,6 +2030,106 @@ def _landing_js():
 def _landing_css():
     return FileResponse("static/landing.css", media_type="text/css", headers={"Cache-Control": "no-cache"})
 
+
+
+# ---- The Daily Drive (/play): a daily football trivia game. Public: no account, no session needed. ----
+play_rate_limit = rate_limit("play", limit=120, window_seconds=60)
+_PLAY_LOCK = threading.Lock()
+_PLAY_MEM: Dict[str, Any] = {}
+
+
+def _play_puzzle(date: Optional[str]):
+    """(date, puzzle) for an ISO date, default today US Eastern. Future and too-old dates are refused."""
+    today = daily_drive.today_et()
+    try:
+        d = datetime.date.fromisoformat(date) if date else today
+    except ValueError:
+        raise HTTPException(400, "date must look like 2026-11-16")
+    if d > today:
+        raise HTTPException(400, "that day hasn't happened yet")
+    if (today - d).days > daily_drive.ARCHIVE_DAYS:
+        raise HTTPException(400, "that day is too far back")
+    key = d.isoformat()
+    with _PLAY_LOCK:
+        puzzle = _PLAY_MEM.get(key)
+        if puzzle is None:
+            puzzle = daily_drive.get_puzzle(key, data_layer.HISTORY_DIR)
+            if len(puzzle["prompts"]) == daily_drive.N_FANTASY + daily_drive.N_HISTORY:
+                if len(_PLAY_MEM) > 100:
+                    _PLAY_MEM.clear()
+                _PLAY_MEM[key] = puzzle
+    if not puzzle["prompts"]:
+        raise HTTPException(503, "today's game isn't ready yet - try again soon")
+    return key, puzzle
+
+
+def _play_prompt(puzzle, prompt_id):
+    for p in puzzle["prompts"]:
+        if p["id"] == prompt_id:
+            return p
+    raise HTTPException(404, "no such prompt")
+
+
+class PlayCheck(BaseModel):
+    date: Optional[str] = None
+    prompt_id: str = Field(max_length=80)
+    answer: str = Field(max_length=80)
+    used: List[str] = Field(default_factory=list, max_length=60)
+
+
+@app.get("/api/play/daily", dependencies=[Depends(play_rate_limit)])
+def play_daily(date: Optional[str] = None):
+    key, puzzle = _play_puzzle(date)
+    return _clean({"date": key, "today": daily_drive.today_et().isoformat(),
+                   "prompts": [daily_drive.public_view(p) for p in puzzle["prompts"]]})
+
+
+@app.post("/api/play/check", dependencies=[Depends(play_rate_limit)])
+def play_check(body: PlayCheck):
+    _, puzzle = _play_puzzle(body.date)
+    prompt = _play_prompt(puzzle, body.prompt_id)
+    res = daily_drive.check_answer(prompt["answers"], body.answer, body.used)
+    if not res["ok"]:
+        return {"ok": False, "reason": res["reason"], "suggestions": res["suggestions"]}
+    a = res["answer"]
+    return {"ok": True, "canonical": a["name"], "answer_id": a["id"], **daily_drive.tier_info(a["tier"])}
+
+
+@app.get("/api/play/reveal", dependencies=[Depends(play_rate_limit)])
+def play_reveal(prompt_id: str, date: Optional[str] = None):
+    _, puzzle = _play_puzzle(date)
+    return _clean(daily_drive.reveal_view(_play_prompt(puzzle, prompt_id)))
+
+
+@app.get("/api/play/practice", dependencies=[Depends(play_rate_limit)])
+def play_practice():
+    """One random prompt from a past day's puzzle (never today's), for unlimited practice."""
+    today = daily_drive.today_et()
+    days = list(range(1, 15))
+    secrets.SystemRandom().shuffle(days)
+    for back in days:
+        d = (today - datetime.timedelta(days=back)).isoformat()
+        try:
+            key, puzzle = _play_puzzle(d)
+        except HTTPException:
+            continue
+        return _clean({"date": key, "prompt": daily_drive.public_view(secrets.choice(puzzle["prompts"]))})
+    raise HTTPException(503, "practice isn't ready yet")
+
+
+@app.get("/play", include_in_schema=False)
+def _play_page():
+    return FileResponse("static/play.html", media_type="text/html", headers={"Cache-Control": "no-cache"})
+
+
+@app.get("/play.js", include_in_schema=False)
+def _play_js():
+    return FileResponse("static/play.js", media_type="text/javascript", headers={"Cache-Control": "no-cache"})
+
+
+@app.get("/play.css", include_in_schema=False)
+def _play_css():
+    return FileResponse("static/play.css", media_type="text/css", headers={"Cache-Control": "no-cache"})
 
 
 _LEGAL_PAGES = {"terms": "legal/TERMS_OF_SERVICE.md", "privacy": "legal/PRIVACY_POLICY.md"}

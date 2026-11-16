@@ -354,3 +354,49 @@ def next_opponent(schedule, team, week=None):
         row = row.iloc[0]
     opp = row["away_team"] if row["home_team"] == team else row["home_team"]
     return opp, int(row["week"])
+
+
+# ----------------------------------------------------------------------
+# HISTORY (The Daily Drive) — finished seasons since 1999 and draft picks
+# ----------------------------------------------------------------------
+HISTORY_FIRST_SEASON = 1999
+_HISTORY_COLS = ["player_id", "player_display_name", "position", "season", "recent_team", "games",
+                 "passing_yards", "passing_tds", "rushing_yards", "rushing_tds",
+                 "receptions", "receiving_yards", "receiving_tds", "fantasy_points_ppr"]
+HISTORY_DIR = os.path.join(CACHE_DIR, "daily_drive")
+
+
+def load_season_totals(season):
+    """One FINISHED regular season of per-player totals (nflverse stats_player_reg_<year>), trimmed to the columns
+    The Daily Drive reads. A finished season never changes, so it is cached forever (no TTL) under
+    data_cache/daily_drive/."""
+    path = os.path.join(HISTORY_DIR, f"season_totals_{season}.parquet")
+    if os.path.exists(path):
+        return pd.read_parquet(path)
+    url = f"https://github.com/nflverse/nflverse-data/releases/download/stats_player/stats_player_reg_{season}.parquet"
+    df = pd.read_parquet(url)
+    df = df[[c for c in _HISTORY_COLS if c in df.columns]].copy()
+    os.makedirs(HISTORY_DIR, exist_ok=True)
+    df.to_parquet(path)
+    print(f"[data] fetched season totals {season}: {len(df)} rows")
+    return df
+
+
+def load_season_history(last_season, first_season=HISTORY_FIRST_SEASON):
+    """All finished seasons first_season..last_season stacked into one frame (season totals per player)."""
+    frames = []
+    for y in range(first_season, int(last_season) + 1):
+        try:
+            frames.append(load_season_totals(y))
+        except Exception as e:                       # a missing season is skipped, never invented
+            print(f"[data] season totals {y} unavailable: {e}")
+    return pd.concat(frames, ignore_index=True) if frames else pd.DataFrame(columns=_HISTORY_COLS)
+
+
+def load_draft_picks(force=False):
+    """Every NFL draft pick (nflverse draft_picks release), cached like the other tables."""
+    def fetch():
+        df = pd.read_parquet("https://github.com/nflverse/nflverse-data/releases/download/draft_picks/draft_picks.parquet")
+        print(f"[data] fetched draft picks: {len(df)} rows")
+        return df
+    return _disk_cached("draft_picks", "all", fetch, force=force)
