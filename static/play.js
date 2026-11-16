@@ -62,13 +62,13 @@
     return "The Daily Drive · " + prettyDate(date) + " · " + yardsOf(tiers) + " yds\n" +
       tiers.map(function (t) { return t ? TIER[t][2] : SACK; }).join("") + "\nlineup-lab-awdv.onrender.com/play";
   }
-  function countUp(el, to, ms, prefix, from) {
-    prefix = prefix || ""; from = from || 0;
-    if (REDUCED || to === from) { el.textContent = prefix + to; return; }
+  function countUp(el, to, ms, prefix, from, suffix) {
+    prefix = prefix || ""; from = from || 0; suffix = suffix || "";
+    if (REDUCED || to === from) { el.textContent = prefix + to + suffix; return; }
     var t0 = performance.now();
     (function step(now) {
       var f = Math.min(1, (now - t0) / ms);
-      el.textContent = prefix + Math.round(from + (to - from) * (1 - Math.pow(1 - f, 3)));
+      el.textContent = prefix + Math.round(from + (to - from) * (1 - Math.pow(1 - f, 3))) + suffix;
       if (f < 1) requestAnimationFrame(step);
     })(t0);
   }
@@ -181,7 +181,7 @@
           pending++;
           setTimeout(function () { pending--; ensure(); if (cv) burst(window.innerWidth * b[1], window.innerHeight * b[2], GOLDS.concat(MIX), 62, 330); }, b[0]);
         });
-        confetti(90, MIX.concat(GOLDS));
+        confetti(50, MIX.concat(GOLDS));
       },
       stop: stop
     };
@@ -306,7 +306,7 @@
   }
   function setHud(ds, o) {
     o = o || {};
-    if (o.countFrom != null) countUp(hudYards, ds.yards, 700, "", o.countFrom); else hudYards.textContent = String(ds.yards);
+    if (o.countFrom != null) { countUp(hudYards, ds.yards, 700, "", o.countFrom); if (!REDUCED && ds.yards !== o.countFrom) restart(hudYards, "pop"); } else hudYards.textContent = String(ds.yards);
     hudPos.textContent = posText(ds.p); hudTd.textContent = ds.td ? "TD " + ds.td : ""; downChip.textContent = downText(ds);
     if (o.label != null) hudLbl.textContent = o.label;
   }
@@ -592,10 +592,11 @@
       var btnLabel = o.practice ? "Another prompt" : (o.last ? "See results" : "Next play");
       var btn = h("button", { "class": "dd-btn dd-next", type: "button", onclick: function (e) { e.stopPropagation(); if (o.practice) { fx.stop(); o.next(); } else go(); } }, btnLabel);
       var box = h("div", { "class": "dd-res" + (res ? " t" + t : " sacked") + (scored ? " scored" : ""), style: "--tc:" + tc });
-      box.appendChild(h("div", { "class": "rs-play" }, big));
+      box.appendChild(h("div", { "class": "rs-play", "data-t": big }, big));
       if (res) {
         box.appendChild(h("div", { "class": "rs-who" }, photo("rs-ph", res), h("div", { "class": "rs-ans" }, "“" + res.name + "”")));
-        box.appendChild(h("div", { "class": "rs-yds" }, "+" + res.yards + " YDS"));
+        var ydsEl = h("div", { "class": "rs-yds" }, "+" + res.yards + " YDS"); box.appendChild(ydsEl);
+        if (!REDUCED && res.yards > 0) { ydsEl.textContent = "+0 YDS"; setTimeout(function () { countUp(ydsEl, res.yards, 650, "+", 0, " YDS"); }, 400); }
         if (noteParts.length) box.appendChild(h("div", { "class": "rs-note" }, noteParts.join(" · ")));
         if (scored) box.appendChild(h("div", { "class": "rs-td" }, "TOUCHDOWN" + (tdN > 1 ? " #" + tdN : "")));
       } else {
