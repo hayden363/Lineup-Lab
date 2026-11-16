@@ -298,3 +298,18 @@ class EndpointTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class FameTest(unittest.TestCase):
+    """History rarity: the highest of career points, career AV and the current consensus rank."""
+
+    def test_star_rookie_and_old_legend_are_not_rare(self):
+        # rookie: few career points but a top consensus rank; legend: few 1999+ points but huge career AV
+        fame = dd.fame_scores([900.0, 40.0, 30.0, 10.0], [None, None, 150.0, 2.0], [None, 8.0, None, None])
+        self.assertGreater(fame[1], 0.9)     # consensus rank 8
+        self.assertEqual(fame[2], 1.0)       # biggest AV in the set
+        self.assertLess(fame[3], 0.5)        # obscure on every signal
+
+    def test_unknown_signals_count_as_no_fame(self):
+        self.assertEqual(dd.fame_scores([5.0], [None], [None]), [1.0])   # a set of one is trivially "most famous"
+        self.assertEqual(dd.fame_scores([1.0, 2.0], [None, None], [400.0, None])[0], 0.0)

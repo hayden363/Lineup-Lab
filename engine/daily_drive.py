@@ -169,15 +169,50 @@ def career_points(history, current_weekly=None):
     return pts
 
 
-def build_history_prompt(tpl, history, career):
-    """Season-total prompt from the stacked season history; popularity = career PPR points."""
+# How famous a history answer is. One signal alone misleads: career PPR points (1999+ data only) make this
+# year's star rookies and pre-1999 legends look obscure. So fame is the HIGHEST of three real signals, each on
+# a 0-1 scale: career points percentile within the answer set, career Approximate Value percentile within the
+# set (Pro Football Reference via nflverse draft data: whole careers, pre-1999 included, drafted players only),
+# and today's FantasyPros consensus rank (rank 1 -> 1.0, rank ECR_FAME_SCALE or worse -> 0; current players).
+ECR_FAME_SCALE = 300.0
+
+
+def _pct_desc(values):
+    """Within-set position on a 0-1 scale: 0 = the smallest value, 1.0 = the biggest (ties share). A set of one gets 1.0."""
+    s = pd.Series([float(v) for v in values], dtype=float)
+    n = len(s)
+    return [1.0] * n if n <= 1 else list((s.rank(method="average") - 1) / (n - 1))
+
+
+def fame_scores(career_vals, av_vals, ecr_ranks):
+    """[fame 0-1] for parallel lists; av/ecr entries may be None (unknown counts as no fame from that signal)."""
+    car = _pct_desc(career_vals)
+    av_known = [v for v in av_vals if v is not None]
+    av_pct = iter(_pct_desc(av_known)) if av_known else iter(())
+    av = [next(av_pct) if v is not None else 0.0 for v in av_vals]
+    ecr = [0.0 if r is None else max(0.0, 1.0 - min(float(r), ECR_FAME_SCALE) / ECR_FAME_SCALE) for r in ecr_ranks]
+    return [max(c, a, e) for c, a, e in zip(car, av, ecr)]
+
+
+def _famed_rows(ids, names, positions, career, av_by_id=None, ecr_rank=None):
+    """rank_and_tier rows sorted by fame (most famous first), career points as the tie-break."""
+    from engine.consensus import match_key
+    av_by_id, ecr_rank = av_by_id or {}, ecr_rank or {}
+    car = [float(career.get(i, 0.0)) for i in ids]
+    fame = fame_scores(car, [av_by_id.get(i) for i in ids],
+                       [ecr_rank.get(match_key(n, p)) for n, p in zip(names, positions)])
+    return [(i, n, (-f, -c)) for i, n, f, c in zip(ids, names, fame, car)]
+
+
+def build_history_prompt(tpl, history, career, av_by_id=None, ecr_rank=None):
+    """Season-total prompt from the stacked season history; popularity = fame (see fame_scores)."""
     h = history[history["position"].isin(tpl["pos"]) & (history[tpl["stat"]] >= tpl["min"])]
     if h.empty:
         return None
-    first = h.groupby("player_id", as_index=False).agg(name=("player_display_name", "first"))
+    first = h.groupby("player_id", as_index=False).agg(name=("player_display_name", "first"), pos=("position", "first"))
     if len(first) < MIN_ANSWERS:
         return None
-    rows = [(r.player_id, r.name, (-float(career.get(r.player_id, 0.0)),)) for r in first.itertuples(index=False)]
+    rows = _famed_rows(list(first["player_id"]), list(first["name"]), list(first["pos"]), career, av_by_id, ecr_rank)
     answers = rank_and_tier(rows)
     if len(answers) < MIN_ANSWERS:
         return None
@@ -185,8 +220,8 @@ def build_history_prompt(tpl, history, career):
             "category": "History · NFL seasons since 1999", "answers": answers}
 
 
-def build_draft_prompt(tpl, picks, career, last_year):
-    """Draft-pick prompt; popularity = career PPR points, then career approximate value (covers non-skill picks)."""
+def build_draft_prompt(tpl, picks, career, last_year, ecr_rank=None):
+    """Draft-pick prompt; popularity = fame (career PPR, career Approximate Value, current consensus rank)."""
     p = picks[(picks["season"] >= tpl["since"]) & (picks["season"] <= last_year)]
     if tpl["rnd"] is not None:
         rounds = tpl["rnd"] if isinstance(tpl["rnd"], tuple) else (tpl["rnd"],)
@@ -198,12 +233,12 @@ def build_draft_prompt(tpl, picks, career, last_year):
     p = p[p["pfr_player_name"].notna()]
     if len(p) < MIN_ANSWERS:
         return None
-    rows = []
+    ids, names, positions, av_by_id = [], [], [], {}
     for r in p.itertuples(index=False):
         gid = r.gsis_id if isinstance(r.gsis_id, str) else f"pfr:{r.pfr_player_id}"
-        av = float(r.car_av) if pd.notna(r.car_av) else 0.0
-        rows.append((gid, r.pfr_player_name, (-float(career.get(gid, 0.0)), -av)))
-    answers = rank_and_tier(rows)
+        ids.append(gid); names.append(r.pfr_player_name); positions.append(r.position)
+        av_by_id[gid] = float(r.car_av) if pd.notna(r.car_av) else 0.0
+    answers = rank_and_tier(_famed_rows(ids, names, positions, career, av_by_id, ecr_rank))
     if len(answers) < MIN_ANSWERS:
         return None
     return {"id": f"d:{tpl['key']}", "template": tpl["key"], "kind": "history", "text": tpl["text"],
@@ -368,10 +403,9 @@ def live_candidates(date_str):
         except Exception as e:
             print(f"[daily_drive] season {s} unavailable: {e}")
     cands = []
+    ecr_rank = {k: v["ecr"] for k, v in consensus.overall_lookup().items()}
     if wk is not None:
         wk = wk[wk["season_type"] == "REG"] if "season_type" in wk.columns else wk
-        ecr = consensus.overall_lookup()
-        ecr_rank = {k: v["ecr"] for k, v in ecr.items()}
         for tpl in FANTASY_TEMPLATES:
             for w in (weeks if tpl["scope"] == "week" else weeks[-1:]):
                 p = build_fantasy_prompt(tpl, wk, season, w, ecr_rank)
@@ -383,13 +417,14 @@ def live_candidates(date_str):
         cur = data.load_weekly(current)                    # the in-progress season still counts toward career points
         cur = cur[cur["season_type"] == "REG"] if "season_type" in cur.columns else cur
         career = career_points(history, cur)
+        picks = data.load_draft_picks()
+        av_by_id = {g: float(v) for g, v in zip(picks["gsis_id"], picks["car_av"]) if isinstance(g, str) and pd.notna(v)}
         for tpl in HISTORY_TEMPLATES:
-            p = build_history_prompt(tpl, history, career)
+            p = build_history_prompt(tpl, history, career, av_by_id, ecr_rank)
             if p:
                 cands.append(p)
-        picks = data.load_draft_picks()
         for tpl in DRAFT_TEMPLATES:
-            p = build_draft_prompt(tpl, picks, career, d.year)
+            p = build_draft_prompt(tpl, picks, career, d.year, ecr_rank)
             if p:
                 cands.append(p)
     except Exception as e:                               # fewer history prompts rather than invented ones

@@ -27,23 +27,23 @@ THE DAILY DRIVE sample day 2026-11-16  (7 prompts; every answer computed from nf
    category: History · NFL Draft   id: d:d_rb_r1
    answers: 42   tiers 6..1: 6:4 5:6 4:6 3:9 2:8 1:9
    re-derived from source: 42 distinct names; builder set == source set: True
-   🏆 Hall of Famer  (100 yds,  4): Omarion Hampton, David Wilson, Jeremiyah Love, Jadarian Price
-   🟣 All-Pro        ( 85 yds,  6): Clyde Edwards-Helaire, Laurence Maroney, Beanie Wells, Ashton Jeanty
-   🔵 Pro Bowler     ( 60 yds,  6): Rashard Mendenhall, Cadillac Williams, Donald Brown, Felix Jones
-   🟢 Starter        ( 30 yds,  9): Bijan Robinson, Joseph Addai, Ryan Mathews, Cedric Benson
-   🟡 Rotation       ( 15 yds,  8): DeAngelo Williams, Melvin Gordon, Todd Gurley, Jonathan Stewart
-   ⚪ Benchwarmer    ( 10 yds,  9): Adrian Peterson, Christian McCaffrey, Marshawn Lynch, Ezekiel Elliott
+   🏆 Hall of Famer  (100 yds,  4): Rashaad Penny, Jahvid Best, David Wilson, Jadarian Price
+   🟣 All-Pro        ( 85 yds,  6): Felix Jones, Sony Michel, Trent Richardson, Clyde Edwards-Helaire
+   🔵 Pro Bowler     ( 60 yds,  6): Najee Harris, Knowshon Moreno, C.J. Spiller, Rashard Mendenhall
+   🟢 Starter        ( 30 yds,  9): Leonard Fournette, Ronnie Brown, Omarion Hampton, Darren McFadden
+   🟡 Rotation       ( 15 yds,  8): Josh Jacobs, Reggie Bush, Ashton Jeanty, DeAngelo Williams
+   ⚪ Benchwarmer    ( 10 yds,  9): Adrian Peterson, Jahmyr Gibbs, Bijan Robinson, Christian McCaffrey
 
 4. [history/h_wr_1300] Name a WR with 1,300+ receiving yards in a season since 1999
    category: History · NFL seasons since 1999   id: h:h_wr_1300
    answers: 78   tiers 6..1: 6:7 5:12 4:12 3:15 2:16 1:16
    re-derived from source: 78 distinct names; builder set == source set: True
    🏆 Hall of Famer  (100 yds,  7): Brandon Aiyuk, Javon Walker, Josh Gordon, Sidney Rice
-   🟣 All-Pro        ( 85 yds, 12): Calvin Ridley, Brandon Lloyd, Roy Williams, Tim Brown
-   🔵 Pro Bowler     ( 60 yds, 12): Chris Godwin Jr., A.J. Brown, Jimmy Smith, Amon-Ra St. Brown
-   🟢 Starter        ( 30 yds, 15): Cooper Kupp, T.Y. Hilton, Jordy Nelson, Rod Smith
-   🟡 Rotation       ( 15 yds, 16): Torry Holt, Stefon Diggs, Tyreek Hill, Derrick Mason
-   ⚪ Benchwarmer    ( 10 yds, 16): Larry Fitzgerald, Randy Moss, Davante Adams, Steve Smith
+   🟣 All-Pro        ( 85 yds, 12): Jeremy Maclin, Alshon Jeffery, Michael Thomas, JuJu Smith-Schuster
+   🔵 Pro Bowler     ( 60 yds, 12): Jordy Nelson, Rod Smith, Golden Tate, Amani Toomer
+   🟢 Starter        ( 30 yds, 15): Chad Johnson, Roddy White, Wes Welker, DeSean Jackson
+   🟡 Rotation       ( 15 yds, 16): DeAndre Hopkins, Keenan Allen, DJ Moore, Marvin Harrison
+   ⚪ Benchwarmer    ( 10 yds, 16): Larry Fitzgerald, Jaxon Smith-Njigba, Randy Moss, Ja'Marr Chase
 
 5. [fantasy/wr_rec_td] Name a WR who caught a TD in Week 1
    category: Fantasy · Week 1   id: f:wr_rec_td:2026:w1
@@ -61,10 +61,10 @@ THE DAILY DRIVE sample day 2026-11-16  (7 prompts; every answer computed from nf
    answers: 79   tiers 6..1: 6:7 5:12 4:12 3:16 2:16 1:16
    re-derived from source: 79 distinct names; builder set == source set: True
    🏆 Hall of Famer  (100 yds,  7): Dwayne Haskins, Josh Rosen, Johnny Manziel, Trey Lance
-   🟣 All-Pro        ( 85 yds, 12): Patrick Ramsey, Tim Tebow, Cam Ward, Kenny Pickett
-   🔵 Pro Bowler     ( 60 yds, 12): Caleb Williams, Byron Leftwich, Vince Young, Jayden Daniels
-   🟢 Starter        ( 30 yds, 16): Chad Pennington, Jason Campbell, Jordan Love, Teddy Bridgewater
-   🟡 Rotation       ( 15 yds, 16): Michael Vick, Baker Mayfield, Justin Herbert, Kyler Murray
+   🟣 All-Pro        ( 85 yds, 12): Jake Locker, Brandon Weeden, Patrick Ramsey, Tim Tebow
+   🔵 Pro Bowler     ( 60 yds, 12): David Carr, Joey Harrington, Mac Jones, Robert Griffin III
+   🟢 Starter        ( 30 yds, 16): Sam Darnold, Bryce Young, Daniel Jones, Blake Bortles
+   🟡 Rotation       ( 15 yds, 16): Jordan Love, Drake Maye, Alex Smith, Trevor Lawrence
    ⚪ Benchwarmer    ( 10 yds, 16): Aaron Rodgers, Matthew Stafford, Ben Roethlisberger, Philip Rivers
 
 7. [fantasy/qb_250_pass] Name a QB with 250+ passing yards in Week 6
