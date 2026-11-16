@@ -186,3 +186,6 @@
   .gc-tab-ind, .gc-tab, .gc-back, .pick-bar i, .odds-bar i, .cmp-bar i { transition: none !important; }
   .fld-ring { opacity: 0; }
 }
+
+/* Review: a slim note instead of an empty card when none of your players were in the game. */
+.gc-none-mine { margin: 0 2px 12px; font-size: 13px; }

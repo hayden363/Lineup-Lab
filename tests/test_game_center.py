@@ -88,6 +88,9 @@ class OddsWeatherInjuriesTest(unittest.TestCase):
         self.assertEqual((w["temp"], w["wind"], w["wind_alert"], w["indoor"]), (41, 17, True, False))
         w2 = G.parse_weather({"gameInfo": {"weather": {"temperature": 70, "windSpeed": 6}}})
         self.assertFalse(w2["wind_alert"])
+        # ESPN's numeric condition code is not a description and must never be shown
+        w3 = G.parse_weather({"gameInfo": {"weather": {"temperature": 43, "conditionId": "33"}}})
+        self.assertIsNone(w3["summary"])
 
     def test_indoor_and_missing_weather(self):
         self.assertTrue(G.parse_weather({"gameInfo": {"venue": {"indoor": True}}})["indoor"])

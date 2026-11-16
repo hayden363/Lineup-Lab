@@ -142,7 +142,8 @@ def parse_weather(js):
     temp = _num(w.get("temperature"))
     return {"temp": None if temp is None else int(temp),
             "wind": None if wind is None else int(wind), "wind_alert": wind is not None and wind >= WIND_ALERT_MPH,
-            "precip": _num(w.get("precipitation")), "summary": w.get("displayValue") or w.get("conditionId"),
+            # conditionId is ESPN's numeric weather code ("33"), meaningless on screen: only a real description shows.
+            "precip": _num(w.get("precipitation")), "summary": w.get("displayValue") or None,
             "indoor": bool(indoor) if indoor is not None else None}
 
 

@@ -517,7 +517,11 @@
     var aud = a.rows.length ? '<div class="gc-audit"><div class="gc-audit-total ' + (a.delta >= 0 ? "up" : "dn") + '"><b>' + d1(a.actual) + '</b><span>pts for your matchup \u00b7 projected ' + d1(a.projected) + " (" + (a.delta >= 0 ? "+" : "") + d1(a.delta) + ")</span></div>" +
       a.rows.map(function (r) { return '<div class="gc-proj"><span>' + esc(r.name) + " <small>" + esc(r.position) + "</small></span><b>" + d1(r.actual) + (r.proj != null ? ' <small>proj ' + d1(r.proj) + "</small>" : "") + "</b></div>"; }).join("") + "</div>"
       : '<div class="muted">None of your players were in this game.</div>';
-    var fantasy = '<div class="gc-two"><div class="gc-card"><div class="gc-h">Fantasy impact audit</div>' + aud + '</div><div class="gc-card"><div class="gc-h">Top fantasy scorers</div>' + (lead || '<div class="muted">No stats posted.</div>') + "</div></div>";
+    var leadCard = '<div class="gc-card"><div class="gc-h">Top fantasy scorers</div>' + (lead || '<div class="muted">No stats posted.</div>') + "</div>";
+    // With none of your players in the game, a half-width empty audit card is wasted space: the leaders take the full row.
+    var fantasy = a.rows.length
+      ? '<div class="gc-two"><div class="gc-card"><div class="gc-h">Fantasy impact audit</div>' + aud + "</div>" + leadCard + "</div>"
+      : '<div class="muted gc-none-mine">None of your players were in this game.</div>' + leadCard;
     return (champ ? '<div class="gc-final">Final \u00b7 ' + esc(champ.abbr) + " win</div>" : '<div class="gc-final">Final</div>') + banner + winCardHtml(d, g) +
       tabsHtml([{ id: "fantasy", label: "Fantasy", html: fantasy }, { id: "scoring", label: "Scoring", html: scoringSummaryHtml(d) }, { id: "box", label: "Box score", html: boxHtml }], tab || "fantasy");
   }
