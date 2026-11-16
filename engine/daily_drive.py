@@ -1,13 +1,13 @@
 """
 THE DAILY DRIVE — a daily football trivia game built on real nflverse data
 ===========================================================================
-Seven prompts a day ("Name a RB who scored a rushing TD in Week 10"). Every prompt's answer set is COMPUTED from
+Seven prompts a day ("Name a WR with 700+ receiving yards this season"). Every prompt's answer set is COMPUTED from
 nflverse tables the app already downloads, never typed in, so each accepted answer is correct by construction.
 
 Pieces, all pure functions except the two `live_*` / `get_puzzle` helpers at the bottom:
   * prompt builders  — turn a DataFrame into {prompt, answer set}
   * rarity tiers     — rank an answer set by popularity, cut by percentile into 6 tiers
-  * daily puzzle     — deterministic (seeded by the date) pick of 4 fantasy + 3 history prompts
+  * daily puzzle     — deterministic (seeded by the date) pick of 7 season prompts (history/draft are behind HISTORY_ENABLED)
   * answer matching  — full name / "F. Last" / last name, typo tolerance that depends on the tier
 """
 
@@ -22,7 +22,19 @@ import unicodedata
 import pandas as pd
 
 MIN_ANSWERS = 12          # a prompt is used only if at least this many answers exist
-N_FANTASY, N_HISTORY = 4, 3
+N_FANTASY, N_HISTORY = 4, 3     # the mix when HISTORY_ENABLED; otherwise the whole day is fantasy season prompts
+HISTORY_ENABLED = False         # owner decision 2026-11-16: every prompt is about THIS season's stats. Flip to bring back history + draft
+PUZZLE_VERSION = 2              # bump when the cached puzzle shape changes: older cached days are regenerated
+TARGET_MIN, TARGET_MAX = 15, 50  # the answer count a threshold rung should land in (the hard floor stays MIN_ANSWERS)
+
+
+def day_counts():
+    """(fantasy, history) prompts in a day."""
+    return (N_FANTASY, N_HISTORY) if HISTORY_ENABLED else (N_FANTASY + N_HISTORY, 0)
+
+
+def day_size():
+    return sum(day_counts())
 
 # tier -> (name, yards, share emoji). Rarer = harder to think of = more yards.
 TIERS = {
@@ -69,72 +81,137 @@ def rank_and_tier(rows):
     Returns [{id, name, tier}] most popular first, one answer per distinct normalized name (the more popular
     player keeps the name when two players share it)."""
     seen, ordered = set(), []
-    for aid, name, key in sorted(rows, key=lambda r: (r[2], r[1])):
+    for row in sorted(rows, key=lambda r: (r[2], r[1])):
+        aid, name = row[0], row[1]
         n = norm_name(name)
         if not n or n in seen:
             continue
         seen.add(n)
-        ordered.append((aid, name))
+        ordered.append((aid, name, row[3] if len(row) > 3 else {}))
     total = len(ordered)
-    return [{"id": aid, "name": name, "tier": tier_for_rank(i, total)} for i, (aid, name) in enumerate(ordered)]
+    return [{"id": aid, "name": name, "tier": tier_for_rank(i, total), **extra} for i, (aid, name, extra) in enumerate(ordered)]
 
 
 # ----------------------------------------------------------------------------------------------- fantasy prompts
-# scope "week": one game week.  scope "season": totals through the latest finished week.
-# stat "fpts" = the nflverse PPR column (the app's default scoring).
+# Every fantasy prompt is about the CURRENT season through the latest fully completed regular-season week.
+#   per="season": the player's season total of `stat` is >= the threshold.
+#   per="game":   the player's best single game of `stat` is >= the threshold.
+# The threshold is NOT fixed: build_season_prompt walks the template's `ladder` (round numbers) from the top and uses
+# the highest rung that still leaves at least TARGET_MIN answers, so the prompt keeps its difficulty as the season grows.
+# stat "fpts" = nflverse fantasy_points_ppr (the app's default scoring); "tds" = rushing + receiving TDs.
+_YDS = (300, 400, 500, 600, 700, 800, 1000, 1200, 1500)
 FANTASY_TEMPLATES = [
-    dict(key="rb_rush_td", scope="week", pos=("RB",), stat="rushing_tds", min=1, text="Name a RB who scored a rushing TD"),
-    dict(key="wr_100_rec", scope="week", pos=("WR",), stat="receiving_yards", min=100, text="Name a WR with 100+ receiving yards"),
-    dict(key="qb_2_td", scope="week", pos=("QB",), stat="passing_tds", min=2, text="Name a QB who threw 2+ TD passes"),
-    dict(key="any_20_ppr", scope="week", pos=("QB", "RB", "WR", "TE"), stat="fpts", min=20, text="Name a player who scored 20+ PPR points"),
-    dict(key="te_rec_td", scope="week", pos=("TE",), stat="receiving_tds", min=1, text="Name a TE who caught a TD"),
-    dict(key="rb_80_rush", scope="week", pos=("RB",), stat="rushing_yards", min=80, text="Name a RB with 80+ rushing yards"),
-    dict(key="qb_250_pass", scope="week", pos=("QB",), stat="passing_yards", min=250, text="Name a QB with 250+ passing yards"),
-    dict(key="wr_rec_td", scope="week", pos=("WR",), stat="receiving_tds", min=1, text="Name a WR who caught a TD"),
-    dict(key="s_te_td", scope="season", pos=("TE",), stat="receiving_tds", min=1, text="Name a TE who caught a TD"),
-    dict(key="s_rb_400", scope="season", pos=("RB",), stat="rushing_yards", min=400, text="Name a RB with 400+ rushing yards"),
-    dict(key="s_wr_600", scope="season", pos=("WR",), stat="receiving_yards", min=600, text="Name a WR with 600+ receiving yards"),
-    dict(key="s_qb_10_td", scope="season", pos=("QB",), stat="passing_tds", min=10, text="Name a QB with 10+ TD passes"),
+    # season totals
+    dict(key="wr_rec_yds", per="season", pos=("WR",), stat="receiving_yards", ladder=_YDS, label="rec yds",
+         text="Name a WR with {t}+ receiving yards this season"),
+    dict(key="te_rec_yds", per="season", pos=("TE",), stat="receiving_yards", ladder=(100, 150, 200, 250, 300, 400, 500, 600, 800), label="rec yds",
+         text="Name a TE with {t}+ receiving yards this season"),
+    dict(key="rb_rec_yds", group="rb_rec", per="season", pos=("RB",), stat="receiving_yards", ladder=(100, 150, 200, 250, 300, 400, 500, 600, 800), label="rec yds",
+         text="Name a RB with {t}+ receiving yards this season"),
+    dict(key="rb_rush_yds", per="season", pos=("RB",), stat="rushing_yards", ladder=(200, 300, 400, 500, 600, 700, 800, 1000, 1200, 1500), label="rush yds",
+         text="Name a RB with {t}+ rushing yards this season"),
+    dict(key="qb_pass_yds", per="season", pos=("QB",), stat="passing_yards", ladder=(1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500), label="pass yds",
+         text="Name a QB with {t}+ passing yards this season"),
+    dict(key="qb_pass_td", per="season", pos=("QB",), stat="passing_tds", ladder=(5, 8, 10, 12, 15, 18, 20, 22, 25, 28, 30, 35), label="pass TD",
+         text="Name a QB with {t}+ passing TDs this season"),
+    dict(key="wr_rec", per="season", pos=("WR",), stat="receptions", ladder=(20, 30, 40, 50, 60, 70, 80, 90, 100), label="rec",
+         text="Name a WR with {t}+ receptions this season"),
+    dict(key="any_total_td", per="season", pos=("RB", "WR", "TE"), stat="tds", ladder=(3, 4, 5, 6, 8, 10, 12, 15), label="total TD",
+         text="Name a player with {t}+ total TDs (rushing + receiving) this season"),
+    dict(key="any_ppr", per="season", pos=("QB", "RB", "WR", "TE"), stat="fpts", ladder=(50, 75, 100, 125, 150, 175, 200, 250, 300), label="PPR pts",
+         text="Name a player with {t}+ PPR points this season"),
+    dict(key="rb_rush_td", per="season", pos=("RB",), stat="rushing_tds", ladder=(2, 3, 4, 5, 6, 8, 10, 12), label="rush TD",
+         text="Name a RB with {t}+ rushing TDs this season"),
+    dict(key="rec_td", group="rec_td", per="season", pos=("WR", "TE"), stat="receiving_tds", ladder=(2, 3, 4, 5, 6, 8, 10, 12), label="rec TD",
+         text="Name a WR or TE with {t}+ receiving TDs this season"),
+    # single-game feats
+    dict(key="wr_game_rec", per="game", pos=("WR",), stat="receiving_yards", ladder=(100, 125, 150, 175, 200), label="rec yds in a game",
+         text="Name a WR with a {t}+ yard receiving game this season"),
+    dict(key="rb_game_rush", per="game", pos=("RB",), stat="rushing_yards", ladder=(80, 100, 125, 150, 175, 200), label="rush yds in a game",
+         text="Name a RB with a {t}+ yard rushing game this season"),
+    dict(key="qb_game_pass", per="game", pos=("QB",), stat="passing_yards", ladder=(250, 300, 350, 400, 450), label="pass yds in a game",
+         text="Name a QB with a {t}+ yard passing game this season"),
+    dict(key="any_game_ppr", per="game", pos=("QB", "RB", "WR", "TE"), stat="fpts", ladder=(20, 25, 30, 35, 40, 50), label="PPR pts in a game",
+         text="Name a player with a {t}+ PPR point game this season"),
+    dict(key="any_game_td", per="game", pos=("QB", "RB", "WR", "TE"), stat="tds", ladder=(2, 3, 4), label="TD in a game",
+         text="Name a player with {t}+ rushing/receiving TDs in one game this season"),
+    dict(key="te_game_rec", per="game", pos=("TE",), stat="receiving_yards", ladder=(50, 75, 100, 125, 150), label="rec yds in a game",
+         text="Name a TE with a {t}+ yard receiving game this season"),
+    # mixed
+    dict(key="rb_catches", group="rb_rec", per="season", pos=("RB",), stat="receptions", ladder=(10, 15, 20, 30, 40, 50, 60, 70), label="rec",
+         text="Name a RB with {t}+ catches this season"),
+    dict(key="wr_rec_td", group="rec_td", per="season", pos=("WR",), stat="receiving_tds", ladder=(2, 3, 4, 5, 6, 8, 10), label="rec TD",
+         text="Name a WR with {t}+ receiving TDs this season"),
+    dict(key="qb_rush_yds", per="season", pos=("QB",), stat="rushing_yards", ladder=(50, 75, 100, 150, 200, 250, 300, 400), label="rush yds",
+         text="Name a QB with {t}+ rushing yards this season"),
 ]
 
 
-def _with_fpts(wk):
-    return wk.assign(fpts=wk["fantasy_points_ppr"]) if "fpts" not in wk.columns else wk
+def _prep(wk):
+    """Adds the derived columns the templates use: fpts (PPR) and tds (rushing + receiving TDs)."""
+    out = wk
+    if "fpts" not in out.columns:
+        out = out.assign(fpts=out["fantasy_points_ppr"])
+    if "tds" not in out.columns:
+        out = out.assign(tds=out["rushing_tds"].fillna(0) + out["receiving_tds"].fillna(0))
+    return out
 
 
-def build_fantasy_prompt(tpl, wk, season, week, ecr_rank=None):
-    """One fantasy prompt from weekly stats `wk` (REG season rows only). `week` is the game week for a "week"
-    template, or the latest finished week for a "season" template. `ecr_rank` maps normalize-name|POS ->
-    FantasyPros consensus rank; a player the experts don't list counts as the least popular. Returns the
-    prompt dict or None when the answer set is smaller than MIN_ANSWERS."""
-    wk = _with_fpts(wk)
-    wk = wk[wk["position"].isin(tpl["pos"])]
-    if tpl["scope"] == "week":
-        rows = wk[wk["week"] == week]
-        when, cat = f"in Week {week}", f"Fantasy · Week {week}"
-        per = rows.groupby("player_id", as_index=False).agg(
-            name=("player_display_name", "first"), pos=("position", "first"), val=(tpl["stat"], "sum"))
-    else:
-        rows = wk[wk["week"] <= week]
-        when, cat = f"this season (through Week {week})", f"Fantasy · {season} season"
-        per = rows.groupby("player_id", as_index=False).agg(
-            name=("player_display_name", "first"), pos=("position", "first"), val=(tpl["stat"], "sum"))
-    tot = rows.groupby("player_id")["fpts"].sum()
-    per = per[per["val"] >= tpl["min"]]
-    if len(per) < MIN_ANSWERS:
-        return None
+def _num(v):
+    v = float(v)
+    return int(v) if v == int(v) else round(v, 1)
+
+
+def _season_players(tpl, wk, through):
+    """One row per player with the value that counts toward the template (season total, or best single game)."""
+    wk = _prep(wk)
+    rows = wk[wk["position"].isin(tpl["pos"]) & (wk["week"] <= through)].sort_values("week")
+    g = rows.groupby("player_id")
+    per = g.agg(name=("player_display_name", "last"), pos=("position", "last"), team=("recent_team", "last"),
+                headshot=("headshot_url", "last") if "headshot_url" in rows.columns else ("player_id", lambda s: None),
+                val=(tpl["stat"], "max" if tpl["per"] == "game" else "sum"), ppr=("fpts", "sum")).reset_index()
+    return per
+
+
+def _answers_at(per, threshold, ecr_rank, label):
     from engine.consensus import match_key
     ecr_rank = ecr_rank or {}
+    q = per[per["val"] >= threshold]
     keyed = []
-    for r in per.itertuples(index=False):
-        rank = ecr_rank.get(match_key(r.name, r.pos), 99999.0)
-        keyed.append((r.player_id, r.name, (rank, -float(tot.get(r.player_id, 0.0)))))
-    answers = rank_and_tier(keyed)
-    if len(answers) < MIN_ANSWERS:
+    for r in q.itertuples(index=False):
+        head = r.headshot if isinstance(r.headshot, str) and r.headshot else None
+        extra = {"team": r.team if isinstance(r.team, str) else None, "position": r.pos, "headshot": head,
+                 "stat": _num(r.val), "stat_label": label}
+        keyed.append((r.player_id, r.name, (ecr_rank.get(match_key(r.name, r.pos), 99999.0), -float(r.ppr)), extra))
+    return rank_and_tier(keyed)
+
+
+def pick_threshold(per, ladder, ecr_rank, label):
+    """Highest ladder rung whose answer set still has at least TARGET_MIN players (so the prompt is as hard as the
+    data allows while staying playable). Falls back to the highest rung with at least MIN_ANSWERS. Returns
+    (threshold, answers) or (None, [])."""
+    fallback = (None, [])
+    for t in sorted(ladder, reverse=True):
+        ans = _answers_at(per, t, ecr_rank, label)
+        if len(ans) >= TARGET_MIN:
+            return t, ans
+        if fallback[0] is None and len(ans) >= MIN_ANSWERS:
+            fallback = (t, ans)
+    return fallback
+
+
+def build_season_prompt(tpl, wk, season, through, ecr_rank=None):
+    """One fantasy prompt about `season` through its latest finished regular-season week `through`. `wk` = that
+    season's REG weekly rows. `ecr_rank` maps normalized-name|POS -> FantasyPros consensus rank; a player the
+    experts don't list counts as the least popular (tie-break: season PPR points). Returns None when no ladder
+    rung leaves MIN_ANSWERS answers."""
+    per = _season_players(tpl, wk, through)
+    t, answers = pick_threshold(per, tpl["ladder"], ecr_rank, tpl["label"])
+    if t is None:
         return None
-    scope_id = f"w{week}" if tpl["scope"] == "week" else f"s{week}"
-    return {"id": f"f:{tpl['key']}:{season}:{scope_id}", "template": tpl["key"], "kind": "fantasy",
-            "text": f"{tpl['text']} {when}", "category": cat, "answers": answers}
+    return {"id": f"f:{tpl['key']}:{season}:w{through}:t{t}", "template": tpl["key"], "kind": "fantasy",
+            "text": tpl["text"].format(t=f"{t:,}"), "category": f"This season · through Week {through}", "answers": answers,
+            "threshold": t, "group": tpl.get("group", tpl["key"])}
 
 
 # ----------------------------------------------------------------------------------------------- history prompts
@@ -250,23 +327,27 @@ def _seed(date_str):
     return int(hashlib.sha256(f"daily-drive:{date_str}".encode()).hexdigest()[:12], 16)
 
 
-def pick_day(date_str, candidates, recent_ids=()):
-    """The same 7 prompts for the same date, every time: 4 fantasy + 3 history from `candidates` (prompt dicts),
-    no template twice, no id in `recent_ids` unless the pool runs dry. Returned in a seeded shuffled order."""
+def pick_day(date_str, candidates, avoid_templates=()):
+    """The same prompts for the same date, every time: day_counts() prompts per kind from `candidates` (prompt
+    dicts), no template (or near-duplicate group) twice in a day, and none of `avoid_templates` (yesterday's) unless the pool runs dry.
+    Returned in a seeded shuffled order."""
     rng = random.Random(_seed(date_str))
-    recent = set(recent_ids)
+    avoid = set(avoid_templates)
     out = []
-    for kind, n in (("fantasy", N_FANTASY), ("history", N_HISTORY)):
+    for kind, n in zip(("fantasy", "history"), day_counts()):
+        if n <= 0:
+            continue
         pool = sorted((c for c in candidates if c["kind"] == kind and len(c["answers"]) >= MIN_ANSWERS), key=lambda c: c["id"])
         rng.shuffle(pool)
-        pool.sort(key=lambda c: c["id"] in recent)       # fresh prompts first; stable, so the shuffle still decides
-        used_templates = set()
+        pool.sort(key=lambda c: c["template"] in avoid)   # fresh templates first; stable, so the shuffle still decides
+        used = set()                                      # template groups: near-duplicates (WR rec TDs vs WR/TE rec TDs) count as one
         for c in pool:
-            if c["template"] in used_templates:
+            grp = c.get("group", c["template"])
+            if grp in used:
                 continue
-            used_templates.add(c["template"])
+            used.add(grp)
             out.append(c)
-            if len(used_templates) == n:
+            if len(used) == n:
                 break
     rng.shuffle(out)
     return out
@@ -345,11 +426,21 @@ def tier_info(tier):
     return {"tier": tier, "tier_name": name, "yards": yards, "emoji": emoji}
 
 
+ANSWER_EXTRAS = ("team", "position", "headshot", "stat", "stat_label")
+
+
+def answer_details(a):
+    """The visual extras for one answer; every key is always present (None when the bank row has none)."""
+    return {k: a.get(k) for k in ANSWER_EXTRAS}
+
+
 def reveal_view(prompt):
-    """Full tiered answer list (most popular first inside each tier), highest tier first. Only after the game."""
+    """Full tiered answer list (most popular first inside each tier), highest tier first. Only after the game.
+    "answers" stays a list of names; "details" runs parallel to it with {name, team, position, headshot, stat, stat_label}."""
     tiers = []
     for t in sorted(TIERS, reverse=True):
-        tiers.append({**tier_info(t), "answers": [a["name"] for a in prompt["answers"] if a["tier"] == t]})
+        inside = [a for a in prompt["answers"] if a["tier"] == t]
+        tiers.append({**tier_info(t), "answers": [a["name"] for a in inside], "details": [{"name": a["name"], **answer_details(a)} for a in inside]})
     return {"id": prompt["id"], "text": prompt["text"], "tiers": tiers}
 
 
@@ -406,11 +497,13 @@ def live_candidates(date_str):
     ecr_rank = {k: v["ecr"] for k, v in consensus.overall_lookup().items()}
     if wk is not None:
         wk = wk[wk["season_type"] == "REG"] if "season_type" in wk.columns else wk
+        through = weeks[-1]                                # latest fully completed regular-season week
         for tpl in FANTASY_TEMPLATES:
-            for w in (weeks if tpl["scope"] == "week" else weeks[-1:]):
-                p = build_fantasy_prompt(tpl, wk, season, w, ecr_rank)
-                if p:
-                    cands.append(p)
+            p = build_season_prompt(tpl, wk, season, through, ecr_rank)
+            if p:
+                cands.append(p)
+    if not HISTORY_ENABLED:
+        return cands
     try:
         current = data.resolve_season()
         history = data.load_season_history(current - 1)    # finished seasons only
@@ -436,33 +529,37 @@ def _puzzle_path(cache_dir, date_str):
     return os.path.join(cache_dir, f"puzzle_{date_str}.json")
 
 
-def recent_prompt_ids(cache_dir, date_str, days=30):
-    """Ids used by cached puzzles in the `days` before `date_str` (the no-repeat window)."""
-    d = dt.date.fromisoformat(date_str)
-    ids = set()
-    for i in range(1, days + 1):
-        path = _puzzle_path(cache_dir, (d - dt.timedelta(days=i)).isoformat())
-        if os.path.exists(path):
-            try:
-                with open(path, encoding="utf-8") as fh:
-                    ids.update(p["id"] for p in json.load(fh)["prompts"])
-            except Exception:
-                pass
-    return ids
+def _read_puzzle(path):
+    try:
+        with open(path, encoding="utf-8") as fh:
+            puz = json.load(fh)
+        return puz if puz.get("v") == PUZZLE_VERSION else None     # an older shape (pre season-prompts) is regenerated
+    except Exception:
+        return None
+
+
+def yesterday_templates(cache_dir, date_str, candidates):
+    """Templates used the day before `date_str`: from its cached puzzle, else what that day's deterministic pick
+    would be from the same candidates. Feeds the no-same-template-on-consecutive-days rule."""
+    prev = (dt.date.fromisoformat(date_str) - dt.timedelta(days=1)).isoformat()
+    puz = _read_puzzle(_puzzle_path(cache_dir, prev))
+    if puz:
+        return {p["template"] for p in puz["prompts"]}
+    return {p["template"] for p in pick_day(prev, candidates)}
 
 
 def get_puzzle(date_str, cache_dir, candidates_fn=live_candidates):
-    """The day's puzzle {date, prompts:[full prompt dicts]}, from the disk cache or generated and cached."""
+    """The day's puzzle {v, date, prompts:[full prompt dicts]}, from the disk cache or generated and cached. The day
+    is built from data through the latest completed week, so a new week flows in on its own (new ids)."""
     path = _puzzle_path(cache_dir, date_str)
     if os.path.exists(path):
-        try:
-            with open(path, encoding="utf-8") as fh:
-                return json.load(fh)
-        except Exception:
-            pass
-    prompts = pick_day(date_str, candidates_fn(date_str), recent_prompt_ids(cache_dir, date_str))
-    puzzle = {"date": date_str, "prompts": prompts}
-    if len(prompts) == N_FANTASY + N_HISTORY:           # never freeze a short day: it may just be missing data
+        puz = _read_puzzle(path)
+        if puz:
+            return puz
+    cands = candidates_fn(date_str)
+    prompts = pick_day(date_str, cands, yesterday_templates(cache_dir, date_str, cands))
+    puzzle = {"v": PUZZLE_VERSION, "date": date_str, "prompts": prompts}
+    if len(prompts) == day_size():                      # never freeze a short day: it may just be missing data
         os.makedirs(cache_dir, exist_ok=True)
         tmp = path + ".tmp"
         with open(tmp, "w", encoding="utf-8") as fh:

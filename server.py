@@ -2120,7 +2120,7 @@ def _play_puzzle(date: Optional[str]):
         puzzle = _PLAY_MEM.get(key)
         if puzzle is None:
             puzzle = daily_drive.get_puzzle(key, data_layer.HISTORY_DIR)
-            if len(puzzle["prompts"]) == daily_drive.N_FANTASY + daily_drive.N_HISTORY:
+            if len(puzzle["prompts"]) == daily_drive.day_size():
                 if len(_PLAY_MEM) > 100:
                     _PLAY_MEM.clear()
                 _PLAY_MEM[key] = puzzle
@@ -2158,7 +2158,8 @@ def play_check(body: PlayCheck):
     if not res["ok"]:
         return {"ok": False, "reason": res["reason"], "suggestions": res["suggestions"]}
     a = res["answer"]
-    out = {"ok": True, "canonical": a["name"], "answer_id": a["id"], **daily_drive.tier_info(a["tier"])}
+    out = {"ok": True, "canonical": a["name"], "answer_id": a["id"], **daily_drive.tier_info(a["tier"]),
+           **daily_drive.answer_details(a)}      # team, position, headshot, stat, stat_label for the answer card
     token = dd_scores.sign_token(key, prompt["id"], a["id"], a["tier"])   # proof for /api/play/score; None = no secret
     if token:
         out["token"] = token

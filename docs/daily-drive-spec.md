@@ -36,38 +36,60 @@ no account; prompts are a **mix** of real-data fantasy prompts and history promp
 No hand-typed facts. Every prompt's answer set is computed from nflverse data the app already downloads
 (`engine/data.py`, `data_cache/`), so it is correct by construction.
 
-**Fantasy prompts (4 per day)** from completed weeks of the current season (`bundle["wk"]` weekly stats,
-scored with the app's default PPR via `engine/scoring.py`). Templates, e.g.
-- "Name a RB who scored a rushing TD in Week N"
-- "Name a WR with 100+ receiving yards in Week N"
-- "Name a QB who threw 2+ TD passes in Week N"
-- "Name a player who scored 20+ PPR points in Week N"
-- "Name a TE who caught a TD this season" (season-to-date sets are fine too)
-A template/week combo is used only if its answer set has at least 12 answers.
+**Season prompts (all 7 per day; owner decision 2026-11-16: "no more random week, just stats from this season,
+updated weekly").** Every prompt is about the CURRENT season's regular-season stats through the latest fully
+completed week (`engine/daily_drive.eligible_weeks`: every game that week has a score and was played before the
+date). Source: nflverse weekly data (`data.load_weekly`, REG only, PPR column `fantasy_points_ppr`). No "in Week N"
+prompts; the category label reads "This season · through Week 10". History and draft prompts still exist in code
+but are off behind `HISTORY_ENABLED = False` (flip it to get back 4 fantasy + 3 history).
 
-**History prompts (3 per day)** generated from nflverse historical datasets only (seasonal player stats
-1999+, draft picks, schedules), e.g. "Name a player with 1,500+ receiving yards in a season since 1999",
-"Name a first-overall pick since 2000", "Name a RB with a 1,800+ rushing-yard season since 1999".
-If a dataset isn't available through `engine/data.py`, add a loader in the same cached style
-(`data._disk_cached`, nflverse-data GitHub releases). No prompt whose answers can't be computed.
+Template families (20, `FANTASY_TEMPLATES`), all phrased "... this season":
+- season totals: WR / TE / RB receiving yards, RB rushing yards, QB passing yards, QB passing TDs, WR receptions,
+  RB/WR/TE total TDs (rush + rec), PPR points, RB rushing TDs, WR/TE receiving TDs;
+- single-game feats: WR receiving-yard game, RB rushing-yard game, QB passing-yard game, PPR-point game,
+  rushing/receiving TDs in one game, TE receiving-yard game (answer = anyone whose best game cleared the line);
+- mixed: RB catches, WR receiving TDs, QB rushing yards.
+
+**Dynamic thresholds.** Each template owns a ladder of round numbers (yards 300/400/500/600/700/800/1000/1200/1500,
+TDs 3/4/5/6/8/10..., PPR 50/75/100/125/150/200..., etc.). `pick_threshold` walks the ladder from the top and takes the
+highest rung that still leaves at least `TARGET_MIN` = 15 answers (the band is 15-50; `MIN_ANSWERS` = 12 is the hard
+floor and the fallback). The chosen number is printed in the prompt text ("Name a WR with 500+ receiving yards this
+season"), so difficulty tracks the season as totals grow.
+
+**Weekly refresh and ids.** A day's puzzle is built from data through the latest completed week at generation time, so
+a new week flows in with no manual step. Prompt ids carry the season, through-week and threshold
+(`f:wr_rec_yds:2026:w9:t500`): a new week or a new rung means new ids. Cached puzzle files carry `v` (`PUZZLE_VERSION`);
+an older shape is regenerated. Tokens (`engine/daily_drive_scores.py`) are looked up in the day's puzzle by prompt id and
+answer id, so a game started after a regeneration scores normally (a game straddling a regeneration fails verification
+and is refused rather than mis-scored).
+
+**Variety.** Deterministic per date (seeded by the date). 7 distinct templates a day, near-duplicates share a `group`
+(WR receiving TDs vs WR/TE receiving TDs; RB receiving yards vs RB catches) and never share a day, and none of
+yesterday's templates are used again unless the pool runs dry (replaces the old 30-day id rule).
+
+**Answer extras (for the visuals).** Each bank answer stores `team` (`recent_team`, latest week), `position`,
+`headshot` (weekly `headshot_url`, else null), `stat` (the qualifying number, e.g. 742 or 156) and `stat_label` ("rec yds",
+"pass TD", "PPR pts", "rush yds in a game", ...). `POST /api/play/check` returns them with an accepted answer;
+`GET /api/play/reveal` returns them per answer in each tier's `details` list (parallel to `answers`). Nothing is sent
+for unrevealed answers.
 
 **Rarity (no editors).** Within each prompt's answer set, rank answers by popularity and cut by percentile:
 top 20% Benchwarmer, next 20% Rotation, next 20% Starter, next 15% Pro Bowler, next 15% All-Pro, last 10%
 Hall of Famer. Popularity:
-- fantasy prompts: FantasyPros consensus rank already loaded by `engine/consensus.py` (`overall_lookup`;
-  a player the experts don't list counts as least popular), tie-break by season fantasy points;
-- history prompts: career PPR fantasy points (more points = more famous).
+- fantasy (season) prompts: FantasyPros consensus rank already loaded by `engine/consensus.py` (`overall_lookup`;
+  a player the experts don't list counts as least popular), tie-break by season PPR points;
+- history prompts (off): career PPR fantasy points (more points = more famous).
 Store the tier with each answer so later we can switch to "% of players who gave this answer".
 
 **Daily puzzle generation.** Deterministic from the date (seeded RNG) so every player gets the same game
-and it can be regenerated: pick 4 fantasy + 3 history prompts, no repeated template on the same day, avoid
-reusing an identical prompt within 30 days. Cache each day's puzzle on disk (`data_cache/daily_drive/`).
+and it can be regenerated: pick 7 season prompts, no repeated template (or near-duplicate group) on the same day and none of
+yesterday's templates. Cache each day's puzzle on disk (`data_cache/daily_drive/`).
 
 ## Answer checking (server side, so the bank isn't shipped to the browser)
 - `GET /api/play/daily?date=YYYY-MM-DD` → date, 7 prompts (id, text, category label, answer count). No answers.
-- `POST /api/play/check` `{date, prompt_id, answer, used:[answer ids]}` → `{ok, tier, yards, canonical, answer_id}`
+- `POST /api/play/check` `{date, prompt_id, answer, used:[answer ids]}` → `{ok, tier, yards, canonical, answer_id, token, team, position, headshot, stat, stat_label}`
   or `{ok:false, reason, suggestions:[...]}`. Rate limited with the existing `rate_limit` dependency.
-- `GET /api/play/reveal?date=…&prompt_id=…` → full tiered answer list; the page calls it only after the game ends.
+- `GET /api/play/reveal?date=…&prompt_id=…` → full tiered answer list (names plus per-answer `details`); the page calls it only after the game ends.
 - `GET /api/play/practice` → one random past prompt.
 - Matching: lowercase, strip punctuation and suffixes (Jr, Sr, II, III), collapse spaces; accept full name,
   "F. Last", and last name alone when unique within that prompt's answer set; ambiguous last name →

@@ -16,7 +16,8 @@ from engine import daily_drive as dd
 
 def _answers(n, prefix="Player"):
     names = [f"{prefix}{chr(65 + i // 26)}{chr(65 + i % 26)} Smith{i}" for i in range(n)]
-    return dd.rank_and_tier([(f"id{i}", nm, (i,)) for i, nm in enumerate(names)])
+    return dd.rank_and_tier([(f"id{i}", nm, (i,), {"team": "SEA", "position": "WR", "headshot": f"https://img/{i}.png",
+                                                    "stat": 500 + i, "stat_label": "rec yds"}) for i, nm in enumerate(names)])
 
 
 def _prompt(pid, template, kind, n=14):
@@ -24,7 +25,7 @@ def _prompt(pid, template, kind, n=14):
 
 
 def _pool():
-    return ([_prompt(f"f:{t}:{w}", t, "fantasy") for t in "abcdef" for w in (1, 2)]
+    return ([_prompt(f"f:{t}:2026:w{w}:t100", t, "fantasy") for t in "abcdefghij" for w in (1, 2)]
             + [_prompt(f"h:{t}", t, "history") for t in "uvwxyz"])
 
 
@@ -58,31 +59,98 @@ class BuilderTests(unittest.TestCase):
                          rushing_yards=0, fantasy_points_ppr=30.0))
         return pd.DataFrame(rows)
 
-    def test_week_prompt_matches_source_rows(self):
-        wk = self._wk()
-        tpl = dict(key="rb_rush_td", scope="week", pos=("RB",), stat="rushing_tds", min=1, text="Name a RB who scored a rushing TD")
-        self.assertIsNone(dd.build_fantasy_prompt(tpl, wk, 2026, 3))      # only 8 qualify: below MIN_ANSWERS
-        tpl2 = dict(tpl, key="rb_90", stat="rushing_yards", min=90)
-        p = dd.build_fantasy_prompt(tpl2, wk, 2026, 2)
-        self.assertEqual(len(p["answers"]), 15)                            # the WR is not an RB
-        self.assertEqual(p["text"], "Name a RB who scored a rushing TD in Week 2")
-        src = set(wk[(wk.week == 2) & (wk.position == "RB") & (wk.rushing_yards >= 90)]["player_display_name"])
-        self.assertEqual({a["name"] for a in p["answers"]}, src)
+    def _season_wk(self):
+        """30 WRs: wr i has 100*(i+1)/... receiving yards over two weeks, a big game in week 2."""
+        rows = []
+        for i in range(30):
+            for w, yds in ((1, 20 * (i + 1)), (2, 10 * (i + 1))):
+                rows.append(dict(player_id=f"w{i}", player_display_name=f"Wide{i} Out", position="WR", week=w, recent_team="SEA" if w == 1 else "DEN",
+                                 headshot_url=f"https://img/w{i}.png", receiving_yards=float(yds), receiving_tds=1.0 if i % 3 == 0 else 0.0,
+                                 rushing_tds=0.0, rushing_yards=0.0, receptions=3.0, fantasy_points_ppr=float(yds) / 10))
+        rows.append(dict(player_id="r1", player_display_name="Some Back", position="RB", week=1, recent_team="NE", headshot_url=None,
+                         receiving_yards=900.0, receiving_tds=0.0, rushing_tds=0.0, rushing_yards=0.0, receptions=3.0, fantasy_points_ppr=9.0))
+        return pd.DataFrame(rows)
+
+    TPL = dict(key="wr_rec_yds", per="season", pos=("WR",), stat="receiving_yards", ladder=(300, 400, 500, 600, 700, 800, 1000),
+               label="rec yds", text="Name a WR with {t}+ receiving yards this season")
+
+    def test_threshold_ladder_picks_the_highest_rung_that_keeps_enough_answers(self):
+        wk = self._season_wk()                            # season totals are 30*(i+1): 30..900; 15+ players need >= 480ish
+        p = dd.build_season_prompt(self.TPL, wk, 2026, 2)
+        # rungs: 500 -> players with 30*(i+1)>=500 (i>=16): 14 players; 400 -> i>=13: 17 players -> 400 is the highest with >= 15
+        self.assertEqual(p["threshold"], 400)
+        self.assertEqual(len(p["answers"]), 17)
+        self.assertEqual(p["text"], "Name a WR with 400+ receiving yards this season")
+        self.assertEqual(p["category"], "This season · through Week 2")
+        self.assertEqual(p["id"], "f:wr_rec_yds:2026:w2:t400")
+        src = set(wk[wk.position == "WR"].groupby("player_display_name")["receiving_yards"].sum().loc[lambda v: v >= 400].index)
+        self.assertEqual({a["name"] for a in p["answers"]}, src)       # the RB with 900 is not a WR
+
+    def test_answer_extras_come_from_the_data(self):
+        p = dd.build_season_prompt(self.TPL, self._season_wk(), 2026, 2)
+        a = next(x for x in p["answers"] if x["name"] == "Wide29 Out")
+        self.assertEqual((a["team"], a["position"], a["stat"], a["stat_label"]), ("DEN", "WR", 900, "rec yds"))   # latest team
+        self.assertEqual(a["headshot"], "https://img/w29.png")
+        self.assertEqual(set(a), {"id", "name", "tier", "team", "position", "headshot", "stat", "stat_label"})
+
+    def test_through_week_only_counts_finished_weeks(self):
+        wk = self._season_wk()
+        p1 = dd.build_season_prompt(dict(self.TPL, ladder=(100, 200, 300)), wk, 2026, 1)     # week 1 only: 20*(i+1) <= 600
+        self.assertEqual(p1["threshold"], 300)                       # week 1 only: totals 20..600; 300+ leaves 16
+        self.assertEqual(max(a["stat"] for a in p1["answers"]), 600)
+        self.assertNotEqual(p1["id"], dd.build_season_prompt(dict(self.TPL, ladder=(100, 200, 300)), wk, 2026, 2)["id"])
+
+    def test_new_week_makes_new_ids_and_rungs_climb(self):
+        wk = self._season_wk()
+        a = dd.build_season_prompt(self.TPL, wk[wk.week <= 1], 2026, 1)
+        b = dd.build_season_prompt(self.TPL, wk, 2026, 2)
+        self.assertNotEqual(a["id"], b["id"])
+        self.assertLess(a["threshold"], b["threshold"] + 1)
+        self.assertGreater(b["threshold"], a["threshold"])      # more weeks played -> a higher rung still has 15 answers
+
+    def test_unreachable_ladder_returns_none_and_small_set_falls_back_above_floor(self):
+        wk = self._season_wk()
+        self.assertIsNone(dd.build_season_prompt(dict(self.TPL, ladder=(5000,)), wk, 2026, 2))
+        p = dd.build_season_prompt(dict(self.TPL, ladder=(690, 450)), wk, 2026, 2)   # 690 -> 9 answers (below the floor), 450 -> 16 -> in band
+        self.assertEqual(p["threshold"], 450)
+        p = dd.build_season_prompt(dict(self.TPL, ladder=(690, 600, 5000)), wk, 2026, 2)   # 600 -> 11 answers: below MIN_ANSWERS
+        self.assertIsNone(p)
+
+    def test_single_game_templates_use_the_best_game_and_the_label(self):
+        wk = self._season_wk()
+        tpl = dict(self.TPL, key="wr_game_rec", per="game", ladder=(50, 100, 150, 200), label="rec yds in a game",
+                   text="Name a WR with a {t}+ yard receiving game this season")
+        p = dd.build_season_prompt(tpl, wk, 2026, 2)      # best game = week 1: 20*(i+1); 15+ players need >= 320 -> rung 200 has 21 players
+        self.assertEqual(p["threshold"], 200)
+        top = next(a for a in p["answers"] if a["name"] == "Wide29 Out")
+        self.assertEqual((top["stat"], top["stat_label"]), (600, "rec yds in a game"))
+
+    def test_tds_stat_adds_rushing_and_receiving(self):
+        wk = self._season_wk().assign(rushing_tds=2.0)
+        tpl = dict(key="any_td", per="season", pos=("WR",), stat="tds", ladder=(3, 4), label="total TD", text="Name a player with {t}+ total TDs this season")
+        p = dd.build_season_prompt(tpl, wk, 2026, 2)      # 2 weeks x 2 rushing = 4, +2 for the 10 multiples-of-3 receivers
+        self.assertEqual(p["threshold"], 4)
+        self.assertEqual(len(p["answers"]), 30)
 
     def test_consensus_rank_orders_popularity_and_unlisted_is_least_popular(self):
-        wk = self._wk()
-        tpl = dict(key="k", scope="week", pos=("RB",), stat="rushing_yards", min=90, text="t")
-        ecr = {"runner5 back|RB": 1.0, "runner6 back|RB": 2.0}
-        p = dd.build_fantasy_prompt(tpl, wk, 2026, 3, ecr)
-        self.assertEqual([a["name"] for a in p["answers"][:2]], ["Runner5 Back", "Runner6 Back"])
+        wk = self._season_wk()
+        ecr = {"wide20 out|WR": 1.0, "wide21 out|WR": 2.0}
+        p = dd.build_season_prompt(self.TPL, wk, 2026, 2, ecr)
+        self.assertEqual([a["name"] for a in p["answers"][:2]], ["Wide20 Out", "Wide21 Out"])
         self.assertEqual(p["answers"][-1]["tier"], 6)
-        self.assertNotIn(p["answers"][-1]["name"], ("Runner5 Back", "Runner6 Back"))
+        self.assertNotIn(p["answers"][-1]["name"], ("Wide20 Out", "Wide21 Out"))
+        self.assertEqual(p["answers"][2]["name"], "Wide29 Out")      # unlisted: tie-break by season PPR points
 
-    def test_season_scope_sums_weeks_through_the_cutoff(self):
-        wk = self._wk()
-        tpl = dict(key="s", scope="season", pos=("RB",), stat="rushing_yards", min=180, text="t")
-        self.assertEqual(len(dd.build_fantasy_prompt(tpl, wk, 2026, 3)["answers"]), 15)
-        self.assertIsNone(dd.build_fantasy_prompt(tpl, wk, 2026, 2))       # only one week counted: 90 < 180
+    def test_real_templates_are_season_scoped_with_ladders(self):
+        self.assertGreaterEqual(len(dd.FANTASY_TEMPLATES), 14)
+        self.assertEqual(len({t["key"] for t in dd.FANTASY_TEMPLATES}), len(dd.FANTASY_TEMPLATES))
+        for t in dd.FANTASY_TEMPLATES:
+            self.assertIn("this season", t["text"])
+            self.assertNotRegex(t["text"], r"(?i)week")
+            self.assertIn("{t}", t["text"])
+            self.assertEqual(list(t["ladder"]), sorted(t["ladder"]))
+            self.assertGreaterEqual(len(t["ladder"]), 3)
+            self.assertIn(t["per"], ("season", "game"))
 
     def test_history_prompt(self):
         hist = pd.DataFrame([dict(player_id=f"p{i}", player_display_name=f"Wideout{i} X", position="WR", season=2010 + i % 5,
@@ -124,19 +192,43 @@ class DailyPuzzleTests(unittest.TestCase):
         a = dd.pick_day("2026-11-16", _pool())
         b = dd.pick_day("2026-11-16", list(reversed(_pool())))
         self.assertEqual([p["id"] for p in a], [p["id"] for p in b])
-        self.assertEqual(collections.Counter(p["kind"] for p in a), {"fantasy": 4, "history": 3})
-        self.assertEqual(len({p["template"] for p in a if p["kind"] == "fantasy"}), 4)
+        self.assertEqual(collections.Counter(p["kind"] for p in a), {"fantasy": 7})     # history is off
+        self.assertEqual(len({p["template"] for p in a}), 7)
         self.assertNotEqual([p["id"] for p in a], [p["id"] for p in dd.pick_day("2026-11-17", _pool())])
 
+    def test_history_flag_brings_back_four_plus_three(self):
+        with mock.patch.object(dd, "HISTORY_ENABLED", True):
+            a = dd.pick_day("2026-11-16", _pool())
+            self.assertEqual(collections.Counter(p["kind"] for p in a), {"fantasy": 4, "history": 3})
+            self.assertEqual(dd.day_size(), 7)
+
     def test_every_prompt_has_enough_answers_and_all_tiers(self):
-        for p in dd.pick_day("2026-11-16", _pool() + [_prompt("f:tiny:1", "tiny", "fantasy", n=5)]):
+        for p in dd.pick_day("2026-11-16", _pool() + [_prompt("f:tiny:2026:w1:t5", "tiny", "fantasy", n=5)]):
             self.assertGreaterEqual(len(p["answers"]), dd.MIN_ANSWERS)
             self.assertEqual({a["tier"] for a in p["answers"]}, {1, 2, 3, 4, 5, 6})
 
-    def test_recent_prompts_are_avoided_when_the_pool_allows(self):
-        first = dd.pick_day("2026-11-16", _pool())
-        again = dd.pick_day("2026-11-16", _pool(), recent_ids={p["id"] for p in first})
-        self.assertFalse({p["id"] for p in first} & {p["id"] for p in again})
+    def test_no_template_on_consecutive_days_when_the_pool_allows(self):
+        day = dt.date(2026, 11, 1)
+        prev = set()
+        for i in range(40):
+            big = [_prompt(f"f:t{k}:2026:w1:t1", f"t{k}", "fantasy") for k in range(16)]      # >= 14 templates: 7 fresh ones always exist
+            picks = dd.pick_day((day + dt.timedelta(days=i)).isoformat(), big, avoid_templates=prev)
+            cur = {p["template"] for p in picks}
+            self.assertEqual(len(cur), 7)
+            self.assertFalse(cur & prev, f"day {i} repeats {cur & prev}")
+            prev = cur
+
+    def test_variety_falls_back_when_the_pool_is_too_small(self):
+        small = [_prompt(f"f:{t}:2026:w1:t1", t, "fantasy") for t in "abcdefgh"]    # 8 templates, yesterday used 7: only 1 fresh
+        picks = dd.pick_day("2026-11-16", small, avoid_templates=set("abcdefg"))
+        self.assertEqual(len(picks), 7)
+        self.assertIn("h", {p["template"] for p in picks})
+
+    def test_near_duplicate_groups_never_share_a_day(self):
+        pool = [dict(_prompt(f"f:{t}:2026:w1:t1", t, "fantasy"), group="g1" if t in "ab" else t) for t in "abcdefghij"]
+        for d in range(1, 15):
+            ts = {p["template"] for p in dd.pick_day(f"2026-11-{d:02d}", pool)}
+            self.assertFalse({"a", "b"} <= ts)
 
     def test_puzzle_is_cached_to_disk_and_reused(self):
         with tempfile.TemporaryDirectory() as d:
@@ -148,7 +240,18 @@ class DailyPuzzleTests(unittest.TestCase):
             two = dd.get_puzzle("2026-11-16", d, cands)
             self.assertEqual(len(calls), 1)
             self.assertEqual([p["id"] for p in one["prompts"]], [p["id"] for p in two["prompts"]])
-            self.assertEqual(dd.recent_prompt_ids(d, "2026-11-17"), {p["id"] for p in one["prompts"]})
+            nxt = dd.get_puzzle("2026-11-17", d, cands)
+            # 10 templates, 7 used yesterday: the 3 unused ones are all taken and only 4 repeats are forced
+            self.assertEqual(len({p["template"] for p in one["prompts"]} & {p["template"] for p in nxt["prompts"]}), 4)
+
+    def test_old_format_cache_is_regenerated(self):
+        with tempfile.TemporaryDirectory() as d:
+            import json
+            with open(os.path.join(d, "puzzle_2026-11-16.json"), "w") as fh:
+                json.dump({"date": "2026-11-16", "prompts": [{"id": "old"}] * 7}, fh)        # pre-v2 file: no "v"
+            puz = dd.get_puzzle("2026-11-16", d, lambda date: _pool())
+            self.assertEqual(puz["v"], dd.PUZZLE_VERSION)
+            self.assertNotIn("old", [p["id"] for p in puz["prompts"]])
 
     def test_short_day_is_not_cached(self):
         with tempfile.TemporaryDirectory() as d:
@@ -244,7 +347,7 @@ class EndpointTests(unittest.TestCase):
         r = self.client.get("/api/play/daily")
         self.assertEqual(r.status_code, 200)
         body = r.text
-        self.assertEqual(len(r.json()["prompts"]), 7)
+        self.assertEqual(len(r.json()["prompts"]), dd.day_size())
         for p in self.puzzle["prompts"]:
             for a in p["answers"]:
                 self.assertNotIn(a["name"], body)
@@ -262,6 +365,38 @@ class EndpointTests(unittest.TestCase):
         self.assertEqual(bad, {"ok": False, "reason": "not in the answer bank", "suggestions": []})
         again = self.client.post("/api/play/check", json={"date": self.today, "prompt_id": p["id"], "answer": a["name"], "used": [a["id"]]}).json()
         self.assertEqual(again["reason"], "already used")
+
+    def test_check_returns_answer_extras_and_a_token_that_verifies(self):
+        from engine import daily_drive_scores as dds
+        p = self.puzzle["prompts"][0]
+        a = p["answers"][3]
+        with mock.patch.dict(os.environ, {"APP_SECRET_KEY": "extras-test-secret"}):
+            j = self.client.post("/api/play/check", json={"date": self.today, "prompt_id": p["id"], "answer": a["name"], "used": []}).json()
+            for k in ("team", "position", "headshot", "stat", "stat_label"):
+                self.assertEqual(j[k], a[k], k)
+            self.assertEqual(dds.verify_token(self.today, j["token"])[1:], (a["id"], a["tier"]))
+            yards, tiers = dds.score_from_tokens(self.today, [j["token"]], self.puzzle["prompts"])
+            self.assertEqual(yards, dd.TIERS[a["tier"]][1])
+
+    def test_reveal_has_details_per_answer_matching_the_names(self):
+        p = self.puzzle["prompts"][0]
+        j = self.client.get(f"/api/play/reveal?date={self.today}&prompt_id={p['id']}").json()
+        bank = {a["name"]: a for a in p["answers"]}
+        for t in j["tiers"]:
+            self.assertEqual([d["name"] for d in t["details"]], t["answers"])
+            for d in t["details"]:
+                self.assertEqual({k: d[k] for k in ("team", "position", "headshot", "stat", "stat_label")},
+                                 {k: bank[d["name"]][k] for k in ("team", "position", "headshot", "stat", "stat_label")})
+
+    def test_daily_still_hides_extras(self):
+        body = self.client.get("/api/play/daily").text
+        for p in self.puzzle["prompts"]:
+            for a in p["answers"]:
+                self.assertNotIn(a["headshot"], body)
+
+    def test_old_format_bank_rows_still_answer_with_null_extras(self):
+        old = {"id": "x1", "name": "Old Row", "tier": 3}
+        self.assertEqual(dd.answer_details(old), {"team": None, "position": None, "headshot": None, "stat": None, "stat_label": None})
 
     def test_future_and_malformed_dates_refused(self):
         future = (dd.today_et() + dt.timedelta(days=2)).isoformat()
