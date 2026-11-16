@@ -53,3 +53,49 @@ class LandingPageTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class WaitlistTest(unittest.TestCase):
+    def setUp(self):
+        from unittest import mock
+        self.mock = mock
+        self.client = TestClient(server.app)
+        server._RATE_BUCKETS.clear()
+        p = mock.patch.object(server.db, "add_waitlist")
+        self.add = p.start()
+        self.addCleanup(p.stop)
+
+    def post(self, email="Fan@Example.com ", plan="manager"):
+        return self.client.post("/api/waitlist", json={"email": email, "plan": plan})
+
+    def test_joins_with_a_normalised_email(self):
+        r = self.post()
+        self.assertEqual(r.status_code, 200)
+        self.add.assert_called_once_with("fan@example.com", "manager")
+
+    def test_free_or_unknown_plans_are_rejected(self):
+        for plan in ("free", "gold", ""):
+            self.assertEqual(self.post(plan=plan).status_code, 400, plan)
+        self.add.assert_not_called()
+
+    def test_bad_emails_are_rejected(self):
+        for email in ("nope", "a@b", "a b@c.com", "", "x" * 400 + "@c.com"):
+            self.assertEqual(self.post(email=email).status_code, 400, email[:20])
+        self.add.assert_not_called()
+
+    def test_missing_table_is_a_friendly_503_not_a_crash(self):
+        self.add.side_effect = RuntimeError("relation plan_waitlist does not exist")
+        r = self.post(plan="commissioner")
+        self.assertEqual(r.status_code, 503)
+        self.assertNotIn("relation", r.text)
+
+    def test_rate_limited_after_ten_in_an_hour(self):
+        codes = [self.post().status_code for _ in range(11)]
+        self.assertEqual(codes[:10], [200] * 10)
+        self.assertEqual(codes[10], 429)
+
+    def test_page_offers_three_plans_and_start_free(self):
+        js = open(os.path.join(ROOT, "static", "landing.js")).read()
+        for needle in ("Sync up to 2 leagues", "Sync 3 to 4 leagues", "Sync 5 or more leagues", "/api/waitlist"):
+            self.assertIn(needle, js)
+        self.assertNotIn("Free Trial", js)

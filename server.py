@@ -333,6 +333,11 @@ class ForgotPasswordRequest(BaseModel):
     email: str
 
 
+class WaitlistRequest(BaseModel):
+    email: str
+    plan: str
+
+
 class ResetPasswordRequest(BaseModel):
     token: str
     new_password: str
@@ -539,6 +544,30 @@ def delete_account(req: DeleteAccountRequest, response: Response, user=Depends(r
     except db.AuthError as e:
         raise HTTPException(400, str(e))
     response.delete_cookie(SESSION_COOKIE)
+    return {"status": "ok"}
+
+
+waitlist_rate_limit = rate_limit("waitlist", limit=10, window_seconds=3600)
+_WAITLIST_PLANS = ("manager", "commissioner")
+_WAITLIST_EMAIL = re.compile(r"^[^@\s]{1,64}@[^@\s]{1,255}\.[^@\s]{2,}$")
+
+
+@app.post("/api/waitlist", dependencies=[Depends(waitlist_rate_limit)])
+def api_waitlist(req: WaitlistRequest):
+    """Public. Joins the waitlist for a paid plan (the plans aren't open yet). The reply is the same whether or
+    not the email was already listed, and nothing about the stored emails is ever returned."""
+    plan = (req.plan or "").strip().lower()
+    email = (req.email or "").strip().lower()
+    if plan not in _WAITLIST_PLANS:
+        raise HTTPException(400, "Pick the Manager or Commissioner plan.")
+    if len(email) > 320 or not _WAITLIST_EMAIL.match(email):
+        raise HTTPException(400, "Enter a valid email address.")
+    try:
+        db.add_waitlist(email, plan)
+    except Exception as e:
+        print(f"[waitlist] couldn't save a sign-up: {type(e).__name__}")   # never log the address itself
+        raise HTTPException(503, "The waitlist isn't taking sign-ups right now. Please try again later.")
+    security.audit("waitlist_join", plan=plan)
     return {"status": "ok"}
 
 

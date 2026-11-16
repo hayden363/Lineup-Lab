@@ -169,7 +169,7 @@ function optimizeRoster(pool,locked,excluded){
 
 /* ---------- NAV + AUTH ---------- */
 function Nav({user,onOpenAuth,onLogout}){
-  const links=[['Product','#product'],['Try it','#sandbox'],['Edges','#edges']];
+  const links=[['Product','#product'],['Try it','#sandbox'],['Edges','#edges'],['Pricing','#pricing']];
   const go=(e,h)=>{e.preventDefault();const el=document.querySelector(h);if(el)el.scrollIntoView({behavior:'smooth',block:'start'})};
   const [open,setOpen]=useState(false);
   return html`<header className="sticky top-0 z-50 gutter" style=${{top:'env(safe-area-inset-top,0px)'}}>
@@ -189,7 +189,7 @@ function Nav({user,onOpenAuth,onLogout}){
               <button className="btn btn-ghost btn-sm" onClick=${onLogout} aria-label="Log out">${Ico('LogOut',{size:15})}<span className="hidden sm:inline">Log out</span></button>
             </div>`:html`
             <button className="hidden sm:inline-flex btn btn-ghost btn-sm" onClick=${()=>onOpenAuth('login')}>Log In</button>
-            <${Magnetic} className="btn btn-mint btn-sm" onClick=${()=>onOpenAuth('signup')}><span className="sm:hidden">Start Free</span><span className="hidden sm:inline">Start Free Trial</span><span className="hidden sm:inline-flex">${Ico('ArrowRight',{size:15})}</span><//>`}
+            <${Magnetic} className="btn btn-mint btn-sm" onClick=${()=>onOpenAuth('signup')}><span className="sm:hidden">Start Free</span><span className="hidden sm:inline">Start Free</span><span className="hidden sm:inline-flex">${Ico('ArrowRight',{size:15})}</span><//>`}
           <button className="md:hidden btn btn-ghost btn-sm" aria-label="Menu" aria-expanded=${open} onClick=${()=>setOpen(o=>!o)}>${Ico(open?'X':'Menu',{size:16})}</button>
         </div>
       </nav>
@@ -673,6 +673,49 @@ function Edges(){
   </section>`;
 }
 
+/* ---------- PRICING ---------- */
+const PLANS=[
+  {id:'free',name:'Free',price:'$0',per:'forever',leagues:'Sync up to 2 leagues',blurb:'For anyone with one or two teams. Everything on this page, no card needed.',cta:'Start Free'},
+  {id:'manager',name:'Manager',price:'$6',per:'/month',yearly:'or $60 a year, two months free',leagues:'Sync 3 to 4 leagues',blurb:'For people juggling a few teams who need every lineup set in minutes.',cta:'Join the waitlist',featured:true},
+  {id:'commissioner',name:'Commissioner',price:'$12',per:'/month',yearly:'or $120 a year, two months free',leagues:'Sync 5 or more leagues',blurb:'For the player in a dozen leagues. No cap on how many you connect.',cta:'Join the waitlist'}];
+function Waitlist({plan}){
+  const [email,setEmail]=useState('');const [st,setSt]=useState('idle');const [msg,setMsg]=useState('');
+  const submit=async e=>{e.preventDefault();
+    if(!/^\S+@\S+\.\S+$/.test(email)){setSt('err');setMsg('Enter an email like you@school.edu.');return}
+    setSt('busy');setMsg('');
+    try{const r=await fetch('/api/waitlist',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:email.trim(),plan})});
+      if(!r.ok){const d=await r.json().catch(()=>({}));throw new Error(d.detail||'Something went wrong. Try again in a minute.')}
+      setSt('done')}catch(x){setSt('err');setMsg(x.message)}};
+  if(st==='done')return html`<div className="text-[14px] font-semibold mint" role="status">You are on the list. We will email you when this plan opens.</div>`;
+  return html`<form onSubmit=${submit} noValidate className="grid gap-2.5">
+    <label className="sr-only" htmlFor=${'wl-'+plan}>Email for the ${plan} plan waitlist</label>
+    <input id=${'wl-'+plan} className="field" type="email" placeholder="you@email.com" value=${email} onChange=${e=>setEmail(e.target.value)} autoComplete="email"/>
+    <button type="submit" className="btn btn-ghost w-full" disabled=${st==='busy'}>${st==='busy'?'Saving…':'Join the waitlist'}</button>
+    ${st==='err'&&html`<div className="text-[13px]" style=${{color:'var(--bad)'}} role="alert">${msg}</div>`}
+  </form>`;
+}
+function Pricing({onOpenAuth}){
+  return html`<section id="pricing" className="gutter py-16 sm:py-24">
+    <div className="wrap">
+      <div className="max-w-[680px] mb-10"><div className="eyebrow mb-3">Plans for every league count</div>
+        <h2 className="font-extrabold tracking-[-0.03em] leading-[1.04] text-[clamp(30px,4.6vw,52px)]">Same tools on every plan. <span className="hl">Pay only if you run a lot of teams.</span></h2>
+        <p className="muted text-[16px] mt-4">Start free with two leagues. If you manage more, the paid plans raise how many leagues you can sync. The paid plans are not open yet: join the waitlist and we will email you first.</p></div>
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3 items-stretch">
+        ${PLANS.map((p,i)=>html`<${motion.div} key=${p.id} ...${reveal} transition=${{...reveal.transition,delay:i*.08}} className="h-full">
+          <div className="card p-6 sm:p-7 h-full flex flex-col" style=${p.featured?{borderColor:'rgba(124,242,166,.45)',boxShadow:'0 30px 90px -30px rgba(74,222,128,.35)'}:null}>
+            <div className="flex items-center justify-between mb-5"><div className="font-extrabold text-[20px]">${p.name}</div>${p.id!=='free'?html`<span className="tag">Coming soon</span>`:null}</div>
+            <div className="flex items-end gap-1.5"><span className="font-extrabold tracking-[-0.03em] text-[48px] leading-none">${p.price}</span><span className="muted text-[14px] pb-1.5">${p.per}</span></div>
+            <div className="dim text-[12.5px] mt-1.5 min-h-[18px]">${p.yearly||''}</div>
+            <div className="mt-5 flex items-center gap-2.5 font-bold text-[15px]">${Ico('Layers',{size:17,color:'#7CF2A6'})}${p.leagues}</div>
+            <p className="muted text-[14px] mt-3 mb-6">${p.blurb}</p>
+            <div className="mt-auto">${p.id==='free'?html`<${Magnetic} className="btn btn-mint w-full" onClick=${()=>onOpenAuth('signup')}>${p.cta} ${Ico('ArrowRight',{size:16})}<//>`:html`<${Waitlist} plan=${p.id}/>`}</div>
+          </div><//>`)}
+      </div>
+      <p className="dim text-[12.5px] mt-5">Prices are in US dollars and may change before the paid plans open.</p>
+    </div>
+  </section>`;
+}
+
 /* ---------- FINAL CTA + FOOTER ---------- */
 function Final({onOpenAuth}){
   return html`<section className="gutter pb-20"><${motion.div} ...${reveal} className="wrap relative rounded-[32px] overflow-hidden px-6 sm:px-14 py-16 sm:py-24 text-center" style=${{border:'1px solid rgba(124,242,166,.25)',background:'radial-gradient(70% 90% at 50% 120%,rgba(74,222,128,.42),rgba(28,94,73,.35) 40%,rgba(11,24,19,.95) 75%)'}}>
@@ -682,7 +725,7 @@ function Final({onOpenAuth}){
       <h2 className="font-extrabold tracking-[-0.03em] leading-[1.02] text-[clamp(32px,5.4vw,64px)] max-w-[800px] mx-auto">Sync your league in 30 seconds. <span className="hl">Start winning Sunday.</span></h2>
       <p className="text-[17px] mt-5 max-w-[520px] mx-auto" style=${{color:'#C3D8CC'}}>Connect Sleeper or ESPN, and Lineup Lab builds your first optimal lineup right away.</p>
       <div className="flex flex-wrap justify-center gap-3 mt-9">
-        <${Magnetic} className="btn btn-mint" onClick=${()=>onOpenAuth('signup')}>Start Free Trial ${Ico('ArrowRight',{size:16})}<//>
+        <${Magnetic} className="btn btn-mint" onClick=${()=>onOpenAuth('signup')}>Start Free ${Ico('ArrowRight',{size:16})}<//>
         <a className="btn btn-ghost no-underline" href=${APP_URL}>Open the live app</a>
       </div>
     </div>
@@ -703,7 +746,7 @@ function App(){
   return html`<${MotionConfig} reducedMotion="user">
     <${Nav} user=${user} onOpenAuth=${open} onLogout=${()=>{}}/>
     <main>
-      <${Hero}/><${Ticker2}/><${Bento} onOpenAuth=${open}/><${Sandbox} onOpenAuth=${open}/><${Edges}/><${Final} onOpenAuth=${open}/>
+      <${Hero}/><${Ticker2}/><${Bento} onOpenAuth=${open}/><${Sandbox} onOpenAuth=${open}/><${Edges}/><${Pricing} onOpenAuth=${open}/><${Final} onOpenAuth=${open}/>
     </main>
     <${Footer}/>
   <//>`;
