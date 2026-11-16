@@ -180,6 +180,7 @@ function Nav({user,onOpenAuth,onLogout}){
         </a>
         <div className="hidden md:flex items-center gap-1">
           ${links.map(([t,h])=>html`<a key=${h} href=${h} onClick=${e=>go(e,h)} className="px-3.5 py-2 rounded-full text-[14px] font-semibold text-[#B6CBBF] hover:text-white hover:bg-white/5 no-underline transition-colors">${t}</a>`)}
+          <a href="/play" className="px-3.5 py-2 rounded-full text-[14px] font-semibold hover:text-white hover:bg-white/5 no-underline transition-colors" style=${{color:'#7CF2A6'}}>The Daily Drive</a>
         </div>
         <div className="flex items-center gap-2">
           ${user?html`
@@ -195,6 +196,7 @@ function Nav({user,onOpenAuth,onLogout}){
       </nav>
       <${AnimatePresence}>${open&&html`<${motion.div} key="m" initial=${{opacity:0,y:-8}} animate=${{opacity:1,y:0}} exit=${{opacity:0,y:-8}} className="glass rounded-2xl mt-2 p-2 md:hidden">
         ${links.map(([t,h])=>html`<a key=${h} href=${h} onClick=${e=>{go(e,h);setOpen(false)}} className="block px-4 py-3 rounded-xl text-[15px] font-semibold no-underline text-white hover:bg-white/5">${t}</a>`)}
+        <a href="/play" className="block px-4 py-3 rounded-xl text-[15px] font-semibold no-underline hover:bg-white/5" style=${{color:'#7CF2A6'}}>The Daily Drive</a>
         ${!user&&html`<button className="w-full text-left px-4 py-3 rounded-xl text-[15px] font-semibold hover:bg-white/5" onClick=${()=>{setOpen(false);onOpenAuth('login')}}>Log In</button>`}
       <//>`}<//>
     </div>
@@ -318,6 +320,7 @@ function Hero(){
         <${motion.div} initial=${{opacity:0,y:14}} animate=${{opacity:1,y:0}} transition=${{delay:1}} className="flex flex-wrap gap-3 mt-8">
           <a className="btn btn-mint no-underline" href=${APP_URL}>${Ico('Zap',{size:17})}Launch Lineup Lab Free</a>
           <button className="btn btn-ghost" onClick=${()=>document.querySelector('#sandbox').scrollIntoView({behavior:'smooth'})}>${Ico('Play',{size:15})}Watch Live Engine</button>
+          <a className="btn btn-ghost no-underline" href="/play" style=${{borderColor:'rgba(124,242,166,.5)'}}>${Ico('Trophy',{size:15})}Play today's Daily Drive</a>
         <//>
         <${motion.div} initial=${{opacity:0}} animate=${{opacity:1}} transition=${{delay:1.2}} className="flex flex-wrap gap-x-6 gap-y-2 mt-8 mono text-[12px] muted">
           <span className="inline-flex items-center gap-1.5">${Ico('ShieldCheck',{size:14,color:'#7CF2A6'})}Google sign-in verified</span>

@@ -296,6 +296,400 @@ class EndpointTests(unittest.TestCase):
         self.assertEqual(self.client.get("/play.css").status_code, 200)
 
 
+# ---------------------------------------------------------------------------------------- saved scores (v2)
+from engine import daily_drive_scores as ds   # noqa: E402
+
+KEY = b"k" * 32
+
+
+def _tokens_for(date, prompts, picks):
+    """picks = {prompt index: answer index} -> signed tokens, exactly as /api/play/check would issue them."""
+    return [ds.sign_token(date, prompts[i]["id"], prompts[i]["answers"][a]["id"], prompts[i]["answers"][a]["tier"], key=KEY)
+            for i, a in picks.items()]
+
+
+class TokenTests(unittest.TestCase):
+    def setUp(self):
+        self.day = "2026-11-16"
+        self.prompts = dd.pick_day(self.day, _pool())
+
+    def test_round_trip(self):
+        a = self.prompts[2]["answers"][4]
+        tok = ds.sign_token(self.day, self.prompts[2]["id"], a["id"], a["tier"], key=KEY)
+        self.assertEqual(ds.verify_token(self.day, tok, key=KEY), (self.prompts[2]["id"], a["id"], a["tier"]))
+
+    def test_tampering_is_rejected(self):
+        a = self.prompts[0]["answers"][0]
+        tok = ds.sign_token(self.day, self.prompts[0]["id"], a["id"], a["tier"], key=KEY)
+        left, right = tok.split(".")
+        forged_payload = ds._b64(f"{self.prompts[0]['id']}|{a['id']}|6".encode())          # bump the tier to Hall of Famer
+        for bad in (forged_payload + "." + right, left + "." + ds._b64(b"x" * 16), left, "", "a.b.c", None, 12, left + "." + right[:-2]):
+            self.assertIsNone(ds.verify_token(self.day, bad, key=KEY), bad)
+        self.assertIsNone(ds.verify_token("2026-11-15", tok, key=KEY))                      # a real token is bound to its date
+        self.assertIsNone(ds.verify_token(self.day, tok, key=b"z" * 32))                    # and to the server's key
+
+    def test_no_key_means_scoring_off(self):
+        with mock.patch.dict(os.environ, {"APP_SECRET_KEY": ""}), mock.patch("engine.crypto._load_or_create_key", side_effect=OSError):
+            self.assertFalse(ds.enabled())
+            self.assertIsNone(ds.sign_token(self.day, "p", "a", 3))
+
+    def test_env_secret_is_used(self):
+        with mock.patch.dict(os.environ, {"APP_SECRET_KEY": "abc"}):
+            self.assertTrue(ds.enabled())
+            tok = ds.sign_token(self.day, "p", "a", 3)
+            self.assertEqual(ds.verify_token(self.day, tok), ("p", "a", 3))
+
+    def test_yards_are_recomputed_from_the_puzzle(self):
+        toks = _tokens_for(self.day, self.prompts, {0: 0, 1: 5, 3: 13})         # tiers come from the bank, not the caller
+        yards, tiers = ds.score_from_tokens(self.day, toks, self.prompts, key=KEY)
+        want = [self.prompts[0]["answers"][0]["tier"], self.prompts[1]["answers"][5]["tier"], 0, self.prompts[3]["answers"][13]["tier"], 0, 0, 0]
+        self.assertEqual(tiers, want)
+        self.assertEqual(yards, sum(dd.TIERS[t][1] for t in want if t))
+
+    def test_duplicate_prompt_tokens_count_once(self):
+        toks = _tokens_for(self.day, self.prompts, {0: 13}) + _tokens_for(self.day, self.prompts, {0: 0})
+        _, tiers = ds.score_from_tokens(self.day, toks, self.prompts, key=KEY)
+        self.assertEqual(tiers[0], self.prompts[0]["answers"][13]["tier"])       # the first token wins, never the best
+
+    def test_forged_unknown_or_inconsistent_tokens_fail_the_whole_submit(self):
+        a = self.prompts[0]["answers"][0]
+        with self.assertRaises(ValueError):
+            ds.score_from_tokens(self.day, ["nonsense"], self.prompts, key=KEY)
+        with self.assertRaises(ValueError):                                       # signed, but for a prompt not in today's puzzle
+            ds.score_from_tokens(self.day, [ds.sign_token(self.day, "f:zz:9", a["id"], a["tier"], key=KEY)], self.prompts, key=KEY)
+        with self.assertRaises(ValueError):                                       # signed with a tier the bank doesn't have
+            ds.score_from_tokens(self.day, [ds.sign_token(self.day, self.prompts[0]["id"], a["id"], 6, key=KEY)], self.prompts, key=KEY)
+        with self.assertRaises(ValueError):
+            ds.score_from_tokens(self.day, [ds.sign_token(self.day, self.prompts[0]["id"], "no-such-id", 1, key=KEY)], self.prompts, key=KEY)
+
+    def test_device_hash(self):
+        h = ds.device_hash("a" * 32)
+        self.assertEqual(len(h), 64)
+        self.assertNotIn("a" * 32, h)
+        for bad in (None, "", "short", "has space " * 4, "x" * 100, 5):
+            self.assertIsNone(ds.device_hash(bad))
+
+
+class StatsMathTests(unittest.TestCase):
+    def test_distribution_buckets(self):
+        d = ds.distribution([0, 99, 100, 199, 250, 599, 600, 700, 700])
+        self.assertEqual([b["count"] for b in d], [2, 2, 1, 0, 0, 1, 3])
+        self.assertEqual((d[0]["lo"], d[0]["hi"], d[-1]["lo"], d[-1]["hi"]), (0, 99, 600, 700))
+        self.assertEqual(len(d), 7)
+
+    def test_average_median_players(self):
+        s = ds.day_stats([100, 200, 600, 400])
+        self.assertEqual((s["players"], s["average_yards"], s["median_yards"]), (4, 325.0, 300.0))
+        self.assertNotIn("percentile", s)
+        e = ds.day_stats([])
+        self.assertEqual((e["players"], e["average_yards"], e["median_yards"]), (0, None, None))
+
+    def test_percentile_counts_strictly_lower_scores_among_the_others(self):
+        ys = [100, 200, 300, 400, 500]
+        self.assertEqual(ds.percentile_beaten(ys, 500), 100)
+        self.assertEqual(ds.percentile_beaten(ys, 300), 50)
+        self.assertEqual(ds.percentile_beaten(ys, 100), 0)
+        self.assertEqual(ds.percentile_beaten([300, 300, 300], 300), 0)            # ties don't count as beaten
+        self.assertIsNone(ds.percentile_beaten([300], 300))                        # alone: nobody to beat
+        self.assertEqual(ds.day_stats(ys, 400)["percentile"], 75)
+
+    def test_streaks(self):
+        self.assertEqual(ds.streaks([], "2026-11-16"), (0, 0))
+        run = ["2026-11-12", "2026-11-13", "2026-11-14", "2026-11-16"]
+        self.assertEqual(ds.streaks(run, "2026-11-16"), (1, 3))                    # today only; the 12-14 run is the longest
+        self.assertEqual(ds.streaks(run + ["2026-11-15"], "2026-11-16"), (5, 5))
+        self.assertEqual(ds.streaks(["2026-11-14", "2026-11-15"], "2026-11-16"), (2, 2))   # not played today yet: still alive
+        self.assertEqual(ds.streaks(["2026-11-13", "2026-11-14"], "2026-11-16"), (0, 2))   # a day was missed: broken
+        self.assertEqual(ds.streaks(["2026-11-16", "2026-11-16"], "2026-11-16"), (1, 1))
+
+    def test_my_history_payload(self):
+        rows = [{"date": "2026-11-14", "yards": 300, "tiers": [3, 3, 3, 3, 3, 3, 3]},
+                {"date": "2026-11-16", "yards": 100, "tiers": [1, 0, 0, 0, 0, 0, 0]},
+                {"date": "2026-11-15", "yards": 500, "tiers": [6, 5, 4, 3, 2, 1, 0]}]
+        h = ds.my_history(rows, "2026-11-16")
+        self.assertEqual((h["games"], h["average_yards"], h["best_yards"], h["current_streak"], h["longest_streak"]), (3, 300.0, 500, 3, 3))
+        self.assertEqual([g["date"] for g in h["history"]], ["2026-11-16", "2026-11-15", "2026-11-14"])
+        self.assertEqual(h["history"][1]["emoji"], "\U0001F3C6\U0001F7E3\U0001F535\U0001F7E2\U0001F7E1⚪\U0001F7E5")
+        self.assertEqual(h["spark"], [300, 500, 100])                               # oldest to newest
+
+
+class ScoreEndpointTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        import server
+        from fastapi.testclient import TestClient
+        cls.server = server
+        cls.client = TestClient(server.app)
+
+    def setUp(self):
+        s = self.server
+        self.today = dd.today_et().isoformat()
+        prompts = dd.pick_day(self.today, _pool())
+        self.prompts = prompts
+        s._PLAY_MEM.clear(); s._RATE_BUCKETS.clear(); s._PLAY_STATS_CACHE.clear()
+        for p in (mock.patch.dict(os.environ, {"APP_SECRET_KEY": "endpoint-test-secret"}),
+                  mock.patch.object(s.daily_drive, "get_puzzle", lambda d, cache: {"date": d, "prompts": prompts})):
+            p.start(); self.addCleanup(p.stop)
+        self.addCleanup(s._PLAY_MEM.clear)
+        self.db = {"scores": {}}                                                    # (date, who) -> row; one per device and per user
+        self.user = None
+
+        def save(game_date, yards, tiers, user_id=None, device_hash=None, now=None):
+            for who in [("u", user_id)] * (user_id is not None) + [("d", device_hash)] * (device_hash is not None):
+                if (game_date, who) in self.db["scores"]:
+                    return self.db["scores"][(game_date, who)], False
+            row = {"date": game_date, "yards": yards, "tiers": list(tiers)}
+            for who in [("u", user_id)] * (user_id is not None) + [("d", device_hash)] * (device_hash is not None):
+                self.db["scores"][(game_date, who)] = row
+            return row, True
+
+        def my_day(game_date, user_id=None, device_hash=None):
+            return self.db["scores"].get((game_date, ("u", user_id))) or self.db["scores"].get((game_date, ("d", device_hash)))
+
+        def day_yards(game_date):
+            return [r["yards"] for r in {id(r): r for (d, _), r in self.db["scores"].items() if d == game_date}.values()]
+
+        for p in (mock.patch.object(s.db, "save_drive_score", side_effect=save), mock.patch.object(s.db, "drive_my_day", side_effect=my_day),
+                  mock.patch.object(s.db, "drive_day_yards", side_effect=day_yards),
+                  mock.patch.object(s.db, "drive_history", side_effect=lambda uid, limit=1000: [
+                      r for (d, who), r in sorted(self.db["scores"].items(), reverse=True) if who == ("u", uid)]),
+                  mock.patch.object(s, "current_user", side_effect=lambda req: self.user)):
+            p.start(); self.addCleanup(p.stop)
+
+    def _check(self, i, a, date=None):
+        p = self.prompts[i]
+        r = self.client.post("/api/play/check", json={"date": date or self.today, "prompt_id": p["id"], "answer": p["answers"][a]["name"], "used": []})
+        self.assertTrue(r.json()["ok"])
+        return r.json()
+
+    def _tokens(self, picks):
+        return [self._check(i, a)["token"] for i, a in picks.items()]
+
+    def test_check_returns_a_verifiable_token_and_failures_do_not(self):
+        j = self._check(0, 3)
+        self.assertEqual(ds.verify_token(self.today, j["token"])[1:], (j["answer_id"], j["tier"]))
+        bad = self.client.post("/api/play/check", json={"date": self.today, "prompt_id": self.prompts[0]["id"], "answer": "Nobody Atall", "used": []}).json()
+        self.assertNotIn("token", bad)
+
+    def test_score_is_recomputed_server_side_and_saved_once_per_device(self):
+        toks = self._tokens({0: 0, 1: 4, 2: 13})
+        dev = "d" * 24
+        r = self.client.post("/api/play/score", json={"date": self.today, "device_id": dev, "tokens": toks, "yards": 9999}).json()
+        want = sum(dd.TIERS[self.prompts[i]["answers"][a]["tier"]][1] for i, a in {0: 0, 1: 4, 2: 13}.items())
+        self.assertTrue(r["available"] and r["saved"])
+        self.assertEqual(r["yards"], want)
+        self.assertEqual(r["stats"]["players"], 1)
+        again = self.client.post("/api/play/score", json={"date": self.today, "device_id": dev, "tokens": self._tokens({0: 13, 1: 13}), "yards": 1}).json()
+        self.assertFalse(again["saved"])
+        self.assertEqual(again["yards"], want)                                       # the original score stands
+        self.assertEqual(self.client.post("/api/play/score", json={"date": self.today, "device_id": "e" * 24, "tokens": []}).json()["yards"], 0)
+
+    def test_one_score_per_signed_in_user_across_devices(self):
+        self.user = {"id": 7}
+        toks = self._tokens({0: 0})
+        a = self.client.post("/api/play/score", json={"date": self.today, "device_id": "a" * 24, "tokens": toks}).json()
+        b = self.client.post("/api/play/score", json={"date": self.today, "device_id": "b" * 24, "tokens": self._tokens({1: 0, 2: 0})}).json()
+        self.assertTrue(a["saved"])
+        self.assertFalse(b["saved"])
+        self.assertEqual(b["yards"], a["yards"])
+
+    def test_forged_tokens_wrong_day_and_missing_identity_are_refused(self):
+        dev = "f" * 24
+        post = lambda **kw: self.client.post("/api/play/score", json={"date": self.today, "device_id": dev, **kw})
+        self.assertEqual(post(tokens=["abc.def"]).status_code, 400)
+        good = self._tokens({0: 0})
+        self.assertEqual(post(tokens=good + ["abc.def"]).status_code, 400)           # one bad token spoils the submit
+        left, right = good[0].split(".")
+        self.assertEqual(post(tokens=[ds._b64(ds._unb64(left) + b"0") + "." + right]).status_code, 400)
+        self.assertEqual(self.client.post("/api/play/score", json={"date": self.today, "tokens": good}).status_code, 400)   # signed out, no device
+        yesterday = (dd.today_et() - dt.timedelta(days=1)).isoformat()
+        old = self.client.post("/api/play/score", json={"date": yesterday, "device_id": dev, "tokens": []})
+        self.assertEqual(old.status_code, 400)                                       # only today's game is scored
+        self.assertEqual(self.client.post("/api/play/score", json={"date": "2999-01-01", "device_id": dev, "tokens": []}).status_code, 400)
+        self.assertEqual(self.db["scores"], {})
+
+    def test_yesterdays_token_cannot_score_today(self):
+        yesterday = (dd.today_et() - dt.timedelta(days=1)).isoformat()
+        stale = self._check(0, 0, date=yesterday)["token"]
+        r = self.client.post("/api/play/score", json={"date": self.today, "device_id": "g" * 24, "tokens": [stale]})
+        self.assertEqual(r.status_code, 400)
+
+    def test_score_is_rate_limited(self):
+        codes = [self.client.post("/api/play/score", json={"date": self.today, "device_id": "h" * 24, "tokens": []}).status_code for _ in range(12)]
+        self.assertEqual(codes[:10], [200] * 10)
+        self.assertEqual(codes[10:], [429, 429])
+
+    def test_stats_endpoint(self):
+        for n, picks in enumerate(({0: 0}, {0: 0, 1: 0}, {0: 13, 1: 13, 2: 13})):
+            self.client.post("/api/play/score", json={"date": self.today, "device_id": chr(97 + n) * 24, "tokens": self._tokens(picks)})
+        anon = self.client.get(f"/api/play/stats?date={self.today}").json()
+        self.assertTrue(anon["available"])
+        self.assertEqual(anon["players"], 3)
+        self.assertEqual(len(anon["distribution"]), 7)
+        self.assertEqual(sum(b["count"] for b in anon["distribution"]), 3)
+        self.assertNotIn("percentile", anon)
+        mine = self.client.get(f"/api/play/stats?date={self.today}&device_id={'c' * 24}").json()   # the top scorer
+        self.assertEqual(mine["percentile"], 100)
+        self.assertEqual(mine["your_yards"], max(r["yards"] for r in {id(r): r for r in self.db["scores"].values()}.values()))
+
+    def test_me_signed_out_and_signed_in(self):
+        self.assertEqual(self.client.get("/api/play/me").json(), {"signed_in": False})
+        self.user = {"id": 5}
+        self.assertEqual(self.client.get("/api/play/me").json()["games"], 0)
+        self.client.post("/api/play/score", json={"date": self.today, "device_id": "m" * 24, "tokens": self._tokens({0: 0, 1: 0})})
+        j = self.client.get("/api/play/me").json()
+        self.assertEqual((j["signed_in"], j["available"], j["games"], j["current_streak"], j["longest_streak"]), (True, True, 1, 1, 1))
+        self.assertEqual(j["history"][0]["date"], self.today)
+        self.assertEqual(len(j["history"][0]["emoji"]) > 0, True)
+        self.assertEqual(j["best_yards"], j["average_yards"])
+
+    def test_me_streak_over_several_days(self):
+        self.user = {"id": 5}
+        today = dd.today_et()
+        for back in (0, 1, 2, 4):
+            d = (today - dt.timedelta(days=back)).isoformat()
+            self.db["scores"][(d, ("u", 5))] = {"date": d, "yards": 100 + back, "tiers": [1] * 7}
+        j = self.client.get("/api/play/me").json()
+        self.assertEqual((j["games"], j["current_streak"], j["longest_streak"]), (4, 3, 3))
+
+
+class DegradedTests(unittest.TestCase):
+    """The table is missing or the database is down: the game plays and nothing 500s."""
+
+    @classmethod
+    def setUpClass(cls):
+        import server
+        from fastapi.testclient import TestClient
+        cls.server = server
+        cls.client = TestClient(server.app)
+
+    def setUp(self):
+        s = self.server
+        self.today = dd.today_et().isoformat()
+        self.prompts = dd.pick_day(self.today, _pool())
+        s._PLAY_MEM.clear(); s._RATE_BUCKETS.clear(); s._PLAY_STATS_CACHE.clear()
+        boom = RuntimeError("relation daily_drive_scores does not exist")
+        for p in (mock.patch.dict(os.environ, {"APP_SECRET_KEY": "endpoint-test-secret"}),
+                  mock.patch.object(s.daily_drive, "get_puzzle", lambda d, cache: {"date": d, "prompts": self.prompts}),
+                  mock.patch.object(s.db, "save_drive_score", side_effect=boom), mock.patch.object(s.db, "drive_my_day", side_effect=boom),
+                  mock.patch.object(s.db, "drive_day_yards", side_effect=boom), mock.patch.object(s.db, "drive_history", side_effect=boom),
+                  mock.patch.object(s, "current_user", side_effect=boom)):
+            p.start(); self.addCleanup(p.stop)
+        self.addCleanup(s._PLAY_MEM.clear)
+
+    def test_game_endpoints_still_work(self):
+        self.assertEqual(self.client.get("/api/play/daily").status_code, 200)
+        p = self.prompts[0]
+        j = self.client.post("/api/play/check", json={"date": self.today, "prompt_id": p["id"], "answer": p["answers"][0]["name"], "used": []}).json()
+        self.assertTrue(j["ok"] and j["token"])
+
+    def test_score_stats_me_degrade_quietly(self):
+        p = self.prompts[0]
+        tok = self.client.post("/api/play/check", json={"date": self.today, "prompt_id": p["id"], "answer": p["answers"][0]["name"], "used": []}).json()["token"]
+        r = self.client.post("/api/play/score", json={"date": self.today, "device_id": "z" * 24, "tokens": [tok]})
+        self.assertEqual((r.status_code, r.json()), (200, {"available": False, "saved": False}))
+        r = self.client.get(f"/api/play/stats?date={self.today}&device_id={'z' * 24}")
+        self.assertEqual((r.status_code, r.json()), (200, {"available": False}))
+        self.assertEqual(self.client.get("/api/play/me").json(), {"signed_in": False})    # even the session lookup failing is harmless
+
+    def test_me_when_history_query_fails(self):
+        with mock.patch.object(self.server, "current_user", return_value={"id": 1}):
+            self.assertEqual(self.client.get("/api/play/me").json(), {"signed_in": True, "available": False})
+
+    def test_no_signing_secret_switches_scoring_off_but_not_the_game(self):
+        with mock.patch.dict(os.environ, {"APP_SECRET_KEY": ""}), mock.patch("engine.crypto._load_or_create_key", side_effect=OSError):
+            p = self.prompts[0]
+            j = self.client.post("/api/play/check", json={"date": self.today, "prompt_id": p["id"], "answer": p["answers"][0]["name"], "used": []}).json()
+            self.assertTrue(j["ok"])
+            self.assertNotIn("token", j)
+            r = self.client.post("/api/play/score", json={"date": self.today, "device_id": "z" * 24, "tokens": []})
+            self.assertEqual(r.json(), {"available": False, "saved": False})
+
+
+class DbHelperTests(unittest.TestCase):
+    """engine/db.py helpers against a fake cursor (no database)."""
+
+    class Cur:
+        def __init__(self, results):
+            self.results, self.sql = list(results), []
+
+        def execute(self, q, params=None):
+            self.sql.append((" ".join(q.split()), params))
+
+        def fetchone(self):
+            return self.results.pop(0) if self.results else None
+
+        def fetchall(self):
+            return self.results.pop(0) if self.results else []
+
+    def _patch(self, cur):
+        from contextlib import contextmanager
+        from engine import db
+
+        @contextmanager
+        def conn():
+            yield cur
+        return mock.patch.object(db, "_conn", conn)
+
+    def test_save_inserts_with_do_nothing_and_reports_created(self):
+        from engine import db
+        row = {"game_date": dt.date(2026, 11, 16), "yards": 300, "tiers": [3] * 7}
+        cur = self.Cur([row])
+        with self._patch(cur):
+            out, created = db.save_drive_score("2026-11-16", 300, [3] * 7, None, "h" * 64, now=1.0)
+        self.assertTrue(created)
+        self.assertEqual(out, {"date": "2026-11-16", "yards": 300, "tiers": [3] * 7})
+        self.assertIn("ON CONFLICT DO NOTHING", cur.sql[0][0])
+
+    def test_repeat_returns_the_original_and_attaches_a_signed_in_user(self):
+        from engine import db
+        row = {"game_date": dt.date(2026, 11, 16), "yards": 100, "tiers": [1] + [0] * 6}
+        cur = self.Cur([None, None, row])                # insert conflicts; user lookup misses; device lookup finds the old row
+        with self._patch(cur):
+            out, created = db.save_drive_score("2026-11-16", 999, [6] * 7, 4, "h" * 64)
+        self.assertFalse(created)
+        self.assertEqual(out["yards"], 100)
+        self.assertTrue(any(q.startswith("UPDATE daily_drive_scores SET user_id") for q, _ in cur.sql))
+
+
+class NavigationAndMigrationTests(unittest.TestCase):
+    def _read(self, path):
+        with open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), path), encoding="utf-8") as fh:
+            return fh.read()
+
+    def test_sidebar_entry_links_to_play(self):
+        html = self._read("static/index.html")
+        self.assertRegex(html, r'<a class="nav-item[^"]*"[^>]*href="/play"')
+        self.assertIn("The Daily Drive", html)
+        self.assertNotRegex(html, r'<a class="nav-item[^"]*"[^>]*data-tab')            # not a tab: the router must ignore it
+
+    def test_sign_in_gate_links_to_play(self):
+        js = self._read("static/app.js")
+        gate = js[js.index("function renderGateAuth"):js.index("async function onGateAuthSuccess")]
+        self.assertIn('href="/play"', gate)
+
+    def test_landing_has_nav_and_hero_links(self):
+        js = self._read("static/landing.js")
+        nav = js[js.index("function Nav("):js.index("/* ---------- HERO")]
+        self.assertGreaterEqual(nav.count('href="/play"'), 2)                           # desktop bar and the phone menu
+        hero = js[js.index("/* ---------- HERO"):js.index("function Footer")]
+        self.assertIn('href="/play"', hero)
+
+    def test_play_page_has_back_link_and_no_inline_js(self):
+        html = self._read("static/play.html")
+        self.assertIn('href="/">&larr; Back to Lineup Lab', html)
+
+    def test_migration_has_the_unique_constraints_and_rls(self):
+        sql = self._read("migrations/20261116000000_daily_drive_scores.sql")
+        self.assertIn("CREATE TABLE IF NOT EXISTS public.daily_drive_scores", sql)
+        self.assertRegex(sql, r"UNIQUE INDEX[^;]*\(game_date, user_id\)\s+WHERE user_id IS NOT NULL")
+        self.assertRegex(sql, r"UNIQUE INDEX[^;]*\(game_date, device_hash\)\s+WHERE device_hash IS NOT NULL")
+        self.assertIn("REFERENCES public.users (id) ON DELETE CASCADE", sql)
+        self.assertIn("ENABLE ROW LEVEL SECURITY", sql)
+        for col in ("yards", "tiers", "device_hash", "created_at"):
+            self.assertIn(col, sql)
+
+
 if __name__ == "__main__":
     unittest.main()
 

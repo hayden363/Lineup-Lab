@@ -5832,6 +5832,7 @@ function renderGateAuth(mode) {
     <div class="gate-mobile-brand"><img src="/icons/icon-192.png" alt=""><span>Lineup Lab</span></div>
     <div class="modal-header"><h2>Welcome</h2></div>
     ${authPanelHtml(mode)}
+    <a class="gate-play-link" href="/play">Play today's Daily Drive &rarr; <span>free, no account needed</span></a>
   </div>`;
   wireAuthPanel(panel, mode, onGateAuthSuccess);
 }

@@ -50,6 +50,7 @@ from pydantic import BaseModel, Field, field_validator
 from engine import chat as chat_layer
 from engine import correlation
 from engine import daily_drive
+from engine import daily_drive_scores as dd_scores
 from engine import data as data_layer
 from engine import db
 from engine import espn as espn_layer
@@ -2151,13 +2152,17 @@ def play_daily(date: Optional[str] = None):
 
 @app.post("/api/play/check", dependencies=[Depends(play_rate_limit)])
 def play_check(body: PlayCheck):
-    _, puzzle = _play_puzzle(body.date)
+    key, puzzle = _play_puzzle(body.date)
     prompt = _play_prompt(puzzle, body.prompt_id)
     res = daily_drive.check_answer(prompt["answers"], body.answer, body.used)
     if not res["ok"]:
         return {"ok": False, "reason": res["reason"], "suggestions": res["suggestions"]}
     a = res["answer"]
-    return {"ok": True, "canonical": a["name"], "answer_id": a["id"], **daily_drive.tier_info(a["tier"])}
+    out = {"ok": True, "canonical": a["name"], "answer_id": a["id"], **daily_drive.tier_info(a["tier"])}
+    token = dd_scores.sign_token(key, prompt["id"], a["id"], a["tier"])   # proof for /api/play/score; None = no secret
+    if token:
+        out["token"] = token
+    return out
 
 
 @app.get("/api/play/reveal", dependencies=[Depends(play_rate_limit)])
@@ -2180,6 +2185,105 @@ def play_practice():
             continue
         return _clean({"date": key, "prompt": daily_drive.public_view(secrets.choice(puzzle["prompts"]))})
     raise HTTPException(503, "practice isn't ready yet")
+
+
+# ---- Daily Drive saved scores + community stats. The game itself never depends on any of this: every DB failure
+# ---- below becomes a quiet {"available": false}, and the page shows "stats unavailable".
+play_score_rate_limit = rate_limit("playscore", limit=10, window_seconds=60)
+_PLAY_STATS_TTL = 20.0
+_PLAY_STATS_CACHE: Dict[str, Any] = {}          # date -> (fetched_at, [yards])
+
+
+class PlayScore(BaseModel):
+    date: str = Field(max_length=10)
+    device_id: Optional[str] = Field(default=None, max_length=80)
+    tokens: List[str] = Field(default_factory=list, max_length=20)
+
+
+def _play_user(request: Request):
+    """The signed-in account, or None. Never raises: a sign-in lookup failing must not break the game."""
+    try:
+        return current_user(request)
+    except Exception:
+        return None
+
+
+def _play_day_yards(date_key: str, fresh: bool = False):
+    now = time.time()
+    hit = _PLAY_STATS_CACHE.get(date_key)
+    if hit and not fresh and now - hit[0] < _PLAY_STATS_TTL:
+        return hit[1]
+    yards = db.drive_day_yards(date_key)
+    if len(_PLAY_STATS_CACHE) > 200:
+        _PLAY_STATS_CACHE.clear()
+    _PLAY_STATS_CACHE[date_key] = (now, yards)
+    return yards
+
+
+def _play_stats_body(date_key: str, user, dev_hash, fresh: bool = False):
+    yards = _play_day_yards(date_key, fresh)
+    mine = db.drive_my_day(date_key, user["id"] if user else None, dev_hash) if (user or dev_hash) else None
+    body = dd_scores.day_stats(yards, mine["yards"] if mine else None)
+    body.update({"available": True, "date": date_key})
+    return body
+
+
+@app.post("/api/play/score", dependencies=[Depends(play_score_rate_limit)])
+def play_score(body: PlayScore, request: Request):
+    """Save today's finished game. The browser sends only the signed tokens from /api/play/check; the yards are
+    recomputed here from the puzzle, so a made-up score can't be posted. Only today's (US Eastern) game is accepted."""
+    key, puzzle = _play_puzzle(body.date)
+    if key != daily_drive.today_et().isoformat():
+        raise HTTPException(400, "only today's game can be scored")
+    if not dd_scores.enabled():
+        return {"available": False, "saved": False}
+    dev_hash = dd_scores.device_hash(body.device_id)
+    user = _play_user(request)
+    if not user and not dev_hash:
+        raise HTTPException(400, "device_id is required when signed out")
+    try:
+        yards, tiers = dd_scores.score_from_tokens(key, body.tokens, puzzle["prompts"])
+    except ValueError:
+        raise HTTPException(400, "those answers couldn't be verified")
+    try:
+        row, created = db.save_drive_score(key, yards, tiers, user["id"] if user else None, dev_hash)
+        _PLAY_STATS_CACHE.pop(key, None)
+        stats = _play_stats_body(key, user, dev_hash, fresh=True)
+    except Exception as e:
+        print(f"[play] couldn't save a score: {type(e).__name__}")
+        return {"available": False, "saved": False}
+    return _clean({"available": True, "saved": created, "yards": row["yards"] if row else yards,
+                   "tiers": row["tiers"] if row else tiers, "stats": stats})
+
+
+@app.get("/api/play/stats", dependencies=[Depends(play_rate_limit)])
+def play_stats(request: Request, date: Optional[str] = None, device_id: Optional[str] = None):
+    """Community numbers for one day: players, average, median, a 7-bucket histogram, and (if the caller sent their
+    device_id or is signed in and has a saved score) their yards and the percent of other players they beat."""
+    key, _ = _play_puzzle(date)
+    dev_hash = dd_scores.device_hash(device_id)
+    user = _play_user(request)
+    try:
+        return _clean(_play_stats_body(key, user, dev_hash))
+    except Exception as e:
+        print(f"[play] stats unavailable: {type(e).__name__}")
+        return {"available": False}
+
+
+@app.get("/api/play/me", dependencies=[Depends(play_rate_limit)])
+def play_me(request: Request):
+    """The signed-in player's saved drives: list, average, best, games, current and longest streak. Signed out gets
+    {"signed_in": false} (200, so the page doesn't log a 401 on every visit)."""
+    user = _play_user(request)
+    if not user:
+        return {"signed_in": False}
+    try:
+        rows = db.drive_history(user["id"])
+    except Exception as e:
+        print(f"[play] history unavailable: {type(e).__name__}")
+        return {"signed_in": True, "available": False}
+    return _clean({"signed_in": True, "available": True,
+                   **dd_scores.my_history(rows, daily_drive.today_et().isoformat())})
 
 
 @app.get("/play", include_in_schema=False)
