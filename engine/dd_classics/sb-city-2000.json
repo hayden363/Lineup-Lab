@@ -1,0 +1,159 @@
+{
+ "version": 1,
+ "key": "sb-city-2000",
+ "cat": "Super Bowl",
+ "text": "Name a city that has hosted a Super Bowl since the 2000 season",
+ "era": "2000+",
+ "group": "sb-venue",
+ "sources": [
+  "https://en.wikipedia.org/wiki/List_of_Super_Bowl_champions",
+  "https://www.cbssports.com/nfl/news/super-bowl-results-winners-mvps-history-full-list/",
+  "https://en.wikipedia.org/wiki/List_of_current_NFL_stadiums"
+ ],
+ "answers": [
+  {
+   "id": "new-orleans",
+   "name": "New Orleans",
+   "aliases": [],
+   "tier": 1,
+   "note": "Super Bowls XXXVI, XLVII, LIX",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_champions"
+  },
+  {
+   "id": "miami",
+   "name": "Miami",
+   "aliases": [
+    "Miami Gardens"
+   ],
+   "tier": 1,
+   "note": "Super Bowls XLI, XLIV, LIV (Miami Gardens)",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_champions"
+  },
+  {
+   "id": "tampa",
+   "name": "Tampa",
+   "aliases": [
+    "Tampa Bay"
+   ],
+   "tier": 1,
+   "note": "Super Bowls XXXV, XLIII, LV",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_champions"
+  },
+  {
+   "id": "las-vegas",
+   "name": "Las Vegas",
+   "aliases": [
+    "Paradise"
+   ],
+   "tier": 1,
+   "note": "Super Bowl LVIII (2024)",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_champions"
+  },
+  {
+   "id": "glendale",
+   "name": "Glendale",
+   "aliases": [
+    "Phoenix"
+   ],
+   "tier": 2,
+   "note": "Super Bowls XLII, XLIX, LVII",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_champions"
+  },
+  {
+   "id": "atlanta",
+   "name": "Atlanta",
+   "aliases": [],
+   "tier": 2,
+   "note": "Super Bowl LIII (2019)",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_champions"
+  },
+  {
+   "id": "houston",
+   "name": "Houston",
+   "aliases": [],
+   "tier": 2,
+   "note": "Super Bowls XXXVIII and LI",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_champions"
+  },
+  {
+   "id": "minneapolis",
+   "name": "Minneapolis",
+   "aliases": [],
+   "tier": 3,
+   "note": "Super Bowl LII (2018)",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_champions"
+  },
+  {
+   "id": "inglewood",
+   "name": "Inglewood",
+   "aliases": [
+    "Los Angeles"
+   ],
+   "tier": 3,
+   "note": "Super Bowl LVI (2022)",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_champions"
+  },
+  {
+   "id": "santa-clara",
+   "name": "Santa Clara",
+   "aliases": [],
+   "tier": 3,
+   "note": "Super Bowls 50 and LX",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_champions"
+  },
+  {
+   "id": "arlington",
+   "name": "Arlington",
+   "aliases": [
+    "Dallas"
+   ],
+   "tier": 4,
+   "note": "Super Bowl XLV (2011)",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_champions"
+  },
+  {
+   "id": "san-diego",
+   "name": "San Diego",
+   "aliases": [],
+   "tier": 4,
+   "note": "Super Bowl XXXVII (2003)",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_champions"
+  },
+  {
+   "id": "indianapolis",
+   "name": "Indianapolis",
+   "aliases": [],
+   "tier": 5,
+   "note": "Super Bowl XLVI (2012)",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_champions"
+  },
+  {
+   "id": "east-rutherford",
+   "name": "East Rutherford",
+   "aliases": [
+    "New Jersey",
+    "New York",
+    "NY/NJ"
+   ],
+   "tier": 5,
+   "note": "Super Bowl XLVIII (2014)",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_champions"
+  },
+  {
+   "id": "detroit",
+   "name": "Detroit",
+   "aliases": [],
+   "tier": 5,
+   "note": "Super Bowl XL (2006)",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_champions"
+  },
+  {
+   "id": "jacksonville",
+   "name": "Jacksonville",
+   "aliases": [],
+   "tier": 6,
+   "note": "Super Bowl XXXIX (2005)",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_champions"
+  }
+ ]
+}

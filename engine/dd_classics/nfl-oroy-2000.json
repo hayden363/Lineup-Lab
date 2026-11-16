@@ -1,0 +1,274 @@
+{
+ "version": 1,
+ "key": "nfl-oroy-2000",
+ "cat": "NFL awards",
+ "text": "Name a player who has won AP Offensive Rookie of the Year since the 2000 season",
+ "era": "2000+",
+ "group": "oroy",
+ "sources": [
+  "https://apnews.com/article/nfl-offensive-rookie-list-047a8b29a925336a4c92d7172c25ef46",
+  "https://eatdrinkandsleepfootball.com/history/awards/offroy.html",
+  "https://www.nfl.com/news/list-of-nfl-honors-award-winners-from-2025-nfl-season"
+ ],
+ "answers": [
+  {
+   "id": "justin-herbert",
+   "name": "Justin Herbert",
+   "aliases": [
+    "Herbert"
+   ],
+   "tier": 1,
+   "note": "2020",
+   "source": "https://apnews.com/article/nfl-offensive-rookie-list-047a8b29a925336a4c92d7172c25ef46"
+  },
+  {
+   "id": "ja-marr-chase",
+   "name": "Ja'Marr Chase",
+   "aliases": [
+    "Chase",
+    "Jamarr Chase"
+   ],
+   "tier": 1,
+   "note": "2021",
+   "source": "https://apnews.com/article/nfl-offensive-rookie-list-047a8b29a925336a4c92d7172c25ef46"
+  },
+  {
+   "id": "saquon-barkley",
+   "name": "Saquon Barkley",
+   "aliases": [
+    "Barkley"
+   ],
+   "tier": 1,
+   "note": "2018",
+   "source": "https://apnews.com/article/nfl-offensive-rookie-list-047a8b29a925336a4c92d7172c25ef46"
+  },
+  {
+   "id": "cam-newton",
+   "name": "Cam Newton",
+   "aliases": [
+    "Newton"
+   ],
+   "tier": 1,
+   "note": "2011",
+   "source": "https://apnews.com/article/nfl-offensive-rookie-list-047a8b29a925336a4c92d7172c25ef46"
+  },
+  {
+   "id": "ben-roethlisberger",
+   "name": "Ben Roethlisberger",
+   "aliases": [
+    "Big Ben",
+    "Roethlisberger"
+   ],
+   "tier": 1,
+   "note": "2004",
+   "source": "https://apnews.com/article/nfl-offensive-rookie-list-047a8b29a925336a4c92d7172c25ef46"
+  },
+  {
+   "id": "adrian-peterson",
+   "name": "Adrian Peterson",
+   "aliases": [
+    "Peterson"
+   ],
+   "tier": 1,
+   "note": "2007",
+   "source": "https://apnews.com/article/nfl-offensive-rookie-list-047a8b29a925336a4c92d7172c25ef46"
+  },
+  {
+   "id": "odell-beckham-jr",
+   "name": "Odell Beckham Jr.",
+   "aliases": [
+    "OBJ",
+    "Odell Beckham",
+    "Beckham"
+   ],
+   "tier": 2,
+   "note": "2014",
+   "source": "https://apnews.com/article/nfl-offensive-rookie-list-047a8b29a925336a4c92d7172c25ef46"
+  },
+  {
+   "id": "dak-prescott",
+   "name": "Dak Prescott",
+   "aliases": [
+    "Prescott"
+   ],
+   "tier": 2,
+   "note": "2016",
+   "source": "https://apnews.com/article/nfl-offensive-rookie-list-047a8b29a925336a4c92d7172c25ef46"
+  },
+  {
+   "id": "kyler-murray",
+   "name": "Kyler Murray",
+   "aliases": [],
+   "tier": 2,
+   "note": "2019",
+   "source": "https://apnews.com/article/nfl-offensive-rookie-list-047a8b29a925336a4c92d7172c25ef46"
+  },
+  {
+   "id": "jayden-daniels",
+   "name": "Jayden Daniels",
+   "aliases": [
+    "Daniels"
+   ],
+   "tier": 2,
+   "note": "2024",
+   "source": "https://apnews.com/article/nfl-offensive-rookie-list-047a8b29a925336a4c92d7172c25ef46"
+  },
+  {
+   "id": "c-j-stroud",
+   "name": "C.J. Stroud",
+   "aliases": [
+    "CJ Stroud",
+    "Stroud"
+   ],
+   "tier": 2,
+   "note": "2023",
+   "source": "https://apnews.com/article/nfl-offensive-rookie-list-047a8b29a925336a4c92d7172c25ef46"
+  },
+  {
+   "id": "todd-gurley",
+   "name": "Todd Gurley",
+   "aliases": [
+    "Gurley"
+   ],
+   "tier": 3,
+   "note": "2015",
+   "source": "https://apnews.com/article/nfl-offensive-rookie-list-047a8b29a925336a4c92d7172c25ef46"
+  },
+  {
+   "id": "alvin-kamara",
+   "name": "Alvin Kamara",
+   "aliases": [
+    "Kamara"
+   ],
+   "tier": 3,
+   "note": "2017",
+   "source": "https://apnews.com/article/nfl-offensive-rookie-list-047a8b29a925336a4c92d7172c25ef46"
+  },
+  {
+   "id": "robert-griffin-iii",
+   "name": "Robert Griffin III",
+   "aliases": [
+    "RG3",
+    "Robert Griffin",
+    "Griffin"
+   ],
+   "tier": 3,
+   "note": "2012",
+   "source": "https://apnews.com/article/nfl-offensive-rookie-list-047a8b29a925336a4c92d7172c25ef46"
+  },
+  {
+   "id": "matt-ryan",
+   "name": "Matt Ryan",
+   "aliases": [
+    "Ryan"
+   ],
+   "tier": 3,
+   "note": "2008",
+   "source": "https://apnews.com/article/nfl-offensive-rookie-list-047a8b29a925336a4c92d7172c25ef46"
+  },
+  {
+   "id": "sam-bradford",
+   "name": "Sam Bradford",
+   "aliases": [
+    "Bradford"
+   ],
+   "tier": 3,
+   "note": "2010",
+   "source": "https://apnews.com/article/nfl-offensive-rookie-list-047a8b29a925336a4c92d7172c25ef46"
+  },
+  {
+   "id": "garrett-wilson",
+   "name": "Garrett Wilson",
+   "aliases": [],
+   "tier": 4,
+   "note": "2022",
+   "source": "https://apnews.com/article/nfl-offensive-rookie-list-047a8b29a925336a4c92d7172c25ef46"
+  },
+  {
+   "id": "vince-young",
+   "name": "Vince Young",
+   "aliases": [],
+   "tier": 4,
+   "note": "2006",
+   "source": "https://apnews.com/article/nfl-offensive-rookie-list-047a8b29a925336a4c92d7172c25ef46"
+  },
+  {
+   "id": "eddie-lacy",
+   "name": "Eddie Lacy",
+   "aliases": [
+    "Lacy"
+   ],
+   "tier": 4,
+   "note": "2013",
+   "source": "https://apnews.com/article/nfl-offensive-rookie-list-047a8b29a925336a4c92d7172c25ef46"
+  },
+  {
+   "id": "percy-harvin",
+   "name": "Percy Harvin",
+   "aliases": [
+    "Harvin"
+   ],
+   "tier": 4,
+   "note": "2009",
+   "source": "https://apnews.com/article/nfl-offensive-rookie-list-047a8b29a925336a4c92d7172c25ef46"
+  },
+  {
+   "id": "clinton-portis",
+   "name": "Clinton Portis",
+   "aliases": [
+    "Portis"
+   ],
+   "tier": 5,
+   "note": "2002",
+   "source": "https://apnews.com/article/nfl-offensive-rookie-list-047a8b29a925336a4c92d7172c25ef46"
+  },
+  {
+   "id": "tetairoa-mcmillan",
+   "name": "Tetairoa McMillan",
+   "aliases": [
+    "McMillan",
+    "Tet McMillan"
+   ],
+   "tier": 5,
+   "note": "2025",
+   "source": "https://apnews.com/article/nfl-offensive-rookie-list-047a8b29a925336a4c92d7172c25ef46"
+  },
+  {
+   "id": "cadillac-williams",
+   "name": "Cadillac Williams",
+   "aliases": [
+    "Carnell Williams",
+    "Carnell Cadillac Williams"
+   ],
+   "tier": 5,
+   "note": "2005",
+   "source": "https://apnews.com/article/nfl-offensive-rookie-list-047a8b29a925336a4c92d7172c25ef46"
+  },
+  {
+   "id": "anquan-boldin",
+   "name": "Anquan Boldin",
+   "aliases": [
+    "Boldin"
+   ],
+   "tier": 5,
+   "note": "2003",
+   "source": "https://apnews.com/article/nfl-offensive-rookie-list-047a8b29a925336a4c92d7172c25ef46"
+  },
+  {
+   "id": "anthony-thomas",
+   "name": "Anthony Thomas",
+   "aliases": [],
+   "tier": 6,
+   "note": "2001",
+   "source": "https://apnews.com/article/nfl-offensive-rookie-list-047a8b29a925336a4c92d7172c25ef46"
+  },
+  {
+   "id": "mike-anderson",
+   "name": "Mike Anderson",
+   "aliases": [],
+   "tier": 6,
+   "note": "2000",
+   "source": "https://apnews.com/article/nfl-offensive-rookie-list-047a8b29a925336a4c92d7172c25ef46"
+  }
+ ]
+}

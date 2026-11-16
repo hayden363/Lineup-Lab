@@ -1,0 +1,460 @@
+{
+ "version": 1,
+ "key": "career-sacks-100",
+ "cat": "Career records",
+ "text": "Name a player with 100 or more official career sacks",
+ "era": "all",
+ "group": "records-def",
+ "sources": [
+  "https://www.pro-football-reference.com/leaders/sacks_career.htm",
+  "https://en.wikipedia.org/wiki/List_of_NFL_career_sacks_leaders"
+ ],
+ "answers": [
+  {
+   "id": "reggie-white",
+   "name": "Reggie White",
+   "aliases": [
+    "White"
+   ],
+   "tier": 1,
+   "note": "198 sacks",
+   "source": "https://www.pro-football-reference.com/leaders/sacks_career.htm"
+  },
+  {
+   "id": "bruce-smith",
+   "name": "Bruce Smith",
+   "aliases": [],
+   "tier": 1,
+   "note": "200 sacks, the NFL record",
+   "source": "https://www.pro-football-reference.com/leaders/sacks_career.htm"
+  },
+  {
+   "id": "lawrence-taylor",
+   "name": "Lawrence Taylor",
+   "aliases": [
+    "LT"
+   ],
+   "tier": 1,
+   "note": "132.5 official sacks",
+   "source": "https://www.pro-football-reference.com/leaders/sacks_career.htm"
+  },
+  {
+   "id": "j-j-watt",
+   "name": "J.J. Watt",
+   "aliases": [
+    "JJ Watt"
+   ],
+   "tier": 1,
+   "note": "114.5 sacks",
+   "source": "https://www.pro-football-reference.com/leaders/sacks_career.htm"
+  },
+  {
+   "id": "von-miller",
+   "name": "Von Miller",
+   "aliases": [
+    "Miller"
+   ],
+   "tier": 1,
+   "note": "130+ sacks",
+   "source": "https://www.pro-football-reference.com/leaders/sacks_career.htm"
+  },
+  {
+   "id": "michael-strahan",
+   "name": "Michael Strahan",
+   "aliases": [
+    "Strahan"
+   ],
+   "tier": 1,
+   "note": "141.5 sacks",
+   "source": "https://www.pro-football-reference.com/leaders/sacks_career.htm"
+  },
+  {
+   "id": "julius-peppers",
+   "name": "Julius Peppers",
+   "aliases": [
+    "Peppers"
+   ],
+   "tier": 1,
+   "note": "159.5 sacks",
+   "source": "https://www.pro-football-reference.com/leaders/sacks_career.htm"
+  },
+  {
+   "id": "aaron-donald",
+   "name": "Aaron Donald",
+   "aliases": [
+    "Donald"
+   ],
+   "tier": 1,
+   "note": "111 sacks",
+   "source": "https://www.pro-football-reference.com/leaders/sacks_career.htm"
+  },
+  {
+   "id": "demarcus-ware",
+   "name": "DeMarcus Ware",
+   "aliases": [
+    "Ware"
+   ],
+   "tier": 1,
+   "note": "138.5 sacks",
+   "source": "https://www.pro-football-reference.com/leaders/sacks_career.htm"
+  },
+  {
+   "id": "khalil-mack",
+   "name": "Khalil Mack",
+   "aliases": [
+    "Mack"
+   ],
+   "tier": 1,
+   "note": "113 sacks",
+   "source": "https://www.pro-football-reference.com/leaders/sacks_career.htm"
+  },
+  {
+   "id": "t-j-watt",
+   "name": "T.J. Watt",
+   "aliases": [
+    "TJ Watt"
+   ],
+   "tier": 2,
+   "note": "100+ sacks",
+   "source": "https://www.pro-football-reference.com/leaders/sacks_career.htm"
+  },
+  {
+   "id": "myles-garrett",
+   "name": "Myles Garrett",
+   "aliases": [
+    "Garrett"
+   ],
+   "tier": 2,
+   "note": "125+ sacks",
+   "source": "https://www.pro-football-reference.com/leaders/sacks_career.htm"
+  },
+  {
+   "id": "jason-taylor",
+   "name": "Jason Taylor",
+   "aliases": [],
+   "tier": 2,
+   "note": "139.5 sacks",
+   "source": "https://www.pro-football-reference.com/leaders/sacks_career.htm"
+  },
+  {
+   "id": "terrell-suggs",
+   "name": "Terrell Suggs",
+   "aliases": [
+    "Suggs"
+   ],
+   "tier": 2,
+   "note": "139 sacks",
+   "source": "https://www.pro-football-reference.com/leaders/sacks_career.htm"
+  },
+  {
+   "id": "kevin-greene",
+   "name": "Kevin Greene",
+   "aliases": [
+    "Greene"
+   ],
+   "tier": 2,
+   "note": "160 sacks",
+   "source": "https://www.pro-football-reference.com/leaders/sacks_career.htm"
+  },
+  {
+   "id": "chris-doleman",
+   "name": "Chris Doleman",
+   "aliases": [
+    "Doleman"
+   ],
+   "tier": 2,
+   "note": "150.5 sacks",
+   "source": "https://www.pro-football-reference.com/leaders/sacks_career.htm"
+  },
+  {
+   "id": "richard-dent",
+   "name": "Richard Dent",
+   "aliases": [
+    "Dent"
+   ],
+   "tier": 2,
+   "note": "137.5 sacks",
+   "source": "https://www.pro-football-reference.com/leaders/sacks_career.htm"
+  },
+  {
+   "id": "derrick-thomas",
+   "name": "Derrick Thomas",
+   "aliases": [],
+   "tier": 2,
+   "note": "126.5 sacks",
+   "source": "https://www.pro-football-reference.com/leaders/sacks_career.htm"
+  },
+  {
+   "id": "dwight-freeney",
+   "name": "Dwight Freeney",
+   "aliases": [
+    "Freeney"
+   ],
+   "tier": 2,
+   "note": "125.5 sacks",
+   "source": "https://www.pro-football-reference.com/leaders/sacks_career.htm"
+  },
+  {
+   "id": "jared-allen",
+   "name": "Jared Allen",
+   "aliases": [
+    "Allen"
+   ],
+   "tier": 3,
+   "note": "136 sacks",
+   "source": "https://www.pro-football-reference.com/leaders/sacks_career.htm"
+  },
+  {
+   "id": "cameron-jordan",
+   "name": "Cameron Jordan",
+   "aliases": [
+    "Jordan"
+   ],
+   "tier": 3,
+   "note": "130+ sacks",
+   "source": "https://www.pro-football-reference.com/leaders/sacks_career.htm"
+  },
+  {
+   "id": "john-randle",
+   "name": "John Randle",
+   "aliases": [
+    "Randle"
+   ],
+   "tier": 3,
+   "note": "137.5 sacks",
+   "source": "https://www.pro-football-reference.com/leaders/sacks_career.htm"
+  },
+  {
+   "id": "rickey-jackson",
+   "name": "Rickey Jackson",
+   "aliases": [
+    "Jackson"
+   ],
+   "tier": 3,
+   "note": "128 sacks",
+   "source": "https://www.pro-football-reference.com/leaders/sacks_career.htm"
+  },
+  {
+   "id": "charles-haley",
+   "name": "Charles Haley",
+   "aliases": [
+    "Haley"
+   ],
+   "tier": 3,
+   "note": "100.5 sacks",
+   "source": "https://www.pro-football-reference.com/leaders/sacks_career.htm"
+  },
+  {
+   "id": "simeon-rice",
+   "name": "Simeon Rice",
+   "aliases": [
+    "Rice"
+   ],
+   "tier": 3,
+   "note": "122 sacks",
+   "source": "https://www.pro-football-reference.com/leaders/sacks_career.htm"
+  },
+  {
+   "id": "calais-campbell",
+   "name": "Calais Campbell",
+   "aliases": [
+    "Campbell"
+   ],
+   "tier": 3,
+   "note": "117+ sacks",
+   "source": "https://www.pro-football-reference.com/leaders/sacks_career.htm"
+  },
+  {
+   "id": "robert-mathis",
+   "name": "Robert Mathis",
+   "aliases": [
+    "Mathis"
+   ],
+   "tier": 3,
+   "note": "123 sacks",
+   "source": "https://www.pro-football-reference.com/leaders/sacks_career.htm"
+  },
+  {
+   "id": "john-abraham",
+   "name": "John Abraham",
+   "aliases": [
+    "Abraham"
+   ],
+   "tier": 3,
+   "note": "133.5 sacks",
+   "source": "https://www.pro-football-reference.com/leaders/sacks_career.htm"
+  },
+  {
+   "id": "leslie-o-neal",
+   "name": "Leslie O'Neal",
+   "aliases": [
+    "O'Neal"
+   ],
+   "tier": 4,
+   "note": "132.5 sacks",
+   "source": "https://www.pro-football-reference.com/leaders/sacks_career.htm"
+  },
+  {
+   "id": "clyde-simmons",
+   "name": "Clyde Simmons",
+   "aliases": [
+    "Simmons"
+   ],
+   "tier": 4,
+   "note": "121.5 sacks",
+   "source": "https://www.pro-football-reference.com/leaders/sacks_career.htm"
+  },
+  {
+   "id": "chandler-jones",
+   "name": "Chandler Jones",
+   "aliases": [],
+   "tier": 4,
+   "note": "112 sacks",
+   "source": "https://www.pro-football-reference.com/leaders/sacks_career.htm"
+  },
+  {
+   "id": "justin-houston",
+   "name": "Justin Houston",
+   "aliases": [
+    "Houston"
+   ],
+   "tier": 4,
+   "note": "112 sacks",
+   "source": "https://www.pro-football-reference.com/leaders/sacks_career.htm"
+  },
+  {
+   "id": "danielle-hunter",
+   "name": "Danielle Hunter",
+   "aliases": [
+    "Hunter"
+   ],
+   "tier": 4,
+   "note": "114.5+ sacks",
+   "source": "https://www.pro-football-reference.com/leaders/sacks_career.htm"
+  },
+  {
+   "id": "cameron-wake",
+   "name": "Cameron Wake",
+   "aliases": [
+    "Wake"
+   ],
+   "tier": 4,
+   "note": "100.5 sacks",
+   "source": "https://www.pro-football-reference.com/leaders/sacks_career.htm"
+  },
+  {
+   "id": "elvis-dumervil",
+   "name": "Elvis Dumervil",
+   "aliases": [
+    "Dumervil"
+   ],
+   "tier": 4,
+   "note": "105.5 sacks",
+   "source": "https://www.pro-football-reference.com/leaders/sacks_career.htm"
+  },
+  {
+   "id": "robert-quinn",
+   "name": "Robert Quinn",
+   "aliases": [
+    "Quinn"
+   ],
+   "tier": 5,
+   "note": "102+ sacks",
+   "source": "https://www.pro-football-reference.com/leaders/sacks_career.htm"
+  },
+  {
+   "id": "carlos-dunlap",
+   "name": "Carlos Dunlap",
+   "aliases": [
+    "Dunlap"
+   ],
+   "tier": 5,
+   "note": "100 sacks",
+   "source": "https://www.pro-football-reference.com/leaders/sacks_career.htm"
+  },
+  {
+   "id": "andre-tippett",
+   "name": "Andre Tippett",
+   "aliases": [
+    "Tippett"
+   ],
+   "tier": 5,
+   "note": "100 sacks",
+   "source": "https://www.pro-football-reference.com/leaders/sacks_career.htm"
+  },
+  {
+   "id": "neil-smith",
+   "name": "Neil Smith",
+   "aliases": [],
+   "tier": 5,
+   "note": "104.5 sacks",
+   "source": "https://www.pro-football-reference.com/leaders/sacks_career.htm"
+  },
+  {
+   "id": "pat-swilling",
+   "name": "Pat Swilling",
+   "aliases": [
+    "Swilling"
+   ],
+   "tier": 5,
+   "note": "107.5 sacks",
+   "source": "https://www.pro-football-reference.com/leaders/sacks_career.htm"
+  },
+  {
+   "id": "sean-jones",
+   "name": "Sean Jones",
+   "aliases": [],
+   "tier": 5,
+   "note": "113 sacks",
+   "source": "https://www.pro-football-reference.com/leaders/sacks_career.htm"
+  },
+  {
+   "id": "kevin-carter",
+   "name": "Kevin Carter",
+   "aliases": [],
+   "tier": 5,
+   "note": "104.5 sacks",
+   "source": "https://www.pro-football-reference.com/leaders/sacks_career.htm"
+  },
+  {
+   "id": "greg-townsend",
+   "name": "Greg Townsend",
+   "aliases": [
+    "Townsend"
+   ],
+   "tier": 6,
+   "note": "109.5 sacks",
+   "source": "https://www.pro-football-reference.com/leaders/sacks_career.htm"
+  },
+  {
+   "id": "trace-armstrong",
+   "name": "Trace Armstrong",
+   "aliases": [
+    "Armstrong"
+   ],
+   "tier": 6,
+   "note": "106 sacks",
+   "source": "https://www.pro-football-reference.com/leaders/sacks_career.htm"
+  },
+  {
+   "id": "jim-jeffcoat",
+   "name": "Jim Jeffcoat",
+   "aliases": [
+    "Jeffcoat"
+   ],
+   "tier": 6,
+   "note": "102.5 sacks",
+   "source": "https://www.pro-football-reference.com/leaders/sacks_career.htm"
+  },
+  {
+   "id": "william-fuller",
+   "name": "William Fuller",
+   "aliases": [
+    "Fuller"
+   ],
+   "tier": 6,
+   "note": "100.5 sacks",
+   "source": "https://www.pro-football-reference.com/leaders/sacks_career.htm"
+  }
+ ]
+}

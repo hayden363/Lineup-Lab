@@ -1,0 +1,165 @@
+{
+ "version": 1,
+ "key": "career-passing-47k",
+ "cat": "Career records",
+ "text": "Name a quarterback with 47,000 or more career passing yards",
+ "era": "all",
+ "group": "records-off",
+ "sources": [
+  "https://www.pro-football-reference.com/leaders/pass_yds_career.htm",
+  "https://www.profootballhof.com/top-20-passing-yards"
+ ],
+ "answers": [
+  {
+   "id": "tom-brady",
+   "name": "Tom Brady",
+   "aliases": [
+    "Brady"
+   ],
+   "tier": 1,
+   "note": "89,214, the NFL record",
+   "source": "https://www.pro-football-reference.com/leaders/pass_yds_career.htm"
+  },
+  {
+   "id": "drew-brees",
+   "name": "Drew Brees",
+   "aliases": [
+    "Brees"
+   ],
+   "tier": 1,
+   "note": "80,358",
+   "source": "https://www.pro-football-reference.com/leaders/pass_yds_career.htm"
+  },
+  {
+   "id": "peyton-manning",
+   "name": "Peyton Manning",
+   "aliases": [
+    "Peyton"
+   ],
+   "tier": 1,
+   "note": "71,940",
+   "source": "https://www.pro-football-reference.com/leaders/pass_yds_career.htm"
+  },
+  {
+   "id": "brett-favre",
+   "name": "Brett Favre",
+   "aliases": [
+    "Favre"
+   ],
+   "tier": 2,
+   "note": "71,838",
+   "source": "https://www.pro-football-reference.com/leaders/pass_yds_career.htm"
+  },
+  {
+   "id": "aaron-rodgers",
+   "name": "Aaron Rodgers",
+   "aliases": [
+    "Rodgers"
+   ],
+   "tier": 2,
+   "note": "66,000+",
+   "source": "https://www.pro-football-reference.com/leaders/pass_yds_career.htm"
+  },
+  {
+   "id": "matthew-stafford",
+   "name": "Matthew Stafford",
+   "aliases": [
+    "Matt Stafford"
+   ],
+   "tier": 2,
+   "note": "64,000+",
+   "source": "https://www.pro-football-reference.com/leaders/pass_yds_career.htm"
+  },
+  {
+   "id": "ben-roethlisberger",
+   "name": "Ben Roethlisberger",
+   "aliases": [
+    "Big Ben",
+    "Roethlisberger"
+   ],
+   "tier": 3,
+   "note": "64,088",
+   "source": "https://www.pro-football-reference.com/leaders/pass_yds_career.htm"
+  },
+  {
+   "id": "philip-rivers",
+   "name": "Philip Rivers",
+   "aliases": [
+    "Rivers"
+   ],
+   "tier": 3,
+   "note": "63,984",
+   "source": "https://www.pro-football-reference.com/leaders/pass_yds_career.htm"
+  },
+  {
+   "id": "matt-ryan",
+   "name": "Matt Ryan",
+   "aliases": [
+    "Ryan"
+   ],
+   "tier": 3,
+   "note": "62,000+",
+   "source": "https://www.pro-football-reference.com/leaders/pass_yds_career.htm"
+  },
+  {
+   "id": "dan-marino",
+   "name": "Dan Marino",
+   "aliases": [
+    "Marino"
+   ],
+   "tier": 4,
+   "note": "61,361",
+   "source": "https://www.pro-football-reference.com/leaders/pass_yds_career.htm"
+  },
+  {
+   "id": "eli-manning",
+   "name": "Eli Manning",
+   "aliases": [
+    "Eli"
+   ],
+   "tier": 4,
+   "note": "57,023",
+   "source": "https://www.pro-football-reference.com/leaders/pass_yds_career.htm"
+  },
+  {
+   "id": "john-elway",
+   "name": "John Elway",
+   "aliases": [
+    "Elway"
+   ],
+   "tier": 4,
+   "note": "51,475",
+   "source": "https://www.pro-football-reference.com/leaders/pass_yds_career.htm"
+  },
+  {
+   "id": "warren-moon",
+   "name": "Warren Moon",
+   "aliases": [
+    "Moon"
+   ],
+   "tier": 5,
+   "note": "49,325 (NFL regular season)",
+   "source": "https://www.pro-football-reference.com/leaders/pass_yds_career.htm"
+  },
+  {
+   "id": "joe-flacco",
+   "name": "Joe Flacco",
+   "aliases": [
+    "Flacco"
+   ],
+   "tier": 5,
+   "note": "48,176",
+   "source": "https://www.pro-football-reference.com/leaders/pass_yds_career.htm"
+  },
+  {
+   "id": "fran-tarkenton",
+   "name": "Fran Tarkenton",
+   "aliases": [
+    "Tarkenton"
+   ],
+   "tier": 6,
+   "note": "47,003",
+   "source": "https://www.pro-football-reference.com/leaders/pass_yds_career.htm"
+  }
+ ]
+}

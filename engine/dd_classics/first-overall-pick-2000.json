@@ -1,0 +1,277 @@
+{
+ "version": 1,
+ "key": "first-overall-pick-2000",
+ "cat": "NFL Draft",
+ "text": "Name a player drafted No. 1 overall in the NFL Draft since 2000",
+ "era": "2000+",
+ "group": "no1",
+ "sources": [
+  "https://en.wikipedia.org/wiki/List_of_first_overall_NFL_draft_picks",
+  "https://www.espn.ph/nfl/story/_/id/39958676/no-1-nfl-draft-picks-history-know"
+ ],
+ "answers": [
+  {
+   "id": "joe-burrow",
+   "name": "Joe Burrow",
+   "aliases": [
+    "Burrow"
+   ],
+   "tier": 1,
+   "note": "2020, Bengals",
+   "source": "https://en.wikipedia.org/wiki/List_of_first_overall_NFL_draft_picks"
+  },
+  {
+   "id": "trevor-lawrence",
+   "name": "Trevor Lawrence",
+   "aliases": [
+    "Lawrence"
+   ],
+   "tier": 1,
+   "note": "2021, Jaguars",
+   "source": "https://en.wikipedia.org/wiki/List_of_first_overall_NFL_draft_picks"
+  },
+  {
+   "id": "caleb-williams",
+   "name": "Caleb Williams",
+   "aliases": [],
+   "tier": 1,
+   "note": "2024, Bears",
+   "source": "https://en.wikipedia.org/wiki/List_of_first_overall_NFL_draft_picks"
+  },
+  {
+   "id": "cam-newton",
+   "name": "Cam Newton",
+   "aliases": [
+    "Newton"
+   ],
+   "tier": 1,
+   "note": "2011, Panthers",
+   "source": "https://en.wikipedia.org/wiki/List_of_first_overall_NFL_draft_picks"
+  },
+  {
+   "id": "andrew-luck",
+   "name": "Andrew Luck",
+   "aliases": [
+    "Luck"
+   ],
+   "tier": 1,
+   "note": "2012, Colts",
+   "source": "https://en.wikipedia.org/wiki/List_of_first_overall_NFL_draft_picks"
+  },
+  {
+   "id": "myles-garrett",
+   "name": "Myles Garrett",
+   "aliases": [
+    "Garrett"
+   ],
+   "tier": 1,
+   "note": "2017, Browns",
+   "source": "https://en.wikipedia.org/wiki/List_of_first_overall_NFL_draft_picks"
+  },
+  {
+   "id": "kyler-murray",
+   "name": "Kyler Murray",
+   "aliases": [],
+   "tier": 2,
+   "note": "2019, Cardinals",
+   "source": "https://en.wikipedia.org/wiki/List_of_first_overall_NFL_draft_picks"
+  },
+  {
+   "id": "baker-mayfield",
+   "name": "Baker Mayfield",
+   "aliases": [
+    "Mayfield"
+   ],
+   "tier": 2,
+   "note": "2018, Browns",
+   "source": "https://en.wikipedia.org/wiki/List_of_first_overall_NFL_draft_picks"
+  },
+  {
+   "id": "jameis-winston",
+   "name": "Jameis Winston",
+   "aliases": [
+    "Winston"
+   ],
+   "tier": 2,
+   "note": "2015, Buccaneers",
+   "source": "https://en.wikipedia.org/wiki/List_of_first_overall_NFL_draft_picks"
+  },
+  {
+   "id": "eli-manning",
+   "name": "Eli Manning",
+   "aliases": [
+    "Eli"
+   ],
+   "tier": 2,
+   "note": "2004, Chargers (traded to the Giants)",
+   "source": "https://en.wikipedia.org/wiki/List_of_first_overall_NFL_draft_picks"
+  },
+  {
+   "id": "matthew-stafford",
+   "name": "Matthew Stafford",
+   "aliases": [
+    "Matt Stafford"
+   ],
+   "tier": 2,
+   "note": "2009, Lions",
+   "source": "https://en.wikipedia.org/wiki/List_of_first_overall_NFL_draft_picks"
+  },
+  {
+   "id": "bryce-young",
+   "name": "Bryce Young",
+   "aliases": [
+    "Young"
+   ],
+   "tier": 3,
+   "note": "2023, Panthers",
+   "source": "https://en.wikipedia.org/wiki/List_of_first_overall_NFL_draft_picks"
+  },
+  {
+   "id": "cam-ward",
+   "name": "Cam Ward",
+   "aliases": [
+    "Ward"
+   ],
+   "tier": 3,
+   "note": "2025, Titans",
+   "source": "https://en.wikipedia.org/wiki/List_of_first_overall_NFL_draft_picks"
+  },
+  {
+   "id": "michael-vick",
+   "name": "Michael Vick",
+   "aliases": [
+    "Mike Vick",
+    "Vick"
+   ],
+   "tier": 3,
+   "note": "2001, Falcons",
+   "source": "https://en.wikipedia.org/wiki/List_of_first_overall_NFL_draft_picks"
+  },
+  {
+   "id": "carson-palmer",
+   "name": "Carson Palmer",
+   "aliases": [
+    "Palmer"
+   ],
+   "tier": 3,
+   "note": "2003, Bengals",
+   "source": "https://en.wikipedia.org/wiki/List_of_first_overall_NFL_draft_picks"
+  },
+  {
+   "id": "jared-goff",
+   "name": "Jared Goff",
+   "aliases": [
+    "Goff"
+   ],
+   "tier": 3,
+   "note": "2016, Rams",
+   "source": "https://en.wikipedia.org/wiki/List_of_first_overall_NFL_draft_picks"
+  },
+  {
+   "id": "jadeveon-clowney",
+   "name": "Jadeveon Clowney",
+   "aliases": [
+    "Clowney"
+   ],
+   "tier": 3,
+   "note": "2014, Texans",
+   "source": "https://en.wikipedia.org/wiki/List_of_first_overall_NFL_draft_picks"
+  },
+  {
+   "id": "fernando-mendoza",
+   "name": "Fernando Mendoza",
+   "aliases": [
+    "Mendoza"
+   ],
+   "tier": 4,
+   "note": "2026, Raiders",
+   "source": "https://en.wikipedia.org/wiki/List_of_first_overall_NFL_draft_picks"
+  },
+  {
+   "id": "sam-bradford",
+   "name": "Sam Bradford",
+   "aliases": [
+    "Bradford"
+   ],
+   "tier": 4,
+   "note": "2010, Rams",
+   "source": "https://en.wikipedia.org/wiki/List_of_first_overall_NFL_draft_picks"
+  },
+  {
+   "id": "jamarcus-russell",
+   "name": "JaMarcus Russell",
+   "aliases": [
+    "Russell"
+   ],
+   "tier": 4,
+   "note": "2007, Raiders",
+   "source": "https://en.wikipedia.org/wiki/List_of_first_overall_NFL_draft_picks"
+  },
+  {
+   "id": "alex-smith",
+   "name": "Alex Smith",
+   "aliases": [],
+   "tier": 4,
+   "note": "2005, 49ers",
+   "source": "https://en.wikipedia.org/wiki/List_of_first_overall_NFL_draft_picks"
+  },
+  {
+   "id": "mario-williams",
+   "name": "Mario Williams",
+   "aliases": [],
+   "tier": 5,
+   "note": "2006, Texans",
+   "source": "https://en.wikipedia.org/wiki/List_of_first_overall_NFL_draft_picks"
+  },
+  {
+   "id": "travon-walker",
+   "name": "Travon Walker",
+   "aliases": [
+    "Walker"
+   ],
+   "tier": 5,
+   "note": "2022, Jaguars",
+   "source": "https://en.wikipedia.org/wiki/List_of_first_overall_NFL_draft_picks"
+  },
+  {
+   "id": "david-carr",
+   "name": "David Carr",
+   "aliases": [
+    "Carr"
+   ],
+   "tier": 5,
+   "note": "2002, Texans",
+   "source": "https://en.wikipedia.org/wiki/List_of_first_overall_NFL_draft_picks"
+  },
+  {
+   "id": "jake-long",
+   "name": "Jake Long",
+   "aliases": [
+    "Long"
+   ],
+   "tier": 5,
+   "note": "2008, Dolphins",
+   "source": "https://en.wikipedia.org/wiki/List_of_first_overall_NFL_draft_picks"
+  },
+  {
+   "id": "eric-fisher",
+   "name": "Eric Fisher",
+   "aliases": [
+    "Fisher"
+   ],
+   "tier": 6,
+   "note": "2013, Chiefs",
+   "source": "https://en.wikipedia.org/wiki/List_of_first_overall_NFL_draft_picks"
+  },
+  {
+   "id": "courtney-brown",
+   "name": "Courtney Brown",
+   "aliases": [
+    "Brown"
+   ],
+   "tier": 6,
+   "note": "2000, Browns",
+   "source": "https://en.wikipedia.org/wiki/List_of_first_overall_NFL_draft_picks"
+  }
+ ]
+}

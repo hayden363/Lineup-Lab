@@ -1,0 +1,771 @@
+{
+ "version": 1,
+ "key": "nfl-franchise",
+ "cat": "NFL franchises",
+ "text": "Name an NFL franchise",
+ "era": "all",
+ "group": "franchise",
+ "sources": [
+  "https://www.profootballhof.com/football-history/national-footbal-league-franchise-histories",
+  "https://en.wikipedia.org/wiki/List_of_defunct_NFL_teams",
+  "https://www.jt-sw.com/football/pro/teams.nsf/PastTeams?OpenPage"
+ ],
+ "answers": [
+  {
+   "id": "dallas-cowboys",
+   "name": "Dallas Cowboys",
+   "aliases": [
+    "Dallas",
+    "Cowboys",
+    "Americas Team"
+   ],
+   "tier": 1,
+   "note": "Current NFL franchise (also answers to its former names)",
+   "source": "https://www.profootballhof.com/football-history/national-footbal-league-franchise-histories"
+  },
+  {
+   "id": "new-england-patriots",
+   "name": "New England Patriots",
+   "aliases": [
+    "New England",
+    "Patriots",
+    "Boston Patriots",
+    "Pats"
+   ],
+   "tier": 1,
+   "note": "Current NFL franchise (also answers to its former names)",
+   "source": "https://www.profootballhof.com/football-history/national-footbal-league-franchise-histories"
+  },
+  {
+   "id": "green-bay-packers",
+   "name": "Green Bay Packers",
+   "aliases": [
+    "Green Bay",
+    "Packers"
+   ],
+   "tier": 1,
+   "note": "Current NFL franchise (also answers to its former names)",
+   "source": "https://www.profootballhof.com/football-history/national-footbal-league-franchise-histories"
+  },
+  {
+   "id": "kansas-city-chiefs",
+   "name": "Kansas City Chiefs",
+   "aliases": [
+    "Kansas City",
+    "Chiefs"
+   ],
+   "tier": 1,
+   "note": "Current NFL franchise (also answers to its former names)",
+   "source": "https://www.profootballhof.com/football-history/national-footbal-league-franchise-histories"
+  },
+  {
+   "id": "pittsburgh-steelers",
+   "name": "Pittsburgh Steelers",
+   "aliases": [
+    "Pittsburgh",
+    "Steelers",
+    "Pittsburgh Pirates"
+   ],
+   "tier": 1,
+   "note": "Current NFL franchise (also answers to its former names)",
+   "source": "https://www.profootballhof.com/football-history/national-footbal-league-franchise-histories"
+  },
+  {
+   "id": "san-francisco-49ers",
+   "name": "San Francisco 49ers",
+   "aliases": [
+    "San Francisco",
+    "49ers",
+    "Niners",
+    "SF 49ers",
+    "Forty Niners"
+   ],
+   "tier": 1,
+   "note": "Current NFL franchise (also answers to its former names)",
+   "source": "https://www.profootballhof.com/football-history/national-footbal-league-franchise-histories"
+  },
+  {
+   "id": "philadelphia-eagles",
+   "name": "Philadelphia Eagles",
+   "aliases": [
+    "Philadelphia",
+    "Eagles"
+   ],
+   "tier": 1,
+   "note": "Current NFL franchise (also answers to its former names)",
+   "source": "https://www.profootballhof.com/football-history/national-footbal-league-franchise-histories"
+  },
+  {
+   "id": "chicago-bears",
+   "name": "Chicago Bears",
+   "aliases": [
+    "Chicago",
+    "Bears",
+    "Decatur Staleys",
+    "Chicago Staleys",
+    "Staleys"
+   ],
+   "tier": 1,
+   "note": "Current NFL franchise (also answers to its former names)",
+   "source": "https://www.profootballhof.com/football-history/national-footbal-league-franchise-histories"
+  },
+  {
+   "id": "new-york-giants",
+   "name": "New York Giants",
+   "aliases": [
+    "Giants",
+    "NY Giants"
+   ],
+   "tier": 2,
+   "note": "Current NFL franchise (also answers to its former names)",
+   "source": "https://www.profootballhof.com/football-history/national-footbal-league-franchise-histories"
+  },
+  {
+   "id": "las-vegas-raiders",
+   "name": "Las Vegas Raiders",
+   "aliases": [
+    "Raiders",
+    "LV Raiders",
+    "Oakland Raiders",
+    "Los Angeles Raiders",
+    "LA Raiders",
+    "Vegas Raiders"
+   ],
+   "tier": 2,
+   "note": "Current NFL franchise (also answers to its former names)",
+   "source": "https://www.profootballhof.com/football-history/national-footbal-league-franchise-histories"
+  },
+  {
+   "id": "denver-broncos",
+   "name": "Denver Broncos",
+   "aliases": [
+    "Denver",
+    "Broncos"
+   ],
+   "tier": 2,
+   "note": "Current NFL franchise (also answers to its former names)",
+   "source": "https://www.profootballhof.com/football-history/national-footbal-league-franchise-histories"
+  },
+  {
+   "id": "seattle-seahawks",
+   "name": "Seattle Seahawks",
+   "aliases": [
+    "Seattle",
+    "Seahawks"
+   ],
+   "tier": 2,
+   "note": "Current NFL franchise (also answers to its former names)",
+   "source": "https://www.profootballhof.com/football-history/national-footbal-league-franchise-histories"
+  },
+  {
+   "id": "buffalo-bills",
+   "name": "Buffalo Bills",
+   "aliases": [
+    "Buffalo",
+    "Bills"
+   ],
+   "tier": 2,
+   "note": "Current NFL franchise (also answers to its former names)",
+   "source": "https://www.profootballhof.com/football-history/national-footbal-league-franchise-histories"
+  },
+  {
+   "id": "baltimore-ravens",
+   "name": "Baltimore Ravens",
+   "aliases": [
+    "Baltimore",
+    "Ravens"
+   ],
+   "tier": 2,
+   "note": "Current NFL franchise (also answers to its former names)",
+   "source": "https://www.profootballhof.com/football-history/national-footbal-league-franchise-histories"
+  },
+  {
+   "id": "miami-dolphins",
+   "name": "Miami Dolphins",
+   "aliases": [
+    "Miami",
+    "Dolphins"
+   ],
+   "tier": 2,
+   "note": "Current NFL franchise (also answers to its former names)",
+   "source": "https://www.profootballhof.com/football-history/national-footbal-league-franchise-histories"
+  },
+  {
+   "id": "los-angeles-rams",
+   "name": "Los Angeles Rams",
+   "aliases": [
+    "Rams",
+    "LA Rams",
+    "St. Louis Rams",
+    "Saint Louis Rams",
+    "Cleveland Rams"
+   ],
+   "tier": 2,
+   "note": "Current NFL franchise (also answers to its former names)",
+   "source": "https://www.profootballhof.com/football-history/national-footbal-league-franchise-histories"
+  },
+  {
+   "id": "minnesota-vikings",
+   "name": "Minnesota Vikings",
+   "aliases": [
+    "Minnesota",
+    "Vikings"
+   ],
+   "tier": 3,
+   "note": "Current NFL franchise (also answers to its former names)",
+   "source": "https://www.profootballhof.com/football-history/national-footbal-league-franchise-histories"
+  },
+  {
+   "id": "detroit-lions",
+   "name": "Detroit Lions",
+   "aliases": [
+    "Detroit",
+    "Lions",
+    "Portsmouth Spartans"
+   ],
+   "tier": 3,
+   "note": "Current NFL franchise (also answers to its former names)",
+   "source": "https://www.profootballhof.com/football-history/national-footbal-league-franchise-histories"
+  },
+  {
+   "id": "new-york-jets",
+   "name": "New York Jets",
+   "aliases": [
+    "Jets",
+    "NY Jets",
+    "New York Titans"
+   ],
+   "tier": 3,
+   "note": "Current NFL franchise (also answers to its former names)",
+   "source": "https://www.profootballhof.com/football-history/national-footbal-league-franchise-histories"
+  },
+  {
+   "id": "indianapolis-colts",
+   "name": "Indianapolis Colts",
+   "aliases": [
+    "Indianapolis",
+    "Colts",
+    "Baltimore Colts"
+   ],
+   "tier": 3,
+   "note": "Current NFL franchise (also answers to its former names)",
+   "source": "https://www.profootballhof.com/football-history/national-footbal-league-franchise-histories"
+  },
+  {
+   "id": "tampa-bay-buccaneers",
+   "name": "Tampa Bay Buccaneers",
+   "aliases": [
+    "Tampa Bay",
+    "Buccaneers",
+    "Bucs",
+    "Tampa"
+   ],
+   "tier": 3,
+   "note": "Current NFL franchise (also answers to its former names)",
+   "source": "https://www.profootballhof.com/football-history/national-footbal-league-franchise-histories"
+  },
+  {
+   "id": "new-orleans-saints",
+   "name": "New Orleans Saints",
+   "aliases": [
+    "New Orleans",
+    "Saints"
+   ],
+   "tier": 3,
+   "note": "Current NFL franchise (also answers to its former names)",
+   "source": "https://www.profootballhof.com/football-history/national-footbal-league-franchise-histories"
+  },
+  {
+   "id": "los-angeles-chargers",
+   "name": "Los Angeles Chargers",
+   "aliases": [
+    "Chargers",
+    "LA Chargers",
+    "San Diego Chargers"
+   ],
+   "tier": 3,
+   "note": "Current NFL franchise (also answers to its former names)",
+   "source": "https://www.profootballhof.com/football-history/national-footbal-league-franchise-histories"
+  },
+  {
+   "id": "cleveland-browns",
+   "name": "Cleveland Browns",
+   "aliases": [
+    "Cleveland",
+    "Browns"
+   ],
+   "tier": 3,
+   "note": "Current NFL franchise (also answers to its former names)",
+   "source": "https://www.profootballhof.com/football-history/national-footbal-league-franchise-histories"
+  },
+  {
+   "id": "cincinnati-bengals",
+   "name": "Cincinnati Bengals",
+   "aliases": [
+    "Cincinnati",
+    "Bengals"
+   ],
+   "tier": 4,
+   "note": "Current NFL franchise (also answers to its former names)",
+   "source": "https://www.profootballhof.com/football-history/national-footbal-league-franchise-histories"
+  },
+  {
+   "id": "atlanta-falcons",
+   "name": "Atlanta Falcons",
+   "aliases": [
+    "Atlanta",
+    "Falcons"
+   ],
+   "tier": 4,
+   "note": "Current NFL franchise (also answers to its former names)",
+   "source": "https://www.profootballhof.com/football-history/national-footbal-league-franchise-histories"
+  },
+  {
+   "id": "carolina-panthers",
+   "name": "Carolina Panthers",
+   "aliases": [
+    "Carolina",
+    "Panthers"
+   ],
+   "tier": 4,
+   "note": "Current NFL franchise (also answers to its former names)",
+   "source": "https://www.profootballhof.com/football-history/national-footbal-league-franchise-histories"
+  },
+  {
+   "id": "arizona-cardinals",
+   "name": "Arizona Cardinals",
+   "aliases": [
+    "Arizona",
+    "Cardinals",
+    "Phoenix Cardinals",
+    "St. Louis Cardinals",
+    "Chicago Cardinals",
+    "Cards"
+   ],
+   "tier": 4,
+   "note": "Current NFL franchise (also answers to its former names)",
+   "source": "https://www.profootballhof.com/football-history/national-footbal-league-franchise-histories"
+  },
+  {
+   "id": "tennessee-titans",
+   "name": "Tennessee Titans",
+   "aliases": [
+    "Tennessee",
+    "Titans",
+    "Houston Oilers",
+    "Tennessee Oilers",
+    "Oilers"
+   ],
+   "tier": 4,
+   "note": "Current NFL franchise (also answers to its former names)",
+   "source": "https://www.profootballhof.com/football-history/national-footbal-league-franchise-histories"
+  },
+  {
+   "id": "jacksonville-jaguars",
+   "name": "Jacksonville Jaguars",
+   "aliases": [
+    "Jacksonville",
+    "Jaguars",
+    "Jags"
+   ],
+   "tier": 4,
+   "note": "Current NFL franchise (also answers to its former names)",
+   "source": "https://www.profootballhof.com/football-history/national-footbal-league-franchise-histories"
+  },
+  {
+   "id": "houston-texans",
+   "name": "Houston Texans",
+   "aliases": [
+    "Houston",
+    "Texans"
+   ],
+   "tier": 4,
+   "note": "Current NFL franchise (also answers to its former names)",
+   "source": "https://www.profootballhof.com/football-history/national-footbal-league-franchise-histories"
+  },
+  {
+   "id": "washington-commanders",
+   "name": "Washington Commanders",
+   "aliases": [
+    "Washington",
+    "Commanders",
+    "Redskins",
+    "Washington Redskins",
+    "Football Team",
+    "Washington Football Team",
+    "Boston Braves",
+    "Boston Redskins"
+   ],
+   "tier": 4,
+   "note": "Current NFL franchise (also answers to its former names)",
+   "source": "https://www.profootballhof.com/football-history/national-footbal-league-franchise-histories"
+  },
+  {
+   "id": "canton-bulldogs",
+   "name": "Canton Bulldogs",
+   "aliases": [
+    "Canton"
+   ],
+   "tier": 5,
+   "note": "Defunct NFL franchise, 1920-1926",
+   "source": "https://www.profootballhof.com/football-history/national-footbal-league-franchise-histories"
+  },
+  {
+   "id": "boston-yanks",
+   "name": "Boston Yanks",
+   "aliases": [
+    "Yanks"
+   ],
+   "tier": 5,
+   "note": "Defunct NFL franchise, 1944-1948",
+   "source": "https://www.profootballhof.com/football-history/national-footbal-league-franchise-histories"
+  },
+  {
+   "id": "brooklyn-dodgers",
+   "name": "Brooklyn Dodgers",
+   "aliases": [
+    "Brooklyn Tigers"
+   ],
+   "tier": 5,
+   "note": "Defunct NFL franchise, 1930-1944",
+   "source": "https://www.profootballhof.com/football-history/national-footbal-league-franchise-histories"
+  },
+  {
+   "id": "duluth-eskimos",
+   "name": "Duluth Eskimos",
+   "aliases": [
+    "Duluth Kelleys",
+    "Eskimos",
+    "Duluth"
+   ],
+   "tier": 5,
+   "note": "Defunct NFL franchise, 1923-1927",
+   "source": "https://www.profootballhof.com/football-history/national-footbal-league-franchise-histories"
+  },
+  {
+   "id": "pottsville-maroons",
+   "name": "Pottsville Maroons",
+   "aliases": [
+    "Boston Bulldogs",
+    "Pottsville"
+   ],
+   "tier": 5,
+   "note": "Defunct NFL franchise, 1925-1928 (moved to Boston in 1929)",
+   "source": "https://www.profootballhof.com/football-history/national-footbal-league-franchise-histories"
+  },
+  {
+   "id": "providence-steam-roller",
+   "name": "Providence Steam Roller",
+   "aliases": [
+    "Providence Steamroller",
+    "Steam Roller",
+    "Steamroller",
+    "Providence"
+   ],
+   "tier": 5,
+   "note": "Defunct NFL franchise, 1925-1931",
+   "source": "https://www.profootballhof.com/football-history/national-footbal-league-franchise-histories"
+  },
+  {
+   "id": "frankford-yellow-jackets",
+   "name": "Frankford Yellow Jackets",
+   "aliases": [
+    "Frankford Yellowjackets",
+    "Yellow Jackets",
+    "Yellowjackets"
+   ],
+   "tier": 5,
+   "note": "Defunct NFL franchise, 1924-1931",
+   "source": "https://www.profootballhof.com/football-history/national-footbal-league-franchise-histories"
+  },
+  {
+   "id": "dayton-triangles",
+   "name": "Dayton Triangles",
+   "aliases": [
+    "Triangles",
+    "Dayton"
+   ],
+   "tier": 6,
+   "note": "Defunct NFL franchise, 1920-1929",
+   "source": "https://www.profootballhof.com/football-history/national-footbal-league-franchise-histories"
+  },
+  {
+   "id": "akron-pros",
+   "name": "Akron Pros",
+   "aliases": [
+    "Akron Indians",
+    "Akron"
+   ],
+   "tier": 6,
+   "note": "Defunct NFL franchise, 1920-1926",
+   "source": "https://www.profootballhof.com/football-history/national-footbal-league-franchise-histories"
+  },
+  {
+   "id": "rock-island-independents",
+   "name": "Rock Island Independents",
+   "aliases": [
+    "Independents",
+    "Rock Island"
+   ],
+   "tier": 6,
+   "note": "Defunct NFL franchise, 1920-1925",
+   "source": "https://www.profootballhof.com/football-history/national-footbal-league-franchise-histories"
+  },
+  {
+   "id": "hammond-pros",
+   "name": "Hammond Pros",
+   "aliases": [
+    "Hammond"
+   ],
+   "tier": 6,
+   "note": "Defunct NFL franchise, 1920-1926",
+   "source": "https://www.profootballhof.com/football-history/national-footbal-league-franchise-histories"
+  },
+  {
+   "id": "muncie-flyers",
+   "name": "Muncie Flyers",
+   "aliases": [
+    "Flyers",
+    "Muncie"
+   ],
+   "tier": 6,
+   "note": "Defunct NFL franchise, 1920-1921",
+   "source": "https://www.profootballhof.com/football-history/national-footbal-league-franchise-histories"
+  },
+  {
+   "id": "milwaukee-badgers",
+   "name": "Milwaukee Badgers",
+   "aliases": [
+    "Badgers",
+    "Milwaukee"
+   ],
+   "tier": 6,
+   "note": "Defunct NFL franchise, 1922-1926",
+   "source": "https://www.profootballhof.com/football-history/national-footbal-league-franchise-histories"
+  },
+  {
+   "id": "racine-legion",
+   "name": "Racine Legion",
+   "aliases": [
+    "Racine Tornadoes",
+    "Racine"
+   ],
+   "tier": 6,
+   "note": "Defunct NFL franchise, 1922-1926",
+   "source": "https://www.profootballhof.com/football-history/national-footbal-league-franchise-histories"
+  },
+  {
+   "id": "rochester-jeffersons",
+   "name": "Rochester Jeffersons",
+   "aliases": [
+    "Jeffersons",
+    "Rochester"
+   ],
+   "tier": 6,
+   "note": "Defunct NFL franchise, 1920-1925",
+   "source": "https://www.profootballhof.com/football-history/national-footbal-league-franchise-histories"
+  },
+  {
+   "id": "evansville-crimson-giants",
+   "name": "Evansville Crimson Giants",
+   "aliases": [
+    "Crimson Giants",
+    "Evansville"
+   ],
+   "tier": 6,
+   "note": "Defunct NFL franchise, 1921-1922",
+   "source": "https://www.profootballhof.com/football-history/national-footbal-league-franchise-histories"
+  },
+  {
+   "id": "oorang-indians",
+   "name": "Oorang Indians",
+   "aliases": [
+    "Oorang"
+   ],
+   "tier": 6,
+   "note": "Defunct NFL franchise, 1922-1923",
+   "source": "https://www.profootballhof.com/football-history/national-footbal-league-franchise-histories"
+  },
+  {
+   "id": "staten-island-stapletons",
+   "name": "Staten Island Stapletons",
+   "aliases": [
+    "Stapletons",
+    "Staten Island Stapes",
+    "Stapes"
+   ],
+   "tier": 6,
+   "note": "Defunct NFL franchise, 1929-1932",
+   "source": "https://www.profootballhof.com/football-history/national-footbal-league-franchise-histories"
+  },
+  {
+   "id": "orange-tornadoes",
+   "name": "Orange Tornadoes",
+   "aliases": [
+    "Newark Tornadoes"
+   ],
+   "tier": 6,
+   "note": "Defunct NFL franchise, 1929-1930 (Orange, then Newark)",
+   "source": "https://www.profootballhof.com/football-history/national-footbal-league-franchise-histories"
+  },
+  {
+   "id": "louisville-colonels",
+   "name": "Louisville Colonels",
+   "aliases": [
+    "Louisville Brecks",
+    "Louisville Breckenridges",
+    "Brecks"
+   ],
+   "tier": 6,
+   "note": "Defunct NFL franchise, 1921-1923, 1926",
+   "source": "https://www.profootballhof.com/football-history/national-footbal-league-franchise-histories"
+  },
+  {
+   "id": "columbus-panhandles",
+   "name": "Columbus Panhandles",
+   "aliases": [
+    "Columbus Tigers",
+    "Panhandles"
+   ],
+   "tier": 6,
+   "note": "Defunct NFL franchise, 1920-1926",
+   "source": "https://www.profootballhof.com/football-history/national-footbal-league-franchise-histories"
+  },
+  {
+   "id": "toledo-maroons",
+   "name": "Toledo Maroons",
+   "aliases": [
+    "Toledo"
+   ],
+   "tier": 6,
+   "note": "Defunct NFL franchise, 1922-1923",
+   "source": "https://www.profootballhof.com/football-history/national-footbal-league-franchise-histories"
+  },
+  {
+   "id": "kenosha-maroons",
+   "name": "Kenosha Maroons",
+   "aliases": [
+    "Kenosha"
+   ],
+   "tier": 6,
+   "note": "Defunct NFL franchise, 1924",
+   "source": "https://www.profootballhof.com/football-history/national-footbal-league-franchise-histories"
+  },
+  {
+   "id": "hartford-blues",
+   "name": "Hartford Blues",
+   "aliases": [
+    "Hartford"
+   ],
+   "tier": 6,
+   "note": "Defunct NFL franchise, 1926",
+   "source": "https://www.profootballhof.com/football-history/national-footbal-league-franchise-histories"
+  },
+  {
+   "id": "cincinnati-reds",
+   "name": "Cincinnati Reds",
+   "aliases": [
+    "Reds"
+   ],
+   "tier": 6,
+   "note": "Defunct NFL franchise, 1933-1934",
+   "source": "https://www.profootballhof.com/football-history/national-footbal-league-franchise-histories"
+  },
+  {
+   "id": "st-louis-gunners",
+   "name": "St. Louis Gunners",
+   "aliases": [
+    "Saint Louis Gunners",
+    "Gunners"
+   ],
+   "tier": 6,
+   "note": "Defunct NFL franchise, 1934",
+   "source": "https://www.profootballhof.com/football-history/national-footbal-league-franchise-histories"
+  },
+  {
+   "id": "minneapolis-marines",
+   "name": "Minneapolis Marines",
+   "aliases": [
+    "Minneapolis Red Jackets",
+    "Minneapolis Redjackets",
+    "Marines"
+   ],
+   "tier": 6,
+   "note": "Defunct NFL franchise, 1921-1924, 1929-1930",
+   "source": "https://www.profootballhof.com/football-history/national-footbal-league-franchise-histories"
+  },
+  {
+   "id": "buffalo-all-americans",
+   "name": "Buffalo All-Americans",
+   "aliases": [
+    "Buffalo Bisons",
+    "Buffalo Rangers",
+    "All-Americans"
+   ],
+   "tier": 6,
+   "note": "Defunct NFL franchise, 1920-1929",
+   "source": "https://www.profootballhof.com/football-history/national-footbal-league-franchise-histories"
+  },
+  {
+   "id": "cleveland-bulldogs",
+   "name": "Cleveland Bulldogs",
+   "aliases": [
+    "Cleveland Indians"
+   ],
+   "tier": 6,
+   "note": "Defunct NFL franchise, 1923-1927 (Indians, then Bulldogs)",
+   "source": "https://www.profootballhof.com/football-history/national-footbal-league-franchise-histories"
+  },
+  {
+   "id": "detroit-wolverines",
+   "name": "Detroit Wolverines",
+   "aliases": [
+    "Wolverines"
+   ],
+   "tier": 6,
+   "note": "Defunct NFL franchise, 1928",
+   "source": "https://www.profootballhof.com/football-history/national-footbal-league-franchise-histories"
+  },
+  {
+   "id": "tonawanda-kardex",
+   "name": "Tonawanda Kardex",
+   "aliases": [
+    "Kardex",
+    "Tonawanda"
+   ],
+   "tier": 6,
+   "note": "Defunct NFL franchise, 1921",
+   "source": "https://www.profootballhof.com/football-history/national-footbal-league-franchise-histories"
+  },
+  {
+   "id": "new-york-yankees",
+   "name": "New York Yankees",
+   "aliases": [
+    "Yankees"
+   ],
+   "tier": 6,
+   "note": "Defunct NFL franchise, 1927-1928",
+   "source": "https://www.profootballhof.com/football-history/national-footbal-league-franchise-histories"
+  },
+  {
+   "id": "cincinnati-celts",
+   "name": "Cincinnati Celts",
+   "aliases": [
+    "Celts"
+   ],
+   "tier": 6,
+   "note": "Defunct NFL franchise, 1921",
+   "source": "https://www.profootballhof.com/football-history/national-footbal-league-franchise-histories"
+  },
+  {
+   "id": "washington-senators",
+   "name": "Washington Senators",
+   "aliases": [
+    "Senators"
+   ],
+   "tier": 6,
+   "note": "Defunct NFL franchise, 1921",
+   "source": "https://www.profootballhof.com/football-history/national-footbal-league-franchise-histories"
+  }
+ ]
+}

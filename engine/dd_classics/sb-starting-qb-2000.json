@@ -1,0 +1,315 @@
+{
+ "version": 1,
+ "key": "sb-starting-qb-2000",
+ "cat": "Super Bowl",
+ "text": "Name a quarterback who has started a Super Bowl since the 2000 season",
+ "era": "2000+",
+ "group": "sb-qb",
+ "sources": [
+  "https://en.wikipedia.org/wiki/List_of_Super_Bowl_starting_quarterbacks",
+  "https://www.profootballhof.com/news/super-bowl-starting-qbs"
+ ],
+ "answers": [
+  {
+   "id": "tom-brady",
+   "name": "Tom Brady",
+   "aliases": [
+    "Brady"
+   ],
+   "tier": 1,
+   "note": "10 Super Bowl starts",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_starting_quarterbacks"
+  },
+  {
+   "id": "patrick-mahomes",
+   "name": "Patrick Mahomes",
+   "aliases": [
+    "Mahomes"
+   ],
+   "tier": 1,
+   "note": "5 starts",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_starting_quarterbacks"
+  },
+  {
+   "id": "peyton-manning",
+   "name": "Peyton Manning",
+   "aliases": [
+    "Peyton"
+   ],
+   "tier": 1,
+   "note": "XLI, XLIV, XLVIII, 50",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_starting_quarterbacks"
+  },
+  {
+   "id": "eli-manning",
+   "name": "Eli Manning",
+   "aliases": [
+    "Eli"
+   ],
+   "tier": 1,
+   "note": "XLII, XLVI",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_starting_quarterbacks"
+  },
+  {
+   "id": "aaron-rodgers",
+   "name": "Aaron Rodgers",
+   "aliases": [
+    "Rodgers"
+   ],
+   "tier": 1,
+   "note": "XLV",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_starting_quarterbacks"
+  },
+  {
+   "id": "drew-brees",
+   "name": "Drew Brees",
+   "aliases": [
+    "Brees"
+   ],
+   "tier": 1,
+   "note": "XLIV",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_starting_quarterbacks"
+  },
+  {
+   "id": "ben-roethlisberger",
+   "name": "Ben Roethlisberger",
+   "aliases": [
+    "Big Ben",
+    "Roethlisberger"
+   ],
+   "tier": 2,
+   "note": "XL, XLIII, XLV",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_starting_quarterbacks"
+  },
+  {
+   "id": "russell-wilson",
+   "name": "Russell Wilson",
+   "aliases": [
+    "Wilson"
+   ],
+   "tier": 2,
+   "note": "XLVIII, XLIX",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_starting_quarterbacks"
+  },
+  {
+   "id": "matthew-stafford",
+   "name": "Matthew Stafford",
+   "aliases": [
+    "Matt Stafford"
+   ],
+   "tier": 2,
+   "note": "LVI",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_starting_quarterbacks"
+  },
+  {
+   "id": "jalen-hurts",
+   "name": "Jalen Hurts",
+   "aliases": [
+    "Hurts"
+   ],
+   "tier": 2,
+   "note": "LVII, LIX",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_starting_quarterbacks"
+  },
+  {
+   "id": "joe-burrow",
+   "name": "Joe Burrow",
+   "aliases": [
+    "Burrow"
+   ],
+   "tier": 2,
+   "note": "LVI (Bengals)",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_starting_quarterbacks"
+  },
+  {
+   "id": "cam-newton",
+   "name": "Cam Newton",
+   "aliases": [
+    "Newton"
+   ],
+   "tier": 2,
+   "note": "50 (Panthers)",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_starting_quarterbacks"
+  },
+  {
+   "id": "colin-kaepernick",
+   "name": "Colin Kaepernick",
+   "aliases": [
+    "Kaepernick",
+    "Kap"
+   ],
+   "tier": 3,
+   "note": "XLVII (49ers)",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_starting_quarterbacks"
+  },
+  {
+   "id": "matt-ryan",
+   "name": "Matt Ryan",
+   "aliases": [
+    "Ryan"
+   ],
+   "tier": 3,
+   "note": "LI (Falcons)",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_starting_quarterbacks"
+  },
+  {
+   "id": "brock-purdy",
+   "name": "Brock Purdy",
+   "aliases": [
+    "Purdy"
+   ],
+   "tier": 3,
+   "note": "LVIII (49ers)",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_starting_quarterbacks"
+  },
+  {
+   "id": "jared-goff",
+   "name": "Jared Goff",
+   "aliases": [
+    "Goff"
+   ],
+   "tier": 3,
+   "note": "LIII (Rams)",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_starting_quarterbacks"
+  },
+  {
+   "id": "kurt-warner",
+   "name": "Kurt Warner",
+   "aliases": [
+    "Warner"
+   ],
+   "tier": 3,
+   "note": "XXXVI (Rams), XLIII (Cardinals)",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_starting_quarterbacks"
+  },
+  {
+   "id": "donovan-mcnabb",
+   "name": "Donovan McNabb",
+   "aliases": [
+    "McNabb"
+   ],
+   "tier": 3,
+   "note": "XXXIX (Eagles)",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_starting_quarterbacks"
+  },
+  {
+   "id": "joe-flacco",
+   "name": "Joe Flacco",
+   "aliases": [
+    "Flacco"
+   ],
+   "tier": 4,
+   "note": "XLVII",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_starting_quarterbacks"
+  },
+  {
+   "id": "nick-foles",
+   "name": "Nick Foles",
+   "aliases": [
+    "Foles"
+   ],
+   "tier": 4,
+   "note": "LII",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_starting_quarterbacks"
+  },
+  {
+   "id": "jimmy-garoppolo",
+   "name": "Jimmy Garoppolo",
+   "aliases": [
+    "Garoppolo",
+    "Jimmy G"
+   ],
+   "tier": 4,
+   "note": "LIV (49ers)",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_starting_quarterbacks"
+  },
+  {
+   "id": "sam-darnold",
+   "name": "Sam Darnold",
+   "aliases": [
+    "Darnold"
+   ],
+   "tier": 4,
+   "note": "LX (Seahawks)",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_starting_quarterbacks"
+  },
+  {
+   "id": "drake-maye",
+   "name": "Drake Maye",
+   "aliases": [
+    "Maye"
+   ],
+   "tier": 4,
+   "note": "LX (Patriots)",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_starting_quarterbacks"
+  },
+  {
+   "id": "matt-hasselbeck",
+   "name": "Matt Hasselbeck",
+   "aliases": [
+    "Hasselbeck"
+   ],
+   "tier": 5,
+   "note": "XL (Seahawks)",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_starting_quarterbacks"
+  },
+  {
+   "id": "rich-gannon",
+   "name": "Rich Gannon",
+   "aliases": [
+    "Gannon"
+   ],
+   "tier": 5,
+   "note": "XXXVII (Raiders)",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_starting_quarterbacks"
+  },
+  {
+   "id": "jake-delhomme",
+   "name": "Jake Delhomme",
+   "aliases": [
+    "Delhomme"
+   ],
+   "tier": 5,
+   "note": "XXXVIII (Panthers)",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_starting_quarterbacks"
+  },
+  {
+   "id": "kerry-collins",
+   "name": "Kerry Collins",
+   "aliases": [
+    "Collins"
+   ],
+   "tier": 5,
+   "note": "XXXV (Giants)",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_starting_quarterbacks"
+  },
+  {
+   "id": "rex-grossman",
+   "name": "Rex Grossman",
+   "aliases": [
+    "Grossman"
+   ],
+   "tier": 6,
+   "note": "XLI (Bears)",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_starting_quarterbacks"
+  },
+  {
+   "id": "brad-johnson",
+   "name": "Brad Johnson",
+   "aliases": [],
+   "tier": 6,
+   "note": "XXXVII (Buccaneers)",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_starting_quarterbacks"
+  },
+  {
+   "id": "trent-dilfer",
+   "name": "Trent Dilfer",
+   "aliases": [
+    "Dilfer"
+   ],
+   "tier": 6,
+   "note": "XXXV (Ravens)",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_starting_quarterbacks"
+  }
+ ]
+}

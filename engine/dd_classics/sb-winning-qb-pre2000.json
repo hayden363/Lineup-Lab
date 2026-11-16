@@ -1,0 +1,221 @@
+{
+ "version": 1,
+ "key": "sb-winning-qb-pre2000",
+ "cat": "Super Bowl",
+ "text": "Name a quarterback who won a Super Bowl before the 2000 season",
+ "era": "pre2000",
+ "group": "sb-qb-old",
+ "sources": [
+  "https://en.wikipedia.org/wiki/List_of_Super_Bowl_starting_quarterbacks",
+  "https://www.profootballhof.com/news/super-bowl-starting-qbs",
+  "https://en.wikipedia.org/wiki/List_of_Super_Bowl_champions"
+ ],
+ "answers": [
+  {
+   "id": "joe-montana",
+   "name": "Joe Montana",
+   "aliases": [
+    "Montana"
+   ],
+   "tier": 1,
+   "note": "XVI, XIX, XXIII, XXIV (49ers)",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_starting_quarterbacks"
+  },
+  {
+   "id": "troy-aikman",
+   "name": "Troy Aikman",
+   "aliases": [
+    "Aikman"
+   ],
+   "tier": 1,
+   "note": "XXVII, XXVIII, XXX (Cowboys)",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_starting_quarterbacks"
+  },
+  {
+   "id": "john-elway",
+   "name": "John Elway",
+   "aliases": [
+    "Elway"
+   ],
+   "tier": 1,
+   "note": "XXXII, XXXIII (Broncos)",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_starting_quarterbacks"
+  },
+  {
+   "id": "terry-bradshaw",
+   "name": "Terry Bradshaw",
+   "aliases": [
+    "Bradshaw"
+   ],
+   "tier": 1,
+   "note": "IX, X, XIII, XIV (Steelers)",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_starting_quarterbacks"
+  },
+  {
+   "id": "joe-namath",
+   "name": "Joe Namath",
+   "aliases": [
+    "Namath"
+   ],
+   "tier": 1,
+   "note": "III (Jets)",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_starting_quarterbacks"
+  },
+  {
+   "id": "bart-starr",
+   "name": "Bart Starr",
+   "aliases": [
+    "Starr"
+   ],
+   "tier": 2,
+   "note": "I, II (Packers)",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_starting_quarterbacks"
+  },
+  {
+   "id": "steve-young",
+   "name": "Steve Young",
+   "aliases": [],
+   "tier": 2,
+   "note": "XXIX (49ers)",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_starting_quarterbacks"
+  },
+  {
+   "id": "roger-staubach",
+   "name": "Roger Staubach",
+   "aliases": [
+    "Staubach"
+   ],
+   "tier": 2,
+   "note": "VI, XII (Cowboys)",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_starting_quarterbacks"
+  },
+  {
+   "id": "brett-favre",
+   "name": "Brett Favre",
+   "aliases": [
+    "Favre"
+   ],
+   "tier": 2,
+   "note": "XXXI (Packers)",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_starting_quarterbacks"
+  },
+  {
+   "id": "johnny-unitas",
+   "name": "Johnny Unitas",
+   "aliases": [
+    "Unitas"
+   ],
+   "tier": 3,
+   "note": "V (Colts)",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_starting_quarterbacks"
+  },
+  {
+   "id": "bob-griese",
+   "name": "Bob Griese",
+   "aliases": [
+    "Griese"
+   ],
+   "tier": 3,
+   "note": "VII, VIII (Dolphins)",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_starting_quarterbacks"
+  },
+  {
+   "id": "phil-simms",
+   "name": "Phil Simms",
+   "aliases": [
+    "Simms"
+   ],
+   "tier": 3,
+   "note": "XXI (Giants)",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_starting_quarterbacks"
+  },
+  {
+   "id": "ken-stabler",
+   "name": "Ken Stabler",
+   "aliases": [
+    "Stabler"
+   ],
+   "tier": 3,
+   "note": "XI (Raiders)",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_starting_quarterbacks"
+  },
+  {
+   "id": "len-dawson",
+   "name": "Len Dawson",
+   "aliases": [
+    "Dawson"
+   ],
+   "tier": 4,
+   "note": "IV (Chiefs)",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_starting_quarterbacks"
+  },
+  {
+   "id": "kurt-warner",
+   "name": "Kurt Warner",
+   "aliases": [
+    "Warner"
+   ],
+   "tier": 4,
+   "note": "XXXIV (Rams, January 2000)",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_starting_quarterbacks"
+  },
+  {
+   "id": "jim-mcmahon",
+   "name": "Jim McMahon",
+   "aliases": [
+    "McMahon"
+   ],
+   "tier": 4,
+   "note": "XX (Bears)",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_starting_quarterbacks"
+  },
+  {
+   "id": "jim-plunkett",
+   "name": "Jim Plunkett",
+   "aliases": [
+    "Plunkett"
+   ],
+   "tier": 5,
+   "note": "XV, XVIII (Raiders)",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_starting_quarterbacks"
+  },
+  {
+   "id": "doug-williams",
+   "name": "Doug Williams",
+   "aliases": [],
+   "tier": 5,
+   "note": "XXII (Redskins)",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_starting_quarterbacks"
+  },
+  {
+   "id": "mark-rypien",
+   "name": "Mark Rypien",
+   "aliases": [
+    "Rypien"
+   ],
+   "tier": 5,
+   "note": "XXVI (Redskins)",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_starting_quarterbacks"
+  },
+  {
+   "id": "joe-theismann",
+   "name": "Joe Theismann",
+   "aliases": [
+    "Theismann"
+   ],
+   "tier": 6,
+   "note": "XVII (Redskins)",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_starting_quarterbacks"
+  },
+  {
+   "id": "jeff-hostetler",
+   "name": "Jeff Hostetler",
+   "aliases": [
+    "Hostetler"
+   ],
+   "tier": 6,
+   "note": "XXV (Giants)",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_starting_quarterbacks"
+  }
+ ]
+}

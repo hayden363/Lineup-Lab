@@ -1,0 +1,325 @@
+{
+ "version": 1,
+ "key": "career-rushing-10k",
+ "cat": "Career records",
+ "text": "Name a player with 10,000 or more career rushing yards",
+ "era": "all",
+ "group": "records-off",
+ "sources": [
+  "https://en.wikipedia.org/wiki/List_of_NFL_career_rushing_yards_leaders",
+  "https://www.profootballhof.com/top-20-rushing-yards"
+ ],
+ "answers": [
+  {
+   "id": "emmitt-smith",
+   "name": "Emmitt Smith",
+   "aliases": [
+    "Smith"
+   ],
+   "tier": 1,
+   "note": "18,355, the NFL record",
+   "source": "https://en.wikipedia.org/wiki/List_of_NFL_career_rushing_yards_leaders"
+  },
+  {
+   "id": "walter-payton",
+   "name": "Walter Payton",
+   "aliases": [
+    "Payton",
+    "Sweetness"
+   ],
+   "tier": 1,
+   "note": "16,726",
+   "source": "https://en.wikipedia.org/wiki/List_of_NFL_career_rushing_yards_leaders"
+  },
+  {
+   "id": "barry-sanders",
+   "name": "Barry Sanders",
+   "aliases": [
+    "Sanders"
+   ],
+   "tier": 1,
+   "note": "15,269",
+   "source": "https://en.wikipedia.org/wiki/List_of_NFL_career_rushing_yards_leaders"
+  },
+  {
+   "id": "adrian-peterson",
+   "name": "Adrian Peterson",
+   "aliases": [
+    "AP",
+    "Peterson"
+   ],
+   "tier": 1,
+   "note": "14,918",
+   "source": "https://en.wikipedia.org/wiki/List_of_NFL_career_rushing_yards_leaders"
+  },
+  {
+   "id": "derrick-henry",
+   "name": "Derrick Henry",
+   "aliases": [
+    "Henry"
+   ],
+   "tier": 1,
+   "note": "13,000+",
+   "source": "https://en.wikipedia.org/wiki/List_of_NFL_career_rushing_yards_leaders"
+  },
+  {
+   "id": "ladainian-tomlinson",
+   "name": "LaDainian Tomlinson",
+   "aliases": [
+    "LT",
+    "Tomlinson"
+   ],
+   "tier": 1,
+   "note": "13,684",
+   "source": "https://en.wikipedia.org/wiki/List_of_NFL_career_rushing_yards_leaders"
+  },
+  {
+   "id": "frank-gore",
+   "name": "Frank Gore",
+   "aliases": [
+    "Gore"
+   ],
+   "tier": 1,
+   "note": "16,000",
+   "source": "https://en.wikipedia.org/wiki/List_of_NFL_career_rushing_yards_leaders"
+  },
+  {
+   "id": "eric-dickerson",
+   "name": "Eric Dickerson",
+   "aliases": [
+    "Dickerson"
+   ],
+   "tier": 2,
+   "note": "13,259",
+   "source": "https://en.wikipedia.org/wiki/List_of_NFL_career_rushing_yards_leaders"
+  },
+  {
+   "id": "jim-brown",
+   "name": "Jim Brown",
+   "aliases": [
+    "Brown"
+   ],
+   "tier": 2,
+   "note": "12,312",
+   "source": "https://en.wikipedia.org/wiki/List_of_NFL_career_rushing_yards_leaders"
+  },
+  {
+   "id": "curtis-martin",
+   "name": "Curtis Martin",
+   "aliases": [
+    "Martin"
+   ],
+   "tier": 2,
+   "note": "14,101",
+   "source": "https://en.wikipedia.org/wiki/List_of_NFL_career_rushing_yards_leaders"
+  },
+  {
+   "id": "jerome-bettis",
+   "name": "Jerome Bettis",
+   "aliases": [
+    "Bettis"
+   ],
+   "tier": 2,
+   "note": "13,662",
+   "source": "https://en.wikipedia.org/wiki/List_of_NFL_career_rushing_yards_leaders"
+  },
+  {
+   "id": "marshall-faulk",
+   "name": "Marshall Faulk",
+   "aliases": [
+    "Faulk"
+   ],
+   "tier": 2,
+   "note": "12,279",
+   "source": "https://en.wikipedia.org/wiki/List_of_NFL_career_rushing_yards_leaders"
+  },
+  {
+   "id": "marcus-allen",
+   "name": "Marcus Allen",
+   "aliases": [
+    "Allen"
+   ],
+   "tier": 2,
+   "note": "12,243",
+   "source": "https://en.wikipedia.org/wiki/List_of_NFL_career_rushing_yards_leaders"
+  },
+  {
+   "id": "tony-dorsett",
+   "name": "Tony Dorsett",
+   "aliases": [
+    "Dorsett"
+   ],
+   "tier": 3,
+   "note": "12,739",
+   "source": "https://en.wikipedia.org/wiki/List_of_NFL_career_rushing_yards_leaders"
+  },
+  {
+   "id": "o-j-simpson",
+   "name": "O.J. Simpson",
+   "aliases": [
+    "OJ Simpson",
+    "Simpson"
+   ],
+   "tier": 3,
+   "note": "11,236",
+   "source": "https://en.wikipedia.org/wiki/List_of_NFL_career_rushing_yards_leaders"
+  },
+  {
+   "id": "thurman-thomas",
+   "name": "Thurman Thomas",
+   "aliases": [],
+   "tier": 3,
+   "note": "12,074",
+   "source": "https://en.wikipedia.org/wiki/List_of_NFL_career_rushing_yards_leaders"
+  },
+  {
+   "id": "franco-harris",
+   "name": "Franco Harris",
+   "aliases": [
+    "Harris"
+   ],
+   "tier": 3,
+   "note": "12,120",
+   "source": "https://en.wikipedia.org/wiki/List_of_NFL_career_rushing_yards_leaders"
+  },
+  {
+   "id": "edgerrin-james",
+   "name": "Edgerrin James",
+   "aliases": [
+    "James"
+   ],
+   "tier": 3,
+   "note": "12,246",
+   "source": "https://en.wikipedia.org/wiki/List_of_NFL_career_rushing_yards_leaders"
+  },
+  {
+   "id": "marshawn-lynch",
+   "name": "Marshawn Lynch",
+   "aliases": [
+    "Lynch"
+   ],
+   "tier": 3,
+   "note": "10,413",
+   "source": "https://en.wikipedia.org/wiki/List_of_NFL_career_rushing_yards_leaders"
+  },
+  {
+   "id": "lesean-mccoy",
+   "name": "LeSean McCoy",
+   "aliases": [
+    "Shady McCoy",
+    "McCoy"
+   ],
+   "tier": 3,
+   "note": "11,000+",
+   "source": "https://en.wikipedia.org/wiki/List_of_NFL_career_rushing_yards_leaders"
+  },
+  {
+   "id": "fred-taylor",
+   "name": "Fred Taylor",
+   "aliases": [],
+   "tier": 4,
+   "note": "11,695",
+   "source": "https://en.wikipedia.org/wiki/List_of_NFL_career_rushing_yards_leaders"
+  },
+  {
+   "id": "steven-jackson",
+   "name": "Steven Jackson",
+   "aliases": [],
+   "tier": 4,
+   "note": "11,438",
+   "source": "https://en.wikipedia.org/wiki/List_of_NFL_career_rushing_yards_leaders"
+  },
+  {
+   "id": "john-riggins",
+   "name": "John Riggins",
+   "aliases": [
+    "Riggins"
+   ],
+   "tier": 4,
+   "note": "11,352",
+   "source": "https://en.wikipedia.org/wiki/List_of_NFL_career_rushing_yards_leaders"
+  },
+  {
+   "id": "corey-dillon",
+   "name": "Corey Dillon",
+   "aliases": [
+    "Dillon"
+   ],
+   "tier": 4,
+   "note": "11,241",
+   "source": "https://en.wikipedia.org/wiki/List_of_NFL_career_rushing_yards_leaders"
+  },
+  {
+   "id": "warrick-dunn",
+   "name": "Warrick Dunn",
+   "aliases": [
+    "Dunn"
+   ],
+   "tier": 5,
+   "note": "10,967",
+   "source": "https://en.wikipedia.org/wiki/List_of_NFL_career_rushing_yards_leaders"
+  },
+  {
+   "id": "jamal-lewis",
+   "name": "Jamal Lewis",
+   "aliases": [],
+   "tier": 5,
+   "note": "10,607",
+   "source": "https://en.wikipedia.org/wiki/List_of_NFL_career_rushing_yards_leaders"
+  },
+  {
+   "id": "tiki-barber",
+   "name": "Tiki Barber",
+   "aliases": [
+    "Barber"
+   ],
+   "tier": 5,
+   "note": "10,449",
+   "source": "https://en.wikipedia.org/wiki/List_of_NFL_career_rushing_yards_leaders"
+  },
+  {
+   "id": "eddie-george",
+   "name": "Eddie George",
+   "aliases": [
+    "George"
+   ],
+   "tier": 5,
+   "note": "10,441",
+   "source": "https://en.wikipedia.org/wiki/List_of_NFL_career_rushing_yards_leaders"
+  },
+  {
+   "id": "ricky-williams",
+   "name": "Ricky Williams",
+   "aliases": [],
+   "tier": 5,
+   "note": "10,009",
+   "source": "https://en.wikipedia.org/wiki/List_of_NFL_career_rushing_yards_leaders"
+  },
+  {
+   "id": "ricky-watters",
+   "name": "Ricky Watters",
+   "aliases": [
+    "Watters"
+   ],
+   "tier": 6,
+   "note": "10,643",
+   "source": "https://en.wikipedia.org/wiki/List_of_NFL_career_rushing_yards_leaders"
+  },
+  {
+   "id": "thomas-jones",
+   "name": "Thomas Jones",
+   "aliases": [],
+   "tier": 6,
+   "note": "10,591",
+   "source": "https://en.wikipedia.org/wiki/List_of_NFL_career_rushing_yards_leaders"
+  },
+  {
+   "id": "ottis-anderson",
+   "name": "Ottis Anderson",
+   "aliases": [],
+   "tier": 6,
+   "note": "10,273",
+   "source": "https://en.wikipedia.org/wiki/List_of_NFL_career_rushing_yards_leaders"
+  }
+ ]
+}

@@ -1,0 +1,235 @@
+{
+ "version": 1,
+ "key": "nfl-opoy-2000",
+ "cat": "NFL awards",
+ "text": "Name a player who has won AP Offensive Player of the Year since the 2000 season",
+ "era": "2000+",
+ "group": "opoy",
+ "sources": [
+  "https://apnews.com/article/nfl-offensive-player-award-b200f07d5750a45dd33f78fddf9cfe28",
+  "https://en.wikipedia.org/wiki/AP_NFL_Offensive_Player_of_the_Year",
+  "https://www.nfl.com/news/list-of-nfl-honors-award-winners-from-2025-nfl-season"
+ ],
+ "answers": [
+  {
+   "id": "patrick-mahomes",
+   "name": "Patrick Mahomes",
+   "aliases": [
+    "Mahomes"
+   ],
+   "tier": 1,
+   "note": "2018",
+   "source": "https://apnews.com/article/nfl-offensive-player-award-b200f07d5750a45dd33f78fddf9cfe28"
+  },
+  {
+   "id": "tom-brady",
+   "name": "Tom Brady",
+   "aliases": [
+    "Brady"
+   ],
+   "tier": 1,
+   "note": "2007, 2010",
+   "source": "https://apnews.com/article/nfl-offensive-player-award-b200f07d5750a45dd33f78fddf9cfe28"
+  },
+  {
+   "id": "peyton-manning",
+   "name": "Peyton Manning",
+   "aliases": [
+    "Peyton"
+   ],
+   "tier": 1,
+   "note": "2004, 2013",
+   "source": "https://apnews.com/article/nfl-offensive-player-award-b200f07d5750a45dd33f78fddf9cfe28"
+  },
+  {
+   "id": "saquon-barkley",
+   "name": "Saquon Barkley",
+   "aliases": [
+    "Barkley"
+   ],
+   "tier": 1,
+   "note": "2024",
+   "source": "https://apnews.com/article/nfl-offensive-player-award-b200f07d5750a45dd33f78fddf9cfe28"
+  },
+  {
+   "id": "derrick-henry",
+   "name": "Derrick Henry",
+   "aliases": [
+    "Henry"
+   ],
+   "tier": 1,
+   "note": "2020",
+   "source": "https://apnews.com/article/nfl-offensive-player-award-b200f07d5750a45dd33f78fddf9cfe28"
+  },
+  {
+   "id": "christian-mccaffrey",
+   "name": "Christian McCaffrey",
+   "aliases": [
+    "CMC",
+    "McCaffrey"
+   ],
+   "tier": 2,
+   "note": "2023",
+   "source": "https://apnews.com/article/nfl-offensive-player-award-b200f07d5750a45dd33f78fddf9cfe28"
+  },
+  {
+   "id": "drew-brees",
+   "name": "Drew Brees",
+   "aliases": [
+    "Brees"
+   ],
+   "tier": 2,
+   "note": "2008, 2011",
+   "source": "https://apnews.com/article/nfl-offensive-player-award-b200f07d5750a45dd33f78fddf9cfe28"
+  },
+  {
+   "id": "cam-newton",
+   "name": "Cam Newton",
+   "aliases": [
+    "Newton"
+   ],
+   "tier": 2,
+   "note": "2015",
+   "source": "https://apnews.com/article/nfl-offensive-player-award-b200f07d5750a45dd33f78fddf9cfe28"
+  },
+  {
+   "id": "adrian-peterson",
+   "name": "Adrian Peterson",
+   "aliases": [
+    "Peterson"
+   ],
+   "tier": 2,
+   "note": "2012",
+   "source": "https://apnews.com/article/nfl-offensive-player-award-b200f07d5750a45dd33f78fddf9cfe28"
+  },
+  {
+   "id": "ladainian-tomlinson",
+   "name": "LaDainian Tomlinson",
+   "aliases": [
+    "LT",
+    "Tomlinson"
+   ],
+   "tier": 3,
+   "note": "2006",
+   "source": "https://apnews.com/article/nfl-offensive-player-award-b200f07d5750a45dd33f78fddf9cfe28"
+  },
+  {
+   "id": "cooper-kupp",
+   "name": "Cooper Kupp",
+   "aliases": [
+    "Kupp"
+   ],
+   "tier": 3,
+   "note": "2021",
+   "source": "https://apnews.com/article/nfl-offensive-player-award-b200f07d5750a45dd33f78fddf9cfe28"
+  },
+  {
+   "id": "justin-jefferson",
+   "name": "Justin Jefferson",
+   "aliases": [
+    "Jefferson"
+   ],
+   "tier": 3,
+   "note": "2022",
+   "source": "https://apnews.com/article/nfl-offensive-player-award-b200f07d5750a45dd33f78fddf9cfe28"
+  },
+  {
+   "id": "marshall-faulk",
+   "name": "Marshall Faulk",
+   "aliases": [
+    "Faulk"
+   ],
+   "tier": 3,
+   "note": "2000, 2001",
+   "source": "https://apnews.com/article/nfl-offensive-player-award-b200f07d5750a45dd33f78fddf9cfe28"
+  },
+  {
+   "id": "matt-ryan",
+   "name": "Matt Ryan",
+   "aliases": [
+    "Ryan"
+   ],
+   "tier": 3,
+   "note": "2016",
+   "source": "https://apnews.com/article/nfl-offensive-player-award-b200f07d5750a45dd33f78fddf9cfe28"
+  },
+  {
+   "id": "todd-gurley",
+   "name": "Todd Gurley",
+   "aliases": [
+    "Gurley"
+   ],
+   "tier": 4,
+   "note": "2017",
+   "source": "https://apnews.com/article/nfl-offensive-player-award-b200f07d5750a45dd33f78fddf9cfe28"
+  },
+  {
+   "id": "shaun-alexander",
+   "name": "Shaun Alexander",
+   "aliases": [
+    "Alexander"
+   ],
+   "tier": 4,
+   "note": "2005",
+   "source": "https://apnews.com/article/nfl-offensive-player-award-b200f07d5750a45dd33f78fddf9cfe28"
+  },
+  {
+   "id": "chris-johnson",
+   "name": "Chris Johnson",
+   "aliases": [
+    "CJ2K"
+   ],
+   "tier": 4,
+   "note": "2009",
+   "source": "https://apnews.com/article/nfl-offensive-player-award-b200f07d5750a45dd33f78fddf9cfe28"
+  },
+  {
+   "id": "demarco-murray",
+   "name": "DeMarco Murray",
+   "aliases": [
+    "Murray"
+   ],
+   "tier": 5,
+   "note": "2014",
+   "source": "https://apnews.com/article/nfl-offensive-player-award-b200f07d5750a45dd33f78fddf9cfe28"
+  },
+  {
+   "id": "jaxon-smith-njigba",
+   "name": "Jaxon Smith-Njigba",
+   "aliases": [
+    "JSN",
+    "Smith Njigba",
+    "Jaxon Smith Njigba"
+   ],
+   "tier": 5,
+   "note": "2025",
+   "source": "https://apnews.com/article/nfl-offensive-player-award-b200f07d5750a45dd33f78fddf9cfe28"
+  },
+  {
+   "id": "michael-thomas",
+   "name": "Michael Thomas",
+   "aliases": [],
+   "tier": 5,
+   "note": "2019",
+   "source": "https://apnews.com/article/nfl-offensive-player-award-b200f07d5750a45dd33f78fddf9cfe28"
+  },
+  {
+   "id": "jamal-lewis",
+   "name": "Jamal Lewis",
+   "aliases": [],
+   "tier": 6,
+   "note": "2003",
+   "source": "https://apnews.com/article/nfl-offensive-player-award-b200f07d5750a45dd33f78fddf9cfe28"
+  },
+  {
+   "id": "priest-holmes",
+   "name": "Priest Holmes",
+   "aliases": [
+    "Holmes"
+   ],
+   "tier": 6,
+   "note": "2002",
+   "source": "https://apnews.com/article/nfl-offensive-player-award-b200f07d5750a45dd33f78fddf9cfe28"
+  }
+ ]
+}

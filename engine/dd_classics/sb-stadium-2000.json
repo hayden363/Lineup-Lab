@@ -1,0 +1,185 @@
+{
+ "version": 1,
+ "key": "sb-stadium-2000",
+ "cat": "Super Bowl",
+ "text": "Name a stadium that has hosted a Super Bowl since the 2000 season",
+ "era": "2000+",
+ "group": "sb-venue",
+ "sources": [
+  "https://en.wikipedia.org/wiki/List_of_Super_Bowl_champions",
+  "https://en.wikipedia.org/wiki/Chronology_of_home_stadiums_for_current_NFL_teams",
+  "https://en.wikipedia.org/wiki/List_of_current_NFL_stadiums"
+ ],
+ "answers": [
+  {
+   "id": "at-t-stadium",
+   "name": "AT&T Stadium",
+   "aliases": [
+    "Cowboys Stadium",
+    "ATT Stadium"
+   ],
+   "tier": 1,
+   "note": "Super Bowl XLV (2011)",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_champions"
+  },
+  {
+   "id": "sofi-stadium",
+   "name": "SoFi Stadium",
+   "aliases": [
+    "Sofi"
+   ],
+   "tier": 1,
+   "note": "Super Bowl LVI (2022)",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_champions"
+  },
+  {
+   "id": "caesars-superdome",
+   "name": "Caesars Superdome",
+   "aliases": [
+    "Superdome",
+    "Louisiana Superdome",
+    "Mercedes-Benz Superdome",
+    "Mercedes Benz Superdome",
+    "New Orleans Superdome"
+   ],
+   "tier": 1,
+   "note": "Super Bowls XXXVI, XLVII and LIX",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_champions"
+  },
+  {
+   "id": "raymond-james-stadium",
+   "name": "Raymond James Stadium",
+   "aliases": [
+    "Ray Jay"
+   ],
+   "tier": 1,
+   "note": "Super Bowls XXXV, XLIII, LV",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_champions"
+  },
+  {
+   "id": "hard-rock-stadium",
+   "name": "Hard Rock Stadium",
+   "aliases": [
+    "Sun Life Stadium",
+    "Dolphin Stadium",
+    "Pro Player Stadium",
+    "Land Shark Stadium",
+    "Joe Robbie Stadium"
+   ],
+   "tier": 2,
+   "note": "Super Bowls XLI and XLIV (as Dolphin / Sun Life) and LIV",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_champions"
+  },
+  {
+   "id": "state-farm-stadium",
+   "name": "State Farm Stadium",
+   "aliases": [
+    "University of Phoenix Stadium",
+    "Univ of Phoenix Stadium",
+    "Phoenix Stadium"
+   ],
+   "tier": 2,
+   "note": "Super Bowls XLII, XLIX, LVII",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_champions"
+  },
+  {
+   "id": "metlife-stadium",
+   "name": "MetLife Stadium",
+   "aliases": [
+    "Met Life Stadium"
+   ],
+   "tier": 2,
+   "note": "Super Bowl XLVIII (2014)",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_champions"
+  },
+  {
+   "id": "mercedes-benz-stadium",
+   "name": "Mercedes-Benz Stadium",
+   "aliases": [
+    "Mercedes Benz Stadium"
+   ],
+   "tier": 3,
+   "note": "Super Bowl LIII (2019)",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_champions"
+  },
+  {
+   "id": "levi-s-stadium",
+   "name": "Levi's Stadium",
+   "aliases": [
+    "Levis Stadium"
+   ],
+   "tier": 3,
+   "note": "Super Bowls 50 and LX",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_champions"
+  },
+  {
+   "id": "u-s-bank-stadium",
+   "name": "U.S. Bank Stadium",
+   "aliases": [
+    "US Bank Stadium"
+   ],
+   "tier": 3,
+   "note": "Super Bowl LII (2018)",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_champions"
+  },
+  {
+   "id": "lucas-oil-stadium",
+   "name": "Lucas Oil Stadium",
+   "aliases": [],
+   "tier": 4,
+   "note": "Super Bowl XLVI (2012)",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_champions"
+  },
+  {
+   "id": "nrg-stadium",
+   "name": "NRG Stadium",
+   "aliases": [
+    "Reliant Stadium"
+   ],
+   "tier": 4,
+   "note": "Super Bowls XXXVIII (as Reliant) and LI",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_champions"
+  },
+  {
+   "id": "allegiant-stadium",
+   "name": "Allegiant Stadium",
+   "aliases": [],
+   "tier": 5,
+   "note": "Super Bowl LVIII (2024)",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_champions"
+  },
+  {
+   "id": "ford-field",
+   "name": "Ford Field",
+   "aliases": [],
+   "tier": 5,
+   "note": "Super Bowl XL (2006)",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_champions"
+  },
+  {
+   "id": "qualcomm-stadium",
+   "name": "Qualcomm Stadium",
+   "aliases": [
+    "Jack Murphy Stadium",
+    "San Diego Stadium",
+    "SDCCU Stadium"
+   ],
+   "tier": 5,
+   "note": "Super Bowl XXXVII (2003)",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_champions"
+  },
+  {
+   "id": "everbank-stadium",
+   "name": "EverBank Stadium",
+   "aliases": [
+    "Alltel Stadium",
+    "Jacksonville Municipal Stadium",
+    "TIAA Bank Field",
+    "EverBank Field"
+   ],
+   "tier": 6,
+   "note": "Super Bowl XXXIX (2005, as Alltel Stadium)",
+   "source": "https://en.wikipedia.org/wiki/List_of_Super_Bowl_champions"
+  }
+ ]
+}
