@@ -37,13 +37,15 @@ def day_size():
     return sum(day_counts())
 
 # tier -> (name, yards, share emoji). Rarer = harder to think of = more yards.
+# Owner's tier colors (2026-11-16), lowest to highest: grey, light blue, red, purple, yellow, gold. The share
+# emoji follows the same colors.
 TIERS = {
-    6: ("Hall of Famer", 100, "\U0001F3C6"),
-    5: ("All-Pro", 85, "\U0001F7E3"),
-    4: ("Pro Bowler", 60, "\U0001F535"),
-    3: ("Starter", 30, "\U0001F7E2"),
-    2: ("Rotation", 15, "\U0001F7E1"),
-    1: ("Benchwarmer", 10, "⚪"),
+    6: ("Hall of Famer", 100, "\U0001F3C6"),   # gold trophy
+    5: ("All-Pro", 85, "\U0001F7E1"),          # yellow
+    4: ("Pro Bowler", 60, "\U0001F7E3"),       # purple
+    3: ("Starter", 30, "\U0001F534"),          # red
+    2: ("Rotation", 15, "\U0001F535"),         # (light) blue
+    1: ("Benchwarmer", 10, "⚪"),               # grey/white
 }
 # percentile of the popularity ranking (0 = most popular answer) at which each tier starts, from the
 # easiest tier up: top 20% Benchwarmer, next 20% Rotation, next 20% Starter, next 15% Pro Bowler, next 15%
@@ -441,9 +443,13 @@ def check_answer(answers, typed, used=()):
     return {"ok": False, "reason": "not in the answer bank", "suggestions": []}
 
 
+SACKED_EMOJI = "\u2B1B"   # black square (red is now the Starter tier)
+TIER_COLORS = {1: "#9aa3b2", 2: "#7cc7ff", 3: "#ff4d5e", 4: "#a970ff", 5: "#ffd84d", 6: "#f5b301"}
+
+
 def tier_info(tier):
     name, yards, emoji = TIERS[tier]
-    return {"tier": tier, "tier_name": name, "yards": yards, "emoji": emoji}
+    return {"tier": tier, "tier_name": name, "yards": yards, "emoji": emoji, "color": TIER_COLORS[tier]}
 
 
 ANSWER_EXTRAS = ("team", "position", "headshot", "stat", "stat_label")
@@ -468,7 +474,7 @@ def share_text(date_str, tiers, base_url="lineup-lab-awdv.onrender.com"):
     """Spoiler-free share card. `tiers` = per-prompt tier numbers, 0 for Sacked."""
     d = dt.date.fromisoformat(date_str)
     yards = sum(TIERS[t][1] for t in tiers if t)
-    squares = "".join(TIERS[t][2] if t else "\U0001F7E5" for t in tiers)
+    squares = "".join(TIERS[t][2] if t else SACKED_EMOJI for t in tiers)
     return f"The Daily Drive · {d.strftime('%b')} {d.day} · {yards} yds\n{squares}\n{base_url}/play"
 
 

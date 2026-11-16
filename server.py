@@ -2271,6 +2271,23 @@ def play_stats(request: Request, date: Optional[str] = None, device_id: Optional
         return {"available": False}
 
 
+@app.get("/api/play/leaderboard", dependencies=[Depends(play_rate_limit)])
+def play_leaderboard(request: Request, date: Optional[str] = None, device_id: Optional[str] = None):
+    """Today's top 5 signed-in players by yards, plus the caller's own rank among ALL players (anonymous included)
+    if they have a saved score. {available, players, top:[{rank, name, yards}], you:{rank, yards}|null}."""
+    key, _ = _play_puzzle(date)
+    dev_hash = dd_scores.device_hash(device_id)
+    user = _play_user(request)
+    try:
+        top = db.drive_leaderboard(key)
+        yards = _play_day_yards(key, False)
+        mine = db.drive_my_day(key, user["id"] if user else None, dev_hash) if (user or dev_hash) else None
+    except Exception as e:
+        print(f"[play] leaderboard unavailable: {type(e).__name__}")
+        return {"available": False}
+    return _clean(dd_scores.leaderboard_body(top, yards, mine["yards"] if mine else None))
+
+
 @app.get("/api/play/me", dependencies=[Depends(play_rate_limit)])
 def play_me(request: Request):
     """The signed-in player's saved drives: list, average, best, games, current and longest streak. Signed out gets

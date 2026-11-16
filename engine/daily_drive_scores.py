@@ -26,7 +26,7 @@ from engine import daily_drive as dd
 
 N_PROMPTS = dd.N_FANTASY + dd.N_HISTORY
 MAX_YARDS = 100 * N_PROMPTS                      # 700
-SACK = "\U0001F7E5"
+SACK = dd.SACKED_EMOJI
 _DEVICE_RE = re.compile(r"^[A-Za-z0-9_-]{16,64}$")
 
 
@@ -204,3 +204,17 @@ def my_history(rows, today, recent=60, spark=14):
                     for r in rows[:recent]],
         "spark": [r["yards"] for r in reversed(rows[:spark])],
     }
+
+
+def leaderboard_body(top, all_yards, my_yards=None):
+    """Ranks for the leaderboard. Competition ranking: equal yards share a rank (1, 2, 2, 4). `top` comes from
+    db.drive_leaderboard (signed-in players only); `all_yards` is every score today, anonymous included."""
+    ranked, prev, rank = [], None, 0
+    for i, row in enumerate(top):
+        if row["yards"] != prev:
+            rank, prev = i + 1, row["yards"]
+        ranked.append({"rank": rank, "name": row["name"], "yards": row["yards"]})
+    you = None
+    if my_yards is not None:
+        you = {"rank": 1 + sum(1 for y in all_yards if y > my_yards), "yards": int(my_yards)}
+    return {"available": True, "players": len(all_yards), "top": ranked, "you": you}

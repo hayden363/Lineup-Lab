@@ -337,7 +337,7 @@ class MatchingTests(unittest.TestCase):
     def test_share_card_is_spoiler_free(self):
         s = dd.share_text("2026-11-16", [6, 3, 0, 4, 2, 5, 3])
         self.assertEqual(s.splitlines()[0], "The Daily Drive · Nov 16 · 320 yds")
-        self.assertEqual(s.splitlines()[1], "\U0001F3C6\U0001F7E2\U0001F7E5\U0001F535\U0001F7E1\U0001F7E3\U0001F7E2")
+        self.assertEqual(s.splitlines()[1], "\U0001F3C6\U0001F534\u2B1B\U0001F7E3\U0001F535\U0001F7E1\U0001F534")
         self.assertTrue(s.endswith("/play"))
 
 
@@ -560,7 +560,7 @@ class StatsMathTests(unittest.TestCase):
         h = ds.my_history(rows, "2026-11-16")
         self.assertEqual((h["games"], h["average_yards"], h["best_yards"], h["current_streak"], h["longest_streak"]), (3, 300.0, 500, 3, 3))
         self.assertEqual([g["date"] for g in h["history"]], ["2026-11-16", "2026-11-15", "2026-11-14"])
-        self.assertEqual(h["history"][1]["emoji"], "\U0001F3C6\U0001F7E3\U0001F535\U0001F7E2\U0001F7E1⚪\U0001F7E5")
+        self.assertEqual(h["history"][1]["emoji"], "\U0001F3C6\U0001F7E1\U0001F7E3\U0001F534\U0001F535⚪\u2B1B")
         self.assertEqual(h["spark"], [300, 500, 100])                               # oldest to newest
 
 
@@ -871,3 +871,45 @@ class SeasonFameTest(unittest.TestCase):
         career = {"star": 3000.0, **{f"p{i}": 10.0 * i for i in range(1, 12)}}
         ans = dd._answers_at(per, 100, {}, "rush yds", fame=(career, {}))
         self.assertEqual({a["name"]: a["tier"] for a in ans}["Star Qb"], 1)
+
+
+class LeaderboardTest(unittest.TestCase):
+    def test_ranks_ties_and_my_rank_among_everyone(self):
+        top = [{"name": "a", "yards": 500}, {"name": "b", "yards": 400}, {"name": "c", "yards": 400}, {"name": "d", "yards": 300}]
+        body = ds.leaderboard_body(top, [500, 450, 400, 400, 300, 120], my_yards=400)
+        self.assertEqual([r["rank"] for r in body["top"]], [1, 2, 2, 4])
+        self.assertEqual(body["you"], {"rank": 3, "yards": 400})          # the anonymous 450 counts
+        self.assertEqual(body["players"], 6)
+        self.assertIsNone(ds.leaderboard_body([], [], None)["you"])
+
+    def test_tier_colors_follow_owner_order(self):
+        self.assertEqual([dd.tier_info(t)["emoji"] for t in range(1, 7)],
+                         ["\u26AA", "\U0001F535", "\U0001F534", "\U0001F7E3", "\U0001F7E1", "\U0001F3C6"])
+
+
+class LeaderboardEndpointTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        import server
+        from fastapi.testclient import TestClient
+        cls.server = server
+        cls.client = TestClient(server.app)
+
+    def setUp(self):
+        s = self.server
+        s._RATE_BUCKETS.clear(); s._PLAY_STATS_CACHE.clear()
+        today = dd.today_et().isoformat()
+        p = mock.patch.object(s.daily_drive, "get_puzzle", lambda d, cache: {"date": d, "prompts": dd.pick_day(today, _pool())})
+        p.start(); self.addCleanup(p.stop)
+
+    def test_board_and_degraded(self):
+        s = self.server
+        with mock.patch.object(s.db, "drive_leaderboard", return_value=[{"name": "hayden", "yards": 455}]), \
+             mock.patch.object(s.db, "drive_day_yards", return_value=[455, 300]), \
+             mock.patch.object(s.db, "drive_my_day", return_value={"date": "x", "yards": 300, "tiers": [1]}):
+            j = self.client.get("/api/play/leaderboard?device_id=0123456789abcdef0123456789abcdef").json()
+        self.assertEqual(j["top"], [{"rank": 1, "name": "hayden", "yards": 455}])
+        self.assertEqual(j["you"], {"rank": 2, "yards": 300})
+        s._PLAY_STATS_CACHE.clear()
+        with mock.patch.object(s.db, "drive_leaderboard", side_effect=RuntimeError("db down")):
+            self.assertEqual(self.client.get("/api/play/leaderboard").json(), {"available": False})
