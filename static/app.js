@@ -1341,6 +1341,7 @@ function scoutGrade(pct) {
 }
 // "Beat projection in N of M games (+x / G)" from the weeks that have both a
 // real score and a pre-game projection; empty when fewer than 2 qualify.
+// The same beat-the-projection record as the header box; shown in the meta line only on phones, where that box is hidden.
 function beatProjChipHtml(p) {
   const rows = (p.weekly_status || []).filter((w) => w.status === "played" && w.fpts != null
     && w.proj && !w.proj.out && w.proj.fpts != null);
@@ -1348,8 +1349,8 @@ function beatProjChipHtml(p) {
   const beat = rows.filter((w) => w.fpts >= w.proj.fpts).length;
   const per = rows.reduce((a, w) => a + (w.fpts - w.proj.fpts), 0) / rows.length;
   const good = beat * 2 >= rows.length;
-  return `<span class="pcd-chip beat ${good ? "up" : "down"}" title="Actual points vs. Sleeper's pre-game projection, rescored for your league">`
-    + `${good ? "Beat" : "Missed"} projection in ${beat} of ${rows.length} (${per >= 0 ? "+" : ""}${per.toFixed(1)} / G)</span>`;
+  return `<span class="pcd-beat ${good ? "up" : "down"}" title="Actual points vs. Sleeper's pre-game projection, rescored for your league">`
+    + `${good ? "Beat" : "Missed"} projection ${beat} of ${rows.length} (${per >= 0 ? "+" : ""}${per.toFixed(1)}/G)</span>`;
 }
 function scoutHue(pct) { return Math.round(pct * 1.3); } // 0 red -> 130 green
 const ordinal = (n) => { const v = n % 100; return n + (["th", "st", "nd", "rd"][(v - 20) % 10] || ["th", "st", "nd", "rd"][v] || "th"); };
@@ -2015,12 +2016,13 @@ function deltaCalloutHtml(p) {
   const rows = (p.weekly_status || []).filter((w) => w.status === "played" && w.fpts != null && w.proj && !w.proj.out && w.proj.fpts != null);
   if (rows.length < 2) return "";
   const per = rows.reduce((a, w) => a + (w.fpts - w.proj.fpts), 0) / rows.length;
-  return `<div class="pcd-delta ${per >= 0 ? "up" : "dn"}" title="Average points per game vs. the pre-game projection, rescored for your league"><b>${per >= 0 ? "+" : ""}${per.toFixed(1)}</b><span>PPG vs projected</span></div>`;
+  const beat = rows.filter((w) => w.fpts >= w.proj.fpts).length;
+  return `<div class="pcd-delta ${per >= 0 ? "up" : "dn"}" title="Average points per game vs. the pre-game projection, rescored for your league"><b>${per >= 0 ? "+" : ""}${per.toFixed(1)}</b><span>PPG vs projected</span><small>Beat it ${beat} of ${rows.length}</small></div>`;
 }
 
 function playerCardHtml(p) {
-  const next = p.next_opponent ? `<span class="pcd-chip">Next: ${p.next_is_away ? "@" : "vs"} ${esc(p.next_opponent)} (Wk ${esc(p.next_week)})</span>` : "";
-  const bye = p.bye_week != null ? `<span class="pcd-chip bye">BYE week ${esc(p.bye_week)}</span>` : "";
+  const next = p.next_opponent ? `<span>Next ${p.next_is_away ? "@" : "vs"} ${esc(p.next_opponent)}, Wk ${esc(p.next_week)}</span>` : "";
+  const bye = p.bye_week != null ? `<span class="pcd-bye">Bye Wk ${esc(p.bye_week)}</span>` : "";
   const ngs = scoutingSlidersHtml(p);
   return `
     <div class="pcd-hd"><button class="modal-close" aria-label="Close">✕</button></div>
@@ -2028,7 +2030,7 @@ function playerCardHtml(p) {
       <div class="pcd-av"><img ${headshotAttrs(p)} alt=""></div>
       <div class="pcd-who">
         <h2>${esc(p.player_display_name)}${statusFlagsHtml(p)}</h2>
-        <div class="pcd-chips"><span class="pcd-chip">${esc(p.position)}</span><span class="pcd-chip team">${esc(p.recent_team)}</span>${next}${bye}${beatProjChipHtml(p)}</div>
+        <div class="pcd-meta"><span class="pcd-pos" data-pos="${esc(p.position)}">${esc(p.position)}</span><span class="pcd-team">${esc(p.recent_team)}</span>${next}${bye}${beatProjChipHtml(p)}</div>
       </div>
       ${deltaCalloutHtml(p)}
     </div>

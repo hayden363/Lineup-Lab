@@ -4406,6 +4406,13 @@ tr.kbd-click:focus-visible { outline-offset: -2px; }
 .pcd-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 .pcd-chip { display: inline-flex; align-items: center; font: 500 11px var(--mono); border: 1px solid rgba(255,255,255,.14); border-radius: 99px; padding: 1px 9px; color: #d4d4d8; white-space: nowrap; }
 .pcd-chip.bye { color: var(--avg); border-color: rgba(251,191,36,.45); background: rgba(251,191,36,.08); }
+/* One clean meta line under the name: position chip, team, then plain text joined by dots. */
+.pcd-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; margin-top: 8px; font: 500 13px var(--sans); color: var(--muted); }
+.pcd-meta > span:not(.pcd-pos):not(.pcd-team)::before { content: "\00b7"; margin-right: 8px; color: var(--muted-dim); }
+.pcd-meta .pcd-pos { font-size: 11px; padding: 1px 7px; }
+.pcd-meta .pcd-team { font-weight: 700; color: var(--text); }
+.pcd-meta .pcd-bye { color: var(--avg); }
+@media (min-width: 640px) { .pcd-meta .pcd-beat { display: none; } }   /* the header box shows it there */
 
 .pcd-acts { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 14px 18px 0; }
 .pcd-btn { display: inline-flex; align-items: center; gap: 7px; border: 1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.04); border-radius: 10px; padding: 7px 12px; font: 600 13px var(--sans); color: var(--text); cursor: pointer; transition: background .15s, border-color .15s; }
@@ -4512,6 +4519,7 @@ tr.kbd-click:focus-visible { outline-offset: -2px; }
 .pcd-hd .modal-close { z-index: 3; }
 .pcd-av { box-shadow: 0 0 0 3px var(--panel), 0 0 0 4px rgba(var(--tm-rgb), .85), 0 0 22px rgba(var(--tm-rgb), .35); }
 .pcd-chip.team { color: var(--tm); border-color: rgba(var(--tm-rgb), .55); background: rgba(var(--tm-rgb), .12); }
+.pcd-meta .pcd-team { color: var(--tm, var(--text)); }
 .pcd-nav button.on { border-bottom-color: var(--tm); }
 
 /* Scouting hero: read + shape chart */
@@ -4600,8 +4608,8 @@ tr.kbd-click:focus-visible { outline-offset: -2px; }
 .gl-row.off .gl-pts { color: var(--muted); }
 @media (max-width: 480px) { .gl-row { grid-template-columns: 34px 54px minmax(0, 1fr) 42px; gap: 6px; padding: 9px 12px; font-size: 12px; } }
 
-.pcd-chip.beat.up { color: #10b981; border-color: rgba(16,185,129,.5); background: rgba(16,185,129,.12); font-weight: 600; }
-.pcd-chip.beat.down { color: #f43f5e; border-color: rgba(244,63,94,.5); background: rgba(244,63,94,.12); font-weight: 600; }
+.pcd-beat.up { color: var(--pos); font-weight: 600; }
+.pcd-beat.down { color: var(--neg); font-weight: 600; }
 .scs-grade { display: inline-block; min-width: 18px; padding: 0 5px; margin-right: 4px; border-radius: 5px; text-align: center; font: 700 11px var(--mono); color: #0b0f19; background: hsl(var(--h) 75% 58%); }
 
 .pcd-wkhd { margin-top: 22px; }
@@ -4620,10 +4628,11 @@ tr.kbd-click:focus-visible { outline-offset: -2px; }
 /* ---- Projection tab: next game in detail + the weeks after ---- */
 .pcard { --st-pos: #10B981; --st-neg: #F43F5E; --st-warn: #F59E0B; --st-ghost: #1E293B; }
 .pcd-delta { margin-left: auto; align-self: center; text-align: right; padding: 8px 14px; border-radius: 14px; border: 1px solid; line-height: 1; }
-.pcd-delta b { display: block; font: 800 28px var(--mono); letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
-.pcd-delta span { display: block; margin-top: 5px; font: 600 9px var(--mono); letter-spacing: .12em; text-transform: uppercase; opacity: .85; }
-.pcd-delta.up { color: var(--st-pos); border-color: rgba(16,185,129,.45); background: rgba(16,185,129,.1); box-shadow: 0 0 22px rgba(16,185,129,.18); }
-.pcd-delta.dn { color: var(--st-neg); border-color: rgba(244,63,94,.45); background: rgba(244,63,94,.1); box-shadow: 0 0 22px rgba(244,63,94,.16); }
+.pcd-delta b { display: block; font: 800 22px var(--mono); letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.pcd-delta span { display: block; margin-top: 4px; font: 600 9px var(--mono); letter-spacing: .1em; text-transform: uppercase; opacity: .8; }
+.pcd-delta small { display: block; margin-top: 4px; font: 500 11px var(--sans); color: var(--muted); }
+.pcd-delta.up { color: var(--st-pos); border-color: rgba(16,185,129,.25); background: rgba(16,185,129,.06); }
+.pcd-delta.dn { color: var(--st-neg); border-color: rgba(244,63,94,.25); background: rgba(244,63,94,.06); }
 @media (max-width: 639px) { .pcd-delta { display: none; } }
 
 .pj-lead { display: flex; justify-content: space-between; align-items: flex-end; gap: 14px; flex-wrap: wrap; }

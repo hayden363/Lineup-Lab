@@ -11,7 +11,7 @@ class PlayerCardWiringTests(unittest.TestCase):
 
     def test_styles_exist(self):
         css = open("static/style.css").read()
-        for sel in (".pcd-chip.beat.up", ".scs-grade"):
+        for sel in (".pcd-beat.up", ".pcd-meta", ".scs-grade"):
             self.assertIn(sel, css)
 
     def test_weekly_lineup_panel_is_gone(self):
