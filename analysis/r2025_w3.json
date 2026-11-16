@@ -1,0 +1,2495 @@
+{
+ "wr_rec_yds": {
+  "-": {
+   "threshold": 200,
+   "text": "Name a WR with 200+ receiving yards",
+   "n": 17,
+   "tiers": [
+    4,
+    3,
+    4,
+    2,
+    3,
+    1
+   ],
+   "t1": [
+    "Davante Adams",
+    "Jaxon Smith-Njigba",
+    "Ja'Marr Chase"
+   ],
+   "t6": [
+    "Ricky Pearsall"
+   ]
+  }
+ },
+ "te_rec_yds": {
+  "-": {
+   "threshold": 100,
+   "text": "Name a TE with 100+ receiving yards",
+   "n": 16,
+   "tiers": [
+    4,
+    3,
+    3,
+    2,
+    3,
+    1
+   ],
+   "t1": [
+    "Travis Kelce",
+    "Zach Ertz",
+    "Brock Bowers"
+   ],
+   "t6": [
+    "Jake Ferguson"
+   ]
+  }
+ },
+ "rb_rush_yds": {
+  "-": {
+   "threshold": 100,
+   "text": "Name a RB with 100+ rushing yards",
+   "n": 33,
+   "tiers": [
+    7,
+    7,
+    6,
+    5,
+    5,
+    3
+   ],
+   "t1": [
+    "Alvin Kamara",
+    "Jahmyr Gibbs",
+    "Bijan Robinson"
+   ],
+   "t6": [
+    "Jacory Croskey-Merritt",
+    "Jeremy McNichols",
+    "Trey Benson"
+   ]
+  }
+ },
+ "qb_pass_yds": {
+  "-": {
+   "threshold": 500,
+   "text": "Name a QB with 500+ passing yards",
+   "n": 27,
+   "tiers": [
+    6,
+    5,
+    6,
+    4,
+    4,
+    2
+   ],
+   "t1": [
+    "Aaron Rodgers",
+    "Russell Wilson",
+    "Matthew Stafford"
+   ],
+   "t6": [
+    "Mac Jones",
+    "Spencer Rattler"
+   ]
+  }
+ },
+ "qb_pass_td": {
+  "-": {
+   "threshold": 3,
+   "text": "Name a QB who has thrown 3+ touchdown passes",
+   "n": 27,
+   "tiers": [
+    6,
+    5,
+    6,
+    4,
+    4,
+    2
+   ],
+   "t1": [
+    "Aaron Rodgers",
+    "Russell Wilson",
+    "Matthew Stafford"
+   ],
+   "t6": [
+    "Jake Browning",
+    "Spencer Rattler"
+   ]
+  }
+ },
+ "rb_catches": {
+  "-": {
+   "threshold": 5,
+   "text": "Name a RB with 5+ catches",
+   "n": 36,
+   "tiers": [
+    8,
+    7,
+    7,
+    5,
+    6,
+    3
+   ],
+   "t1": [
+    "Alvin Kamara",
+    "Jahmyr Gibbs",
+    "Bijan Robinson"
+   ],
+   "t6": [
+    "Justice Hill",
+    "Tyrone Tracy Jr.",
+    "Trey Benson"
+   ]
+  }
+ },
+ "wte_rec_td": {
+  "-": {
+   "threshold": 2,
+   "text": "Name a WR or TE with 2+ receiving TDs",
+   "n": 29,
+   "tiers": [
+    6,
+    6,
+    6,
+    4,
+    5,
+    2
+   ],
+   "t1": [
+    "Davante Adams",
+    "Amon-Ra St. Brown",
+    "DeAndre Hopkins"
+   ],
+   "t6": [
+    "Elic Ayomanor",
+    "Devontez Walker"
+   ]
+  }
+ },
+ "any_total_td": {
+  "-": {
+   "threshold": 3,
+   "text": "Name a player with 3+ touchdowns (rushing + receiving)",
+   "n": 16,
+   "tiers": [
+    4,
+    3,
+    3,
+    2,
+    3,
+    1
+   ],
+   "t1": [
+    "Keenan Allen",
+    "Jahmyr Gibbs",
+    "Kenneth Walker III"
+   ],
+   "t6": [
+    "J.K. Dobbins"
+   ]
+  }
+ },
+ "any_ppr": {
+  "-": {
+   "threshold": 50,
+   "text": "Name a player with 50+ PPR fantasy points",
+   "n": 29,
+   "tiers": [
+    6,
+    6,
+    6,
+    4,
+    5,
+    2
+   ],
+   "t1": [
+    "Keenan Allen",
+    "Jahmyr Gibbs",
+    "Jaxon Smith-Njigba"
+   ],
+   "t6": [
+    "Quentin Johnston",
+    "De'Von Achane"
+   ]
+  }
+ },
+ "any_targets": {
+  "-": {
+   "threshold": 20,
+   "text": "Name a player who has been targeted 20+ times",
+   "n": 41,
+   "tiers": [
+    9,
+    8,
+    8,
+    6,
+    6,
+    4
+   ],
+   "t1": [
+    "Davante Adams",
+    "Jaxon Smith-Njigba",
+    "Ja'Marr Chase"
+   ],
+   "t6": [
+    "De'Von Achane",
+    "Rashid Shaheed",
+    "Jake Ferguson"
+   ]
+  }
+ },
+ "rb_carries": {
+  "-": {
+   "threshold": 30,
+   "text": "Name a RB with 30+ carries",
+   "n": 28,
+   "tiers": [
+    6,
+    6,
+    5,
+    4,
+    5,
+    2
+   ],
+   "t1": [
+    "Alvin Kamara",
+    "Jahmyr Gibbs",
+    "Bijan Robinson"
+   ],
+   "t6": [
+    "J.K. Dobbins",
+    "De'Von Achane"
+   ]
+  }
+ },
+ "any_scrim": {
+  "-": {
+   "threshold": 250,
+   "text": "Name a player with 250+ scrimmage yards (rushing + receiving)",
+   "n": 18,
+   "tiers": [
+    4,
+    4,
+    3,
+    3,
+    3,
+    1
+   ],
+   "t1": [
+    "Derrick Henry",
+    "Jahmyr Gibbs",
+    "Jaxon Smith-Njigba"
+   ],
+   "t6": [
+    "Ricky Pearsall"
+   ]
+  }
+ },
+ "wr_yac": {
+  "-": {
+   "threshold": 50,
+   "text": "Name a WR with 50+ yards after the catch",
+   "n": 29,
+   "tiers": [
+    6,
+    6,
+    6,
+    4,
+    5,
+    2
+   ],
+   "t1": [
+    "Cooper Kupp",
+    "Jaxon Smith-Njigba",
+    "Ja'Marr Chase"
+   ],
+   "t6": [
+    "Jauan Jennings",
+    "Troy Franklin"
+   ]
+  }
+ },
+ "wr_game_yds": {
+  "-": {
+   "threshold": 100,
+   "text": "Name a WR with a 100+ yard receiving game",
+   "n": 21,
+   "tiers": [
+    5,
+    4,
+    4,
+    3,
+    3,
+    2
+   ],
+   "t1": [
+    "Davante Adams",
+    "Jaxon Smith-Njigba",
+    "Ja'Marr Chase"
+   ],
+   "t6": [
+    "Kayshon Boutte",
+    "Ricky Pearsall"
+   ]
+  }
+ },
+ "te_game_yds": {
+  "-": {
+   "threshold": 60,
+   "text": "Name a TE with a 60+ yard receiving game",
+   "n": 15,
+   "tiers": [
+    3,
+    3,
+    3,
+    3,
+    2,
+    1
+   ],
+   "t1": [
+    "Travis Kelce",
+    "Zach Ertz",
+    "Brock Bowers"
+   ],
+   "t6": [
+    "Jake Ferguson"
+   ]
+  }
+ },
+ "rb_game_yds": {
+  "-": {
+   "threshold": 90,
+   "text": "Name a RB with a 90+ yard rushing game",
+   "n": 15,
+   "tiers": [
+    3,
+    3,
+    3,
+    3,
+    2,
+    1
+   ],
+   "t1": [
+    "Alvin Kamara",
+    "Jahmyr Gibbs",
+    "Bijan Robinson"
+   ],
+   "t6": [
+    "Jordan Mason"
+   ]
+  }
+ },
+ "qb_game_yds": {
+  "-": {
+   "threshold": 275,
+   "text": "Name a QB with a 275+ yard passing game",
+   "n": 19,
+   "tiers": [
+    4,
+    4,
+    4,
+    3,
+    3,
+    1
+   ],
+   "t1": [
+    "Russell Wilson",
+    "Matthew Stafford",
+    "Josh Allen"
+   ],
+   "t6": [
+    "Mac Jones"
+   ]
+  }
+ },
+ "any_game_ppr": {
+  "-": {
+   "threshold": 25,
+   "text": "Name a player with a 25+ PPR point game",
+   "n": 31,
+   "tiers": [
+    7,
+    6,
+    6,
+    5,
+    4,
+    3
+   ],
+   "t1": [
+    "Aaron Rodgers",
+    "Jahmyr Gibbs",
+    "Ja'Marr Chase"
+   ],
+   "t6": [
+    "Justin Fields",
+    "Keon Coleman",
+    "De'Von Achane"
+   ]
+  }
+ },
+ "qb_game_td": {
+  "-": {
+   "threshold": 3,
+   "text": "Name a QB who threw 3+ touchdown passes in one game",
+   "n": 15,
+   "tiers": [
+    3,
+    3,
+    3,
+    3,
+    2,
+    1
+   ],
+   "t1": [
+    "Aaron Rodgers",
+    "Russell Wilson",
+    "Josh Allen"
+   ],
+   "t6": [
+    "Spencer Rattler"
+   ]
+  }
+ },
+ "any_game_rec": {
+  "-": {
+   "threshold": 8,
+   "text": "Name a player with 8+ catches in one game",
+   "n": 25,
+   "tiers": [
+    5,
+    5,
+    5,
+    4,
+    4,
+    2
+   ],
+   "t1": [
+    "Christian McCaffrey",
+    "Jahmyr Gibbs",
+    "Jaxon Smith-Njigba"
+   ],
+   "t6": [
+    "Troy Franklin",
+    "Ricky Pearsall"
+   ]
+  }
+ },
+ "qb_game_rush": {
+  "-": {
+   "threshold": 30,
+   "text": "Name a QB with 30+ rushing yards in one game",
+   "n": 17,
+   "tiers": [
+    4,
+    3,
+    4,
+    2,
+    3,
+    1
+   ],
+   "t1": [
+    "Russell Wilson",
+    "Josh Allen",
+    "Patrick Mahomes"
+   ],
+   "t6": [
+    "Justin Fields"
+   ]
+  }
+ },
+ "rb_game_rec": {
+  "-": {
+   "threshold": 35,
+   "text": "Name a RB with 35+ receiving yards in one game",
+   "n": 19,
+   "tiers": [
+    4,
+    4,
+    4,
+    3,
+    3,
+    1
+   ],
+   "t1": [
+    "Christian McCaffrey",
+    "Bijan Robinson",
+    "James Cook"
+   ],
+   "t6": [
+    "Tyrone Tracy Jr."
+   ]
+  }
+ },
+ "combo_rb_100_td": {
+  "-": null
+ },
+ "combo_wr_100_td": {
+  "-": {
+   "threshold": 1,
+   "text": "Name a WR with 100+ receiving yards AND a TD in the same game",
+   "n": 14,
+   "tiers": [
+    3,
+    3,
+    3,
+    2,
+    2,
+    1
+   ],
+   "t1": [
+    "Davante Adams",
+    "Ja'Marr Chase",
+    "Amon-Ra St. Brown"
+   ],
+   "t6": [
+    "Keon Coleman"
+   ]
+  }
+ },
+ "combo_qb_dual": {
+  "-": {
+   "threshold": 1,
+   "text": "Name a QB who threw a TD AND ran for a TD in the same game",
+   "n": 12,
+   "tiers": [
+    3,
+    2,
+    3,
+    1,
+    2,
+    1
+   ],
+   "t1": [
+    "Josh Allen",
+    "Patrick Mahomes",
+    "Caleb Williams"
+   ],
+   "t6": [
+    "Jake Browning"
+   ]
+  }
+ },
+ "combo_rb_5050": {
+  "-": null
+ },
+ "combo_rush_rec_td": {
+  "-": null
+ },
+ "combo_qb_300_3td": {
+  "-": null
+ },
+ "combo_wr_8_100": {
+  "-": null
+ },
+ "combo_te_td_5": {
+  "-": null
+ },
+ "n_wr_100": {
+  "-": {
+   "threshold": 1,
+   "text": "Name a WR with 1+ games of 100+ receiving yards",
+   "n": 21,
+   "tiers": [
+    5,
+    4,
+    4,
+    3,
+    3,
+    2
+   ],
+   "t1": [
+    "Davante Adams",
+    "Jaxon Smith-Njigba",
+    "Ja'Marr Chase"
+   ],
+   "t6": [
+    "Kayshon Boutte",
+    "Ricky Pearsall"
+   ]
+  }
+ },
+ "n_rb_100": {
+  "-": null
+ },
+ "n_any_td": {
+  "-": {
+   "threshold": 2,
+   "text": "Name a player who has scored in 2+ games (rushing/receiving TD)",
+   "n": 46,
+   "tiers": [
+    10,
+    9,
+    9,
+    7,
+    7,
+    4
+   ],
+   "t1": [
+    "Davante Adams",
+    "Jahmyr Gibbs",
+    "Kenneth Walker III"
+   ],
+   "t6": [
+    "Tyquan Thornton",
+    "Tory Horton",
+    "Davis Allen"
+   ]
+  }
+ },
+ "n_boom": {
+  "-": {
+   "threshold": 1,
+   "text": "Name a player with 1+ games of 20+ PPR points",
+   "n": 64,
+   "tiers": [
+    13,
+    13,
+    13,
+    9,
+    10,
+    6
+   ],
+   "t1": [
+    "Aaron Rodgers",
+    "Jahmyr Gibbs",
+    "Jaxon Smith-Njigba"
+   ],
+   "t6": [
+    "Keon Coleman",
+    "Mac Jones",
+    "De'Von Achane"
+   ]
+  }
+ },
+ "n_qb_300": {
+  "-": null
+ },
+ "n_multi_td": {
+  "-": {
+   "threshold": 1,
+   "text": "Name a player with 1+ multi-TD games (2+ rushing/receiving TDs)",
+   "n": 22,
+   "tiers": [
+    5,
+    4,
+    5,
+    3,
+    3,
+    2
+   ],
+   "t1": [
+    "Josh Allen",
+    "Jahmyr Gibbs",
+    "Kenneth Walker III"
+   ],
+   "t6": [
+    "Quentin Johnston",
+    "Devontez Walker"
+   ]
+  }
+ },
+ "s_td": {
+  "-": {
+   "threshold": 2,
+   "text": "Name a player who has scored in 2+ straight games",
+   "n": 37,
+   "tiers": [
+    8,
+    7,
+    8,
+    5,
+    6,
+    3
+   ],
+   "t1": [
+    "Davante Adams",
+    "Jahmyr Gibbs",
+    "Kenneth Walker III"
+   ],
+   "t6": [
+    "Tory Horton",
+    "Davis Allen",
+    "Elic Ayomanor"
+   ]
+  }
+ },
+ "s_wr_100": {
+  "-": null
+ },
+ "s_rb_100": {
+  "-": {
+   "threshold": 2,
+   "text": "Name a RB with 60+ rushing yards in 2+ straight games",
+   "n": 13,
+   "tiers": [
+    3,
+    3,
+    2,
+    2,
+    2,
+    1
+   ],
+   "t1": [
+    "Saquon Barkley",
+    "Jahmyr Gibbs",
+    "Bijan Robinson"
+   ],
+   "t6": [
+    "J.K. Dobbins"
+   ]
+  }
+ },
+ "e_rb_ypc": {
+  "-": {
+   "threshold": 4.0,
+   "text": "Name a RB averaging 4+ yards per carry (min 18 carries)",
+   "n": 20,
+   "tiers": [
+    4,
+    4,
+    4,
+    3,
+    3,
+    2
+   ],
+   "t1": [
+    "Derrick Henry",
+    "Jahmyr Gibbs",
+    "Bijan Robinson"
+   ],
+   "t6": [
+    "Jacory Croskey-Merritt",
+    "Trey Benson"
+   ]
+  }
+ },
+ "e_wr_ypt": {
+  "-": {
+   "threshold": 9.5,
+   "text": "Name a WR averaging 9.5+ yards per target (min 12 targets)",
+   "n": 15,
+   "tiers": [
+    3,
+    3,
+    3,
+    3,
+    2,
+    1
+   ],
+   "t1": [
+    "Justin Jefferson",
+    "Jaxon Smith-Njigba",
+    "JuJu Smith-Schuster"
+   ],
+   "t6": [
+    "Ricky Pearsall"
+   ]
+  }
+ },
+ "e_qb_cmp": {
+  "-": {
+   "threshold": 66,
+   "text": "Name a QB completing 66%+ of his passes (min 54 attempts)",
+   "n": 16,
+   "tiers": [
+    4,
+    3,
+    3,
+    2,
+    3,
+    1
+   ],
+   "t1": [
+    "Matthew Stafford",
+    "Josh Allen",
+    "Dak Prescott"
+   ],
+   "t6": [
+    "Spencer Rattler"
+   ]
+  }
+ },
+ "e_qb_ypa": {
+  "-": {
+   "threshold": 6.5,
+   "text": "Name a QB averaging 6.5+ yards per attempt (min 54 attempts)",
+   "n": 15,
+   "tiers": [
+    3,
+    3,
+    3,
+    3,
+    2,
+    1
+   ],
+   "t1": [
+    "Aaron Rodgers",
+    "Russell Wilson",
+    "Josh Allen"
+   ],
+   "t6": [
+    "Mac Jones"
+   ]
+  }
+ },
+ "e_wr_ypr": {
+  "-": {
+   "threshold": 14.0,
+   "text": "Name a WR averaging 14+ yards per catch (min 8 catches)",
+   "n": 21,
+   "tiers": [
+    5,
+    4,
+    4,
+    3,
+    3,
+    2
+   ],
+   "t1": [
+    "Davante Adams",
+    "Jaxon Smith-Njigba",
+    "Malik Nabers"
+   ],
+   "t6": [
+    "Tyquan Thornton",
+    "Ricky Pearsall"
+   ]
+  }
+ },
+ "e_qb_tdpct": {
+  "-": {
+   "threshold": 4.5,
+   "text": "Name a QB throwing a TD on 4.5%+ of his attempts (min 54 attempts)",
+   "n": 15,
+   "tiers": [
+    3,
+    3,
+    3,
+    3,
+    2,
+    1
+   ],
+   "t1": [
+    "Aaron Rodgers",
+    "Matthew Stafford",
+    "Josh Allen"
+   ],
+   "t6": [
+    "Jake Browning"
+   ]
+  }
+ },
+ "e_qb_safe": {
+  "-": {
+   "threshold": -1.5,
+   "text": "Name a QB with an interception rate under 1.5% (min 54 attempts)",
+   "n": 15,
+   "tiers": [
+    3,
+    3,
+    3,
+    3,
+    2,
+    1
+   ],
+   "t1": [
+    "Josh Allen",
+    "Patrick Mahomes",
+    "Jared Goff"
+   ],
+   "t6": [
+    "Spencer Rattler"
+   ]
+  }
+ },
+ "e_wr_share": {
+  "-": {
+   "threshold": 25,
+   "text": "Name a WR with a 25%+ target share (min 2 games played)",
+   "n": 17,
+   "tiers": [
+    4,
+    3,
+    4,
+    2,
+    3,
+    1
+   ],
+   "t1": [
+    "Davante Adams",
+    "Jaxon Smith-Njigba",
+    "Ja'Marr Chase"
+   ],
+   "t6": [
+    "Marquise Brown"
+   ]
+  }
+ },
+ "sc_conf_rush_td": {
+  "AFC": {
+   "threshold": 1,
+   "text": "Name an AFC player with 1+ rushing TDs",
+   "n": 26,
+   "tiers": [
+    6,
+    5,
+    5,
+    4,
+    4,
+    2
+   ],
+   "t1": [
+    "Josh Allen",
+    "James Cook",
+    "Patrick Mahomes"
+   ],
+   "t6": [
+    "Jake Browning",
+    "Raheim Sanders"
+   ]
+  },
+  "NFC": {
+   "threshold": 1,
+   "text": "Name an NFC player with 1+ rushing TDs",
+   "n": 28,
+   "tiers": [
+    6,
+    6,
+    5,
+    4,
+    5,
+    2
+   ],
+   "t1": [
+    "Alvin Kamara",
+    "Jahmyr Gibbs",
+    "Kenneth Walker III"
+   ],
+   "t6": [
+    "Jacory Croskey-Merritt",
+    "Jeremy McNichols"
+   ]
+  }
+ },
+ "sc_div_rec_td": {
+  "AFC East": {
+   "threshold": 1,
+   "text": "Name a AFC East player with 1+ receiving TDs",
+   "n": 14,
+   "tiers": [
+    3,
+    3,
+    3,
+    2,
+    2,
+    1
+   ],
+   "t1": [
+    "Tyreek Hill",
+    "Hunter Henry",
+    "Garrett Wilson"
+   ],
+   "t6": [
+    "Jackson Hawes"
+   ]
+  },
+  "AFC North": {
+   "threshold": 1,
+   "text": "Name a AFC North player with 1+ receiving TDs",
+   "n": 18,
+   "tiers": [
+    4,
+    4,
+    3,
+    3,
+    3,
+    1
+   ],
+   "t1": [
+    "DeAndre Hopkins",
+    "Ja'Marr Chase",
+    "DK Metcalf"
+   ],
+   "t6": [
+    "Mitchell Tinsley"
+   ]
+  },
+  "AFC South": null,
+  "AFC West": null,
+  "NFC East": null,
+  "NFC North": {
+   "threshold": 1,
+   "text": "Name a NFC North player with 1+ receiving TDs",
+   "n": 16,
+   "tiers": [
+    4,
+    3,
+    3,
+    2,
+    3,
+    1
+   ],
+   "t1": [
+    "Aaron Jones",
+    "Amon-Ra St. Brown",
+    "Justin Jefferson"
+   ],
+   "t6": [
+    "John FitzPatrick"
+   ]
+  },
+  "NFC South": null,
+  "NFC West": {
+   "threshold": 1,
+   "text": "Name a NFC West player with 1+ receiving TDs",
+   "n": 15,
+   "tiers": [
+    3,
+    3,
+    3,
+    3,
+    2,
+    1
+   ],
+   "t1": [
+    "Davante Adams",
+    "Jaxon Smith-Njigba",
+    "Christian McCaffrey"
+   ],
+   "t6": [
+    "Jake Tonges"
+   ]
+  }
+ },
+ "sc_conf_wr_yds": {
+  "AFC": null,
+  "NFC": null
+ },
+ "sc_conf_rb_yds": {
+  "AFC": {
+   "threshold": 100,
+   "text": "Name an AFC RB with 100+ rushing yards",
+   "n": 13,
+   "tiers": [
+    3,
+    3,
+    2,
+    2,
+    2,
+    1
+   ],
+   "t1": [
+    "Derrick Henry",
+    "James Cook",
+    "Jonathan Taylor"
+   ],
+   "t6": [
+    "J.K. Dobbins"
+   ]
+  },
+  "NFC": {
+   "threshold": 100,
+   "text": "Name an NFC RB with 100+ rushing yards",
+   "n": 20,
+   "tiers": [
+    4,
+    4,
+    4,
+    3,
+    3,
+    2
+   ],
+   "t1": [
+    "Alvin Kamara",
+    "Jahmyr Gibbs",
+    "Bijan Robinson"
+   ],
+   "t6": [
+    "Jeremy McNichols",
+    "Trey Benson"
+   ]
+  }
+ },
+ "sc_div_ppr_game": {
+  "AFC East": {
+   "threshold": 15,
+   "text": "Name a AFC East player with a 15+ PPR point game",
+   "n": 16,
+   "tiers": [
+    4,
+    3,
+    3,
+    2,
+    3,
+    1
+   ],
+   "t1": [
+    "Tyreek Hill",
+    "James Cook",
+    "Josh Allen"
+   ],
+   "t6": [
+    "De'Von Achane"
+   ]
+  },
+  "AFC North": {
+   "threshold": 15,
+   "text": "Name a AFC North player with a 15+ PPR point game",
+   "n": 14,
+   "tiers": [
+    3,
+    3,
+    3,
+    2,
+    2,
+    1
+   ],
+   "t1": [
+    "Aaron Rodgers",
+    "Ja'Marr Chase",
+    "Lamar Jackson"
+   ],
+   "t6": [
+    "Devontez Walker"
+   ]
+  },
+  "AFC South": null,
+  "AFC West": {
+   "threshold": 15,
+   "text": "Name a AFC West player with a 15+ PPR point game",
+   "n": 15,
+   "tiers": [
+    3,
+    3,
+    3,
+    3,
+    2,
+    1
+   ],
+   "t1": [
+    "Keenan Allen",
+    "Patrick Mahomes",
+    "Brock Bowers"
+   ],
+   "t6": [
+    "Troy Franklin"
+   ]
+  },
+  "NFC East": {
+   "threshold": 18,
+   "text": "Name a NFC East player with a 18+ PPR point game",
+   "n": 16,
+   "tiers": [
+    4,
+    3,
+    3,
+    2,
+    3,
+    1
+   ],
+   "t1": [
+    "Russell Wilson",
+    "CeeDee Lamb",
+    "Malik Nabers"
+   ],
+   "t6": [
+    "Jake Ferguson"
+   ]
+  },
+  "NFC North": {
+   "threshold": 15,
+   "text": "Name a NFC North player with a 15+ PPR point game",
+   "n": 15,
+   "tiers": [
+    3,
+    3,
+    3,
+    3,
+    2,
+    1
+   ],
+   "t1": [
+    "Jared Goff",
+    "Jahmyr Gibbs",
+    "Amon-Ra St. Brown"
+   ],
+   "t6": [
+    "J.J. McCarthy"
+   ]
+  },
+  "NFC South": {
+   "threshold": 15,
+   "text": "Name a NFC South player with a 15+ PPR point game",
+   "n": 15,
+   "tiers": [
+    3,
+    3,
+    3,
+    3,
+    2,
+    1
+   ],
+   "t1": [
+    "Alvin Kamara",
+    "Bijan Robinson",
+    "Chris Olave"
+   ],
+   "t6": [
+    "Spencer Rattler"
+   ]
+  },
+  "NFC West": {
+   "threshold": 15,
+   "text": "Name a NFC West player with a 15+ PPR point game",
+   "n": 17,
+   "tiers": [
+    4,
+    3,
+    4,
+    2,
+    3,
+    1
+   ],
+   "t1": [
+    "Matthew Stafford",
+    "Jaxon Smith-Njigba",
+    "Kenneth Walker III"
+   ],
+   "t6": [
+    "Ricky Pearsall"
+   ]
+  }
+ },
+ "sc_conf_qb_td": {
+  "AFC": {
+   "threshold": 2,
+   "text": "Name an AFC QB with 2+ touchdown passes",
+   "n": 17,
+   "tiers": [
+    4,
+    3,
+    4,
+    2,
+    3,
+    1
+   ],
+   "t1": [
+    "Aaron Rodgers",
+    "Joe Flacco",
+    "Josh Allen"
+   ],
+   "t6": [
+    "Jake Browning"
+   ]
+  },
+  "NFC": {
+   "threshold": 2,
+   "text": "Name an NFC QB with 2+ touchdown passes",
+   "n": 17,
+   "tiers": [
+    4,
+    3,
+    4,
+    2,
+    3,
+    1
+   ],
+   "t1": [
+    "Russell Wilson",
+    "Matthew Stafford",
+    "Dak Prescott"
+   ],
+   "t6": [
+    "Spencer Rattler"
+   ]
+  }
+ },
+ "sc_conf_te_td": {
+  "AFC": null,
+  "NFC": {
+   "threshold": 1,
+   "text": "Name an NFC TE with 1+ receiving TDs",
+   "n": 16,
+   "tiers": [
+    4,
+    3,
+    3,
+    2,
+    3,
+    1
+   ],
+   "t1": [
+    "Zach Ertz",
+    "George Kittle",
+    "Trey McBride"
+   ],
+   "t6": [
+    "John FitzPatrick"
+   ]
+  }
+ },
+ "sc_col_td": {
+  "SEC": {
+   "threshold": 1,
+   "text": "Name an SEC alum with 1+ rushing or receiving TDs",
+   "n": 35,
+   "tiers": [
+    7,
+    7,
+    7,
+    6,
+    5,
+    3
+   ],
+   "t1": [
+    "Mike Evans",
+    "Jahmyr Gibbs",
+    "Bijan Robinson"
+   ],
+   "t6": [
+    "Marvin Mims Jr.",
+    "Cedric Tillman",
+    "John FitzPatrick"
+   ]
+  },
+  "Big Ten": {
+   "threshold": 1,
+   "text": "Name an Big Ten alum with 1+ rushing or receiving TDs",
+   "n": 35,
+   "tiers": [
+    7,
+    7,
+    7,
+    6,
+    5,
+    3
+   ],
+   "t1": [
+    "Saquon Barkley",
+    "Jaxon Smith-Njigba",
+    "Kenneth Walker III"
+   ],
+   "t6": [
+    "Troy Franklin",
+    "Luke Farrell",
+    "Jeremy Ruckert"
+   ]
+  },
+  "ACC": {
+   "threshold": 1,
+   "text": "Name an ACC alum with 1+ rushing or receiving TDs",
+   "n": 25,
+   "tiers": [
+    5,
+    5,
+    5,
+    4,
+    4,
+    2
+   ],
+   "t1": [
+    "DeAndre Hopkins",
+    "Christian McCaffrey",
+    "Keenan Allen"
+   ],
+   "t6": [
+    "Devontez Walker",
+    "Jackson Hawes"
+   ]
+  },
+  "Big 12": {
+   "threshold": 1,
+   "text": "Name an Big 12 alum with 1+ rushing or receiving TDs",
+   "n": 16,
+   "tiers": [
+    4,
+    3,
+    3,
+    2,
+    3,
+    1
+   ],
+   "t1": [
+    "Travis Kelce",
+    "Patrick Mahomes",
+    "Puka Nacua"
+   ],
+   "t6": [
+    "Tylan Wallace"
+   ]
+  }
+ },
+ "x_div_td": {
+  "-": {
+   "threshold": 1,
+   "text": "Name a player who scored against a division rival",
+   "n": 72,
+   "tiers": [
+    15,
+    14,
+    15,
+    10,
+    11,
+    7
+   ],
+   "t1": [
+    "DeAndre Hopkins",
+    "Jahmyr Gibbs",
+    "Bijan Robinson"
+   ],
+   "t6": [
+    "Jeremy Ruckert",
+    "Tylan Wallace",
+    "Elic Ayomanor"
+   ]
+  }
+ },
+ "x_div_wr_100": {
+  "-": {
+   "threshold": 60,
+   "text": "Name a WR with 60+ receiving yards in a game against a division rival",
+   "n": 28,
+   "tiers": [
+    6,
+    6,
+    5,
+    4,
+    5,
+    2
+   ],
+   "t1": [
+    "DeAndre Hopkins",
+    "Jaxon Smith-Njigba",
+    "Amon-Ra St. Brown"
+   ],
+   "t6": [
+    "Alec Pierce",
+    "Ricky Pearsall"
+   ]
+  }
+ },
+ "x_night_td": {
+  "-": {
+   "threshold": 1,
+   "text": "Name a player who scored in a primetime game",
+   "n": 44,
+   "tiers": [
+    9,
+    9,
+    9,
+    6,
+    7,
+    4
+   ],
+   "t1": [
+    "DeAndre Hopkins",
+    "Jahmyr Gibbs",
+    "James Cook"
+   ],
+   "t6": [
+    "Rashod Bateman",
+    "Tyquan Thornton",
+    "Ryan Miller"
+   ]
+  }
+ },
+ "x_road_rb": {
+  "-": {
+   "threshold": 60,
+   "text": "Name a RB with a 60+ yard rushing game on the road",
+   "n": 24,
+   "tiers": [
+    5,
+    5,
+    5,
+    3,
+    4,
+    2
+   ],
+   "t1": [
+    "Derrick Henry",
+    "Jahmyr Gibbs",
+    "Bijan Robinson"
+   ],
+   "t6": [
+    "De'Von Achane",
+    "Trey Benson"
+   ]
+  }
+ },
+ "x_dome_td": {
+  "-": {
+   "threshold": 1,
+   "text": "Name a player who scored in a dome or closed-roof game",
+   "n": 55,
+   "tiers": [
+    11,
+    11,
+    11,
+    9,
+    8,
+    5
+   ],
+   "t1": [
+    "Travis Kelce",
+    "Jahmyr Gibbs",
+    "Bijan Robinson"
+   ],
+   "t6": [
+    "Brock Wright",
+    "Troy Franklin",
+    "Luke Farrell"
+   ]
+  }
+ },
+ "x_ot_ppr": {
+  "-": {
+   "threshold": 8,
+   "text": "Name a player with 8+ PPR points in an overtime game",
+   "n": 13,
+   "tiers": [
+    3,
+    3,
+    2,
+    2,
+    2,
+    1
+   ],
+   "t1": [
+    "Russell Wilson",
+    "CeeDee Lamb",
+    "Malik Nabers"
+   ],
+   "t6": [
+    "KaVontae Turpin"
+   ]
+  }
+ },
+ "x_loss_td": {
+  "-": {
+   "threshold": 1,
+   "text": "Name a player who scored in a one-score loss (8 points or fewer)",
+   "n": 48,
+   "tiers": [
+    10,
+    10,
+    9,
+    7,
+    8,
+    4
+   ],
+   "t1": [
+    "Davante Adams",
+    "Bijan Robinson",
+    "DeAndre Hopkins"
+   ],
+   "t6": [
+    "Tyquan Thornton",
+    "Troy Franklin",
+    "John FitzPatrick"
+   ]
+  }
+ },
+ "x_loss_ppr": {
+  "-": {
+   "threshold": 20,
+   "text": "Name a player with 20+ PPR points in a loss",
+   "n": 29,
+   "tiers": [
+    6,
+    6,
+    6,
+    4,
+    5,
+    2
+   ],
+   "t1": [
+    "Russell Wilson",
+    "Bijan Robinson",
+    "Patrick Mahomes"
+   ],
+   "t6": [
+    "Spencer Rattler",
+    "Troy Franklin"
+   ]
+  }
+ },
+ "x_upset_td": {
+  "-": {
+   "threshold": 1,
+   "text": "Name a player who scored in an upset win (his team was the underdog)",
+   "n": 30,
+   "tiers": [
+    6,
+    6,
+    6,
+    5,
+    4,
+    3
+   ],
+   "t1": [
+    "Keenan Allen",
+    "Jahmyr Gibbs",
+    "Kenneth Walker III"
+   ],
+   "t6": [
+    "Kayshon Boutte",
+    "Tory Horton",
+    "Ryan Miller"
+   ]
+  }
+ },
+ "x_shootout": {
+  "-": {
+   "threshold": 1,
+   "text": "Name a player who scored in a shootout (60+ combined points)",
+   "n": 45,
+   "tiers": [
+    9,
+    9,
+    9,
+    7,
+    7,
+    4
+   ],
+   "t1": [
+    "DeAndre Hopkins",
+    "Jahmyr Gibbs",
+    "James Cook"
+   ],
+   "t6": [
+    "Brock Wright",
+    "Ben Skowronek",
+    "Luke McCaffrey"
+   ]
+  }
+ },
+ "w_ppr20": {
+  "-": {
+   "threshold": 22,
+   "text": "Name a player with 22+ PPR points last week",
+   "n": 20,
+   "tiers": [
+    4,
+    4,
+    4,
+    3,
+    3,
+    2
+   ],
+   "t1": [
+    "Josh Allen",
+    "Jahmyr Gibbs",
+    "Christian McCaffrey"
+   ],
+   "t6": [
+    "Jordan Mason",
+    "Hunter Henry"
+   ]
+  }
+ },
+ "w_rb_td": {
+  "-": {
+   "threshold": 1,
+   "text": "Name a RB with 1+ rushing TDs last week",
+   "n": 20,
+   "tiers": [
+    4,
+    4,
+    4,
+    3,
+    3,
+    2
+   ],
+   "t1": [
+    "Derrick Henry",
+    "Jahmyr Gibbs",
+    "Kenneth Walker III"
+   ],
+   "t6": [
+    "Jeremy McNichols",
+    "Jacory Croskey-Merritt"
+   ]
+  }
+ },
+ "w_wr_100": {
+  "-": {
+   "threshold": 70,
+   "text": "Name a WR with 70+ receiving yards last week",
+   "n": 17,
+   "tiers": [
+    4,
+    3,
+    4,
+    2,
+    3,
+    1
+   ],
+   "t1": [
+    "Justin Jefferson",
+    "Jaxon Smith-Njigba",
+    "Amon-Ra St. Brown"
+   ],
+   "t6": [
+    "Ricky Pearsall"
+   ]
+  }
+ },
+ "w_rb_100": {
+  "-": {
+   "threshold": 60,
+   "text": "Name a RB with 60+ rushing yards last week",
+   "n": 17,
+   "tiers": [
+    4,
+    3,
+    4,
+    2,
+    3,
+    1
+   ],
+   "t1": [
+    "David Montgomery",
+    "Jahmyr Gibbs",
+    "Bijan Robinson"
+   ],
+   "t6": [
+    "Jeremy McNichols"
+   ]
+  }
+ },
+ "w_qb_300": {
+  "-": {
+   "threshold": 200,
+   "text": "Name a QB with 200+ passing yards last week",
+   "n": 19,
+   "tiers": [
+    4,
+    4,
+    4,
+    3,
+    3,
+    1
+   ],
+   "t1": [
+    "Josh Allen",
+    "Patrick Mahomes",
+    "Dak Prescott"
+   ],
+   "t6": [
+    "Spencer Rattler"
+   ]
+  }
+ },
+ "w3_td": {
+  "-": {
+   "threshold": 3,
+   "text": "Name a player with 3+ TDs over the last three weeks",
+   "n": 16,
+   "tiers": [
+    4,
+    3,
+    3,
+    2,
+    3,
+    1
+   ],
+   "t1": [
+    "Keenan Allen",
+    "Jahmyr Gibbs",
+    "Kenneth Walker III"
+   ],
+   "t6": [
+    "J.K. Dobbins"
+   ]
+  }
+ },
+ "w3_ppr": {
+  "-": {
+   "threshold": 60,
+   "text": "Name a player with 60+ PPR points over the last three weeks",
+   "n": 17,
+   "tiers": [
+    4,
+    3,
+    4,
+    2,
+    3,
+    1
+   ],
+   "t1": [
+    "Josh Allen",
+    "Jahmyr Gibbs",
+    "Bijan Robinson"
+   ],
+   "t6": [
+    "Daniel Jones"
+   ]
+  }
+ },
+ "w3_wr_yds": {
+  "-": {
+   "threshold": 200,
+   "text": "Name a WR with 200+ receiving yards over the last three weeks",
+   "n": 17,
+   "tiers": [
+    4,
+    3,
+    4,
+    2,
+    3,
+    1
+   ],
+   "t1": [
+    "Davante Adams",
+    "Jaxon Smith-Njigba",
+    "Ja'Marr Chase"
+   ],
+   "t6": [
+    "Ricky Pearsall"
+   ]
+  }
+ },
+ "w3_rb_yds": {
+  "-": {
+   "threshold": 175,
+   "text": "Name a RB with 175+ rushing yards over the last three weeks",
+   "n": 16,
+   "tiers": [
+    4,
+    3,
+    3,
+    2,
+    3,
+    1
+   ],
+   "t1": [
+    "Alvin Kamara",
+    "Jahmyr Gibbs",
+    "Bijan Robinson"
+   ],
+   "t6": [
+    "J.K. Dobbins"
+   ]
+  }
+ },
+ "r_td": {
+  "-": {
+   "threshold": 1,
+   "text": "Name a rookie with 1+ rushing or receiving TDs",
+   "n": 14,
+   "tiers": [
+    3,
+    3,
+    3,
+    2,
+    2,
+    1
+   ],
+   "t1": [
+    "Emeka Egbuka",
+    "Cam Skattebo",
+    "Bhayshul Tuten"
+   ],
+   "t6": [
+    "Jackson Hawes"
+   ]
+  }
+ },
+ "r_wr_yds": {
+  "-": {
+   "threshold": 20,
+   "text": "Name a rookie WR with 20+ receiving yards",
+   "n": 12,
+   "tiers": [
+    3,
+    2,
+    3,
+    1,
+    2,
+    1
+   ],
+   "t1": [
+    "Emeka Egbuka",
+    "Tetairoa McMillan",
+    "Matthew Golden"
+   ],
+   "t6": [
+    "Jack Bech"
+   ]
+  }
+ },
+ "r_game_ppr": {
+  "-": {
+   "threshold": 10,
+   "text": "Name a rookie with a 10+ PPR point game",
+   "n": 17,
+   "tiers": [
+    4,
+    3,
+    4,
+    2,
+    3,
+    1
+   ],
+   "t1": [
+    "Emeka Egbuka",
+    "Cam Skattebo",
+    "Matthew Golden"
+   ],
+   "t6": [
+    "Jacory Croskey-Merritt"
+   ]
+  }
+ },
+ "r_scrim": {
+  "-": {
+   "threshold": 100,
+   "text": "Name a rookie with 100+ scrimmage yards (rushing + receiving)",
+   "n": 15,
+   "tiers": [
+    3,
+    3,
+    3,
+    3,
+    2,
+    1
+   ],
+   "t1": [
+    "Emeka Egbuka",
+    "Cam Skattebo",
+    "Bhayshul Tuten"
+   ],
+   "t6": [
+    "Jacory Croskey-Merritt"
+   ]
+  }
+ },
+ "r_catch": {
+  "-": {
+   "threshold": 4,
+   "text": "Name a rookie with 4+ catches",
+   "n": 21,
+   "tiers": [
+    5,
+    4,
+    4,
+    3,
+    3,
+    2
+   ],
+   "t1": [
+    "Emeka Egbuka",
+    "Cam Skattebo",
+    "Matthew Golden"
+   ],
+   "t6": [
+    "Jayden Higgins",
+    "Chimere Dike"
+   ]
+  }
+ },
+ "d_sacks": {
+  "-": {
+   "threshold": 2,
+   "text": "Name a defender with 2+ sacks",
+   "n": 37,
+   "tiers": [
+    8,
+    7,
+    8,
+    5,
+    6,
+    3
+   ],
+   "t1": [
+    "Andrew Van Ginkel",
+    "Will McDonald IV",
+    "Rashan Gary"
+   ],
+   "t6": [
+    "Travon Walker",
+    "Trey Hendrickson",
+    "Tyquan Lewis"
+   ]
+  }
+ },
+ "d_picks": {
+  "-": {
+   "threshold": 1,
+   "text": "Name a defender with 1+ interceptions",
+   "n": 58,
+   "tiers": [
+    12,
+    12,
+    11,
+    9,
+    9,
+    5
+   ],
+   "t1": [
+    "Kevin Byard",
+    "Isaiah Rodgers",
+    "Mike Jackson"
+   ],
+   "t6": [
+    "Tony Jefferson",
+    "Xavier McKinney",
+    "Xavier Watts"
+   ]
+  }
+ },
+ "d_tackles": {
+  "-": {
+   "threshold": 20,
+   "text": "Name a defender with 20+ tackles",
+   "n": 59,
+   "tiers": [
+    12,
+    12,
+    12,
+    9,
+    9,
+    5
+   ],
+   "t1": [
+    "Bobby Okereke",
+    "Tyrel Dodson",
+    "Bobby Wagner"
+   ],
+   "t6": [
+    "Germaine Pratt",
+    "Jack Sanborn",
+    "Jevon Holland"
+   ]
+  }
+ },
+ "d_ff": {
+  "-": {
+   "threshold": 1,
+   "text": "Name a defender who has forced 1+ fumbles",
+   "n": 55,
+   "tiers": [
+    11,
+    11,
+    11,
+    9,
+    8,
+    5
+   ],
+   "t1": [
+    "Jeffery Simmons",
+    "Isaiah Rodgers",
+    "Joey Bosa"
+   ],
+   "t6": [
+    "Tyrique Stevenson",
+    "Tyson Campbell",
+    "Will Harris"
+   ]
+  }
+ },
+ "d_pbu": {
+  "-": {
+   "threshold": 4,
+   "text": "Name a defender with 4+ passes defended",
+   "n": 15,
+   "tiers": [
+    3,
+    3,
+    3,
+    3,
+    2,
+    1
+   ],
+   "t1": [
+    "Keisean Nixon",
+    "Jourdan Lewis",
+    "DJ Turner II"
+   ],
+   "t6": [
+    "Will Johnson"
+   ]
+  }
+ },
+ "d_game_tkl": {
+  "-": {
+   "threshold": 11,
+   "text": "Name a defender with 11+ tackles in one game",
+   "n": 29,
+   "tiers": [
+    6,
+    6,
+    6,
+    4,
+    5,
+    2
+   ],
+   "t1": [
+    "Bobby Okereke",
+    "Jordyn Brooks",
+    "Quay Walker"
+   ],
+   "t6": [
+    "Tre'von Moehrig",
+    "Tykee Smith"
+   ]
+  }
+ },
+ "k_fg": {
+  "-": {
+   "threshold": 5,
+   "text": "Name a kicker with 5+ field goals made",
+   "n": 22,
+   "tiers": [
+    5,
+    4,
+    5,
+    3,
+    3,
+    2
+   ],
+   "t1": [
+    "Matt Prater",
+    "Chris Boswell",
+    "Brandon McManus"
+   ],
+   "t6": [
+    "Ryan Fitzgerald",
+    "Tyler Loop"
+   ]
+  }
+ },
+ "k_long": {
+  "-": {
+   "threshold": 54,
+   "text": "Name a kicker with a 54+ yard field goal",
+   "n": 15,
+   "tiers": [
+    3,
+    3,
+    3,
+    3,
+    2,
+    1
+   ],
+   "t1": [
+    "Chris Boswell",
+    "Brandon McManus",
+    "Brandon Aubrey"
+   ],
+   "t6": [
+    "Jake Elliott"
+   ]
+  }
+ },
+ "k_50": {
+  "-": {
+   "threshold": 1,
+   "text": "Name a kicker with 1+ field goals from 50 or more yards",
+   "n": 23,
+   "tiers": [
+    5,
+    5,
+    4,
+    4,
+    3,
+    2
+   ],
+   "t1": [
+    "Matt Prater",
+    "Chris Boswell",
+    "Brandon McManus"
+   ],
+   "t6": [
+    "Tyler Loop",
+    "Jake Elliott"
+   ]
+  }
+ },
+ "p_in20": {
+  "-": {
+   "threshold": 3,
+   "text": "Name a punter with 3+ punts downed inside the 20",
+   "n": 24,
+   "tiers": [
+    5,
+    5,
+    5,
+    3,
+    4,
+    2
+   ],
+   "t1": [
+    "Johnny Hekker",
+    "Riley Dixon",
+    "Bryan Anger"
+   ],
+   "t6": [
+    "Sam Martin",
+    "Michael Dickson"
+   ]
+  }
+ },
+ "o_qb_sacked": {
+  "-": {
+   "threshold": 5,
+   "text": "Name a QB who has been sacked 5+ times",
+   "n": 24,
+   "tiers": [
+    5,
+    5,
+    5,
+    3,
+    4,
+    2
+   ],
+   "t1": [
+    "Aaron Rodgers",
+    "Russell Wilson",
+    "Matthew Stafford"
+   ],
+   "t6": [
+    "Cam Ward",
+    "Spencer Rattler"
+   ]
+  }
+ },
+ "o_qb_int": {
+  "-": {
+   "threshold": 2,
+   "text": "Name a QB who has thrown 2+ interceptions",
+   "n": 17,
+   "tiers": [
+    4,
+    3,
+    4,
+    2,
+    3,
+    1
+   ],
+   "t1": [
+    "Aaron Rodgers",
+    "Russell Wilson",
+    "Matthew Stafford"
+   ],
+   "t6": [
+    "Jake Browning"
+   ]
+  }
+ },
+ "o_fum_lost": {
+  "-": {
+   "threshold": 1,
+   "text": "Name a player who has lost 1+ fumbles",
+   "n": 38,
+   "tiers": [
+    8,
+    8,
+    7,
+    6,
+    6,
+    3
+   ],
+   "t1": [
+    "Joe Flacco",
+    "Jaxon Smith-Njigba",
+    "Ja'Marr Chase"
+   ],
+   "t6": [
+    "Nate Carter",
+    "Trevor Etienne",
+    "Myles Price"
+   ]
+  }
+ },
+ "o_wr_rush": {
+  "-": {
+   "threshold": 2,
+   "text": "Name a WR with 2+ rushing attempts",
+   "n": 16,
+   "tiers": [
+    4,
+    3,
+    3,
+    2,
+    3,
+    1
+   ],
+   "t1": [
+    "DJ Moore",
+    "Amon-Ra St. Brown",
+    "Deebo Samuel Sr."
+   ],
+   "t6": [
+    "Chimere Dike"
+   ]
+  }
+ },
+ "o_qb_rush_td": {
+  "-": {
+   "threshold": 1,
+   "text": "Name a QB who has rushed for 1+ touchdowns",
+   "n": 13,
+   "tiers": [
+    3,
+    3,
+    2,
+    2,
+    2,
+    1
+   ],
+   "t1": [
+    "Josh Allen",
+    "Patrick Mahomes",
+    "Lamar Jackson"
+   ],
+   "t6": [
+    "Jake Browning"
+   ]
+  }
+ },
+ "o_qb_run": {
+  "-": {
+   "threshold": 10,
+   "text": "Name a QB with 10+ rushing attempts",
+   "n": 18,
+   "tiers": [
+    4,
+    4,
+    3,
+    3,
+    3,
+    1
+   ],
+   "t1": [
+    "Russell Wilson",
+    "Josh Allen",
+    "Patrick Mahomes"
+   ],
+   "t6": [
+    "Spencer Rattler"
+   ]
+  }
+ },
+ "o_swing": {
+  "-": {
+   "threshold": 20,
+   "text": "Name a player whose best and worst PPR weeks are 20+ points apart (min 2 games)",
+   "n": 23,
+   "tiers": [
+    5,
+    5,
+    4,
+    4,
+    3,
+    2
+   ],
+   "t1": [
+    "Russell Wilson",
+    "Ja'Marr Chase",
+    "Amon-Ra St. Brown"
+   ],
+   "t6": [
+    "Hunter Renfrow",
+    "Troy Franklin"
+   ]
+  }
+ },
+ "f_wr1": {
+  "-": {
+   "threshold": 1,
+   "text": "Name a WR who has finished a week as a top-12 WR in PPR scoring 1+ times",
+   "n": 30,
+   "tiers": [
+    6,
+    6,
+    6,
+    5,
+    4,
+    3
+   ],
+   "t1": [
+    "Davante Adams",
+    "Jaxon Smith-Njigba",
+    "Ja'Marr Chase"
+   ],
+   "t6": [
+    "Jauan Jennings",
+    "Ricky Pearsall",
+    "Troy Franklin"
+   ]
+  }
+ },
+ "f_rb1": {
+  "-": {
+   "threshold": 1,
+   "text": "Name a RB who has finished a week as a top-12 RB in PPR scoring 1+ times",
+   "n": 24,
+   "tiers": [
+    5,
+    5,
+    5,
+    3,
+    4,
+    2
+   ],
+   "t1": [
+    "Derrick Henry",
+    "Jahmyr Gibbs",
+    "Bijan Robinson"
+   ],
+   "t6": [
+    "Dylan Sampson",
+    "De'Von Achane"
+   ]
+  }
+ },
+ "f_te1": {
+  "-": {
+   "threshold": 1,
+   "text": "Name a TE who has finished a week as a top-6 TE in PPR scoring 1+ times",
+   "n": 14,
+   "tiers": [
+    3,
+    3,
+    3,
+    2,
+    2,
+    1
+   ],
+   "t1": [
+    "Zach Ertz",
+    "Mark Andrews",
+    "Brock Bowers"
+   ],
+   "t6": [
+    "Ja'Tavion Sanders"
+   ]
+  }
+ },
+ "f_qb1": {
+  "-": {
+   "threshold": 1,
+   "text": "Name a QB who has finished a week as a top-6 QB in PPR scoring 1+ times",
+   "n": 14,
+   "tiers": [
+    3,
+    3,
+    3,
+    2,
+    2,
+    1
+   ],
+   "t1": [
+    "Russell Wilson",
+    "Josh Allen",
+    "Patrick Mahomes"
+   ],
+   "t6": [
+    "Justin Fields"
+   ]
+  }
+ }
+}
