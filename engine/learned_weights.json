@@ -1,0 +1,41 @@
+{
+  "generated_at": "2026-11-15T23:01:22",
+  "seasons_used": [
+    2017,
+    2018,
+    2019,
+    2020,
+    2021,
+    2022,
+    2023,
+    2024,
+    2025
+  ],
+  "weights": {
+    "QB": {
+      "yards_per_attempt": 13.7,
+      "td_rate": 12.3,
+      "completion_pct": 0.0,
+      "int_rate": -16.1,
+      "sack_rate": -12.8,
+      "rush_yards_per_game": 29.0
+    },
+    "RB": {
+      "yards_per_carry": 13.7,
+      "td_rate": 7.7,
+      "touches_per_game": 49.9,
+      "yards_per_target": 2.6,
+      "target_share": 26.1,
+      "rushing_epa_per_carry": 0.0
+    },
+    "TE": {
+      "target_share": 32.9,
+      "catch_rate": 0.0,
+      "td_rate_targets": 7.1,
+      "yards_per_target": 5.4,
+      "wopr": 27.8,
+      "yac_per_reception": 10.7,
+      "air_yards_share": 16.2
+    }
+  }
+}

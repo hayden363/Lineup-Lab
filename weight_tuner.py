@@ -26,7 +26,7 @@ have.
 Run:
     python weight_tuner.py                  # dry run: prints learned vs
                                               # current weights, writes nothing
-    python weight_tuner.py --write           # also saves data_cache/learned_weights.json,
+    python weight_tuner.py --write           # also saves engine/learned_weights.json (committed),
                                               # which engine/metrics.py picks up
                                               # automatically on next import —
                                               # restart the server to apply it
@@ -44,10 +44,11 @@ import pandas as pd
 
 from engine import data
 from engine.board import MIN_VOLUME
-from engine.metrics import METRIC_FNS, MIN_GAMES, _DEFAULT_WEIGHTS
+from engine.metrics import METRIC_FNS, MIN_GAMES, _DEFAULT_WEIGHTS, score_players
 from engine.scoring import apply_scoring
 
-LEARNED_WEIGHTS_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data_cache", "learned_weights.json")
+LEARNED_WEIGHTS_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "engine", "learned_weights.json")
+TOP_N = {"QB": 12, "RB": 24, "WR": 24, "TE": 12}   # "did the top of our list match the real top" cut-offs
 POSITIONS = ("QB", "RB", "WR", "TE")
 
 
@@ -134,11 +135,9 @@ def _probe_seasons(n_pairs):
     return sorted(seasons.keys())
 
 
-def tune_position(position, seasons):
-    """Build every valid (year, year+1) training pair for this position,
-    concatenate across all of them, and regress."""
-    feature_cols = list(_DEFAULT_WEIGHTS[position].keys())
-    frames = []
+def _season_pairs(position, seasons):
+    """{year: (all qualified players that year, those same players joined to their next-season points per game)}."""
+    out = {}
     for year in seasons:
         if (year + 1) not in seasons:
             continue
@@ -147,16 +146,63 @@ def tune_position(position, seasons):
             columns={"fpts_per_game": "target_fpts_per_game"})
         joined = train.join(target, how="inner")  # only players who qualified in BOTH seasons
         if len(joined):
-            frames.append(joined)
+            out[year] = (train, joined)
+    return out
 
-    if not frames:
+
+def _usable_features(position, frame):
+    """Metrics with real history. A metric that is missing for most rows (QB `dakota` is not in the historical weekly
+    files) must not be a regression column: dropping rows with any missing feature left QBs with zero training rows
+    and the tuner silently learned nothing. Such a metric keeps its hand-picked weight."""
+    return [c for c in _DEFAULT_WEIGHTS[position] if c in frame.columns and frame[c].notna().mean() > 0.5]
+
+
+def _fit(position, frames):
+    combined = pd.concat(frames, ignore_index=True)
+    feats = _usable_features(position, combined)
+    learned = learn_weights(combined, "target_fpts_per_game", feats)
+    ref = {f: _DEFAULT_WEIGHTS[position][f] for f in feats}
+    # Sign-constrained: a metric whose coefficient came out on the wrong side of its hand-picked direction (completion
+    # % pulled negative by its overlap with yards per attempt) is an artifact of correlated features, not "completing
+    # passes is bad". It is zeroed instead of flipped, so SCORE never punishes a QB for a higher completion rate.
+    learned = learned.where(learned * pd.Series(ref).reindex(learned.index) > 0, 0.0)
+    return to_weight_dict(learned, ref)
+
+
+def tune_position(position, seasons):
+    """Build every valid (year, year+1) training pair for this position,
+    concatenate across all of them, and regress."""
+    pairs = _season_pairs(position, seasons)
+    if not pairs:
         print(f"  [tuner] {position}: no season-over-season pairs with enough overlap — skipped")
         return None
+    frames = [j for _, j in pairs.values()]
+    print(f"  [tuner] {position}: {sum(len(f) for f in frames)} player-season pairs across {len(frames)} season transitions")
+    return _fit(position, frames)
 
-    combined = pd.concat(frames, ignore_index=True)
-    print(f"  [tuner] {position}: {len(combined)} player-season pairs across {len(frames)} season transitions")
-    learned = learn_weights(combined, "target_fpts_per_game", feature_cols)
-    return to_weight_dict(learned, _DEFAULT_WEIGHTS[position])
+
+def validate_position(position, seasons):
+    """Honest check: for each season transition, fit on the OTHER transitions only, then rank that held-out year's
+    players by SCORE and compare with their real next-season points per game. Returns one row per held-out year with
+    the rank correlation (and share of the real top-N we also put in our top-N) for the hand-picked weights, the
+    learned weights, and a plain 'last season's points per game' baseline."""
+    pairs = _season_pairs(position, seasons)
+    rows = []
+    n = TOP_N[position]
+    for year, (everyone, joined) in pairs.items():
+        others = [j for y, (_, j) in pairs.items() if y != year]
+        if not others:
+            continue
+        defaults = _DEFAULT_WEIGHTS[position]
+        learned = {**defaults, **_fit(position, others)}
+        row = {"year": year, "n": len(joined)}
+        for name, score in (("hand", score_players(everyone, defaults)), ("learned", score_players(everyone, learned)),
+                            ("baseline", everyone["fpts_per_game"])):
+            s = score.reindex(joined.index)
+            row[name + "_rho"] = s.rank().corr(joined["target_fpts_per_game"].rank())   # Spearman, without needing scipy
+            row[name + "_top"] = len(set(s.nlargest(n).index) & set(joined["target_fpts_per_game"].nlargest(n).index)) / n
+        rows.append(row)
+    return pd.DataFrame(rows)
 
 
 def main():
@@ -164,6 +210,8 @@ def main():
     ap.add_argument("--write", action="store_true", help="save learned_weights.json (default: dry run, prints only)")
     ap.add_argument("--only", default=None, help="comma-separated positions, e.g. WR,TE (default: all)")
     ap.add_argument("--season-pairs", type=int, default=4, help="how many (year, year+1) pairs to gather (default 4)")
+    ap.add_argument("--validate", action="store_true",
+                    help="leave-one-season-out check of hand-picked vs learned weights vs last-year baseline")
     args = ap.parse_args()
 
     positions = [p.strip().upper() for p in args.only.split(",")] if args.only else list(POSITIONS)
@@ -177,6 +225,15 @@ def main():
         return
 
     print(f"\n[tuner] using seasons {seasons} ({len(seasons) - 1} year-over-year transition(s))\n")
+
+    if args.validate:
+        for pos in positions:
+            v = validate_position(pos, seasons)
+            print(f"===== {pos}: {len(v)} held-out seasons =====")
+            print(v.round(3).to_string(index=False))
+            print("mean rank correlation  hand %.3f  learned %.3f  baseline %.3f  (learned better in %d of %d)\n" % (
+                v.hand_rho.mean(), v.learned_rho.mean(), v.baseline_rho.mean(), int((v.learned_rho > v.hand_rho).sum()), len(v)))
+        return
 
     results = {}
     for pos in positions:

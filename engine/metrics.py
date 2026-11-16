@@ -8,7 +8,7 @@ All positions key on player_id (nflverse gsis_id) so they join cleanly
 against play-by-play and Next Gen Stats in engine/advanced.py.
 
 WEIGHTS starts from the hand-picked defaults below, then any position/
-metric present in data_cache/learned_weights.json overrides its default —
+metric present in engine/learned_weights.json (committed, so production uses it) overrides its default —
 real weights learned from multi-season history instead of guessed, via
 weight_tuner.py (`python weight_tuner.py --write`, then restart the
 server; see that file). A metric the tuner didn't touch, or a position it
@@ -67,8 +67,7 @@ TE_WEIGHTS = {
 
 _DEFAULT_WEIGHTS = {"QB": QB_WEIGHTS, "RB": RB_WEIGHTS, "WR": WR_WEIGHTS, "TE": TE_WEIGHTS}
 
-LEARNED_WEIGHTS_PATH = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data_cache", "learned_weights.json")
+LEARNED_WEIGHTS_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "learned_weights.json")
 
 
 def _load_learned_weights():
@@ -93,7 +92,7 @@ def _merged_weights():
 # The effective weights the app actually scores with — hand-picked defaults
 # with any learned overrides applied on top, per position/metric. Computed
 # once at import time; run weight_tuner.py --write and restart the server
-# to pick up a new learned_weights.json (same "restart to pick up a config
+# to pick up a new engine/learned_weights.json (same "restart to pick up a config
 # change" pattern as everything else in this app).
 WEIGHTS = _merged_weights()
 

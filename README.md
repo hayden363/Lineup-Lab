@@ -285,17 +285,31 @@ prediction). It reaches back several real historical seasons on its own,
 independent of the live app's current season.
 
 ```bash
-python weight_tuner.py              # dry run — prints learned vs current weights
-python weight_tuner.py --write      # saves data_cache/learned_weights.json
+python weight_tuner.py                                    # dry run: prints learned vs current weights
+python weight_tuner.py --season-pairs 8 --validate        # held-out check, see below
+python weight_tuner.py --season-pairs 8 --only QB,RB,TE --write   # saves engine/learned_weights.json
 ```
 
-`engine/metrics.py` picks up `learned_weights.json` automatically on
-import — restart the server after `--write` for it to take effect. It's
-a **partial** override: any position or metric the tuner didn't touch
-keeps its hand-picked default, so it's safe to run for only the
-positions/metrics you trust the sample size for. Nothing is applied
-until you explicitly run it with `--write` — a fresh checkout scores
-with the hand-picked defaults exactly as before.
+`engine/metrics.py` picks up `engine/learned_weights.json` (committed, so production uses it) on import; restart
+the server after `--write`. It is a **partial** override: any position or metric the tuner didn't touch keeps its
+hand-picked default (QB `dakota` has no history, so it stays at 16).
+
+**What is shipped, and why only some positions.** `--validate` fits on the other season transitions and ranks the
+held-out year's players by SCORE against their real next-season points per game (2017 to 2025, 8 held-out
+transitions, mean rank correlation):
+
+| Position | Hand-picked | Learned (shipped) | Last season's points/game |
+|---|---|---|---|
+| QB | 0.438 | 0.513 | 0.518 |
+| RB | 0.612 | 0.654 | 0.662 |
+| WR | 0.692 | 0.691 (not shipped) | 0.700 |
+| TE | 0.587 | 0.640 | 0.646 |
+
+QB, RB and TE learned weights beat hand-picked in held-out seasons (QB 7 of 8, RB 5 of 8, TE 7 of 8); WR did not
+(4 of 8, no gain), so WR keeps hand-picked weights. Learned coefficients are sign-constrained: one that came out on
+the wrong side of its hand-picked direction (QB completion %, TE catch rate, RB rushing EPA per carry) is set to 0,
+not flipped, because those are artifacts of correlated metrics. Be honest about the ceiling: SCORE built from these
+metrics predicts next season about as well as simply ranking by last season's points per game, and no better.
 
 ## Development — type checking
 
