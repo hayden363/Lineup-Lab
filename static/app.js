@@ -3987,17 +3987,19 @@ function secHeadHtml(icon, title, sub, right) {
 // DEF/K, whatever this league actually runs) first, bench after — a bench
 // player isn't scoring this week, so its projection is muted and excluded
 // from the team total (see engine/tools.py _roster_players).
-function rosterRowHtml(p, isBench) {
+function rosterRowHtml(p, isBench, idx) {
   // DEF/K have no SCORE — this app's stat engine only covers QB/RB/WR/TE (see README) — so there's no player-detail
   // view to open for them.
   const unscored = p.SCORE == null;
-  const range = p.floor != null && p.ceiling != null ? `<small class="proj-range" title="Typical range (10th to 90th percentile)${p.p_play != null ? `; ${Math.round(p.p_play * 100)}% chance to play` : ""}">${FMT.int(p.floor)}–${FMT.int(p.ceiling)}${p.p_play != null ? ` · ${Math.round(p.p_play * 100)}% to play` : ""}</small>` : "";
-  // Starters carry the live number (blue projected before kickoff, teal points once it starts); the bench stays a plain projection.
+  const rangeTxt = p.floor != null && p.ceiling != null ? `Typical range ${FMT.int(p.floor)}–${FMT.int(p.ceiling)} (10th to 90th percentile)${p.p_play != null ? `; ${Math.round(p.p_play * 100)}% chance to play` : ""}` : "";
+  const range = p.floor != null && p.ceiling != null ? `<small class="proj-range" title="${esc(rangeTxt)}">${FMT.int(p.floor)}–${FMT.int(p.ceiling)}${p.p_play != null ? ` · ${Math.round(p.p_play * 100)}% to play` : ""}</small>` : "";
+  // Starters: one big green number (his projection) until his game starts; then big white real points with his live
+  // projection small and green under it. No words. The range lives in the tooltip. The bench stays a plain projection.
   const v = isBench ? null : liveRowView(p, null);
   const num = isBench
     ? `<span class="proj-num tabular">${FMT.d1(p.PROJ)}${range}</span>`
-    : `<span class="proj-num tabular lv" data-state="${v.state}"><b class="lv-main" data-val="${v.main == null ? "" : v.main}">${FMT.d1(v.main)}</b><small class="lv-sub${v.sub ? "" : " is-empty"}">${esc(v.sub)}</small>${range}</span>`;
-  return `<div class="myteam-roster-row${isBench ? " bench" : ""}${unscored ? " unscored" : " kbd-click"}" data-pid="${esc(p.player_id)}" ${unscored ? 'data-unscored="1"' : 'role="button" tabindex="0"'}>
+    : `<span class="proj-num tabular lv" data-state="${v.state}" title="${esc(rangeTxt)}"><i class="lv-dot" aria-hidden="true"></i><b class="lv-main" data-val="${v.main == null ? "" : v.main}">${FMT.d1(v.main)}</b><small class="lv-sub${v.sub == null ? " is-empty" : ""}" data-val="${v.sub == null ? "" : v.sub}">${v.sub == null ? "" : FMT.d1(v.sub)}</small></span>`;
+  return `<div class="myteam-roster-row${isBench ? " bench" : ""}${unscored ? " unscored" : " kbd-click"}" style="--i:${idx || 0}" data-pid="${esc(p.player_id)}" ${unscored ? 'data-unscored="1"' : 'role="button" tabindex="0"'}>
     <img ${headshotAttrs(p)} alt="">
     <span class="pos-badge">${esc(p.slot || p.position)}</span>
     <span>${esc(p.player_display_name)}${p.recent_team ? ` <span class="mt-team" data-team-page="${esc(p.recent_team)}" role="link" tabindex="0" title="Open the ${esc(p.recent_team)} team page">${esc(p.recent_team)}</span>` : ""}${statusFlagsHtml(p)}</span>
@@ -4005,61 +4007,75 @@ function rosterRowHtml(p, isBench) {
   </div>`;
 }
 
-// ---- live scoring on My Team (spec: projected = blue --live-proj, real points = teal --live-pts) -------------------
-// pre-game: big blue projected. In a game: big teal points so far, small blue live projection below. Final: big teal
-// points with a small muted "Final". `lv` is that player's record from GET /api/myteam/live (null before it answers).
+// ---- live scoring on My Team ----------------------------------------------------------------------------------------
+// Green (--live-proj = the app's --pos) is always a projection, white (--live-pts = --text) is always real points. Before
+// his game: one big green number. From kickoff on (and after the final whistle): big white points, small green live
+// projection under it. `lv` is that player's record from GET /api/myteam/live (null before it answers). No words anywhere.
 function liveRowView(p, lv) {
   const settled = !!p.final;
   const st = lv && (lv.game_state === "in" || lv.game_state === "post") && lv.points != null ? lv.game_state : (settled ? "post" : "pre");
-  if (st === "pre") return { state: "pre", main: p.PROJ, sub: "", subKind: "" };
-  if (st === "post") {
-    const was = lv && lv.pregame_proj != null ? `Projected ${FMT.d1(lv.pregame_proj)}` : "";
-    return { state: "post", main: lv && lv.points != null ? lv.points : p.PROJ, sub: "Final", subKind: "final", title: was };
-  }
+  if (st === "pre") return { state: "pre", main: p.PROJ, sub: null, title: "" };
+  const pts = lv && lv.points != null ? lv.points : p.PROJ;
+  const sub = lv && lv.live_proj != null ? lv.live_proj : pts;
+  if (st === "post") return { state: "post", main: pts, sub, title: lv && lv.pregame_proj != null ? `Projected ${FMT.d1(lv.pregame_proj)} before the game` : "" };
   const clk = lv.quarter ? `${lv.quarter > 4 ? "OT" : "Q" + lv.quarter}${lv.clock ? " " + lv.clock : ""}` : "";
-  return { state: "in", main: lv.points, sub: lv.live_proj != null ? `proj ${FMT.d1(lv.live_proj)}` : "", subKind: "proj", title: clk };
+  return { state: "in", main: pts, sub, title: clk };
 }
 
-// A team's big number: label, state, main and the small line under it.
+// A team's big number (+ the smaller green projected final under it once real points exist).
 function liveTeamView(team, lt) {
-  const base = { state: "pre", main: team.total_proj, sub: "", label: teamTotalLabel(team) };
+  const starters = (team.players || []).filter((p) => p.is_starter);
   if (!lt || lt.points_total == null) {
-    if (lt && lt.live_proj_total != null && !base.label.startsWith("FINAL")) base.main = lt.live_proj_total;
-    if (base.label === "FINAL (STARTERS)") base.state = "post";
-    return base;
+    if (starters.length && starters.every((p) => p.final)) return { state: "post", main: team.total_proj, sub: team.total_proj };
+    return { state: "pre", main: lt && lt.live_proj_total != null ? lt.live_proj_total : team.total_proj, sub: null };
   }
   const started = (lt.players || []).some((x) => x.game_state === "in" || x.game_state === "post");
-  if (lt.final) return { state: "post", main: lt.points_total, sub: "", label: "FINAL (STARTERS)" };
-  if (started) return { state: "in", main: lt.points_total, sub: `proj ${FMT.d1(lt.live_proj_total)}`, label: "LIVE (STARTERS)" };
-  return { ...base, main: lt.live_proj_total != null ? lt.live_proj_total : base.main };
+  if (!started) return { state: "pre", main: lt.live_proj_total != null ? lt.live_proj_total : team.total_proj, sub: null };
+  return { state: lt.final ? "post" : "in", main: lt.points_total, sub: lt.live_proj_total != null ? lt.live_proj_total : lt.points_total };
 }
 
-// Counts el's number from `from` to `to` (tabular, one decimal). A newer call cancels an older one; reduced motion jumps.
-function animateNumber(el, to, from, ms) {
+// Counts el's number from `from` to `to` (tabular). A newer call cancels an older one; reduced motion jumps.
+function animateNumber(el, to, from, ms, dec) {
+  const d = dec == null ? 1 : dec;
   const tok = (el._lvTok = (el._lvTok || 0) + 1);
-  const done = () => { el.textContent = to == null ? "—" : Number(to).toFixed(1); };
+  const done = () => { el.textContent = to == null ? "—" : Number(to).toFixed(d); };
   el.dataset.val = to == null ? "" : String(to);
   if (to == null || prefersReducedMotion || from == null || !isFinite(from) || from === to) return done();
-  const t0 = performance.now(), dur = ms || 600;
+  const t0 = performance.now(), dur = ms || 700;
   const tick = (now) => {
     if (el._lvTok !== tok) return;
     const k = Math.min(1, (now - t0) / dur);
-    el.textContent = (from + (to - from) * (1 - Math.pow(1 - k, 3))).toFixed(1);
+    el.textContent = (from + (to - from) * (1 - Math.pow(1 - k, 3))).toFixed(d);
     if (k < 1) requestAnimationFrame(tick); else done();
   };
   requestAnimationFrame(tick);
 }
 
-// Puts a view into a `.lv` row number, or a `.mt-total` (+ its sub line and label) in place.
+// A brief glow on a number that just went up (real points only). Restarts if it fires again; off under reduced motion.
+function bumpNumber(el) {
+  if (prefersReducedMotion) return;
+  el.classList.remove("bump");
+  void el.offsetWidth;
+  el.classList.add("bump");
+  clearTimeout(el._bumpT);
+  el._bumpT = setTimeout(() => el.classList.remove("bump"), 1100);
+}
+
+// Puts a view into a `.lv` row number, or a `.mt-total` (+ its sub line) in place, animating whatever changed.
 function paintLiveNum(box, view, mainEl, subEl) {
   const prevState = box.dataset.state, prevVal = parseFloat(mainEl.dataset.val);
   const from = prevState === "pre" && view.state !== "pre" ? 0 : (isFinite(prevVal) ? prevVal : null);
   box.dataset.state = view.state;
-  if (mainEl.dataset.val !== String(view.main)) animateNumber(mainEl, view.main, from);
+  if (mainEl.dataset.val !== String(view.main)) {
+    animateNumber(mainEl, view.main, from);
+    if (view.state !== "pre" && prevState !== "pre" && isFinite(prevVal) && view.main > prevVal) bumpNumber(mainEl);
+  }
   if (subEl) {
-    subEl.textContent = view.sub || "";
-    subEl.classList.toggle("is-empty", !view.sub);
-    subEl.classList.toggle("is-final", view.subKind === "final");
+    const prevSub = parseFloat(subEl.dataset.val);
+    const subFrom = isFinite(prevSub) ? prevSub : (prevState === "pre" && isFinite(prevVal) ? prevVal : null);
+    subEl.classList.toggle("is-empty", view.sub == null);
+    if (view.sub == null) { subEl.textContent = ""; subEl.dataset.val = ""; }
+    else if (subEl.dataset.val !== String(view.sub)) animateNumber(subEl, view.sub, subFrom);
   }
   if (mainEl !== box) box.title = view.title || "";
 }
@@ -4083,40 +4099,24 @@ function teamCardHtml(team, kind) {
   const starters = team.players.filter((p) => p.is_starter);
   const bench = team.players.filter((p) => !p.is_starter);
   const rows = `
-    ${starters.map((p) => rosterRowHtml(p, false)).join("")}
+    ${starters.map((p, i) => rosterRowHtml(p, false, i)).join("")}
     ${bench.length ? `<div class="section-label">Bench <span class="hint-inline">— doesn't count this week</span></div>` : ""}
-    ${bench.map((p) => rosterRowHtml(p, true)).join("")}
+    ${bench.map((p, i) => rosterRowHtml(p, true, starters.length + i)).join("")}
   `;
   const avatar = team.avatar_url
     ? `<img class="mt-avatar" src="${proxyImg(team.avatar_url)}" data-fb-emoji="🏈" alt="">`
     : `<span class="team-emoji">🏈</span>`;
-  return `<div class="myteam-card${kind === "opponent" ? " opponent" : ""}">
+  const tv = liveTeamView(team, null);
+  return `<div class="myteam-card enter${kind === "opponent" ? " opponent" : ""}">
       <div class="mt-label">${kind === "mine" ? "MY TEAM" : "OPPONENT"}</div>
       <div class="mt-name-row">${avatar}<div class="mt-name">${esc(team.team_name)}</div></div>
-      <div class="mt-total-lbl">${esc(teamTotalLabel(team))}</div>
-      <div class="mt-total tabular" data-state="${teamTotalLabel(team) === "FINAL (STARTERS)" ? "post" : "pre"}" data-val="${team.total_proj == null ? "" : team.total_proj}">${FMT.d1(team.total_proj)}</div>
-      <div class="mt-total-sub tabular is-empty"></div>
+      <div class="mt-total tabular" data-state="${tv.state}" data-val="${tv.main == null ? "" : tv.main}">${FMT.d1(tv.main)}</div>
+      <div class="mt-total-sub tabular${tv.sub == null ? " is-empty" : ""}" data-val="${tv.sub == null ? "" : tv.sub}">${tv.sub == null ? "" : FMT.d1(tv.sub)}</div>
       <div style="margin-top:14px">${rows}</div>
     </div>`;
 }
 
-// "Projected" until his games are played. Rows the server settled with real
-// scores carry final:true, so a finished week reads FINAL and a part-played
-// one says it mixes the two.
-function teamTotalLabel(team) {
-  const starters = (team.players || []).filter((p) => p.is_starter);
-  const done = starters.filter((p) => p.final).length;
-  if (!starters.length || !done) return "PROJECTED (STARTERS)";
-  return done === starters.length ? "FINAL (STARTERS)" : "ACTUAL + PROJECTED (STARTERS)";
-}
-
-// A big center "VS" badge between the two team cards, plus who's favored —
-// the head-to-head feel of a real matchup page, not just two cards side by side.
-function matchupSettled(mine, opp) {
-  return [mine, opp].every((t) => teamTotalLabel(t) === "FINAL (STARTERS)");
-}
-
-// While games are on, the head-to-head uses the live numbers from /api/myteam/live; otherwise the settled-final logic.
+// While games are on, the head-to-head uses the live numbers from /api/myteam/live. Returns my margin (mine - opp).
 function liveEdge(mine, opp, live) {
   const lm = live && live.live && live.scoreboard_ok ? live.my_team : null, lo = live && live.live && live.scoreboard_ok ? live.opponent : null;
   if (!lm || !lo) return null;
@@ -4124,37 +4124,43 @@ function liveEdge(mine, opp, live) {
   return { mine: final ? lm.points_total : lm.live_proj_total, opp: final ? lo.points_total : lo.live_proj_total, final };
 }
 
-function matchupCenterHtml(mine, opp, live) {
-  if (!opp) return `<div class="matchup-vs-center"><div class="matchup-vs-badge">VS</div></div>`;
+function matchupMargin(mine, opp, live) {
   const le = liveEdge(mine, opp, live);
-  const diff = le ? (le.mine || 0) - (le.opp || 0) : (mine.total_proj || 0) - (opp.total_proj || 0);
-  const settled = le ? le.final : matchupSettled(mine, opp);
-  const favoredName = diff >= 0 ? mine.team_name : opp.team_name;
-  // Green only when YOU are projected ahead; an opponent edge is shown
-  // plainly (it's not "good"), never in the app's success color.
-  const favor = Math.abs(diff) < 0.1
-    ? `<span style="color:var(--muted)">Dead even</span>`
-    : `<span class="matchup-favor-lbl">${settled ? "Final margin" : "Projected edge"}</span><span class="${diff >= 0 ? "" : "is-opp"}">${esc(favoredName)} +${FMT.d1(Math.abs(diff))}</span>`;
+  return le ? (le.mine || 0) - (le.opp || 0) : (mine.total_proj || 0) - (opp.total_proj || 0);
+}
+
+// Win probability (server-computed: engine/win_prob.py) as a ring in the center column: my chance big inside it, theirs
+// small under it, my projected margin last. Painted in place by paintWinProb so the arc and numbers glide to new values.
+const WP_C = 2 * Math.PI * 34;
+function wpShown(p) { return p >= 1 ? 100 : p <= 0 ? 0 : Math.min(99, Math.max(1, Math.round(p * 100))); }
+function matchupCenterHtml(mine, opp, wp, margin) {
+  if (!opp || wp == null) return `<div class="matchup-vs-center"><div class="matchup-vs-badge">VS</div></div>`;
   return `<div class="matchup-vs-center">
-    <div class="matchup-vs-badge">VS</div>
-    <div class="matchup-favor">${favor}</div>
+    <div class="wp" data-p="${wp}" data-full="${wpShown(wp) >= 100 ? 1 : 0}" role="img" aria-label="Win probability: you ${wpShown(wp)} percent, opponent ${100 - wpShown(wp)} percent">
+      <svg class="wp-ring" viewBox="0 0 80 80" aria-hidden="true"><circle class="wp-track" cx="40" cy="40" r="34"/><circle class="wp-arc" cx="40" cy="40" r="34" stroke-dasharray="${WP_C.toFixed(2)}" stroke-dashoffset="${(WP_C * (1 - wp)).toFixed(2)}"/></svg>
+      <div class="wp-mid"><b class="wp-me tabular" data-val="${wpShown(wp)}">${wpShown(wp)}</b><i>%</i></div>
+    </div>
+    <div class="wp-opp tabular"><span class="wp-opp-n" data-val="${100 - wpShown(wp)}">${100 - wpShown(wp)}</span>%</div>
+    <div class="wp-edge tabular${margin < 0 ? " is-opp" : ""}" title="Projected margin, you minus opponent">${Math.abs(margin) < 0.05 ? "even" : (margin > 0 ? "+" : "−") + FMT.d1(Math.abs(margin))}</div>
   </div>`;
 }
 
-// Split bar showing each side's share of the combined projected total —
-// a quick "who's ahead, by how much" read at a glance.
-function matchupBarHtml(mine, opp, live) {
-  const le = liveEdge(mine, opp, live);
-  const mv = Math.max(le ? le.mine || 0 : mine.total_proj || 0, 0), ov = Math.max(le ? le.opp || 0 : opp.total_proj || 0, 0);
-  const sum = mv + ov;
-  const minePct = sum > 0 ? (mv / sum) * 100 : 50;
-  return `<div class="matchup-bar-wrap">
-    <div class="matchup-bar-labels"><span class="mine">${esc(mine.team_name)} · ${minePct.toFixed(0)}%</span><span class="matchup-bar-cap">share of combined projected points</span><span>${(100 - minePct).toFixed(0)}% · ${esc(opp.team_name)}</span></div>
-    <div class="matchup-bar" role="img" aria-label="${esc(mine.team_name)} ${minePct.toFixed(0)} percent of combined projected points">
-      <div class="matchup-bar-fill mine" style="width:${minePct.toFixed(1)}%"></div>
-      <div class="matchup-bar-fill theirs" style="width:${(100 - minePct).toFixed(1)}%"></div>
-    </div>
-  </div>`;
+function paintWinProb(content, wp, margin) {
+  const c = content.querySelector(".matchup-vs-center .wp");
+  if (!c || wp == null) return;
+  const me = c.querySelector(".wp-me"), op = c.parentElement.querySelector(".wp-opp-n"), arc = c.querySelector(".wp-arc");
+  const shown = wpShown(wp);
+  c.dataset.p = String(wp);
+  c.dataset.full = shown >= 100 ? "1" : "0";
+  c.setAttribute("aria-label", `Win probability: you ${shown} percent, opponent ${100 - shown} percent`);
+  arc.setAttribute("stroke-dashoffset", (WP_C * (1 - wp)).toFixed(2));
+  animateNumber(me, shown, parseFloat(me.dataset.val), 900, 0);
+  animateNumber(op, 100 - shown, parseFloat(op.dataset.val), 900, 0);
+  const edge = c.parentElement.querySelector(".wp-edge");
+  if (edge) {
+    edge.classList.toggle("is-opp", margin < 0);
+    edge.textContent = Math.abs(margin) < 0.05 ? "even" : (margin > 0 ? "+" : "−") + FMT.d1(Math.abs(margin));
+  }
 }
 
 function leagueMatchupsHtml(matchups, myRosterId) {
@@ -4250,23 +4256,22 @@ async function loadMyTeam(week, refresh) {
       ${unknown ? `<div class="form-msg error">${unknown} player${unknown === 1 ? "" : "s"} on your roster couldn't be identified yet. Tap Refresh roster; if it stays, the league site hasn't published them.</div>` : ""}`;
     html += `<div class="myteam-summary">
       ${teamCardHtml(data.my_team, "mine")}
-      ${matchupCenterHtml(data.my_team, data.opponent)}
+      ${matchupCenterHtml(data.my_team, data.opponent, data.win_prob, data.opponent ? matchupMargin(data.my_team, data.opponent, null) : 0)}
       ${data.opponent ? teamCardHtml(data.opponent, "opponent")
         : `<div class="myteam-card opponent"><div class="mt-label">OPPONENT</div><div class="mt-name muted">No head-to-head matchup set for week ${esc(data.nfl_week)} yet.</div></div>`}
     </div>`;
     html = html.replace('<div class="myteam-summary">', replacementBannerHtml(data.my_team) + '<div class="myteam-summary">');
-    if (data.opponent) html += matchupBarHtml(data.my_team, data.opponent);
     html += leagueMatchupsHtml(data.league_matchups, data.my_team.roster_id);
     html += `<div id="trades-panel"></div>`;
     content.innerHTML = html;
-    $("#rb-go")?.addEventListener("click", () => switchTab("startsit"));
+    loadTradesPanel();     // first, before any other post-render work: nothing after this line may stop the trades section from loading
     $("#mt-refresh").addEventListener("click", async (e) => {
       e.currentTarget.disabled = true; e.currentTarget.textContent = "Refreshing…";
       await loadMyTeam(data.nfl_week, true);
       showToast("Roster refreshed from the league site.");
     });
+    $("#rb-go")?.addEventListener("click", () => switchTab("startsit"));
     countUpTotals(content, `${data.nfl_week}|${data.my_team.roster_id}`);
-    loadTradesPanel();
     startMyTeamLive((scoringQS() + weekQS).replace(/^&/, ""), data);
     content.querySelectorAll(".myteam-roster-row:not(.unscored)").forEach((row) => {
       row.addEventListener("click", (e) => { if (!e.target.closest("[data-team-page]")) openPlayerModal(row.dataset.pid); });
@@ -4342,13 +4347,12 @@ function applyMyTeamLive(live) {
       if (!row) return;
       paintLiveNum(row, liveRowView(p, byPid.get(String(p.player_id))), row.querySelector(".lv-main"), row.querySelector(".lv-sub"));
     });
-    const tv = liveTeamView(team, lt), tot = card.querySelector(".mt-total");
-    paintLiveNum(tot, tv, tot, card.querySelector(".mt-total-sub"));
-    card.querySelector(".mt-total-lbl").textContent = tv.label;
+    const tot = card.querySelector(".mt-total");
+    paintLiveNum(tot, liveTeamView(team, lt), tot, card.querySelector(".mt-total-sub"));
   });
   if (data.opponent) {
-    content.querySelector(".matchup-vs-center")?.replaceWith(el("div", "", matchupCenterHtml(data.my_team, data.opponent, live)).firstElementChild);
-    content.querySelector(".matchup-bar-wrap")?.replaceWith(el("div", "", matchupBarHtml(data.my_team, data.opponent, live)).firstElementChild);
+    const wp = live.win_prob != null ? live.win_prob : data.win_prob;
+    paintWinProb(content, wp, matchupMargin(data.my_team, data.opponent, live));
   }
 }
 
@@ -4373,21 +4377,33 @@ function countUpTotals(root, key) {
 }
 
 // ------------------------------------------------------------ league trades ----
-async function loadTradesPanel() {
+const TRADES_TIMEOUT_MS = 30000;
+async function loadTradesPanel(attempt) {
   const host = $("#trades-panel");
   if (!host) return;
+  const head = secHeadHtml("trades", "League trades", "Every completed trade in your league, newest first.");
+  host.innerHTML = `${head}<div class="hint tr-loading">Loading trades…</div>`;     // the section is on screen from the first paint
   let seen = [];
   try { seen = JSON.parse(localStorage.getItem("seenTrades") || "[]"); } catch (e) { /* storage unavailable */ }
+  const ctl = typeof AbortController === "function" ? new AbortController() : null;
+  let timedOut = false;
+  const timer = ctl ? setTimeout(() => { timedOut = true; ctl.abort(); }, TRADES_TIMEOUT_MS) : null;     // api() has no timeout of its own
   try {
-    const { trades } = await api(`/api/league/trades?seen=${encodeURIComponent(seen.join(","))}`);
-    const head = secHeadHtml("trades", "League trades", "Every completed trade in your league, newest first.");
+    const { trades } = await api(`/api/league/trades?seen=${encodeURIComponent(seen.join(","))}`, ctl ? { signal: ctl.signal } : undefined);
+    if (!host.isConnected) return;                    // My Team re-rendered meanwhile; that render started its own load
     if (!trades.length) { host.innerHTML = `${head}<div class="hint">No trades in your league yet.</div>`; return; }
     const side = (s) => `<div class="tr-side"><div class="tr-team">${esc(s.team)} <span class="muted small">gets</span></div>${s.receives.map((x) => `<div class="tr-item ${x.kind}">${esc(x.name)}</div>`).join("") || `<div class="muted small">nothing</div>`}</div>`;
     host.innerHTML = head +
       trades.slice(0, 10).map((t) => `<div class="tr-card${t.is_new ? " is-new" : ""}"><div class="tr-head">${t.week != null ? `Week ${esc(t.week)}` : esc(t.at ? new Date(t.at).toLocaleDateString(undefined, { month: "short", day: "numeric" }) : "—")}${t.is_new ? ` <span class="lk lk-open">NEW</span>` : ""}${t.status ? ` <span class="lk">${esc(t.status)}</span>` : ""}${t.votes ? ` <span class="muted small">${esc(t.votes.approved)} approve · ${esc(t.votes.vetoed)} veto</span>` : ""}</div><div class="tr-sides">${t.sides.map(side).join("")}</div></div>`).join("");
     try { localStorage.setItem("seenTrades", JSON.stringify(trades.map((t) => t.id))); } catch (e) { /* storage unavailable */ }
   } catch (e) {
-    host.innerHTML = `${secHeadHtml("trades", "League trades", "")}<div class="hint">${esc(e.message)}</div>`;
+    if (!host.isConnected) return;
+    if (!attempt) { setTimeout(() => { if (host.isConnected) loadTradesPanel(1); }, 3000); return; }   // one quiet retry
+    const msg = timedOut ? "Loading trades took too long." : (e && e.message) || "Couldn't load trades.";
+    host.innerHTML = `${head}<div class="hint">${esc(msg)} <button type="button" class="pill" id="tr-retry">Try again</button></div>`;
+    $("#tr-retry")?.addEventListener("click", () => loadTradesPanel());
+  } finally {
+    if (timer) clearTimeout(timer);
   }
 }
 

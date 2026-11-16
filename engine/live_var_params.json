@@ -1,0 +1,62 @@
+{
+ "version": 1,
+ "fit_seasons": [
+  2023,
+  2024,
+  2025
+ ],
+ "test_season": 2026,
+ "model": "sd = max(floor, a * rog_exp ** b); remaining-points residual, per position; ALL = position-agnostic (K, DEF, unknown)",
+ "sd": {
+  "QB": {
+   "a": 3.0271,
+   "b": 0.3343,
+   "floor": 2.7688,
+   "calib_test": {
+    "n": 2507,
+    "within_1sd": 0.731,
+    "within_2sd": 0.952
+   }
+  },
+  "RB": {
+   "a": 2.4293,
+   "b": 0.427,
+   "floor": 1.62,
+   "calib_test": {
+    "n": 6141,
+    "within_1sd": 0.791,
+    "within_2sd": 0.949
+   }
+  },
+  "WR": {
+   "a": 2.4992,
+   "b": 0.4434,
+   "floor": 1.3654,
+   "calib_test": {
+    "n": 10302,
+    "within_1sd": 0.799,
+    "within_2sd": 0.937
+   }
+  },
+  "TE": {
+   "a": 2.2541,
+   "b": 0.442,
+   "floor": 1.1051,
+   "calib_test": {
+    "n": 5552,
+    "within_1sd": 0.799,
+    "within_2sd": 0.941
+   }
+  },
+  "ALL": {
+   "a": 2.4757,
+   "b": 0.4257,
+   "floor": 1.6066,
+   "calib_test": {
+    "n": 24502,
+    "within_1sd": 0.79,
+    "within_2sd": 0.943
+   }
+  }
+ }
+}

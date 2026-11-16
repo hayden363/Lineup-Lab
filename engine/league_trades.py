@@ -7,7 +7,15 @@ received and gave up. Pure parsing lives in `parse_trade` so it can be tested
 without the network.
 """
 
+import threading
+import time
+from concurrent.futures import ThreadPoolExecutor
+
 from . import sleeper
+
+TRADES_TTL = 120          # a finished trade list is reused this long (same as sleeper.TRADE_TTL for the raw weeks)
+_RESULT = {}              # (league_id, weeks) -> (computed_at, trades)
+_RESULT_LOCK = threading.Lock()
 
 
 def parse_trade(tx, team_names, player_name):
@@ -37,7 +45,17 @@ def parse_trade(tx, team_names, player_name):
 
 def league_trades(league_id, weeks, force=False):
     """Completed trades across `weeks` (iterable of week numbers), newest
-    first. A week Sleeper has no data for is skipped, not fatal."""
+    first. A week Sleeper has no data for is skipped, not fatal. The weeks are
+    fetched in parallel (one request each, a league mid-season is 10+ of them
+    and used to be fetched one after another), and the finished list is reused
+    for TRADES_TTL seconds so reopening My Team does not refetch everything."""
+    weeks = list(weeks)
+    key = (str(league_id), tuple(weeks))
+    if not force:
+        with _RESULT_LOCK:
+            hit = _RESULT.get(key)
+        if hit and time.time() - hit[0] < TRADES_TTL:
+            return [dict(t) for t in hit[1]]
     teams = {t["roster_id"]: t["team_name"] for t in sleeper.league_snapshot(league_id)["teams"]}
     players = sleeper.all_players()
 
@@ -45,18 +63,25 @@ def league_trades(league_id, weeks, force=False):
         p = players.get(pid) or {}
         return p.get("full_name") or " ".join(x for x in (p.get("first_name"), p.get("last_name")) if x) or str(pid)
 
-    out = []
-    for w in weeks:
+    def week_txs(w):
         try:
-            txs = sleeper.get_transactions(league_id, w, force=force)
+            return sleeper.get_transactions(league_id, w, force=force)
         except Exception:
-            continue
-        for tx in txs or []:
-            t = parse_trade(tx, teams, name)
-            if t:
-                out.append(t)
+            return []
+
+    out = []
+    with ThreadPoolExecutor(max_workers=min(6, max(1, len(weeks)))) as pool:
+        for txs in pool.map(week_txs, weeks):
+            for tx in txs or []:
+                t = parse_trade(tx, teams, name)
+                if t:
+                    out.append(t)
     out.sort(key=lambda t: t.get("at") or 0, reverse=True)
-    return out
+    with _RESULT_LOCK:
+        if len(_RESULT) > 200:
+            _RESULT.clear()
+        _RESULT[key] = (time.time(), out)
+    return [dict(t) for t in out]
 
 
 def parse_espn_trades(activities):

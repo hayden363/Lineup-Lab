@@ -11,7 +11,7 @@ import re
 import time
 from datetime import datetime, timezone
 
-from . import live_proj
+from . import live_proj, win_prob
 
 # One spelling for every NFL team code that shows up across Sleeper (WAS, LAR is not used there but LA is), ESPN (WSH, LAR),
 # nflverse (LA, WAS, JAX) and the older aliases the other modules already map (engine/boxscore.py, engine/news.py).
@@ -153,8 +153,14 @@ def _player(s, idx, pts):
                                              quarter=g["period"])["live_proj"]
     else:                                                          # post, not yet settled by our box scores
         live = points
+    if state == "post":
+        rog = 0.0                                                  # nothing left to play
+    elif state == "in" and live is not None and points is not None:
+        rog = max(0.0, live - points)
+    else:
+        rog = pregame or 0.0                                       # before kickoff, or a live clock we cannot read
     return {"player_id": s["player_id"], "position": s["position"], "game_state": state, "points": points,
-            "pregame_proj": pregame, "live_proj": live, "quarter": g["period"] if (g and state == "in") else None,
+            "pregame_proj": pregame, "live_proj": live, "rog": rog, "quarter": g["period"] if (g and state == "in") else None,
             "clock": g["clock"] if (g and state == "in") else None,
             "detail": g["detail"] if g else None, "kickoff": g["kickoff"] if g else None}
 
@@ -176,7 +182,9 @@ def _team(card, idx, by_roster):
         else:
             v = p["pregame_proj"]
         total += v or 0.0
+    var = sum(win_prob.rog_sd(p["position"], p["rog"]) ** 2 for p in players)
     return {"roster_id": card["roster_id"], "points_total": points_total, "live_proj_total": round(total, 1),
+            "mu": total, "rog_var": var,
             "final": bool(players) and all(p["game_state"] == "post" for p in players), "players": players}
 
 
@@ -186,7 +194,7 @@ def compose(base, games, points, now=None):
     week = base.get("week")
     is_live_week = base.get("live_week") is not None and base.get("live_week") == week
     if not is_live_week:
-        return {"live": False, "week": week, "reason": "not the live NFL week", "my_team": None, "opponent": None,
+        return {"live": False, "win_prob": None, "week": week, "reason": "not the live NFL week", "my_team": None, "opponent": None,
                 "scoreboard_ok": True, "points_source": None, "active": False, "wake_in_seconds": None, "as_of": now}
     idx = game_index(games, week)
     by_roster = (points or {}).get("by_roster") or {}
@@ -205,7 +213,10 @@ def compose(base, games, points, now=None):
             else:
                 soonest = k if soonest is None else min(soonest, k)
     wake = None if (active or soonest is None) else max(5, int(soonest - SOON_SECONDS - now))
-    return {"live": True, "week": week, "platform": base.get("platform"), "scoreboard_ok": bool(idx),
+    wp = None
+    if mine and opp:
+        wp = win_prob.win_probability(mine["mu"], mine["rog_var"], opp["mu"], opp["rog_var"])
+    return {"live": True, "week": week, "platform": base.get("platform"), "scoreboard_ok": bool(idx), "win_prob": wp,
             "points_source": (points or {}).get("source"), "points_note": (points or {}).get("note"),
             "active": active, "poll_seconds": POLL_SECONDS, "wake_in_seconds": wake, "as_of": now,
             "my_team": mine, "opponent": opp}

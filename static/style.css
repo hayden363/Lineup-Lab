@@ -5363,7 +5363,7 @@ body.sidebar-collapsed .nav-live-dot { position: absolute; top: 9px; right: 16px
   --shadow-glow: 0 10px 24px -12px var(--accent-glow);
   --sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Inter, Roboto, "Helvetica Neue", Arial, sans-serif;
   --mono: var(--sans);
-  --live-pts: #00ceb8; --live-proj: #58a7ff;   /* My Team live: real points = the skin's teal, projected = its blue. Fixed on purpose: team themes remap --accent and --info, which would make the two collide */
+  --live-pts: var(--text); --live-proj: var(--pos);   /* My Team live: real points = white (--text), projections = the app's green (--pos). Fixed on purpose: team themes remap --accent and --info (never --text or --pos), so the two never collide with a theme */
   --pos-qb: #ff2a6d; --pos-rb: #00ceb8; --pos-wr: #58a7ff; --pos-te: #ffae58; --pos-k: #bd66ff; --pos-def: #7988a1;
 }
 body { font-variant-numeric: tabular-nums; background: var(--bg); }
@@ -5547,21 +5547,51 @@ body.tp-open .th-title::after { content: ""; position: absolute; left: 0; right:
 }
 
 /* ---- My Team live scoring --------------------------------------------------------------------------------------
-   Before kickoff the number is the projection in blue. Once the game starts it is the real points in teal, counting up,
-   with the live projection small and blue under it. Final: teal points, a quiet "Final". --live-pts / --live-proj are
-   fixed colors (see the Sleeper skin :root): a team theme can turn --accent or --info blue, teal or gold, so neither is used here. */
-.myteam-roster-row .proj-num.lv { display: flex; flex-direction: column; align-items: flex-end; line-height: 1.1; min-width: 56px; }
-.lv-main { font-weight: 800; font-size: 18px; font-variant-numeric: tabular-nums; }
-.lv-sub { font-family: var(--sans); font-size: 11px; font-weight: 600; font-variant-numeric: tabular-nums; margin-top: 2px; white-space: nowrap; }
+   White (--live-pts) = real points, green (--live-proj) = a projection. Before his game: one big green number. From
+   kickoff on: big white points with his live projection small and green under them. No labels. Team themes remap
+   --accent / --info but never --text or --pos, so these two stay put. All motion is off under prefers-reduced-motion. */
+.myteam-roster-row .proj-num.lv { position: relative; display: flex; flex-direction: column; align-items: flex-end; line-height: 1.1; min-width: 56px; }
+.lv-main { font-weight: 800; font-size: 20px; font-variant-numeric: tabular-nums; letter-spacing: -.01em; transition: color .4s; }
+.lv-sub { font-family: var(--sans); font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; margin-top: 3px; color: var(--live-proj); }
 .lv-sub.is-empty, .mt-total-sub.is-empty { display: none; }
 .lv[data-state="pre"] .lv-main { color: var(--live-proj); }
 .lv[data-state="in"] .lv-main, .lv[data-state="post"] .lv-main { color: var(--live-pts); }
-.lv[data-state="in"] .lv-sub { color: var(--live-proj); }
-.lv[data-state="post"] .lv-sub { color: var(--muted); font-weight: 500; letter-spacing: .02em; }
-.lv[data-state="in"] .proj-range, .lv[data-state="post"] .proj-range { display: none; }
-.myteam-card .mt-total[data-state="pre"], .myteam-card.opponent .mt-total[data-state="pre"] { color: var(--live-proj); text-shadow: 0 0 20px rgba(88, 167, 255, 0.35); }
-.myteam-card .mt-total[data-state="in"], .myteam-card .mt-total[data-state="post"],
-.myteam-card.opponent .mt-total[data-state="in"], .myteam-card.opponent .mt-total[data-state="post"] { color: var(--live-pts); text-shadow: 0 0 20px rgba(0, 206, 184, 0.32); }
-.myteam-card .mt-total-sub { text-align: center; font-size: 15px; font-weight: 700; color: var(--live-proj); margin-top: 2px; }
-.myteam-card .mt-total { font-size: 44px; }
-@media (max-width: 640px) { .myteam-card .mt-total { font-size: 40px; } .lv-main { font-size: 17px; } }
+.lv-dot { display: none; position: absolute; left: -2px; top: 7px; width: 7px; height: 7px; border-radius: 50%; background: var(--live-proj); box-shadow: 0 0 0 0 rgba(47, 217, 160, .6); }
+.lv[data-state="in"] .lv-dot { display: block; animation: lvPulse 1.6s ease-out infinite; }
+@keyframes lvPulse { 0% { box-shadow: 0 0 0 0 rgba(47, 217, 160, .6); } 70% { box-shadow: 0 0 0 7px rgba(47, 217, 160, 0); } 100% { box-shadow: 0 0 0 0 rgba(47, 217, 160, 0); } }
+.bump { animation: lvBump 1.1s ease-out; }
+@keyframes lvBump { 0% { transform: scale(1.18); text-shadow: 0 0 14px rgba(255, 255, 255, .95), 0 0 28px rgba(47, 217, 160, .7); } 100% { transform: none; text-shadow: none; } }
+.myteam-card .mt-total { font-size: 46px; font-weight: 800; letter-spacing: -.025em; transition: color .4s; }
+.myteam-card .mt-total[data-state="pre"] { color: var(--live-proj); text-shadow: 0 0 22px rgba(47, 217, 160, 0.32); }
+.myteam-card .mt-total[data-state="in"], .myteam-card .mt-total[data-state="post"] { color: var(--live-pts); text-shadow: none; }
+.myteam-card.opponent .mt-total { text-shadow: none; }
+.myteam-card .mt-total-sub { text-align: center; font-size: 17px; font-weight: 700; color: var(--live-proj); margin: 0 0 2px; }
+.myteam-card.opponent { opacity: 1; }
+/* staggered entrance on first paint of a team card */
+.myteam-card.enter .myteam-roster-row { animation: mtRowIn .5s cubic-bezier(.2, .8, .2, 1) both; animation-delay: calc(var(--i, 0) * 45ms + 60ms); }
+@keyframes mtRowIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+
+/* win probability ring (center column) */
+.matchup-vs-center { padding-top: 70px; gap: 6px; }
+.wp { position: relative; width: 84px; height: 84px; }
+.wp-ring { width: 100%; height: 100%; transform: rotate(-90deg); display: block; }
+.wp-ring circle { fill: none; stroke-width: 7; }
+.wp-track { stroke: rgba(255, 255, 255, .13); }
+.wp-arc { stroke: var(--accent); stroke-linecap: round; transition: stroke-dashoffset 1s cubic-bezier(.2, .8, .2, 1); filter: drop-shadow(0 0 6px var(--accent-glow)); }
+.wp-mid { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-weight: 800; color: var(--text); }
+.wp-me { font-size: 25px; letter-spacing: -.02em; }
+.wp[data-full="1"] .wp-me { font-size: 19px; }
+.wp-mid i { font-style: normal; font-size: 11px; font-weight: 700; color: var(--muted); margin: 5px 0 0 1px; }
+.wp-opp { font-size: 12px; font-weight: 700; color: var(--muted); }
+.wp-opp::before { content: "opp "; font-weight: 500; font-size: 10px; text-transform: uppercase; letter-spacing: .06em; }
+.wp-edge { font-size: 12px; font-weight: 700; color: var(--accent); }
+.wp-edge.is-opp { color: var(--muted); }
+@media (max-width: 640px) {
+  .myteam-card .mt-total { font-size: 42px; }
+  .matchup-vs-center { padding-top: 4px; flex-direction: row; gap: 14px; }
+  .wp { width: 68px; height: 68px; } .wp-me { font-size: 20px; } .wp[data-full="1"] .wp-me { font-size: 15px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lv[data-state="in"] .lv-dot, .bump, .myteam-card.enter .myteam-roster-row { animation: none; }
+  .wp-arc, .lv-main, .myteam-card .mt-total { transition: none; }
+}

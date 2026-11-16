@@ -59,6 +59,7 @@ from engine import boxscore as boxscore_layer
 from engine import schemas
 from engine import live_scores as live_scores_layer
 from engine import myteam_live as myteam_live_layer
+from engine import win_prob as win_prob_layer
 from engine import waitlist as waitlist_layer
 from engine import locks
 from engine.flight import FLIGHT
@@ -1528,6 +1529,8 @@ def _load_my_team(user, week, scoring, refresh=False):
 def api_my_team(week: Optional[int] = Query(None, ge=1, le=25), refresh: bool = Query(False),
                  scoring: Optional[dict] = Depends(scoring_from_query), user=Depends(require_user)):
     _, result = _load_my_team(user, week, scoring, refresh=refresh)
+    # matchup win probability from pregame projections (engine/win_prob.py); the live endpoint refreshes it during games
+    result["win_prob"] = win_prob_layer.pregame_win_prob(result.get("my_team"), result.get("opponent"))
     return _clean(result)
 
 

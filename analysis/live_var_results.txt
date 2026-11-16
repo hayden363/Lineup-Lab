@@ -1,0 +1,13 @@
+fit rows 194472 (2023-2025), held-out rows 24648 (2026 weeks 1-7), snapshots with seconds left > 0 and rog_exp > 0.05
+calibration = share of finals inside +-1 / +-2 SD of points so far + expected rest of game (normal: 68.3% / 95.4%)
+pos          a       b   floor    fit n  fit 1sd  fit 2sd   test n  test 1sd  test 2sd
+QB       3.027   0.334   2.769    20973    0.726    0.957     2507     0.731     0.952
+RB       2.429   0.427   1.620    50561    0.813    0.949     6141     0.791     0.949
+WR       2.499   0.443   1.365    81870    0.817    0.948    10302     0.799     0.937
+TE       2.254   0.442   1.105    40654    0.827    0.950     5552     0.799     0.941
+ALL      2.476   0.426   1.607   194058    0.808    0.950    24502     0.790     0.943
+held-out calibration by seconds left (all positions):
+     0- 900s  n=  6059  1sd=0.872  2sd=0.951
+   900-1800s  n=  6143  1sd=0.809  2sd=0.940
+  1800-2700s  n=  6150  1sd=0.758  2sd=0.940
+  2700-3601s  n=  6150  1sd=0.722  2sd=0.940

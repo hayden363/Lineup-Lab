@@ -218,6 +218,21 @@ class EndpointTests(unittest.TestCase):
         self.assertEqual(r["my_team"]["points_total"], 6.5)
         self.assertTrue(r["active"])
 
+    def test_live_response_carries_a_win_probability(self):
+        r = self.call()
+        self.assertIsInstance(r["win_prob"], float)
+        self.assertTrue(0.0 < r["win_prob"] < 1.0)
+        self.assertEqual(r["my_team"]["players"][0]["rog"] >= 0, True)
+
+    def test_my_team_response_carries_the_pregame_win_probability(self):
+        r = self.server.api_my_team(week=None, refresh=False, scoring=None, user=self.user)
+        self.assertIsInstance(r["win_prob"], float)
+        self.assertTrue(0.0 < r["win_prob"] < 1.0)          # 12.0 projected WR vs 18.0 projected QB: behind, but not 0
+
+    def test_non_live_week_response_has_a_null_win_prob_key(self):
+        self.result["live_week"] = 12
+        self.assertIn("win_prob", self.call())
+
     def test_polls_reuse_the_cached_team_instead_of_rebuilding_it(self):
         self.call(); self.call(); self.call()
         self.assertEqual(self.calls["my_team"], 1)

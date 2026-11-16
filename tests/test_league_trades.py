@@ -87,3 +87,50 @@ class EspnPendingTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ParallelAndCacheTests(unittest.TestCase):
+    """The league's weeks are fetched concurrently, a failing week is skipped, and a finished list is reused (My Team reopens
+    were refetching every week one after another)."""
+
+    def setUp(self):
+        from unittest import mock
+        T._RESULT.clear()
+        self.addCleanup(T._RESULT.clear)
+        self.calls = []
+
+        def tx(lid, w, force=False):
+            self.calls.append(w)
+            if w == 3:
+                raise RuntimeError("sleeper down")
+            return [{"type": "trade", "status": "complete", "transaction_id": f"t{w}", "leg": w, "status_updated": w,
+                     "roster_ids": [1, 2], "adds": {"p1": 1}, "drops": {"p1": 2}}]
+        self.patches = [mock.patch.object(T.sleeper, "league_snapshot", return_value={"teams": [{"roster_id": 1, "team_name": "A"}, {"roster_id": 2, "team_name": "B"}]}),
+                        mock.patch.object(T.sleeper, "all_players", return_value={"p1": {"full_name": "Pat One"}}),
+                        mock.patch.object(T.sleeper, "get_transactions", side_effect=tx)]
+        for p in self.patches:
+            p.start()
+            self.addCleanup(p.stop)
+
+    def test_all_weeks_fetched_newest_first_and_a_failing_week_is_skipped(self):
+        out = T.league_trades("L", range(1, 6))
+        self.assertEqual(sorted(self.calls), [1, 2, 3, 4, 5])
+        self.assertEqual([t["week"] for t in out], [5, 4, 2, 1])
+
+    def test_second_call_is_served_from_the_result_cache(self):
+        T.league_trades("L", range(1, 4))
+        n = len(self.calls)
+        out = T.league_trades("L", range(1, 4))
+        self.assertEqual(len(self.calls), n)
+        self.assertEqual(len(out), 2)
+
+    def test_callers_flagging_trades_do_not_corrupt_the_cache(self):
+        a = T.league_trades("L", range(1, 3))
+        a[0]["is_new"] = True
+        self.assertNotIn("is_new", T.league_trades("L", range(1, 3))[0])
+
+    def test_force_refetches(self):
+        T.league_trades("L", range(1, 3))
+        n = len(self.calls)
+        T.league_trades("L", range(1, 3), force=True)
+        self.assertGreater(len(self.calls), n)
