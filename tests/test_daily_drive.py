@@ -690,6 +690,51 @@ class NavigationAndMigrationTests(unittest.TestCase):
             self.assertIn(col, sql)
 
 
+class PlayVisualTest(unittest.TestCase):
+    """The immersive /play front end: static checks only (no browser): CSP-safe, reduced motion, optional API fields."""
+
+    def _r(self, p):
+        with open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), p), encoding="utf-8") as f:
+            return f.read()
+
+    def test_no_inline_script_and_no_external_assets(self):
+        html = self._r("static/play.html")
+        for attrs, inner in re.findall(r"<script\b([^>]*)>(.*?)</script>", html, re.S):
+            self.assertIn("src=", attrs)
+            self.assertEqual(inner.strip(), "")
+        self.assertIn('src="/team-themes.js"', html)
+        self.assertIn('id="dd-live"', html)                       # aria-live region for results
+        for f in ("static/play.js", "static/play.css", "static/play.html"):
+            self.assertNotRegex(self._r(f), r"https?://(?!www\.w3\.org)")   # no CDNs or remote assets
+
+    def test_reduced_motion_is_handled_in_css_and_js(self):
+        self.assertIn("prefers-reduced-motion: reduce", self._r("static/play.css"))
+        js = self._r("static/play.js")
+        self.assertIn("prefers-reduced-motion: reduce", js)
+        self.assertIn("if (REDUCED", js)                          # particles, scan hold and count-ups skip when reduced
+        self.assertEqual(js.count("requestAnimationFrame(loop)") >= 1, True)
+
+    def test_optional_player_fields_degrade_gracefully(self):
+        js = self._r("static/play.js")
+        for key in ("r.team", "r.position", "r.headshot", "r.stat", "r.stat_label"):
+            self.assertIn(key, js)
+        self.assertIn('"/api/img?url="', js)                      # headshots go through the same-origin proxy
+        self.assertIn("initials(", js)                            # fallback badge
+        self.assertIn("tr.details", js)                           # reveal details are optional
+
+    def test_tier_colors_emoji_and_leaderboard_wiring(self):
+        js, css = self._r("static/play.js"), self._r("static/play.css")
+        for e in ("\u26aa", "\U0001F535", "\U0001F534", "\U0001F7E3", "\U0001F7E1", "\U0001F3C6", "\u2b1b"):
+            self.assertIn(e, js)
+        self.assertNotIn("\U0001F7E5", js)                       # old sacked square
+        for t in ("--t1: #b3bccd", "--t2: #6fd0ff", "--t3: #ff4b55", "--t4: #b866ff", "--t5: #fff04d", "--t6: #ffab1a"):
+            self.assertIn(t, css)                                 # grey, light blue, red, purple, yellow, gold
+        self.assertIn("/api/play/leaderboard", js)
+        self.assertIn("function tierFx", js)
+        self.assertIn("The Red Zone", js)
+        self.assertLess(len(js) + len(css), 100_000)              # stays light
+
+
 if __name__ == "__main__":
     unittest.main()
 

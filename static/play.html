@@ -11,10 +11,12 @@
 </head>
 <body>
 <nav class="dd-nav" aria-label="Site"><a href="/">&larr; Back to Lineup Lab</a></nav>
-<main class="dd" id="app" aria-live="polite">
+<div id="dd-live" class="dd-sr" role="status" aria-live="polite"></div>
+<main class="dd" id="app" data-mode="intro">
   <noscript><p class="dd-card">The Daily Drive needs JavaScript to run.</p></noscript>
 </main>
 <footer class="dd-foot"><a href="/">Built by Lineup Lab: real NFL data for your fantasy team</a></footer>
+<script src="/team-themes.js"></script>
 <script src="/play.js"></script>
 </body>
 </html>
