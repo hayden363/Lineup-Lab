@@ -36,20 +36,20 @@ def day_counts():
 def day_size():
     return sum(day_counts())
 
-# tier -> (name, yards, share emoji). Rarer = harder to think of = more yards.
-# Owner's tier colors (2026-11-16), lowest to highest: grey, light blue, red, purple, yellow, gold. The share
-# emoji follows the same colors.
+# tier -> (play name, yards, share emoji). Rarer = harder to think of = more yards. Tiers are football plays, from the
+# smallest gain to the biggest. Owner's tier colors (2026-11-16), lowest to highest: grey, light blue, red, purple,
+# yellow, gold. The share emoji follows the same colors. A wrong answer or timeout is a Sack (0 yards, not a tier).
 TIERS = {
-    6: ("Hall of Famer", 100, "\U0001F3C6"),   # gold trophy
-    5: ("All-Pro", 85, "\U0001F7E1"),          # yellow
-    4: ("Pro Bowler", 60, "\U0001F7E3"),       # purple
-    3: ("Starter", 30, "\U0001F534"),          # red
-    2: ("Rotation", 15, "\U0001F535"),         # (light) blue
-    1: ("Benchwarmer", 10, "⚪"),               # grey/white
+    6: ("Highlight Reel TD", 100, "\U0001F3C6"),   # gold trophy
+    5: ("Bomb", 85, "\U0001F7E1"),                 # yellow
+    4: ("Chunk Play", 60, "\U0001F7E3"),           # purple
+    3: ("Chain Mover", 30, "\U0001F534"),          # red
+    2: ("Quick Slant", 15, "\U0001F535"),          # (light) blue
+    1: ("Checkdown", 10, "⚪"),                      # grey/white
 }
 # percentile of the popularity ranking (0 = most popular answer) at which each tier starts, from the
-# easiest tier up: top 20% Benchwarmer, next 20% Rotation, next 20% Starter, next 15% Pro Bowler, next 15%
-# All-Pro, last 10% Hall of Famer.
+# easiest tier up: top 20% Checkdown, next 20% Quick Slant, next 20% Chain Mover, next 15% Chunk Play, next 15%
+# Bomb, last 10% Highlight Reel TD.
 _TIER_STARTS = [(0, 1), (20, 2), (40, 3), (60, 4), (75, 5), (90, 6)]
 
 
