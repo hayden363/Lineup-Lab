@@ -2166,10 +2166,27 @@ def play_check(body: PlayCheck):
     return out
 
 
+PLAY_REVEAL_LOCKED = "Today's answer sheets unlock at midnight ET. Signed-in players see them right after their drive."
+
+
 @app.get("/api/play/reveal", dependencies=[Depends(play_rate_limit)])
-def play_reveal(prompt_id: str, date: Optional[str] = None):
-    _, puzzle = _play_puzzle(date)
-    return _clean(daily_drive.reveal_view(_play_prompt(puzzle, prompt_id)))
+def play_reveal(request: Request, prompt_id: str, date: Optional[str] = None):
+    """Every answer for one prompt, by tier. Past days are open to anyone. TODAY's sheets are only for a signed-in
+    player who has already saved today's score: otherwise anyone could read the rarest answers before playing and
+    post a perfect 700 (each answer would verify, because it IS valid). One score per account per day means a
+    finished player can't use the sheet to replay. Anonymous players get today's sheets after midnight ET."""
+    key, puzzle = _play_puzzle(date)
+    prompt = _play_prompt(puzzle, prompt_id)
+    if key == daily_drive.today_et().isoformat():
+        user = _play_user(request)
+        try:
+            mine = db.drive_my_day(key, user["id"], None) if user else None
+        except Exception as e:
+            print(f"[play] reveal lock check failed: {type(e).__name__}")
+            mine = None                                           # fail closed: no DB, no early answers
+        if not mine:
+            raise HTTPException(403, PLAY_REVEAL_LOCKED)
+    return _clean(daily_drive.reveal_view(prompt))
 
 
 @app.get("/api/play/practice", dependencies=[Depends(play_rate_limit)])
@@ -2312,6 +2329,11 @@ def _play_page():
 @app.get("/play.js", include_in_schema=False)
 def _play_js():
     return FileResponse("static/play.js", media_type="text/javascript", headers={"Cache-Control": "no-cache"})
+
+
+@app.get("/play-field.js", include_in_schema=False)
+def _play_field_js():
+    return FileResponse("static/play-field.js", media_type="text/javascript", headers={"Cache-Control": "no-cache"})
 
 
 @app.get("/play.css", include_in_schema=False)

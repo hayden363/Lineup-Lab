@@ -16,12 +16,12 @@ no account; prompts are a **mix** of real-data fantasy prompts and history promp
 
 | Tier | Name | Yards | Share emoji |
 |---|---|---|---|
-| 6 | Hall of Famer | 100 | 🏆 |
-| 5 | All-Pro | 85 | 🟣 |
-| 4 | Pro Bowler | 60 | 🔵 |
-| 3 | Starter | 30 | 🟢 |
-| 2 | Rotation | 15 | 🟡 |
-| 1 | Benchwarmer | 10 | ⚪ |
+| 6 | Highlight Reel TD | 100 | 🏆 |
+| 5 | Bomb | 85 | 🟣 |
+| 4 | Chunk Play | 60 | 🔵 |
+| 3 | Chain Mover | 30 | 🟢 |
+| 2 | Quick Slant | 15 | 🟡 |
+| 1 | Checkdown | 10 | ⚪ |
 | — | Sacked | 0 | 🟥 |
 
 - 100-yard answers get a short "TOUCHDOWN" celebration. A field bar (0 to 700 yards) fills as prompts resolve.
@@ -74,8 +74,8 @@ yesterday's templates are used again unless the pool runs dry (replaces the old 
 for unrevealed answers.
 
 **Rarity (no editors).** Within each prompt's answer set, rank answers by popularity and cut by percentile:
-top 20% Benchwarmer, next 20% Rotation, next 20% Starter, next 15% Pro Bowler, next 15% All-Pro, last 10%
-Hall of Famer. Popularity:
+top 20% Checkdown, next 20% Quick Slant, next 20% Chain Mover, next 15% Chunk Play, next 15% Bomb, last 10%
+Highlight Reel TD. Popularity:
 - fantasy (season) prompts: FantasyPros consensus rank already loaded by `engine/consensus.py` (`overall_lookup`;
   a player the experts don't list counts as least popular), tie-break by season PPR points;
 - history prompts (off): career PPR fantasy points (more points = more famous).
@@ -94,7 +94,7 @@ yesterday's templates. Cache each day's puzzle on disk (`data_cache/daily_drive/
 - Matching: lowercase, strip punctuation and suffixes (Jr, Sr, II, III), collapse spaces; accept full name,
   "F. Last", and last name alone when unique within that prompt's answer set; ambiguous last name →
   `suggestions` ("Did you mean Josh Allen?"). Typos: Levenshtein ≤ 2 (≤1 for names under 6 letters) may
-  auto-accept only Benchwarmer–Pro Bowler answers; All-Pro and Hall of Famer need an exact name/alias match
+  auto-accept only Checkdown–Chunk Play answers; Bomb and Highlight Reel TD need an exact name/alias match
   (otherwise return the suggestion chip). Each answer accepted once per game.
 - Future dates are refused; past dates are allowed (archive/practice).
 
