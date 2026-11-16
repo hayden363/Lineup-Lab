@@ -13,6 +13,7 @@ import time
 import numpy as np
 import pandas as pd
 
+from . import consensus as consensus_layer
 from . import lineup as lineup_layer
 from . import profile
 from . import context, correlation, data, db, decision, kdef_model, schemas, play_prob, draft_runs, history, trade_engine, locks, trade_reasons, defense_scoring, kicker_scoring, role_baseline, sleeper, waivers, weather
@@ -496,6 +497,24 @@ def _apply_recommendation_tiers(valid):
         r["confidence"] = confidence
 
 
+def _weekly_consensus_inputs(bundle, week, scoring):
+    """({pos: {match_key: weekly positional rank}}, {pos: our projections for that position, best
+    first}) for Start/Sit. Both are empty when this week's consensus page is missing or stale, which
+    leaves every projection as our own number."""
+    try:
+        after = consensus_layer.fresh_after(bundle["schedule"], week)
+        ecr = consensus_layer.load_ecr()
+        lookups = {p: consensus_layer.weekly_lookup(p, ecr, fresh_after=after) for p in ("QB", "RB", "WR", "TE")}
+        if after is None or not any(lookups.values()):
+            return {}, {}
+        pool, _ = waivers.cached_pool(scoring, bundle)
+        ref = {p: sorted(pool.loc[pool["position"] == p, "value"].dropna().astype(float), reverse=True) for p in lookups}
+        return lookups, ref
+    except Exception as e:
+        print(f"[startsit] weekly consensus skipped: {e}")
+        return {}, {}
+
+
 def start_sit(player_ids, opponents=None, season=None, scoring=None, mode="balanced", keep_samples=False):
     """Compare 2+ players. `opponents`: optional {player_id: opp_abbr} for
     matchup-adjusted projections; players without one use a rest-of-season
@@ -516,6 +535,7 @@ def start_sit(player_ids, opponents=None, season=None, scoring=None, mode="balan
     slate_week = waivers.target_week(bundle["schedule"])
     byes = profile.bye_weeks(bundle["schedule"])
     weather.prefetch(bundle["schedule"], slate_week)
+    wk_ecr, ecr_ref = _weekly_consensus_inputs(bundle, slate_week, scoring)
     for pid in player_ids:
         pos = _position_of(pid, bundle)
         if pos is None:
@@ -574,6 +594,20 @@ def start_sit(player_ids, opponents=None, season=None, scoring=None, mode="balan
         floor_v, ceil_v = _clean_num(row.get("floor")), _clean_num(row.get("ceiling"))
         floor_v = floor_v * env_f * h2h_f if floor_v is not None else None
         ceil_v = ceil_v * env_f * h2h_f if ceil_v is not None else None
+        # Expert consensus for this week (engine/consensus.py): the backtest says it out-ranks our
+        # number on its own, so it takes most of the weight. The floor and ceiling scale with the
+        # projection so the spread keeps its shape. No rank for this player: our number stands.
+        consensus_info = None
+        if not on_bye and proj > 0:
+            e_rank = wk_ecr.get(pos, {}).get(consensus_layer.match_key(row.get("player_display_name"), pos))
+            blended, e_pts = consensus_layer.blend_with_rank(proj, e_rank, ecr_ref.get(pos, []), consensus_layer.WEEKLY_WEIGHT)
+            if e_pts is not None:
+                consensus_info = {"rank": int(round(e_rank)), "points": round(e_pts, 1), "weight": consensus_layer.WEEKLY_WEIGHT,
+                                  "model_proj": round(proj, 1)}
+                scale = blended / proj
+                proj = blended
+                floor_v = floor_v * scale if floor_v is not None else None
+                ceil_v = ceil_v * scale if ceil_v is not None else None
         # A player on a bye or ruled out scores nothing this week. His next-game number is kept for reference, but
         # the PROJ every ranking and sentence reads is zero, so a bye can never look like the best option.
         next_proj = proj
@@ -582,7 +616,7 @@ def start_sit(player_ids, opponents=None, season=None, scoring=None, mode="balan
         usage = context.usage_trend(bundle["wk"], pid, pos)
         spread = (ceil_v - floor_v) if (floor_v is not None and ceil_v is not None) else None
         results.append({
-            "base_proj": base_proj, "environment": {"factor": env_f, "notes": env_notes, "game": ctx},
+            "base_proj": base_proj, "consensus": consensus_info, "environment": {"factor": env_f, "notes": env_notes, "game": ctx},
             "head_to_head": h2h,
             "usage": usage, "cv": (spread / proj if spread is not None and proj else None),
             "player_id": pid, "position": pos,

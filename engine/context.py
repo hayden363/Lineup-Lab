@@ -161,6 +161,9 @@ def build_reasons(r):
         out.append(f"{'Soft' if factor > 1 else 'Tough'} matchup vs {r['opponent']} ({factor:.2f}x)")
     env = r.get("environment") or {}
     out.extend(env.get("notes", []))
+    c = r.get("consensus")
+    if c:
+        out.append(f"Experts rank him {r['position']}{c['rank']} this week; their number is {round(c['weight'] * 100)}% of this projection")
     u = r.get("usage")
     if u and u["label"] != "steady":
         out.append(f"{u['metric'].capitalize()} {u['label']}: {u['recent_avg']:g}/game lately vs {u['earlier_avg']:g} earlier")

@@ -436,6 +436,37 @@ def player_pool(scoring, bundle):
     return pool, logs
 
 
+def with_weekly_consensus(pool, schedule, week, weight=None):
+    """A copy of `pool` whose `value` leans on this week's expert consensus rank (engine/consensus.py),
+    the raw model number kept as `value_model`. The cached pool itself is never changed (Start/Sit and
+    trades read it too and blend consensus their own way). A player the experts do not list, or no
+    fresh page for this week, keeps our number."""
+    from . import consensus
+    weight = consensus.WAIVER_WEEKLY_WEIGHT if weight is None else weight
+    pool = pool.copy()
+    pool["value_model"] = pool["value"]
+    try:
+        after = consensus.fresh_after(schedule, week)
+        if after is None:
+            return pool
+        ecr = consensus.load_ecr()
+        for pos in POSITIONS:
+            ranks = consensus.weekly_lookup(pos, ecr, fresh_after=after)
+            if not ranks:
+                continue
+            idx = pool.index[pool["position"] == pos]
+            ref = sorted(pool.loc[idx, "value"].dropna().astype(float), reverse=True)
+            for pid in idx:
+                row = pool.loc[pid]
+                rank = ranks.get(consensus.match_key(row["player_display_name"], pos))
+                blended, pts = consensus.blend_with_rank(float(row["value"]), rank, ref, weight)
+                if pts is not None:
+                    pool.at[pid, "value"] = round(blended, 2)
+    except Exception as e:
+        print(f"[waivers] weekly consensus skipped: {e}")
+    return pool
+
+
 def replacement_levels(pool, roster_positions, teams):
     """{position: projected points/game of the first player this league shape
     leaves unrostered}: rank (teams x starters at the position + 1) by value.
@@ -515,6 +546,7 @@ def build(league_id=None, my_roster_id=None, scoring=None, now=None, limit=10, e
     byes = profile.bye_weeks(schedule)
     pool, logs = cached_pool(scoring, bundle)
     pool = pool.copy()
+    pool = with_weekly_consensus(pool, schedule, week)
     snaps = weekly_snaps(bundle["season"])
     depth = depth_by_team()
 

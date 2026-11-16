@@ -17,9 +17,11 @@ barely above free and a tight end at 22 is a huge edge. In a superflex league
 the QB replacement drops to about QB24 and quarterbacks rise accordingly.
 
 The final order blends our VOR rank with the expert consensus rank (ECR, see
-engine/consensus.py) at 30% weight: other sites don't decide anything, but a
-big disagreement is worth showing and a mild nudge keeps early-season noise
-from dominating. Both ranks are returned so the UI can show the gap.
+engine/consensus.py) at 70% weight. That weight comes from a backtest, not taste:
+in 2021-2025 preseason, rank correlation with each player's real points per
+game was .636 for our ranking alone, .683 at 30% consensus, .726 at 70% and .729
+at 85% (analysis/ecr_sweep.py). A player the experts don't list keeps our
+rank unchanged. Both ranks are returned so the UI can show the gap.
 
 Tiers are cut where the VOR drops by a lot between neighbours, which is how
 draft-day tier sheets are made.
@@ -39,7 +41,7 @@ DEFAULT_LEAGUE = {
 FLEX_SHARE = {"QB": 0.0, "RB": 0.4, "WR": 0.5, "TE": 0.1}
 SUPERFLEX_SHARE = {"QB": 0.7, "RB": 0.1, "WR": 0.15, "TE": 0.05}
 
-ECR_WEIGHT = 0.30
+ECR_WEIGHT = 0.70
 ECR_MISSING_RANK = 450  # not in the experts' top ~400 -> treat as deep
 
 
@@ -116,7 +118,9 @@ def compute_value(frames, ecr=None, league=None, ecr_weight=ECR_WEIGHT):
         allp["bye_week"] = np.where(np.isnan(sched_bye), ecr_bye, sched_bye)
     else:
         allp["bye_week"] = ecr_bye
-    filled = allp["ecr"].fillna(ECR_MISSING_RANK)
+    # Not listed by the experts: our own rank stands (a name that failed to match must not sink a
+    # real player). ECR_MISSING_RANK stays only as the value the UI shows for "deep".
+    filled = allp["ecr"].fillna(allp["our_rank"])
     allp["blend"] = (1 - ecr_weight) * allp["our_rank"] + ecr_weight * filled \
         if ecr else allp["our_rank"]
     allp = allp.sort_values(["blend", "VOR"], ascending=[True, False])

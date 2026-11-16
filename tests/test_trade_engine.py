@@ -199,13 +199,13 @@ class TradeValueTest(unittest.TestCase):
         self.assertEqual(set(v), {"a", "b", "c", "d", "e", "f", "xr", "xw", "xq", "xt"})
         self.assertTrue(all(0 <= x["trade"] <= 100 for x in v.values()))
 
-    def test_expert_rank_nudges_by_thirty_percent(self):
+    def test_expert_rank_carries_seventy_percent(self):
         import pandas as pd
         pool = self._pool()
         pvs = {"a": 90.0, "b": 70.0, "c": 50.0, "d": 30.0, "e": 20.0, "f": 10.0, "xr": 5.0, "xw": 4.0, "xq": 3.0, "xt": 2.0}
         from engine import consensus
         key = consensus.match_key("f Player", "TE")
         v = T.trade_values(pool, self.SHAPE, self.ROSTERED, ecr={key: {"ecr": 1}}, pvs_by_id=pvs)
-        # experts have him 1st -> blends toward the top slot's PVS (90): 0.7*10 + 0.3*90
-        self.assertAlmostEqual(v["f"]["trade"], 34.0, places=1)
+        # experts have him 1st -> blends toward the top slot's PVS (90): 0.3*10 + 0.7*90
+        self.assertAlmostEqual(v["f"]["trade"], 66.0, places=1)
         self.assertEqual(v["a"]["trade"], 90.0)

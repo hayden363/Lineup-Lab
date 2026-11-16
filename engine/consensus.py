@@ -72,8 +72,55 @@ def overall_lookup(ecr=None):
     return out
 
 
-def weekly_lookup(position, ecr=None):
-    """{match_key: weekly positional ECR} for one position (QB/RB/WR/TE)."""
+# How much of a weekly projection comes from the expert consensus rank. Chosen by backtest
+# (analysis/weekly_sweep.py, 2021-2025, 280 season-week-position groups, real PPR points): rank
+# correlation with real points rises steadily as the consensus share rises and is flat from 0.8 up
+# (all positions: 0.0 -> .549, 0.5 -> .581, 0.8 -> .589, 1.0 -> .591). 0.8 keeps a fifth of our own
+# number so players the experts do not list, and the matchup/injury/weather layers, still count.
+WEEKLY_WEIGHT = 0.80
+# Waivers rank a rest-of-season number, not one game, so the one-week consensus gets less say. This
+# one is a judgment call between the weekly result and no change; it has no backtest of its own.
+WAIVER_WEEKLY_WEIGHT = 0.50
+# A weekly page counts only if scraped from 4 days before that week's first game on (the same
+# window the backtest used); a leftover page from last week must never be read as this week's.
+FRESH_DAYS_BEFORE_KICKOFF = 4
+
+
+def fresh_after(schedule, week):
+    """Earliest scrape date a weekly consensus page may have to count for `week`, or None when the
+    schedule has no game dates for it."""
+    try:
+        s = schedule[(schedule["week"] == week) & (schedule["game_type"] == "REG")] \
+            if "game_type" in schedule.columns else schedule[schedule["week"] == week]
+        first = pd.to_datetime(s["gameday"]).min()
+    except Exception:
+        return None
+    return None if pd.isna(first) else first - pd.Timedelta(days=FRESH_DAYS_BEFORE_KICKOFF)
+
+
+def weekly_lookup(position, ecr=None, fresh_after=None):
+    """{match_key: weekly positional ECR} for one position (QB/RB/WR/TE). With `fresh_after`, only
+    pages scraped on or after that date count (an empty dict when the cached page is older)."""
     ecr = load_ecr() if ecr is None else ecr
     sub = ecr[ecr["page_type"] == f"weekly-{position.lower()}"]
+    if fresh_after is not None and len(sub):
+        sub = sub[pd.to_datetime(sub["scrape_date"]) >= pd.Timestamp(fresh_after)]
     return {match_key(r.player, r.pos): float(r.ecr) for r in sub.itertuples(index=False)}
+
+
+def points_for_rank(rank, ref_sorted_desc):
+    """The points a player at positional rank `rank` would score on our own scale: the rank-th
+    highest of `ref_sorted_desc` (our projections for that position, best first). Experts publish
+    ranks, not points, so this puts their order on the same axis as ours."""
+    n = len(ref_sorted_desc)
+    if rank is None or n == 0:
+        return None
+    return float(ref_sorted_desc[min(max(int(round(rank)), 1), n) - 1])
+
+
+def blend_with_rank(ours, rank, ref_sorted_desc, weight):
+    """(blended points, consensus points). Falls back to (ours, None) when there is no rank to use."""
+    pts = points_for_rank(rank, ref_sorted_desc)
+    if ours is None or pts is None:
+        return ours, None
+    return weight * pts + (1.0 - weight) * float(ours), pts

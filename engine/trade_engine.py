@@ -9,9 +9,9 @@ Market value (0-100, the league's own PVS)
     value = PVS (engine/pvs.py) computed for THIS league's team count, starting
     slots and scoring, so a superflex league re-prices quarterbacks and a deep
     league re-prices its bench. It keeps the real gaps between players (a 0.1
-    point gap is not priced like a 2 point gap). The expert consensus rank nudges
-    it by 30%: that rank is turned into the PVS of whoever sits at that spot on
-    our list, then blended 70/30. Tiers are the one shared set of PVS bands
+    point gap is not priced like a 2 point gap). The expert consensus rank carries
+    70% (backtested, see engine/value.py): that rank is turned into the PVS of
+    whoever sits at that spot on our list, then blended 30/70. Tiers are the one shared set of PVS bands
     (engine/pvs.TIER_BANDS): 1 = 80+, 2 = 60+, 3 = 40+, 4 = 25+, 5 = below.
 
 1. Starting Lineup Delta
@@ -56,7 +56,7 @@ import numpy as np
 from . import consensus, lineup as lineup_layer, optimizer, pvs as pvs_layer, sleeper, value as value_layer
 
 POSITIONS = ("QB", "RB", "WR", "TE")
-ECR_WEIGHT = 0.30   # the same expert-rank nudge the board uses (engine/value.ECR_WEIGHT)
+ECR_WEIGHT = value_layer.ECR_WEIGHT   # one backtested expert-rank weight for the board and trades
 OPP_MIN_DSL = 1.5
 MY_MIN_DSL = 0.5
 CANDIDATES_PER_SIDE = 9
