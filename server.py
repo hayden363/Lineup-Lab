@@ -2058,6 +2058,11 @@ def _style_css():
     return FileResponse("static/style.css", media_type="text/css", headers={"Cache-Control": "no-cache"})
 
 
+@app.get("/game-center.css", include_in_schema=False)
+def _game_center_css():
+    return FileResponse("static/game-center.css", media_type="text/css", headers={"Cache-Control": "no-cache"})
+
+
 # The page shell itself has the exact same staleness risk as app.js/
 # style.css above, and it's the one that actually bit real testing
 # tonight: a browser served a cached index.html with none of a brand-new

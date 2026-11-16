@@ -1,0 +1,191 @@
+/* Game center: the full-screen view that opens from an NFL Games card.
+   A live-broadcast / data-HUD treatment built only from the app's own tokens (--bg, --panel, --accent, --pos/--neg/--avg,
+   position and team colors). Loaded after style.css so it wins on equal specificity. Every animation is switched off
+   under prefers-reduced-motion at the bottom of this file. */
+
+.gc-panel { --gc-edge: color-mix(in srgb, var(--accent) 22%, transparent); }
+.gc-backdrop { backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+
+/* ---------------------------------------------------------------- hero ---- */
+.gc-head { padding: 12px 20px 18px; border-bottom: 1px solid var(--gc-edge); isolation: isolate;
+  background:
+    radial-gradient(60% 140% at 0% 50%, color-mix(in srgb, var(--c1) 55%, transparent), transparent 70%),
+    radial-gradient(60% 140% at 100% 50%, color-mix(in srgb, var(--c2) 55%, transparent), transparent 70%),
+    linear-gradient(180deg, color-mix(in srgb, var(--bg) 70%, #000), var(--bg)); }
+.gc-head::after { background: repeating-linear-gradient(90deg, transparent 0 78px, rgba(255,255,255,.035) 78px 79px); opacity: .7;
+  -webkit-mask-image: linear-gradient(180deg, #000, transparent 95%); mask-image: linear-gradient(180deg, #000, transparent 95%); }
+.gc-head.has-fav { box-shadow: inset 0 -2px 0 var(--accent), 0 8px 30px -18px var(--accent-glow); }
+.gc-head.is-live::before { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 2px; z-index: 2;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent); background-size: 220% 100%; animation: gcScan 3.2s linear infinite; }
+@keyframes gcScan { from { background-position: 120% 0; } to { background-position: -120% 0; } }
+.gc-back { display: inline-flex; align-items: center; gap: 4px; min-height: 36px; padding: 4px 12px 4px 8px; margin-left: -8px; border-radius: 999px; font-size: 13px; color: var(--muted); transition: color .15s, background .15s; }
+.gc-back:hover { color: var(--text); background: rgba(255,255,255,.06); }
+.gc-scoreline { max-width: 860px; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 16px; margin-top: 2px; }
+.gc-logo { width: 64px; height: 64px; filter: drop-shadow(0 6px 14px rgba(0,0,0,.5)); flex-shrink: 0; }
+.gc-team { min-width: 0; gap: 14px; }
+.gc-tinfo { min-width: 0; }
+.gc-tname { font-size: 15px; font-weight: 800; letter-spacing: .01em; display: flex; align-items: center; gap: 8px; }
+.gc-team:last-child .gc-tname { flex-direction: row-reverse; }
+.gc-tscore { font-family: var(--sans); font-size: clamp(40px, 7.4vw, 68px); font-weight: 800; line-height: 1; letter-spacing: -.03em; margin-left: auto; position: relative;
+  text-shadow: 0 0 28px rgba(255,255,255,.12); }
+.gc-team.win .gc-tscore { color: var(--accent); text-shadow: 0 0 26px var(--accent-glow); }
+.gc-tscore.flash { animation: gcScoreFlash 1.4s ease-out; }
+@keyframes gcScoreFlash { 0% { color: #fff; text-shadow: 0 0 38px var(--accent), 0 0 12px #fff; transform: scale(1.18); } 40% { transform: scale(1); } 100% { text-shadow: 0 0 28px rgba(255,255,255,.12); } }
+.gc-team .gc-tscore { transform-origin: left center; } .gc-team:last-child .gc-tscore { transform-origin: right center; }
+.gc-rec { color: rgba(255,255,255,.7); font-size: 12px; letter-spacing: .04em; }
+.gc-mid { display: grid; justify-items: center; gap: 6px; min-width: 96px; }
+.gc-status { font-size: 12px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; padding: 5px 12px; border-radius: 999px;
+  background: rgba(0,0,0,.35); border: 1px solid var(--gc-edge); color: var(--text); white-space: nowrap; }
+.gc-when { font-size: 13px; color: var(--muted); }
+.gc-live { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 900; letter-spacing: .18em; color: var(--neg); }
+.gc-live i { width: 8px; height: 8px; border-radius: 50%; background: var(--neg); box-shadow: 0 0 0 0 var(--neg-glow); animation: gcPulse 1.5s ease-out infinite; }
+@keyframes gcPulse { 0% { box-shadow: 0 0 0 0 rgba(255,93,122,.65); } 80%, 100% { box-shadow: 0 0 0 10px rgba(255,93,122,0); } }
+.gc-poss { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; background: #ea580c; border: 1.5px solid #fff; box-shadow: 0 0 10px rgba(251,146,60,.9); animation: gcBall 1.6s ease-in-out infinite; }
+@keyframes gcBall { 50% { transform: scale(1.35); } }
+.gc-head .sb-badge { top: 14px; right: 20px; }
+.gc-head .sb-net { font-size: 11px; color: var(--muted); }
+
+/* ------------------------------------------------------------- body/cards --- */
+.gc-body { background-image: none; padding: 16px 20px 48px; gap: 14px; grid-auto-rows: max-content;
+  background: radial-gradient(80% 40% at 50% 0, color-mix(in srgb, var(--accent) 6%, transparent), transparent 70%); }
+.gc-body > *, .gc-panes > .gc-pane { min-width: 0; }
+.gc-card { position: relative; border: 1px solid var(--border); border-radius: var(--radius);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--panel) 92%, #fff 3%), var(--panel)); padding: 16px; box-shadow: var(--shadow); }
+.gc-h { display: flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 800; letter-spacing: .16em; margin-bottom: 12px; }
+.gc-h::before { content: ""; width: 3px; height: 12px; border-radius: 2px; background: var(--accent); box-shadow: 0 0 10px var(--accent-glow); }
+.gc-h .muted { letter-spacing: .04em; text-transform: none; font-weight: 600; margin-left: auto; }
+.gc-final { display: flex; justify-content: center; align-items: center; gap: 12px; color: var(--text); }
+.gc-final::before, .gc-final::after { content: ""; height: 1px; width: 56px; background: linear-gradient(90deg, transparent, var(--accent)); }
+.gc-final::after { transform: scaleX(-1); }
+
+/* entrance stagger: once per open (the script adds .gc-enter on the first paint only) */
+.gc-enter > * { animation: gcRise .5s cubic-bezier(.2,.8,.2,1) both; animation-delay: calc(var(--i, 0) * 70ms); }
+@keyframes gcRise { from { opacity: 0; transform: translateY(14px); } }
+
+/* ----------------------------------------------------------------- field --- */
+.fld-wrap { position: relative; padding: 14px; border-radius: var(--radius-lg); background: linear-gradient(180deg, #0b141c, #0a1118); border: 1px solid var(--gc-edge); box-shadow: var(--shadow), inset 0 0 40px rgba(0,206,184,.05); }
+.fld-wrap::before, .fld-wrap::after { content: ""; position: absolute; width: 16px; height: 16px; border: 2px solid var(--accent); opacity: .7; pointer-events: none; }
+.fld-wrap::before { top: 6px; left: 6px; border-right: 0; border-bottom: 0; border-top-left-radius: 6px; }
+.fld-wrap::after { bottom: 6px; right: 6px; border-left: 0; border-top: 0; border-bottom-right-radius: 6px; }
+.fld-wrap.rz { border-color: rgba(255,93,122,.55); box-shadow: 0 0 28px -4px rgba(255,93,122,.35), inset 0 0 40px rgba(255,93,122,.06); }
+.fld { background: #0a1d20; border-radius: 10px; }
+.fld-ball { filter: drop-shadow(0 0 10px rgba(251,146,60,.95)); animation: none; }
+.fld-ring { transform-box: fill-box; transform-origin: center; animation: gcRing 1.8s ease-out infinite; }
+@keyframes gcRing { from { transform: scale(1); opacity: .9; } to { transform: scale(3.2); opacity: 0; } }
+.fld-trail { filter: drop-shadow(0 0 5px rgba(0,206,184,.8)); stroke-dasharray: 1; stroke-dashoffset: 0; animation: gcTrail 1s cubic-bezier(.2,.8,.2,1) both; }
+@keyframes gcTrail { from { stroke-dashoffset: 1; } }
+.fld-arrow { animation: gcNudge 1.2s ease-in-out infinite; }
+@keyframes gcNudge { 50% { transform: translateX(6px); } }
+.fld-bar { flex-wrap: wrap; row-gap: 8px; margin-top: 12px; }
+.fld-dd { font-family: var(--sans); font-size: 13px; font-weight: 800; letter-spacing: .02em; color: var(--text); background: color-mix(in srgb, var(--accent) 14%, transparent); border: 1px solid var(--gc-edge); padding: 6px 14px; border-radius: 999px; }
+.fld-rzbadge { color: var(--neg); background: rgba(255,93,122,.12); border: 1px solid rgba(255,93,122,.5); letter-spacing: .12em; }
+.drv-chips { display: inline-flex; gap: 6px; flex-wrap: wrap; margin-left: auto; }
+.drv-chip { display: inline-flex; align-items: baseline; gap: 5px; padding: 4px 10px; border-radius: 999px; background: var(--panel-2); font-size: 12px; }
+.drv-chip small { color: var(--muted); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; font-weight: 700; } .drv-chip b { font-weight: 800; }
+
+/* ------------------------------------------------------- win probability --- */
+.wp-head { display: flex; justify-content: space-between; align-items: baseline; font-size: 13px; font-weight: 700; margin-bottom: 8px; }
+.wp-head b { font-size: 24px; font-weight: 800; letter-spacing: -.02em; }
+.wp-side { display: inline-flex; align-items: baseline; gap: 6px; } .wp-side i { width: 9px; height: 9px; border-radius: 3px; align-self: center; }
+.wp-plot { position: relative; height: 120px; margin: 4px 0 12px; border-radius: 10px; overflow: hidden; background: rgba(0,0,0,.25); border: 1px solid var(--border); }
+.wp-chart { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.wp-line { stroke-dasharray: 1; stroke-dashoffset: 0; animation: gcTrail 1.4s cubic-bezier(.2,.8,.2,1) both; filter: drop-shadow(0 0 4px rgba(255,255,255,.5)); }
+.wp-dot { position: absolute; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 50%; background: #fff; box-shadow: 0 0 0 3px var(--accent), 0 0 14px var(--accent); }
+.wp-tag { position: absolute; left: 8px; font-size: 10px; font-weight: 800; letter-spacing: .12em; color: rgba(255,255,255,.6); z-index: 1; } .wp-tag.t { top: 6px; } .wp-tag.b { bottom: 6px; }
+.gc-wpcard .odds-bar { height: 8px; }
+
+/* ----------------------------------------------------------------- tabs ---- */
+.gc-tabs { position: relative; display: grid; grid-template-columns: repeat(var(--n, 3), 1fr); padding: 4px; border-radius: 14px; background: var(--panel); border: 1px solid var(--border); }
+.gc-tab { position: relative; z-index: 1; min-height: 40px; border: 0; background: none; color: var(--muted); font: inherit; font-size: 13px; font-weight: 800; letter-spacing: .02em; cursor: pointer; border-radius: 10px; transition: color .2s; }
+.gc-tab.on { color: var(--on-accent, #04201c); }
+.gc-tab-ind { position: absolute; z-index: 0; top: 4px; bottom: 4px; left: 4px; width: calc((100% - 8px) / var(--n, 3)); border-radius: 10px; background: var(--accent); box-shadow: 0 6px 18px -6px var(--accent-glow);
+  transform: translateX(calc(var(--i, 0) * 100%)); transition: transform .32s cubic-bezier(.2,.9,.25,1); }
+.gc-panes { display: grid; gap: 14px; }
+.gc-pane { display: grid; gap: 14px; align-content: start; min-width: 0; }
+@media (max-width: 759px) { .gc-pane { display: none; } .gc-pane.on { display: grid; animation: gcRise .35s cubic-bezier(.2,.8,.2,1) both; } }
+@media (min-width: 760px) {
+  .gc-tabs { display: none; }
+  .gc-panes { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
+  .gc-pane { grid-column: 1 / -1; }
+  .gc-panes:has([data-pane="plays"]) .gc-pane[data-pane="plays"], .gc-panes:has([data-pane="plays"]) .gc-pane[data-pane="fantasy"] { grid-column: auto; }
+  .gc-panes:has([data-pane="scoring"]) .gc-pane[data-pane="scoring"] { grid-column: 1 / -1; }
+}
+
+/* --------------------------------------------------------- play timeline --- */
+.pbp { position: relative; gap: 2px; max-height: 520px; padding-left: 6px; scrollbar-width: thin; }
+.pbp::before { content: ""; position: absolute; left: 13px; top: 6px; bottom: 6px; width: 2px; background: linear-gradient(180deg, var(--gc-edge), transparent); }
+.pbp-sum { max-height: none; }
+.pbp-row { position: relative; align-items: center; gap: 4px 10px; padding: 8px 10px 8px 26px; border-radius: 10px; border-left: 0; animation: none; }
+.gc-enter .pbp-row { animation: gcRise .4s cubic-bezier(.2,.8,.2,1) both; animation-delay: calc(var(--i, 0) * 70ms + 180ms); }
+.pbp-row::before { content: ""; position: absolute; left: 4px; top: 50%; width: 8px; height: 8px; margin-top: -4px; border-radius: 50%; background: var(--panel-2); border: 2px solid var(--muted-dim); }
+.pbp-row.scoring { background: linear-gradient(90deg, color-mix(in srgb, var(--avg) 14%, transparent), transparent 85%); }
+.pbp-row.scoring::before { background: var(--avg); border-color: var(--avg); box-shadow: 0 0 12px var(--avg-glow); }
+.pbp-row.mine { background: linear-gradient(90deg, color-mix(in srgb, var(--pos) 16%, transparent), transparent 85%); }
+.pbp-row.mine::before { background: var(--pos); border-color: var(--pos); box-shadow: 0 0 14px var(--pos); }
+.pbp-row.scoring .pbp-text { font-weight: 800; }
+.pbp-clock { font-size: 11px; font-weight: 700; min-width: 58px; }
+.pbp-text { display: flex; align-items: center; gap: 8px; min-width: 150px; overflow-wrap: anywhere; }
+.pbp-tm { flex-shrink: 0; font-size: 10px; font-weight: 900; letter-spacing: .06em; padding: 2px 6px; border-radius: 6px; color: #fff; background: color-mix(in srgb, var(--tc, #475569) 80%, #000); }
+.pbp-score { font-size: 12px; font-weight: 800; color: var(--avg); letter-spacing: .04em; }
+.pbp-pts { font-size: 11px; background: var(--panel-2); }
+.pbp-pts.mine { color: #04201c; background: var(--pos); box-shadow: 0 0 12px -2px var(--pos); }
+.pbp-pts.neg { color: var(--neg); }
+
+/* ------------------------------------------------------ fantasy leaders ---- */
+.ld-list { display: grid; gap: 8px; }
+.ld-row { display: grid; grid-template-columns: 18px 36px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 6px 8px; border-radius: 12px; background: var(--panel-2); animation: gcRise .45s both; animation-delay: var(--d, 0ms); }
+.ld-row.mine { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--pos) 60%, transparent), 0 0 18px -6px var(--pos); background: linear-gradient(90deg, color-mix(in srgb, var(--pos) 14%, var(--panel-2)), var(--panel-2)); }
+.ld-rank { font-size: 12px; font-weight: 800; color: var(--muted); text-align: center; }
+.ld-face { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; object-position: top; background: var(--panel); border: 2px solid var(--tc, var(--border)); }
+.ld-name { font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .ld-name small { color: var(--muted); font-weight: 600; }
+.ld-bar { height: 5px; margin-top: 5px; border-radius: 999px; background: rgba(255,255,255,.07); overflow: hidden; }
+.ld-bar i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--tc, var(--accent)), var(--accent)); transform-origin: left; animation: gcGrow .8s cubic-bezier(.2,.8,.2,1) both; animation-delay: var(--d, 0ms); }
+@keyframes gcGrow { from { transform: scaleX(0); } }
+.ld-pts { font-size: 18px; font-weight: 800; letter-spacing: -.01em; }
+.ld-row.mine .ld-pts { color: var(--pos); }
+
+/* -------------------------------------------------- the rest of the cards --- */
+.gc-proj b { font-family: var(--sans); font-size: 15px; font-weight: 800; }
+.gc-proj.total b { color: var(--accent); text-shadow: 0 0 14px var(--accent-glow); }
+.gc-mvp { position: relative; overflow: hidden; border-radius: var(--radius-lg); background: linear-gradient(135deg, rgba(255,184,77,.2), rgba(255,184,77,.03)); border-color: rgba(255,184,77,.5); box-shadow: 0 0 36px -10px rgba(255,184,77,.45); }
+.gc-mvp::after { content: ""; position: absolute; inset: 0; background: linear-gradient(110deg, transparent 30%, rgba(255,255,255,.12) 50%, transparent 70%); background-size: 250% 100%; animation: gcShine 3.4s ease-in-out infinite; pointer-events: none; }
+@keyframes gcShine { from { background-position: 120% 0; } to { background-position: -120% 0; } }
+.gc-mvp-tag { color: var(--avg) !important; }
+.gc-audit-total b { font-family: var(--sans); font-size: 38px; letter-spacing: -.02em; }
+.gc-pick { border-color: var(--gc-edge); }
+.pick-side b { font-family: var(--sans); font-size: 52px; letter-spacing: -.03em; }
+.pick-bar i, .odds-bar i, .cmp-bar i { transition: width .7s cubic-bezier(.2,.8,.2,1); }
+.gc-card .odds-bar, .gc-card .pick-bar, .gc-card .cmp-bar { box-shadow: inset 0 0 0 1px rgba(255,255,255,.04); }
+.gc-odds .odds-spread { font-family: var(--sans); }
+
+/* ---------------------------------------------------------------- phones --- */
+@media (max-width: 559px) {
+  .gc-head { padding: 8px 14px 14px; }
+  .gc-head .sb-badge { top: 10px; right: 12px; }
+  .gc-scoreline { gap: 8px; }
+  .gc-logo { width: 44px; height: 44px; }
+  .gc-team { gap: 8px; flex-direction: column; text-align: center; }
+  .gc-team:last-child { flex-direction: column; text-align: center; }
+  .gc-tinfo, .gc-team:last-child .gc-tinfo { justify-items: center; }
+  .gc-tname { display: flex; font-size: 12px; } .gc-team:last-child .gc-tname { flex-direction: row; }
+  .gc-tscore, .gc-team:last-child .gc-tscore { margin: 0; font-size: clamp(36px, 12vw, 48px); transform-origin: center; }
+  .gc-mid { min-width: 64px; } .gc-status { font-size: 10px; padding: 4px 8px; letter-spacing: .08em; }
+  .gc-body { padding: 12px 14px 40px; }
+  .gc-card { padding: 14px; }
+  .fld-wrap { padding: 10px; }
+  .drv-chips { margin-left: 0; }
+  .pbp { max-height: none; }
+  .pbp-text { min-width: 100%; order: 3; }
+  .pick-side b { font-size: 40px; }
+}
+
+/* ------------------------------------------------------- reduced motion ---- */
+@media (prefers-reduced-motion: reduce) {
+  .gc-head.is-live::before, .gc-live i, .gc-poss, .gc-tscore.flash, .fld-ring, .fld-trail, .fld-arrow, .wp-line,
+  .gc-enter > *, .gc-enter .pbp-row, .gc-pane.on, .ld-row, .ld-bar i, .gc-mvp::after { animation: none !important; }
+  .gc-tab-ind, .gc-tab, .gc-back, .pick-bar i, .odds-bar i, .cmp-bar i { transition: none !important; }
+  .fld-ring { opacity: 0; }
+}
+
+/* Review: a slim note instead of an empty card when none of your players were in the game. */
+.gc-none-mine { margin: 0 2px 12px; font-size: 13px; }

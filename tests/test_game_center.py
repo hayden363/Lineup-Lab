@@ -88,6 +88,9 @@ class OddsWeatherInjuriesTest(unittest.TestCase):
         self.assertEqual((w["temp"], w["wind"], w["wind_alert"], w["indoor"]), (41, 17, True, False))
         w2 = G.parse_weather({"gameInfo": {"weather": {"temperature": 70, "windSpeed": 6}}})
         self.assertFalse(w2["wind_alert"])
+        # ESPN's numeric condition code is not a description and must never be shown
+        w3 = G.parse_weather({"gameInfo": {"weather": {"temperature": 43, "conditionId": "33"}}})
+        self.assertIsNone(w3["summary"])
 
     def test_indoor_and_missing_weather(self):
         self.assertTrue(G.parse_weather({"gameInfo": {"venue": {"indoor": True}}})["indoor"])
@@ -234,6 +237,25 @@ class EndpointTest(unittest.TestCase):
         names, mine = self.B.athlete_index(parsed, [{"player_display_name": "Jahmyr Gibbs", "position": "RB", "recent_team": "DET"}])
         self.assertEqual(names["g"], ("Jahmyr Gibbs", "RB", "DET"))
         self.assertEqual(mine, {"g"})
+
+
+class WinSeriesDriveTest(unittest.TestCase):
+    def test_win_series_is_home_percent_thinned_and_empty_without_data(self):
+        js = {"winprobability": [{"homeWinPercentage": i / 200} for i in range(200)]}
+        out = G.win_series(js)
+        self.assertEqual((len(out), out[0]), (G.SERIES_POINTS, 0.0))
+        self.assertEqual(out[-1], round(199 / 200 * 100, 1))
+        self.assertEqual(G.win_series({}), [])
+        self.assertEqual(G.win_series({"winprobability": [{"homeWinPercentage": 0.5}]}), [])
+
+    def test_current_drive_trail_is_measured_from_the_left_goal_line(self):
+        cur = {"team": {"id": "1", "abbreviation": "GB"}, "offensivePlays": 3, "yards": 20, "timeElapsed": {"displayValue": "1:40"},
+               "plays": [{"start": {"yardLine": 25}}, {"start": {"yardLine": 35}}]}
+        d = G.current_drive({"drives": {"current": cur}}, "DET", "GB", {})
+        self.assertEqual(d["trail"], [25, 35])                 # away team drives left to right
+        cur["team"] = {"id": "2", "abbreviation": "DET"}
+        self.assertEqual(G.current_drive({"drives": {"current": cur}}, "DET", "GB", {})["trail"], [75, 65])
+        self.assertIsNone(G.current_drive({}, "DET", "GB", {}))
 
 
 if __name__ == "__main__":
