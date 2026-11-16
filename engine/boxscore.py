@@ -27,6 +27,7 @@ import pandas as pd
 import requests
 
 from . import consensus
+from . import espn as espn_layer
 from . import news as news_layer
 from .scoring import ScoringSettings, compute_fantasy_points
 
@@ -78,6 +79,39 @@ def _pairs(keys, stats):
     return out
 
 
+_POS_BY_ESPN = None
+
+
+def _position_by_espn_id():
+    """{espn athlete id: position} from the cached id crosswalk (the same parquet engine/espn.py reads). ESPN's box
+    score feed stopped sending a position for each athlete, and without one nothing downstream (fantasy points,
+    sorting, the viewer's `mine` highlight) works. {} when the crosswalk isn't on disk; callers then infer."""
+    global _POS_BY_ESPN
+    if _POS_BY_ESPN is not None:
+        return _POS_BY_ESPN
+    out = {}
+    try:
+        import os
+        path = os.path.join(espn_layer.CACHE_DIR, "id_crosswalk.parquet")
+        if os.path.exists(path):
+            df = pd.read_parquet(path, columns=["espn_id", "position"]).dropna()
+            out = {str(int(float(a))): str(p).upper() for a, p in zip(df["espn_id"], df["position"])}
+    except Exception as e:
+        print(f"[boxscore] couldn't load positions from the id crosswalk: {e}")
+    _POS_BY_ESPN = out
+    return out
+
+
+def _infer_position(stats):
+    """Last resort when neither ESPN nor the crosswalk names a position: kickers and quarterbacks are unmistakable
+    from their stat categories; anyone else stays None."""
+    if "kicking" in stats:
+        return "K"
+    if (stats.get("passing") or {}).get("passingAttempts", 0) >= 5:
+        return "QB"
+    return None
+
+
 def parse_summary(js):
     """{teams: [{abbr, name, players: [...]}]} from ESPN's summary JSON.
     Each player: {athlete_id, name, position, team, headshot, stats:
@@ -106,6 +140,10 @@ def parse_summary(js):
                     "team": abbr, "headshot": (ath.get("headshot") or {}).get("href"), "stats": {}})
                 p["stats"].setdefault(cname, {}).update(
                     {k: _num(v) for k, v in _pairs(cat.get("keys"), a.get("stats"))})
+        pos_map = _position_by_espn_id()
+        for p in by_id.values():
+            if not p.get("position"):
+                p["position"] = pos_map.get(p["athlete_id"]) or _infer_position(p["stats"])
         teams.append({"abbr": abbr, "name": t.get("shortDisplayName") or t.get("displayName"),
                       "logo": news_layer.team_logo(_team(abbr)) or t.get("logo"),
                       "players": list(by_id.values())})
@@ -140,7 +178,7 @@ def _line(p):
                                f"{c.get('interceptions', 0):.0f} INT"))
     if "rushing" in s:
         c = s["rushing"]
-        out.append(("Rushing", f"{c.get('carries', 0):.0f} car, {c.get('rushingYards', 0):.0f} yds, "
+        out.append(("Rushing", f"{c.get('rushingAttempts', c.get('carries', 0)):.0f} car, {c.get('rushingYards', 0):.0f} yds, "
                                f"{c.get('rushingTouchdowns', 0):.0f} TD"))
     if "receiving" in s:
         c = s["receiving"]
@@ -159,6 +197,16 @@ def _line(p):
     pref = _LINE_ORDER.get(p.get("position"), ())
     out.sort(key=lambda ab: pref.index(ab[0]) if ab[0] in pref else len(pref))     # stable: the rest keep feed order
     return [{"label": a, "text": b} for a, b in out]
+
+
+def _mine_team(mine_keys, p):
+    """The roster team for this box-score player, or None. Name+position first; when the feed gave no position,
+    fall back to the name alone so a rostered player is never dropped for a missing field."""
+    hit = mine_keys.get(consensus.match_key(p.get("name"), p.get("position")))
+    if hit is None and not p.get("position"):
+        nm = consensus.normalize_name(p.get("name"))
+        hit = next((v for k, v in mine_keys.items() if k.split("|")[0] == nm), None)
+    return hit
 
 
 def annotate(parsed, roster, scoring=None):
@@ -184,7 +232,7 @@ def annotate(parsed, roster, scoring=None):
         for p in t["players"]:
             p.setdefault("fantasy_points", None)
             p["lines"] = _line(p)
-            want = mine_keys.get(consensus.match_key(p.get("name"), p.get("position")))
+            want = _mine_team(mine_keys, p)
             p["mine"] = want is not None and (not want or want == _team(p.get("team")))
             if p["mine"]:
                 mine_count += 1
@@ -239,7 +287,7 @@ def athlete_index(parsed, roster):
     for t in (parsed or {}).get("teams", []):
         for p in t.get("players", []):
             names[p["athlete_id"]] = (p.get("name"), p.get("position"), p.get("team") or t.get("abbr"))
-            want = mine_keys.get(consensus.match_key(p.get("name"), p.get("position")))
+            want = _mine_team(mine_keys, p)
             if want is not None and (not want or want == _team(p.get("team") or t.get("abbr"))):
                 mine.add(p["athlete_id"])
     return names, mine

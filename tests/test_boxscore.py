@@ -207,3 +207,50 @@ class EndpointTest(unittest.TestCase):
                 mock.patch.object(self.server, "_effective_scoring", side_effect=RuntimeError("db down")):
             r = self.client.get("/api/live-scores/401772510")
         self.assertEqual(r.status_code, 200)
+
+
+def _no_position_summary():
+    """ESPN's current feed: athletes carry no position, and rushing attempts are `rushingAttempts`."""
+    def cat(name, keys, rows):
+        return {"name": name, "keys": keys, "athletes": [{"athlete": {"id": i, "displayName": n}, "stats": st} for i, n, st in rows]}
+    return {"boxscore": {"players": [{"team": {"abbreviation": "SF", "shortDisplayName": "49ers"}, "statistics": [
+        cat("passing", ["completions/passingAttempts", "passingYards", "yardsPerPassAttempt", "passingTouchdowns", "interceptions"],
+            [("10", "Brock Purdy", ["21/27", "323", "12.0", "2", "0"])]),
+        cat("rushing", ["rushingAttempts", "rushingYards", "yardsPerRushAttempt", "rushingTouchdowns", "longRushing"],
+            [("20", "Christian McCaffrey", ["12", "60", "5.0", "1", "20"])]),
+        cat("receiving", ["receptions", "receivingYards", "yardsPerReception", "receivingTouchdowns", "longReception", "receivingTargets"],
+            [("20", "Christian McCaffrey", ["3", "95", "31.7", "1", "74", "3"])]),
+        cat("kicking", ["fieldGoalsMade/fieldGoalAttempts", "extraPointsMade/extraPointAttempts"], [("30", "Kicker Guy", ["1/1", "2/2"])]),
+    ]}]}}
+
+
+class MissingPositionTest(unittest.TestCase):
+    """Regression: with no position in the feed, every box score came back with no fantasy points and nobody
+    highlighted as `mine`, so the Live tab looked empty."""
+
+    def parse(self, crosswalk):
+        with mock.patch.object(B, "_position_by_espn_id", return_value=crosswalk):
+            return B.parse_summary(_no_position_summary())
+
+    def test_positions_come_from_the_crosswalk(self):
+        players = {p["name"]: p for p in self.parse({"10": "QB", "20": "RB"})["teams"][0]["players"]}
+        self.assertEqual(players["Brock Purdy"]["position"], "QB")
+        self.assertEqual(players["Christian McCaffrey"]["position"], "RB")
+
+    def test_kicker_and_qb_are_inferred_when_the_crosswalk_is_empty(self):
+        players = {p["name"]: p for p in self.parse({})["teams"][0]["players"]}
+        self.assertEqual(players["Brock Purdy"]["position"], "QB")
+        self.assertEqual(players["Kicker Guy"]["position"], "K")
+        self.assertIsNone(players["Christian McCaffrey"]["position"])
+
+    def test_fantasy_points_and_rushing_line_appear(self):
+        out = B.annotate(self.parse({"10": "QB", "20": "RB"}), None)
+        cmc = next(p for p in out["teams"][0]["players"] if p["name"] == "Christian McCaffrey")
+        self.assertEqual(cmc["fantasy_points"], 30.5)   # 60 rush + 95 rec yds, 2 TD, 3 rec on PPR
+        self.assertIn("12 car, 60 yds, 1 TD", [l["text"] for l in cmc["lines"]])
+
+    def test_rostered_player_is_mine_even_with_no_position_at_all(self):
+        roster = [{"player_display_name": "Christian McCaffrey", "position": "RB", "recent_team": "SF"}]
+        out = B.annotate(self.parse({}), roster)
+        self.assertEqual(out["mine_count"], 1)
+        self.assertTrue(next(p for p in out["teams"][0]["players"] if p["name"] == "Christian McCaffrey")["mine"])
