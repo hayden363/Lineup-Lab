@@ -141,6 +141,13 @@ class BuilderTests(unittest.TestCase):
         self.assertNotIn(p["answers"][-1]["name"], ("Wide20 Out", "Wide21 Out"))
         self.assertEqual(p["answers"][2]["name"], "Wide29 Out")      # unlisted: tie-break by season PPR points
 
+    def test_ladder_steps_down_until_a_hall_of_famer_exists(self):
+        wk = self._season_wk()
+        with mock.patch.object(dd, "has_hall_of_famer", side_effect=lambda ans: len(ans) >= 20):
+            p = dd.build_season_prompt(self.TPL, wk, 2026, 2)
+        self.assertGreaterEqual(len(p["answers"]), 20)
+        self.assertEqual(p["threshold"], 300)
+
     def test_real_templates_are_season_scoped_with_ladders(self):
         self.assertGreaterEqual(len(dd.FANTASY_TEMPLATES), 14)
         self.assertEqual(len({t["key"] for t in dd.FANTASY_TEMPLATES}), len(dd.FANTASY_TEMPLATES))
@@ -195,6 +202,15 @@ class DailyPuzzleTests(unittest.TestCase):
         self.assertEqual(collections.Counter(p["kind"] for p in a), {"fantasy": 7})     # history is off
         self.assertEqual(len({p["template"] for p in a}), 7)
         self.assertNotEqual([p["id"] for p in a], [p["id"] for p in dd.pick_day("2026-11-17", _pool())])
+
+    def test_every_prompt_in_a_day_has_a_hall_of_famer(self):
+        bad = dict(_prompt("f:bad:2026:w1:t1", "bad", "fantasy"), answers=[dict(a, tier=min(a["tier"], 5)) for a in _answers(14)])
+        for d in range(1, 20):
+            day = dd.pick_day(f"2026-11-{d:02d}", _pool() + [bad])
+            self.assertEqual(len(day), 7)
+            self.assertNotIn("bad", {p["template"] for p in day})
+            for p in day:
+                self.assertTrue(any(a["tier"] == 6 for a in p["answers"]), p["id"])
 
     def test_history_flag_brings_back_four_plus_three(self):
         with mock.patch.object(dd, "HISTORY_ENABLED", True):

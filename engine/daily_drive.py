@@ -186,6 +186,11 @@ def _answers_at(per, threshold, ecr_rank, label):
     return rank_and_tier(keyed)
 
 
+def has_hall_of_famer(answers):
+    """Owner rule: every prompt needs at least one tier-6 (Hall of Famer) answer."""
+    return any(a["tier"] == 6 for a in answers)
+
+
 def pick_threshold(per, ladder, ecr_rank, label):
     """Highest ladder rung whose answer set still has at least TARGET_MIN players (so the prompt is as hard as the
     data allows while staying playable). Falls back to the highest rung with at least MIN_ANSWERS. Returns
@@ -193,6 +198,8 @@ def pick_threshold(per, ladder, ecr_rank, label):
     fallback = (None, [])
     for t in sorted(ladder, reverse=True):
         ans = _answers_at(per, t, ecr_rank, label)
+        if not has_hall_of_famer(ans):                 # too small a set to reach the top tier: step down the ladder
+            continue
         if len(ans) >= TARGET_MIN:
             return t, ans
         if fallback[0] is None and len(ans) >= MIN_ANSWERS:
@@ -337,7 +344,7 @@ def pick_day(date_str, candidates, avoid_templates=()):
     for kind, n in zip(("fantasy", "history"), day_counts()):
         if n <= 0:
             continue
-        pool = sorted((c for c in candidates if c["kind"] == kind and len(c["answers"]) >= MIN_ANSWERS), key=lambda c: c["id"])
+        pool = sorted((c for c in candidates if c["kind"] == kind and len(c["answers"]) >= MIN_ANSWERS and has_hall_of_famer(c["answers"])), key=lambda c: c["id"])
         rng.shuffle(pool)
         pool.sort(key=lambda c: c["template"] in avoid)   # fresh templates first; stable, so the shuffle still decides
         used = set()                                      # template groups: near-duplicates (WR rec TDs vs WR/TE rec TDs) count as one
