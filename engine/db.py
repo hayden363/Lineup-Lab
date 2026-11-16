@@ -339,11 +339,20 @@ def touch_last_seen(user_id, now=None):
 
 def add_waitlist(email, plan, now=None):
     """Put an email on the waitlist for a paid plan. Safe to repeat: the same email and plan is stored once.
-    Raises if the plan_waitlist migration hasn't been applied; the endpoint turns that into a friendly 503."""
+    Returns True only when this call added a new row. Raises if the plan_waitlist migration hasn't been applied;
+    the endpoint turns that into a friendly 503."""
     now = now if now is not None else time.time()
     with _conn() as c:
-        c.execute("INSERT INTO plan_waitlist (email, plan, created_at) VALUES (%s, %s, %s) ON CONFLICT DO NOTHING",
-                  (email, plan, now))
+        c.execute("INSERT INTO plan_waitlist (email, plan, created_at) VALUES (%s, %s, %s) "
+                  "ON CONFLICT DO NOTHING RETURNING email", (email, plan, now))
+        return c.fetchone() is not None
+
+
+def waitlist_counts():
+    """{plan: number of people waiting}, e.g. {"manager": 4, "commissioner": 2}."""
+    with _conn() as c:
+        c.execute("SELECT plan, count(*) AS n FROM plan_waitlist GROUP BY plan")
+        return {r["plan"]: int(r["n"]) for r in c.fetchall()}
 
 
 def delete_session(token):

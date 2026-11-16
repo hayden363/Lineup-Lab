@@ -56,6 +56,7 @@ from engine import league_trades as league_trades_layer
 from engine import boxscore as boxscore_layer
 from engine import schemas
 from engine import live_scores as live_scores_layer
+from engine import waitlist as waitlist_layer
 from engine import locks
 from engine.flight import FLIGHT
 from engine.imgshrink import shrink as shrink_image
@@ -553,7 +554,7 @@ _WAITLIST_EMAIL = re.compile(r"^[^@\s]{1,64}@[^@\s]{1,255}\.[^@\s]{2,}$")
 
 
 @app.post("/api/waitlist", dependencies=[Depends(waitlist_rate_limit)])
-def api_waitlist(req: WaitlistRequest):
+def api_waitlist(req: WaitlistRequest, background: BackgroundTasks):
     """Public. Joins the waitlist for a paid plan (the plans aren't open yet). The reply is the same whether or
     not the email was already listed, and nothing about the stored emails is ever returned."""
     plan = (req.plan or "").strip().lower()
@@ -563,11 +564,13 @@ def api_waitlist(req: WaitlistRequest):
     if len(email) > 320 or not _WAITLIST_EMAIL.match(email):
         raise HTTPException(400, "Enter a valid email address.")
     try:
-        db.add_waitlist(email, plan)
+        added = db.add_waitlist(email, plan)
     except Exception as e:
         print(f"[waitlist] couldn't save a sign-up: {type(e).__name__}")   # never log the address itself
         raise HTTPException(503, "The waitlist isn't taking sign-ups right now. Please try again later.")
     security.audit("waitlist_join", plan=plan)
+    if added:   # a repeat sign-up from the same email changes no count, so it never emails the owner
+        background.add_task(waitlist_layer.notify_owner, plan, email)
     return {"status": "ok"}
 
 

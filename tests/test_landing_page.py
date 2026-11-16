@@ -61,9 +61,12 @@ class WaitlistTest(unittest.TestCase):
         self.mock = mock
         self.client = TestClient(server.app)
         server._RATE_BUCKETS.clear()
-        p = mock.patch.object(server.db, "add_waitlist")
+        p = mock.patch.object(server.db, "add_waitlist", return_value=True)
         self.add = p.start()
         self.addCleanup(p.stop)
+        n = mock.patch.object(server.waitlist_layer, "notify_owner")
+        self.notify = n.start()
+        self.addCleanup(n.stop)
 
     def post(self, email="Fan@Example.com ", plan="manager"):
         return self.client.post("/api/waitlist", json={"email": email, "plan": plan})
@@ -89,6 +92,14 @@ class WaitlistTest(unittest.TestCase):
         self.assertEqual(r.status_code, 503)
         self.assertNotIn("relation", r.text)
 
+    def test_owner_is_told_about_a_new_request_but_not_a_repeat(self):
+        self.post()
+        self.notify.assert_called_once_with("manager", "fan@example.com")
+        self.notify.reset_mock()
+        self.add.return_value = False        # same email and plan again: no new row, no email
+        self.assertEqual(self.post().status_code, 200)
+        self.notify.assert_not_called()
+
     def test_rate_limited_after_ten_in_an_hour(self):
         codes = [self.post().status_code for _ in range(11)]
         self.assertEqual(codes[:10], [200] * 10)
@@ -99,3 +110,56 @@ class WaitlistTest(unittest.TestCase):
         for needle in ("Sync up to 2 leagues", "Sync 3 to 4 leagues", "Sync 5 or more leagues", "/api/waitlist"):
             self.assertIn(needle, js)
         self.assertNotIn("Free Trial", js)
+
+
+class OwnerNoticeTest(unittest.TestCase):
+    COUNTS = {"manager": 4, "commissioner": 2}
+
+    def setUp(self):
+        from unittest import mock
+        from engine import waitlist as W
+        self.W = W
+        self.mock = mock
+        W._last_notice = 0.0
+        env = mock.patch.dict(os.environ, {"WAITLIST_NOTIFY_EMAIL": "owner@example.com"}, clear=False)
+        env.start()
+        self.addCleanup(env.stop)
+        self.sent = []
+        self.send = lambda to, subject, text, body: self.sent.append((to, subject, text, body))
+
+    def test_email_has_the_new_request_and_the_totals(self):
+        r = self.W.notify_owner("manager", "fan@example.com", get_counts=lambda: self.COUNTS, send=self.send, now=1000)
+        self.assertEqual(r, "sent")
+        to, subject, text, body = self.sent[0]
+        self.assertEqual(to, "owner@example.com")
+        self.assertEqual(subject, "Lineup Lab waitlist: 6 requests (4 Manager, 2 Commissioner)")
+        self.assertIn("fan@example.com joined the Manager (3-4 leagues) waitlist", text)
+        self.assertIn("Waiting right now: 6 total", text)
+
+    def test_singular_subject(self):
+        subject, _, _ = self.W.build("manager", "a@b.co", {"manager": 1})
+        self.assertEqual(subject, "Lineup Lab waitlist: 1 request (1 Manager, 0 Commissioner)")
+
+    def test_html_escapes_the_address(self):
+        _, _, body = self.W.build("manager", "<b>x</b>@e.com", self.COUNTS)
+        self.assertNotIn("<b>x</b>@e.com", body)
+
+    def test_nothing_sent_without_a_recipient(self):
+        with self.mock.patch.dict(os.environ, {"WAITLIST_NOTIFY_EMAIL": "", "OWNER_REPORT_EMAIL": ""}):
+            self.assertEqual(self.W.notify_owner("manager", "a@b.co", send=self.send, now=1000), "not-configured")
+        self.assertEqual(self.sent, [])
+
+    def test_falls_back_to_the_owner_report_address(self):
+        with self.mock.patch.dict(os.environ, {"WAITLIST_NOTIFY_EMAIL": "", "OWNER_REPORT_EMAIL": "boss@example.com"}):
+            self.assertEqual(self.W.recipient(), "boss@example.com")
+
+    def test_bursts_are_throttled_and_a_failed_send_is_retried(self):
+        kw = dict(get_counts=lambda: self.COUNTS, send=self.send)
+        self.assertEqual(self.W.notify_owner("manager", "a@b.co", now=1000, **kw), "sent")
+        self.assertEqual(self.W.notify_owner("manager", "c@d.co", now=1100, **kw), "throttled")
+        self.assertEqual(self.W.notify_owner("manager", "c@d.co", now=1000 + self.W.NOTICE_EVERY_SECONDS + 1, **kw), "sent")
+        self.W._last_notice = 0.0
+        def boom(*a):
+            raise RuntimeError("smtp down")
+        self.assertEqual(self.W.notify_owner("manager", "a@b.co", get_counts=lambda: self.COUNTS, send=boom, now=5000), "failed")
+        self.assertEqual(self.W.notify_owner("manager", "a@b.co", now=5001, **kw), "sent")
