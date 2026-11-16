@@ -48,33 +48,47 @@
   // SVG x for a yard line (0 to 100 from the left goal line): end zones take 100 units each side of a 1000-wide field.
   function fieldX(yard) { return 100 + yard * 8; }
 
-  function fieldSvg(sit, home, away) {
+  // `drive` (optional): {trail: [yard positions from the left goal line where each snap of this drive started]}.
+  function fieldSvg(sit, home, away, drive) {
     var ballX = fieldX(sit.yard_line), ltgX = fieldX(sit.line_to_gain);
     var right = sit.direction === "left-to-right";
     var hc = theme(home), ac = theme(away);
     var grass = "";
-    for (var i = 0; i < 10; i++) grass += '<rect x="' + (100 + i * 80) + '" y="0" width="80" height="350" fill="' + (i % 2 ? "#163022" : "#142A1E") + '"/>';
+    for (var i = 0; i < 10; i++) grass += '<rect x="' + (100 + i * 80) + '" y="0" width="80" height="350" fill="' + (i % 2 ? "#0c2326" : "#0a1d20") + '"/>';
     var marks = "";
     for (var k = 1; k <= 9; k++) {
       var x = fieldX(k * 10), label = k * 10 <= 50 ? k * 10 : 100 - k * 10;
-      marks += '<line x1="' + x + '" y1="0" x2="' + x + '" y2="350" stroke="#fff" stroke-opacity=".2" stroke-width="2"/>' +
-        '<text x="' + x + '" y="332" fill="#94a3b8" font-size="16" font-family="monospace" text-anchor="middle">' + label + "</text>" +
-        '<text x="' + x + '" y="30" fill="#94a3b8" font-size="16" font-family="monospace" text-anchor="middle">' + label + "</text>";
+      marks += '<line x1="' + x + '" y1="0" x2="' + x + '" y2="350" stroke="#9fe9e0" stroke-opacity=".14" stroke-width="2"/>' +
+        '<text x="' + x + '" y="332" fill="#7f9aa8" font-size="16" font-family="monospace" text-anchor="middle">' + label + "</text>" +
+        '<text x="' + x + '" y="30" fill="#7f9aa8" font-size="16" font-family="monospace" text-anchor="middle">' + label + "</text>";
     }
     var hashes = "";
-    for (var y = 0; y <= 100; y++) if (y % 5) hashes += '<line x1="' + fieldX(y) + '" y1="118" x2="' + fieldX(y) + '" y2="128" stroke="#fff" stroke-opacity=".18"/><line x1="' + fieldX(y) + '" y1="222" x2="' + fieldX(y) + '" y2="232" stroke="#fff" stroke-opacity=".18"/>';
-    var rz = sit.is_red_zone ? '<rect class="fld-rz" x="' + (right ? fieldX(80) : 100) + '" y="0" width="160" height="350" fill="rgba(244,63,94,.16)"/>' : "";
+    for (var y = 0; y <= 100; y++) if (y % 5) hashes += '<line x1="' + fieldX(y) + '" y1="118" x2="' + fieldX(y) + '" y2="128" stroke="#9fe9e0" stroke-opacity=".16"/><line x1="' + fieldX(y) + '" y1="222" x2="' + fieldX(y) + '" y2="232" stroke="#9fe9e0" stroke-opacity=".16"/>';
+    var rz = sit.is_red_zone ? '<rect class="fld-rz" x="' + (right ? fieldX(80) : 100) + '" y="0" width="160" height="350" fill="rgba(255,93,122,.16)"/>' : "";
     var dx = right ? 1 : -1, ax = ballX + dx * 36;
-    var arrow = '<polygon points="' + ax + ",160 " + (ax + dx * 26) + ",175 " + ax + ',190" fill="#fde047" opacity=".9"/>';
-    return '<svg class="fld" viewBox="0 0 1000 350" role="img" aria-label="Ball on the field">' +
+    var arrow = '<polygon class="fld-arrow" points="' + ax + ",160 " + (ax + dx * 26) + ",175 " + ax + ',190" fill="#00ceb8" opacity=".85"/>';
+    var trail = "", tg = "";
+    var pts = ((drive && drive.trail) || []).filter(function (v) { return typeof v === "number" && v >= 0 && v <= 100; });
+    if (pts.length) {
+      var x0 = fieldX(pts[0]);
+      if (x0 === ballX) x0 += right ? -1 : 1;     // a zero-length line has no gradient box
+      tg = '<linearGradient id="fldTrailG" gradientUnits="userSpaceOnUse" x1="' + x0 + '" y1="0" x2="' + ballX + '" y2="0"><stop offset="0" stop-color="#00ceb8" stop-opacity=".12"/><stop offset="1" stop-color="#00ceb8" stop-opacity=".95"/></linearGradient>';
+      trail = '<line class="fld-trail" x1="' + x0 + '" y1="175" x2="' + ballX + '" y2="175" pathLength="1" stroke="url(#fldTrailG)" stroke-width="6" stroke-linecap="round"/>' +
+        pts.map(function (v) { return '<circle class="fld-snap" cx="' + fieldX(v) + '" cy="175" r="4.5" fill="#0b1018" stroke="#00ceb8" stroke-width="2"/>'; }).join("");
+    }
+    var defs = '<defs>' + tg +
+      '<linearGradient id="fldEzA" x1="0" x2="1"><stop offset="0" stop-color="' + ac.primary + '"/><stop offset="1" stop-color="' + ac.primary + '" stop-opacity=".55"/></linearGradient>' +
+      '<linearGradient id="fldEzH" x1="1" x2="0"><stop offset="0" stop-color="' + hc.primary + '"/><stop offset="1" stop-color="' + hc.primary + '" stop-opacity=".55"/></linearGradient></defs>';
+    return '<svg class="fld" viewBox="0 0 1000 350" role="img" aria-label="Ball on the field">' + defs +
       grass +
-      '<rect x="0" y="0" width="100" height="350" fill="' + ac.primary + '"/><rect x="900" y="0" width="100" height="350" fill="' + hc.primary + '"/>' +
+      '<rect x="0" y="0" width="100" height="350" fill="url(#fldEzA)"/><rect x="900" y="0" width="100" height="350" fill="url(#fldEzH)"/>' +
       '<text x="50" y="175" fill="#fff" font-size="28" font-weight="800" font-family="monospace" text-anchor="middle" transform="rotate(-90 50 175)">' + esc(away) + "</text>" +
       '<text x="950" y="175" fill="#fff" font-size="28" font-weight="800" font-family="monospace" text-anchor="middle" transform="rotate(90 950 175)">' + esc(home) + "</text>" +
       rz + marks + hashes +
       '<line x1="' + ltgX + '" y1="0" x2="' + ltgX + '" y2="350" stroke="#facc15" stroke-width="4" stroke-dasharray="6 4"/>' +
-      '<line x1="' + ballX + '" y1="0" x2="' + ballX + '" y2="350" stroke="#38bdf8" stroke-width="4"/>' +
-      arrow +
+      '<line x1="' + ballX + '" y1="0" x2="' + ballX + '" y2="350" stroke="#00ceb8" stroke-width="3" stroke-opacity=".9"/>' +
+      trail + arrow +
+      '<circle class="fld-ring" cx="' + ballX + '" cy="175" r="11" fill="none" stroke="#fb923c" stroke-width="2"/>' +
       '<circle class="fld-ball" cx="' + ballX + '" cy="175" r="11" fill="#ea580c" stroke="#fff" stroke-width="2.5"/></svg>';
   }
 
@@ -111,8 +125,10 @@
       return '<span class="pbp-pts ' + (x.mine ? "mine" : "") + (pos ? "" : " neg") + '" title="' + esc(x.name) + '">' + (x.mine ? esc(x.name) + " " : "") + (pos ? "+" : "") + x.points.toFixed(1) + " pts</span>";
     }).join("");
     var mineScoring = p.scoring && (p.fantasy || []).some(function (x) { return x.mine; });
+    var tm = p.team ? '<span class="pbp-tm" style="--tc:' + esc(theme(p.team).primary) + '">' + esc(p.team) + "</span>" : "";
+    var sc = p.scoring && p.away_score != null && p.home_score != null ? '<span class="pbp-score">' + esc(p.away_score) + "\u2013" + esc(p.home_score) + "</span>" : "";
     return '<div class="pbp-row' + (p.scoring ? " scoring" : "") + (mineScoring ? " mine" : "") + '"><span class="pbp-clock">' + (p.quarter ? "Q" + esc(p.quarter) + " " : "") + esc(p.clock || "") + "</span>" +
-      '<span class="pbp-text">' + esc(playHeadline(p)) + "</span>" + f + "</div>";
+      '<span class="pbp-text">' + tm + esc(playHeadline(p)) + "</span>" + sc + f + "</div>";
   }
 
   function mineRows(d) {
@@ -286,20 +302,22 @@
     }).join("");
   }
 
-  // ---- the game header (every state): both teams with their records, the score or the kickoff time ----
-  function headerHtml(g, fav) {
-    var a = theme(g.away.abbr), h = theme(g.home.abbr);
-    var side = function (t) {
+  // ---- the game header (every state): a team-colored scoreboard hero. `sit` (optional, live): who has the ball. ----
+  function headerHtml(g, fav, sit) {
+    var a = theme(g.away.abbr), h = theme(g.home.abbr), live = g.state === "in";
+    var side = function (t, which) {
       var mineSide = fav && key(t.abbr) === fav;
-      return '<div class="gc-team' + (t.winner ? " win" : "") + (mineSide ? " fav" : "") + '">' + logo(t.abbr, "gc-logo") +
-        '<div class="gc-tinfo"><div class="gc-tname">' + esc(t.name || t.abbr) + "</div>" + (t.record ? '<div class="gc-rec">' + esc(t.record) + "</div>" : "") +
-        (mineSide ? '<span class="gc-ribbon">\u2605 YOUR TEAM</span>' : "") + '</div><div class="gc-tscore">' + (g.state === "pre" ? "" : t.score == null ? "–" : t.score) + "</div></div>";
+      var ball = live && sit && sit.possession && key(sit.possession) === key(t.abbr) ? '<span class="gc-poss" title="Has the ball" aria-label="Has the ball"></span>' : "";
+      var shown = g.state === "pre" ? "" : t.score == null ? "\u2013" : t.score;
+      return '<div class="gc-team ' + which + (t.winner ? " win" : "") + (mineSide ? " fav" : "") + '">' + logo(t.abbr, "gc-logo") +
+        '<div class="gc-tinfo"><div class="gc-tname">' + esc(t.name || t.abbr) + ball + "</div>" + (t.record ? '<div class="gc-rec">' + esc(t.record) + "</div>" : "") +
+        (mineSide ? '<span class="gc-ribbon">\u2605 YOUR TEAM</span>' : "") + '</div><div class="gc-tscore" data-side="' + which + '"' + (g.state !== "pre" && t.score != null ? ' data-score="' + esc(t.score) + '"' : "") + ">" + shown + "</div></div>";
     };
     var mid = g.state === "pre"
       ? '<div class="gc-status">KICKOFF</div><div class="gc-when">' + esc(kickoffText(g)) + "</div>"
-      : '<div class="gc-status">' + esc(statusLine(g)) + "</div>";
-    return '<div class="gc-head' + (isFavGame(g, fav) ? " has-fav" : "") + '" style="--c1:' + esc(a.primary) + ";--c2:" + esc(h.primary) + '"><button type="button" class="gc-back" id="gc-back" aria-label="Back to all games">\u2039 All games</button>' +
-      badgeHtml(g) + '<div class="gc-scoreline">' + side(g.away) + '<div class="gc-mid">' + mid + (g.network ? '<div class="sb-net">' + esc(g.network) + "</div>" : "") + "</div>" + side(g.home) + "</div></div>";
+      : (live ? '<div class="gc-live"><i></i>LIVE</div>' : "") + '<div class="gc-status">' + esc(statusLine(g)) + "</div>";
+    return '<div class="gc-head' + (isFavGame(g, fav) ? " has-fav" : "") + (live ? " is-live" : "") + '" style="--c1:' + esc(a.primary) + ";--c2:" + esc(h.primary) + '"><button type="button" class="gc-back" id="gc-back" aria-label="Back to all games">\u2039 All games</button>' +
+      badgeHtml(g) + '<div class="gc-scoreline">' + side(g.away, "away") + '<div class="gc-mid">' + mid + (g.network ? '<div class="sb-net">' + esc(g.network) + "</div>" : "") + "</div>" + side(g.home, "home") + "</div></div>";
   }
 
   // ---- pre-game dashboard ----
@@ -403,15 +421,78 @@
       '<div class="gc-card"><div class="gc-h">Injury report</div>' + injuriesHtml(d.injuries) + "</div>";
   }
 
-  function liveHtml(d, g, boxHtml) {
+  // Win chance over the game: the home team's share after each play, filled toward whichever side is ahead.
+  function winChartHtml(series, g) {
+    if (!series || series.length < 2) return "";
+    var W = 600, H = 120, n = series.length, hc = theme(g.home.abbr).primary, ac = theme(g.away.abbr).primary;
+    var pts = series.map(function (v, i) { return [Math.round((i / (n - 1)) * W * 10) / 10, Math.round((H - (Math.max(0, Math.min(100, v)) / 100) * H) * 10) / 10]; });
+    var line = pts.map(function (q, i) { return (i ? "L" : "M") + q[0] + " " + q[1]; }).join(" ");
+    var area = line + " L" + W + " " + H / 2 + " L0 " + H / 2 + " Z";
+    var last = pts[n - 1], cur = series[n - 1];
+    return '<svg class="wp-chart" viewBox="0 0 ' + W + " " + H + '" preserveAspectRatio="none" role="img" aria-label="Win probability over the game">' +
+      '<defs><clipPath id="wpUp"><rect x="0" y="0" width="' + W + '" height="' + H / 2 + '"/></clipPath><clipPath id="wpDn"><rect x="0" y="' + H / 2 + '" width="' + W + '" height="' + H / 2 + '"/></clipPath></defs>' +
+      '<path d="' + area + '" fill="' + esc(hc) + '" fill-opacity=".55" clip-path="url(#wpUp)"/><path d="' + area + '" fill="' + esc(ac) + '" fill-opacity=".55" clip-path="url(#wpDn)"/>' +
+      '<line x1="0" y1="' + H / 2 + '" x2="' + W + '" y2="' + H / 2 + '" stroke="#fff" stroke-opacity=".25" stroke-dasharray="4 4"/>' +
+      '<path class="wp-line" d="' + line + '" pathLength="1" fill="none" stroke="#fff" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round"/></svg>' +
+      '<span class="wp-dot" style="left:' + (last[0] / W * 100) + "%;top:" + (last[1] / H * 100) + '%" title="' + Math.round(cur) + '% ' + esc(g.home.abbr) + '"></span>';
+  }
+
+  // The win-probability card: the chart when ESPN gave a series, else just the current split, else nothing.
+  function winCardHtml(d, g) {
+    var series = d.win_series || [], cur = series.length ? Math.round(series[series.length - 1]) : d.home_win_pct;
+    if (cur == null) return "";
+    var hp = cur, ap = 100 - cur, hc = esc(theme(g.home.abbr).primary), ac = esc(theme(g.away.abbr).primary);
+    var chart = winChartHtml(series, g);
+    return '<div class="gc-card gc-wpcard"><div class="gc-h">Win probability</div>' +
+      '<div class="wp-head"><span class="wp-side"><i style="background:' + ac + '"></i>' + esc(g.away.abbr) + " <b>" + ap + '%</b></span><span class="wp-side r"><b>' + hp + "%</b> " + esc(g.home.abbr) + '<i style="background:' + hc + '"></i></span></div>' +
+      (chart ? '<div class="wp-plot"><span class="wp-tag t">' + esc(g.home.abbr) + '</span>' + chart + '<span class="wp-tag b">' + esc(g.away.abbr) + "</span></div>" : "") +
+      '<div class="odds-bar"><i style="width:' + ap + "%;background:" + ac + '"></i><b style="background:' + hc + '"></b></div></div>';
+  }
+
+  function driveChipsHtml(dr) {
+    if (!dr) return "";
+    var chip = function (k, v) { return v == null || v === "" ? "" : '<span class="drv-chip"><small>' + k + "</small><b>" + esc(v) + "</b></span>"; };
+    var out = chip("Plays", dr.plays) + chip("Yards", dr.yards) + chip("Time", dr.elapsed);
+    return out ? '<span class="drv-chips" aria-label="Current drive">' + out + "</span>" : "";
+  }
+
+  // Top fantasy scorers in this game as ranked bars; your players are lit.
+  function leadersHtml(d, n) {
+    var rows = leaders(d, n);
+    if (!rows.length) return "";
+    var max = Math.max.apply(null, rows.map(function (p) { return p.fantasy_points; }).concat([1]));
+    return '<div class="ld-list">' + rows.map(function (p, i) {
+      var src = p.headshot ? (typeof proxyImg === "function" ? proxyImg(p.headshot) : p.headshot) : "";
+      var fb = typeof initialsAvatarUri === "function" ? initialsAvatarUri(p.name) : "";
+      var w = Math.max(4, Math.round((Math.max(0, p.fantasy_points) / max) * 100));
+      return '<div class="ld-row' + (p.mine ? " mine" : "") + '" style="--tc:' + esc(theme(p.teamAbbr).primary) + ";--d:" + i * 50 + 'ms"><span class="ld-rank">' + (i + 1) + '</span><img class="ld-face" src="' + esc(src || fb) + '"' + (fb ? ' data-fb="' + esc(fb) + '"' : "") + ' alt="">' +
+        '<div class="ld-main"><div class="ld-name">' + esc(p.name) + ' <small>' + esc(p.position) + " \u00b7 " + esc(p.teamAbbr) + (p.mine ? " \u00b7 yours" : "") + '</small></div><div class="ld-bar"><i style="width:' + w + '%"></i></div></div><b class="ld-pts">' + d1(p.fantasy_points) + "</b></div>";
+    }).join("") + "</div>";
+  }
+
+  // Tabs for the phone layout (desktop shows every pane at once and hides the bar). Equal-width tabs, so the
+  // sliding indicator is pure CSS: --i is the active index, --n the count.
+  function tabsHtml(list, active) {
+    list = list.filter(function (t) { return t.html; });
+    if (list.length < 2) return list.map(function (t) { return t.html; }).join("");
+    var ai = Math.max(0, list.map(function (t) { return t.id; }).indexOf(active));
+    return '<div class="gc-tabs" role="tablist" style="--n:' + list.length + ";--i:" + ai + '">' + list.map(function (t, i) {
+      return '<button type="button" role="tab" class="gc-tab' + (i === ai ? " on" : "") + '" data-gc-tab="' + t.id + '" aria-selected="' + (i === ai) + '">' + esc(t.label) + "</button>";
+    }).join("") + '<i class="gc-tab-ind" aria-hidden="true"></i></div>' +
+      '<div class="gc-panes">' + list.map(function (t, i) { return '<div class="gc-pane' + (i === ai ? " on" : "") + '" data-pane="' + t.id + '">' + t.html + "</div>"; }).join("") + "</div>";
+  }
+
+  function liveHtml(d, g, boxHtml, tab) {
     var sit = d.situation;
-    var field = sit ? '<div class="fld-wrap' + (sit.is_red_zone ? " rz" : "") + '">' + fieldSvg(sit, g.home.abbr, g.away.abbr) +
-      '<div class="fld-bar"><span class="fld-dd">' + esc(bannerText(sit, g)) + "</span>" + (sit.is_red_zone ? '<span class="fld-rzbadge">RED ZONE</span>' : "") + "</div></div>"
+    var field = sit ? '<div class="fld-wrap' + (sit.is_red_zone ? " rz" : "") + '">' + fieldSvg(sit, g.home.abbr, g.away.abbr, d.drive) +
+      '<div class="fld-bar"><span class="fld-dd">' + esc(bannerText(sit, g)) + "</span>" + driveChipsHtml(d.drive) + (sit.is_red_zone ? '<span class="fld-rzbadge">RED ZONE</span>' : "") + "</div></div>"
       : '<div class="gc-card"><div class="muted">Between drives. The field view returns when the next play is set.</div></div>';
-    var wp = d.home_win_pct == null ? "" : '<div class="gc-wp"><span>' + esc(g.away.abbr) + " " + (100 - d.home_win_pct) + '%</span><div class="odds-bar"><i style="width:' + (100 - d.home_win_pct) + "%;background:" + esc(theme(g.away.abbr).primary) + '"></i><b style="background:' + esc(theme(g.home.abbr).primary) + '"></b></div><span>' + d.home_win_pct + "% " + esc(g.home.abbr) + "</span></div>";
-    return field + wp + '<div class="gc-two"><div class="gc-card"><div class="gc-h">Play by play</div><div class="pbp" id="gc-pbp">' +
-      ((d.plays || []).map(playRowHtml).join("") || '<div class="muted">No plays yet.</div>') + "</div></div>" +
-      '<div class="gc-card"><div class="gc-h">Your players</div>' + mineLiveHtml(d) + "</div></div>" + boxHtml;
+    var plays = '<div class="gc-card"><div class="gc-h">Play by play</div><div class="pbp" id="gc-pbp">' +
+      ((d.plays || []).map(playRowHtml).join("") || '<div class="muted">No plays yet.</div>') + "</div></div>";
+    var fantasy = '<div class="gc-card"><div class="gc-h">Your players</div>' + mineLiveHtml(d) + "</div>";
+    var lead = leadersHtml(d, 5);
+    if (lead) fantasy += '<div class="gc-card"><div class="gc-h">Fantasy leaders</div>' + lead + "</div>";
+    return field + winCardHtml(d, g) + tabsHtml([{ id: "plays", label: "Plays", html: plays }, { id: "fantasy", label: "Fantasy", html: fantasy }, { id: "box", label: "Box score", html: boxHtml }], tab || "plays");
   }
 
   function mineLiveHtml(d) {
@@ -421,27 +502,35 @@
       '<div class="gc-proj total"><span>Total so far</span><b>' + d1(d.box && d.box.mine_points) + "</b></div>";
   }
 
-  function postHtml(d, g, boxHtml) {
+  // Every scoring play, oldest first, with the running score and the fantasy points it produced.
+  function scoringSummaryHtml(d) {
+    var rows = (d.plays || []).filter(function (p) { return p.scoring; }).reverse();
+    if (!rows.length) return "";
+    return '<div class="gc-card"><div class="gc-h">Scoring summary</div><div class="pbp pbp-sum">' + rows.map(playRowHtml).join("") + "</div></div>";
+  }
+
+  function postHtml(d, g, boxHtml, tab) {
     var m = mvp(d), a = audit(d);
     var champ = g.away.winner ? g.away : g.home.winner ? g.home : null;
-    var banner = m ? '<div class="gc-mvp"><span class="gc-mvp-tag">Game MVP</span><b>' + esc(m.name) + '</b><span>' + esc(m.position) + " · " + esc(m.teamAbbr) + " · " + d1(m.fantasy_points) + " fantasy pts</span></div>" : "";
-    var lead = leaders(d, 5).map(function (p) { return '<div class="gc-proj"><span>' + esc(p.name) + " <small>" + esc(p.position) + " · " + esc(p.teamAbbr) + "</small></span><b>" + d1(p.fantasy_points) + "</b></div>"; }).join("");
-    var aud = a.rows.length ? '<div class="gc-audit"><div class="gc-audit-total ' + (a.delta >= 0 ? "up" : "dn") + '"><b>' + d1(a.actual) + '</b><span>pts for your matchup · projected ' + d1(a.projected) + " (" + (a.delta >= 0 ? "+" : "") + d1(a.delta) + ")</span></div>" +
+    var banner = m ? '<div class="gc-mvp"><span class="gc-mvp-tag">Game MVP</span><b>' + esc(m.name) + '</b><span>' + esc(m.position) + " \u00b7 " + esc(m.teamAbbr) + " \u00b7 " + d1(m.fantasy_points) + " fantasy pts</span></div>" : "";
+    var lead = leadersHtml(d, 5);
+    var aud = a.rows.length ? '<div class="gc-audit"><div class="gc-audit-total ' + (a.delta >= 0 ? "up" : "dn") + '"><b>' + d1(a.actual) + '</b><span>pts for your matchup \u00b7 projected ' + d1(a.projected) + " (" + (a.delta >= 0 ? "+" : "") + d1(a.delta) + ")</span></div>" +
       a.rows.map(function (r) { return '<div class="gc-proj"><span>' + esc(r.name) + " <small>" + esc(r.position) + "</small></span><b>" + d1(r.actual) + (r.proj != null ? ' <small>proj ' + d1(r.proj) + "</small>" : "") + "</b></div>"; }).join("") + "</div>"
       : '<div class="muted">None of your players were in this game.</div>';
-    return (champ ? '<div class="gc-final">Final · ' + esc(champ.abbr) + " win</div>" : '<div class="gc-final">Final</div>') + banner +
-      '<div class="gc-two"><div class="gc-card"><div class="gc-h">Fantasy impact audit</div>' + aud + '</div><div class="gc-card"><div class="gc-h">Top fantasy scorers</div>' + (lead || '<div class="muted">No stats posted.</div>') + "</div></div>" + boxHtml;
+    var fantasy = '<div class="gc-two"><div class="gc-card"><div class="gc-h">Fantasy impact audit</div>' + aud + '</div><div class="gc-card"><div class="gc-h">Top fantasy scorers</div>' + (lead || '<div class="muted">No stats posted.</div>') + "</div></div>";
+    return (champ ? '<div class="gc-final">Final \u00b7 ' + esc(champ.abbr) + " win</div>" : '<div class="gc-final">Final</div>') + banner + winCardHtml(d, g) +
+      tabsHtml([{ id: "fantasy", label: "Fantasy", html: fantasy }, { id: "scoring", label: "Scoring", html: scoringSummaryHtml(d) }, { id: "box", label: "Box score", html: boxHtml }], tab || "fantasy");
   }
 
   var LiveTab = { sortGames: sortGames, scoreChange: scoreChange, fieldX: fieldX, fieldSvg: fieldSvg, bannerText: bannerText,
-    playHeadline: playHeadline, liveTeamKeys: liveTeamKeys, mineHtml: mineHtml, playRowHtml: playRowHtml, scorebugHtml: scorebugHtml, preHtml: preHtml, headerHtml: headerHtml, gridSections: gridSections, kickoffText: kickoffText, predictionHtml: predictionHtml, oddsFullHtml: oddsFullHtml, compareBarsHtml: compareBarsHtml, coverNote: coverNote, liveHtml: liveHtml, postHtml: postHtml,
+    playHeadline: playHeadline, liveTeamKeys: liveTeamKeys, mineHtml: mineHtml, playRowHtml: playRowHtml, scorebugHtml: scorebugHtml, preHtml: preHtml, headerHtml: headerHtml, gridSections: gridSections, kickoffText: kickoffText, predictionHtml: predictionHtml, oddsFullHtml: oddsFullHtml, compareBarsHtml: compareBarsHtml, coverNote: coverNote, liveHtml: liveHtml, postHtml: postHtml, winChartHtml: winChartHtml, winCardHtml: winCardHtml, leadersHtml: leadersHtml, tabsHtml: tabsHtml, scoringSummaryHtml: scoringSummaryHtml,
     audit: audit, mvp: mvp, leaders: leaders, oddsBarHtml: oddsBarHtml, weatherHtml: weatherHtml, key: key };
   if (typeof window !== "undefined") window.LiveTab = LiveTab;
   if (typeof module !== "undefined") module.exports = LiveTab;
   if (typeof document === "undefined" || typeof window === "undefined" || !window.document.getElementById) return;
 
   // -------------------------------------------------------------- browser ----
-  var games = [], lastScores = {}, flashes = {}, poll = null, gcTimer = null, gcGame = null, gcOrigin = null;
+  var games = [], lastScores = {}, flashes = {}, poll = null, gcTimer = null, gcGame = null, gcOrigin = null, gcTab = null, gcShown = {}, gcEntered = false;
   function $(s) { return document.querySelector(s); }
   function reduced() { return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches); }
   function mineCount(g) {
@@ -575,6 +664,36 @@
     return typeof gameBodyHtml === "function" && d.box ? '<div class="gc-card gc-box"><div class="gc-h">Box score</div>' + gameBodyHtml(d.box) + "</div>" : "";
   }
 
+  // Scores count up when the game opens and flash when they change; plain text under reduced motion.
+  function animateScores() {
+    var els = document.querySelectorAll(".gc-tscore[data-score]");
+    Array.prototype.forEach.call(els, function (el) {
+      var side = el.dataset.side, to = Number(el.dataset.score), from = gcShown[side];
+      gcShown[side] = to;
+      if (isNaN(to) || from === to) return;
+      if (from != null) el.classList.add("flash");
+      if (reduced()) return;
+      var start = from == null ? 0 : from, t0 = performance.now(), dur = from == null ? 800 : 600;
+      el.textContent = String(start);
+      (function step(t) {
+        var k = Math.min(1, (t - t0) / dur);
+        el.textContent = String(Math.round(start + (to - start) * (1 - Math.pow(1 - k, 3))));
+        if (k < 1) requestAnimationFrame(step); else el.textContent = String(to);
+      })(t0);
+    });
+  }
+
+  function selectTab(id) {
+    var bar = $(".gc-tabs");
+    if (!bar) return;
+    var tabs = Array.prototype.slice.call(bar.querySelectorAll(".gc-tab")), idx = -1;
+    tabs.forEach(function (t, i) { var on = t.dataset.gcTab === id; t.classList.toggle("on", on); t.setAttribute("aria-selected", on ? "true" : "false"); if (on) idx = i; });
+    if (idx < 0) return;
+    bar.style.setProperty("--i", idx);
+    Array.prototype.forEach.call(document.querySelectorAll(".gc-pane"), function (p) { p.classList.toggle("on", p.dataset.pane === id); });
+    gcTab = id;
+  }
+
   function renderBody(d) {
     var g = Object.assign({}, gcGame, d.game || {});
     g.home = Object.assign({}, gcGame.home, (d.game || {}).home); g.away = Object.assign({}, gcGame.away, (d.game || {}).away);
@@ -582,10 +701,17 @@
     if (!body) return;
     var box = boxSection(d);
     var scroll = body.scrollTop;
-    body.innerHTML = g.state === "pre" ? preHtml(d, g, favKey()) : g.state === "in" ? liveHtml(d, g, box) : postHtml(d, g, box);
+    body.innerHTML = g.state === "pre" ? preHtml(d, g, favKey()) : g.state === "in" ? liveHtml(d, g, box, gcTab) : postHtml(d, g, box, gcTab);
     body.scrollTop = scroll;
+    if (!gcEntered) {                     // the entrance stagger plays once per open, not on every 15 s refresh
+      gcEntered = true;
+      body.classList.add("gc-enter");
+      Array.prototype.forEach.call(body.children, function (c, i) { c.style.setProperty("--i", i); });
+      setTimeout(function () { body.classList.remove("gc-enter"); }, 1200);
+    }
     var head = $(".gc-head");
-    if (head) head.outerHTML = headerHtml(g, favKey());
+    if (head) head.outerHTML = headerHtml(g, favKey(), d.situation);
+    animateScores();
   }
 
   async function refreshGame() {
@@ -603,7 +729,7 @@
     var g = games.filter(function (x) { return String(x.game_id) === String(id); })[0];
     var root = $("#gc-root");
     if (!g || !root) return;
-    gcGame = g; gcOrigin = origin || null;
+    gcGame = g; gcOrigin = origin || null; gcTab = null; gcShown = {}; gcEntered = false;
     root.innerHTML = '<div class="gc-backdrop"><section class="gc-panel" role="dialog" aria-modal="true" aria-label="Game center">' + headerHtml(g, favKey()) +
       '<div class="gc-body" id="gc-body"><div class="gc-skel">' + '<div class="skel gc-skel-row"></div>'.repeat(5) + "</div></div></section></div>";
     document.body.classList.add("gc-open");
@@ -639,6 +765,8 @@
     if (chip) { filter = chip.dataset.filter; renderGrid(false); return; }
     var card = t.closest(".sb-card[data-game]");
     if (card && card.closest("#live-grid")) { openGame(card.dataset.game, card); return; }
+    var tab = t.closest(".gc-tab[data-gc-tab]");
+    if (tab) { selectTab(tab.dataset.gcTab); return; }
     if (t.closest("#gc-back")) closeGame();
   });
   document.addEventListener("keydown", function (e) { if (e.key === "Escape" && gcGame) { e.stopPropagation(); closeGame(); } }, true);

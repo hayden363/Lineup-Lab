@@ -230,6 +230,48 @@ def parse_plays(js, names, scoring, mine, limit=PLAY_LIMIT):
     return plays[::-1][:limit]
 
 
+# ------------------------------------------- win probability and the drive ----
+SERIES_POINTS = 90
+
+
+def win_series(js, limit=SERIES_POINTS):
+    """The home team's win chance (0-100, one decimal) after each play, thinned to at most `limit` points while
+    keeping the first and last. [] when ESPN published no winprobability for the game."""
+    wp = _g(js, "winprobability")
+    if not isinstance(wp, list):
+        return []
+    vals = [_num(p.get("homeWinPercentage")) for p in wp if isinstance(p, dict)]
+    vals = [round(v * 100, 1) for v in vals if v is not None]
+    if len(vals) < 2:
+        return []
+    if len(vals) > limit:
+        step = (len(vals) - 1) / (limit - 1)
+        vals = [vals[int(round(i * step))] for i in range(limit)]
+    return vals
+
+
+def current_drive(js, home, away, teams):
+    """The drive in progress: who has the ball, plays, yards, time, and the field positions (0-100 from the left
+    goal line) the drive's plays started from, for the trail on the field. None between drives or without data."""
+    cur = _g(js, "drives", "current")
+    if not isinstance(cur, dict):
+        return None
+    tid = _g(cur, "team", "id")
+    abbr = _g(cur, "team", "abbreviation") or (teams or {}).get(str(tid))
+    if abbr not in (home, away):
+        return None
+    right = abbr == away
+    trail = []
+    for p in cur.get("plays") or []:
+        own = _num(_g(p, "start", "yardLine")) if isinstance(p, dict) else None
+        if own is not None and 0 <= own <= 100:
+            trail.append(int(own) if right else 100 - int(own))
+    if not trail and cur.get("yards") is None:
+        return None
+    return {"team": abbr, "plays": cur.get("offensivePlays"), "yards": cur.get("yards"),
+            "elapsed": _g(cur, "timeElapsed", "displayValue"), "trail": trail}
+
+
 # ------------------------------------------------------------------ bundle ----
 def center(js, game, names, scoring, mine):
     """Everything the deep dive shows for one game, from its summary JSON. `game` is the scoreboard row
@@ -246,4 +288,5 @@ def center(js, game, names, scoring, mine):
     if isinstance(wp, list) and wp and isinstance(wp[-1], dict) and _num(wp[-1].get("homeWinPercentage")) is not None:
         win = round(float(wp[-1]["homeWinPercentage"]) * 100)
     return {"situation": sit, "odds": parse_odds(js, home, away), "weather": parse_weather(js),
-            "injuries": parse_injuries(js), "plays": parse_plays(js, names, scoring, mine), "home_win_pct": win}
+            "injuries": parse_injuries(js), "plays": parse_plays(js, names, scoring, mine), "home_win_pct": win,
+            "win_series": win_series(js), "drive": current_drive(js, home, away, teams)}

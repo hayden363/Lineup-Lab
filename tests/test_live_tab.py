@@ -257,6 +257,50 @@ class PureTests(unittest.TestCase):
         for needle in ("Game MVP", "Jahmyr Gibbs", "Fantasy impact audit", "pts for your matchup", "Top fantasy scorers", "Final"):
             self.assertIn(needle, out)
 
+    def test_win_chart_only_renders_with_a_real_series(self):
+        out = run(GAME + '''return [L.winChartHtml([], G()), L.winChartHtml([50], G()), L.winChartHtml([50, 62.5, 80], G()),
+          L.winCardHtml({}, G()), L.winCardHtml({home_win_pct: 64}, G()), L.winCardHtml({win_series: [50, 70]}, G())];''')
+        self.assertEqual((out[0], out[1], out[3]), ("", "", ""))
+        self.assertIn("wp-chart", out[2])
+        self.assertNotIn("wp-chart", out[4])
+        self.assertIn("64%", out[4])
+        self.assertIn("wp-chart", out[5])
+        self.assertIn("70%", out[5])
+
+    def test_drive_trail_is_drawn_only_when_the_drive_has_snaps(self):
+        sit = '{yard_line: 62, line_to_gain: 52, direction: "right-to-left", is_red_zone: false}'
+        none = run(f'return L.fieldSvg({sit}, "DET", "GB");')
+        some = run(f'return L.fieldSvg({sit}, "DET", "GB", {{trail: [80, 72, 62]}});')
+        self.assertNotIn("fld-trail", none)
+        self.assertIn("fld-trail", some)
+        self.assertIn('cx="740"', some)                   # first snap at yard 80
+
+    def test_tabs_need_two_panes_and_mark_the_active_one(self):
+        out = run('''return [L.tabsHtml([{id:"a",label:"A",html:"<p>x</p>"}], "a"), L.tabsHtml([{id:"a",label:"A",html:"x"},{id:"b",label:"B",html:"y"},{id:"c",label:"C",html:""}], "b")];''')
+        self.assertNotIn("gc-tabs", out[0])
+        self.assertIn("--n:2;--i:1", out[1])
+        self.assertNotIn(">C<", out[1])
+
+    def test_leaders_light_up_your_players_and_hide_when_empty(self):
+        out = run('''const d = {box:{teams:[{abbr:"DET", players:[{name:"Jahmyr Gibbs", position:"RB", mine:true, fantasy_points:20},{name:"Jared Goff", position:"QB", fantasy_points:15.7}]}]}};
+          return [L.leadersHtml(d, 5), L.leadersHtml({box:{teams:[]}}, 5)];''')
+        self.assertIn("ld-row mine", out[0])
+        self.assertIn("Jared Goff", out[0])
+        self.assertEqual(out[1], "")
+
+    def test_scoring_play_row_shows_team_and_running_score(self):
+        out = run('return L.playRowHtml({id:"1", type:"Field Goal", scoring:true, team:"DET", away_score:10, home_score:13, yards:40, fantasy:[]});')
+        self.assertIn("pbp-tm", out)
+        self.assertIn("10\u201313", out)
+
+    def test_live_header_has_pulse_and_ball_marker_only_for_the_team_with_possession(self):
+        out = run(GAME + 'return [L.headerHtml(G(), "", {possession:"DET"}), L.headerHtml(G({state:"post"}), "", {possession:"DET"})];')
+        self.assertIn("gc-live", out[0])
+        self.assertEqual(out[0].count("gc-poss"), 1)
+        self.assertNotIn("gc-live", out[1])
+        self.assertNotIn("gc-poss", out[1])
+        self.assertIn('data-score="17"', out[0])
+
 
 class WiringTests(unittest.TestCase):
     def read(self, rel):
@@ -299,6 +343,16 @@ class WiringTests(unittest.TestCase):
         from fastapi.testclient import TestClient
         import server
         r = TestClient(server.app).get("/live.js")
+        self.assertEqual((r.status_code, r.headers.get("cache-control")), (200, "no-cache"))
+
+    def test_game_center_stylesheet_is_served_precached_and_respects_reduced_motion(self):
+        css = self.read("static/game-center.css")
+        self.assertIn("prefers-reduced-motion: reduce", css)
+        self.assertIn('href="/game-center.css"', self.read("static/index.html"))
+        self.assertIn('"/game-center.css"', self.read("static/sw.js"))
+        from fastapi.testclient import TestClient
+        import server
+        r = TestClient(server.app).get("/game-center.css")
         self.assertEqual((r.status_code, r.headers.get("cache-control")), (200, "no-cache"))
 
 
