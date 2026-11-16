@@ -173,16 +173,29 @@ def _season_players(tpl, wk, through):
     return per
 
 
-def _answers_at(per, threshold, ecr_rank, label):
+def _answers_at(per, threshold, ecr_rank, label, fame=None):
+    """Tiered answers at `threshold`. With `fame` = (career_points, av_by_id), popularity is the same three-signal
+    fame score the history prompts use (career PPR, career Approximate Value, current consensus rank), so a star
+    who is hurt or ranked low right now (Lamar Jackson, Jalen Hurts) is still an obvious answer. Without it,
+    popularity is the consensus rank alone (unlisted = least popular), tie-broken by season PPR."""
     from engine.consensus import match_key
     ecr_rank = ecr_rank or {}
     q = per[per["val"] >= threshold]
+    rows = list(q.itertuples(index=False))
+    if fame is not None and rows:
+        career, av_by_id = fame
+        score = fame_scores([float(career.get(r.player_id, 0.0)) for r in rows],
+                            [(av_by_id or {}).get(r.player_id) for r in rows],
+                            [ecr_rank.get(match_key(r.name, r.pos)) for r in rows])
+        keys = [(-f, -float(r.ppr)) for f, r in zip(score, rows)]
+    else:
+        keys = [(ecr_rank.get(match_key(r.name, r.pos), 99999.0), -float(r.ppr)) for r in rows]
     keyed = []
-    for r in q.itertuples(index=False):
+    for r, k in zip(rows, keys):
         head = r.headshot if isinstance(r.headshot, str) and r.headshot else None
         extra = {"team": r.team if isinstance(r.team, str) else None, "position": r.pos, "headshot": head,
                  "stat": _num(r.val), "stat_label": label}
-        keyed.append((r.player_id, r.name, (ecr_rank.get(match_key(r.name, r.pos), 99999.0), -float(r.ppr)), extra))
+        keyed.append((r.player_id, r.name, k, extra))
     return rank_and_tier(keyed)
 
 
@@ -191,13 +204,13 @@ def has_hall_of_famer(answers):
     return any(a["tier"] == 6 for a in answers)
 
 
-def pick_threshold(per, ladder, ecr_rank, label):
+def pick_threshold(per, ladder, ecr_rank, label, fame=None):
     """Highest ladder rung whose answer set still has at least TARGET_MIN players (so the prompt is as hard as the
     data allows while staying playable). Falls back to the highest rung with at least MIN_ANSWERS. Returns
     (threshold, answers) or (None, [])."""
     fallback = (None, [])
     for t in sorted(ladder, reverse=True):
-        ans = _answers_at(per, t, ecr_rank, label)
+        ans = _answers_at(per, t, ecr_rank, label, fame)
         if not has_hall_of_famer(ans):                 # too small a set to reach the top tier: step down the ladder
             continue
         if len(ans) >= TARGET_MIN:
@@ -207,13 +220,13 @@ def pick_threshold(per, ladder, ecr_rank, label):
     return fallback
 
 
-def build_season_prompt(tpl, wk, season, through, ecr_rank=None):
+def build_season_prompt(tpl, wk, season, through, ecr_rank=None, fame=None):
     """One fantasy prompt about `season` through its latest finished regular-season week `through`. `wk` = that
     season's REG weekly rows. `ecr_rank` maps normalized-name|POS -> FantasyPros consensus rank; a player the
     experts don't list counts as the least popular (tie-break: season PPR points). Returns None when no ladder
     rung leaves MIN_ANSWERS answers."""
     per = _season_players(tpl, wk, through)
-    t, answers = pick_threshold(per, tpl["ladder"], ecr_rank, tpl["label"])
+    t, answers = pick_threshold(per, tpl["ladder"], ecr_rank, tpl["label"], fame)
     if t is None:
         return None
     return {"id": f"f:{tpl['key']}:{season}:w{through}:t{t}", "template": tpl["key"], "kind": "fantasy",
@@ -505,8 +518,16 @@ def live_candidates(date_str):
     if wk is not None:
         wk = wk[wk["season_type"] == "REG"] if "season_type" in wk.columns else wk
         through = weeks[-1]                                # latest fully completed regular-season week
+        fame = None
+        try:                                               # career signals for fame; consensus-only if they can't load
+            history = data.load_season_history(season - 1)
+            picks = data.load_draft_picks()
+            av_by_id = {g: float(v) for g, v in zip(picks["gsis_id"], picks["car_av"]) if isinstance(g, str) and pd.notna(v)}
+            fame = (career_points(history, wk), av_by_id)
+        except Exception as e:
+            print(f"[daily_drive] career data unavailable, rarity from consensus only: {e}")
         for tpl in FANTASY_TEMPLATES:
-            p = build_season_prompt(tpl, wk, season, through, ecr_rank)
+            p = build_season_prompt(tpl, wk, season, through, ecr_rank, fame)
             if p:
                 cands.append(p)
     if not HISTORY_ENABLED:

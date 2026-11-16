@@ -858,3 +858,16 @@ class FameTest(unittest.TestCase):
     def test_unknown_signals_count_as_no_fame(self):
         self.assertEqual(dd.fame_scores([5.0], [None], [None]), [1.0])   # a set of one is trivially "most famous"
         self.assertEqual(dd.fame_scores([1.0, 2.0], [None, None], [400.0, None])[0], 0.0)
+
+
+class SeasonFameTest(unittest.TestCase):
+    """A star with a big career but a low current consensus rank must not be the rare (Hall of Famer) answer."""
+
+    def test_career_star_is_not_rare(self):
+        rows = [dict(player_id=f"p{i}", name=f"Player {i}", pos="QB", team="X", headshot=None, val=150.0 + i, ppr=50.0)
+                for i in range(12)]
+        rows[0].update(player_id="star", name="Star Qb")
+        per = pd.DataFrame(rows)
+        career = {"star": 3000.0, **{f"p{i}": 10.0 * i for i in range(1, 12)}}
+        ans = dd._answers_at(per, 100, {}, "rush yds", fame=(career, {}))
+        self.assertEqual({a["name"]: a["tier"] for a in ans}["Star Qb"], 1)

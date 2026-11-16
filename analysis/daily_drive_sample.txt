@@ -10,72 +10,72 @@ THE DAILY DRIVE sample day 2026-11-16  (7 prompts; every answer computed from nf
    🔵 Pro Bowler     ( 60 yds,  3): George Pickens (DAL WR, 533 rec yds), Garrett Wilson (NYJ WR, 527 rec yds), Luther Burden III (CHI WR, 644 rec yds)
    🟢 Starter        ( 30 yds,  4): Drake London (ATL WR, 692 rec yds), Puka Nacua (LA WR, 715 rec yds), Zay Flowers (BAL WR, 614 rec yds)
    🟡 Rotation       ( 15 yds,  4): Malik Nabers (NYG WR, 648 rec yds), Chris Olave (NO WR, 734 rec yds), Christian Watson (GB WR, 879 rec yds)
-   ⚪ Benchwarmer    ( 10 yds,  4): Jaxon Smith-Njigba (SEA WR, 1,036 rec yds), Ja'Marr Chase (CIN WR, 647 rec yds), Amon-Ra St. Brown (DET WR, 657 rec yds)
+   ⚪ Benchwarmer    ( 10 yds,  4): CeeDee Lamb (DAL WR, 904 rec yds), Jaxon Smith-Njigba (SEA WR, 1,036 rec yds), Ja'Marr Chase (CIN WR, 647 rec yds)
 
 2. [wr_rec_td] Name a WR with 4+ receiving TDs this season
    category: This season · through Week 9   id: f:wr_rec_td:2026:w9:t4   threshold: 4
    answers: 18 (target 15-50)   tiers 6..1: 6:1 5:3 4:3 3:3 2:4 1:4
    re-derived from the weekly table: 18 distinct names; builder set and stats == source: True
    🏆 Hall of Famer  (100 yds,  1): Darius Cooper (PHI WR, 4 rec TD)
-   🟣 All-Pro        ( 85 yds,  3): Tre Tucker (LV WR, 4 rec TD), Davante Adams (LA WR, 4 rec TD), DeMario Douglas (NE WR, 4 rec TD)
-   🔵 Pro Bowler     ( 60 yds,  3): Luther Burden III (CHI WR, 4 rec TD), Jameson Williams (DET WR, 5 rec TD), Stefon Diggs (WAS WR, 5 rec TD)
-   🟢 Starter        ( 30 yds,  3): Nico Collins (HOU WR, 4 rec TD), Matthew Golden (GB WR, 5 rec TD), Parker Washington (JAX WR, 5 rec TD)
-   🟡 Rotation       ( 15 yds,  4): Justin Jefferson (MIN WR, 4 rec TD), Christian Watson (GB WR, 7 rec TD), Tee Higgins (CIN WR, 6 rec TD)
-   ⚪ Benchwarmer    ( 10 yds,  4): Jaxon Smith-Njigba (SEA WR, 9 rec TD), Ja'Marr Chase (CIN WR, 7 rec TD), Amon-Ra St. Brown (DET WR, 5 rec TD)
+   🟣 All-Pro        ( 85 yds,  3): Jameson Williams (DET WR, 5 rec TD), Tre Tucker (LV WR, 4 rec TD), DeMario Douglas (NE WR, 4 rec TD)
+   🔵 Pro Bowler     ( 60 yds,  3): Matthew Golden (GB WR, 5 rec TD), Parker Washington (JAX WR, 5 rec TD), Luther Burden III (CHI WR, 4 rec TD)
+   🟢 Starter        ( 30 yds,  3): Tee Higgins (CIN WR, 6 rec TD), Puka Nacua (LA WR, 4 rec TD), Nico Collins (HOU WR, 4 rec TD)
+   🟡 Rotation       ( 15 yds,  4): CeeDee Lamb (DAL WR, 7 rec TD), Stefon Diggs (WAS WR, 5 rec TD), Justin Jefferson (MIN WR, 4 rec TD)
+   ⚪ Benchwarmer    ( 10 yds,  4): Davante Adams (LA WR, 4 rec TD), Jaxon Smith-Njigba (SEA WR, 9 rec TD), Ja'Marr Chase (CIN WR, 7 rec TD)
 
 3. [rb_rush_td] Name a RB with 4+ rushing TDs this season
    category: This season · through Week 9   id: f:rb_rush_td:2026:w9:t4   threshold: 4
    answers: 18 (target 15-50)   tiers 6..1: 6:1 5:3 4:3 3:3 2:4 1:4
    re-derived from the weekly table: 18 distinct names; builder set and stats == source: True
-   🏆 Hall of Famer  (100 yds,  1): Brian Robinson (ATL RB, 4 rush TD)
-   🟣 All-Pro        ( 85 yds,  3): Blake Corum (LA RB, 4 rush TD), Ollie Gordon II (MIA RB, 4 rush TD), Chris Rodriguez Jr. (JAX RB, 4 rush TD)
-   🔵 Pro Bowler     ( 60 yds,  3): Chuba Hubbard (CAR RB, 5 rush TD), Derrick Henry (BAL RB, 8 rush TD), Tony Pollard (TEN RB, 6 rush TD)
-   🟢 Starter        ( 30 yds,  3): Bucky Irving (TB RB, 7 rush TD), Kyren Williams (LA RB, 6 rush TD), Bhayshul Tuten (JAX RB, 4 rush TD)
-   🟡 Rotation       ( 15 yds,  4): Christian McCaffrey (SF RB, 9 rush TD), Javonte Williams (DAL RB, 9 rush TD), Jonathan Taylor (IND RB, 8 rush TD)
-   ⚪ Benchwarmer    ( 10 yds,  4): Jahmyr Gibbs (DET RB, 9 rush TD), Bijan Robinson (ATL RB, 5 rush TD), Kenneth Walker III (KC RB, 7 rush TD)
+   🏆 Hall of Famer  (100 yds,  1): Chris Rodriguez Jr. (JAX RB, 4 rush TD)
+   🟣 All-Pro        ( 85 yds,  3): Blake Corum (LA RB, 4 rush TD), Ollie Gordon II (MIA RB, 4 rush TD), Brian Robinson (ATL RB, 4 rush TD)
+   🔵 Pro Bowler     ( 60 yds,  3): Bhayshul Tuten (JAX RB, 4 rush TD), Chuba Hubbard (CAR RB, 5 rush TD), Tony Pollard (TEN RB, 6 rush TD)
+   🟢 Starter        ( 30 yds,  3): D'Andre Swift (CHI RB, 10 rush TD), Bucky Irving (TB RB, 7 rush TD), Kyren Williams (LA RB, 6 rush TD)
+   🟡 Rotation       ( 15 yds,  4): James Cook (BUF RB, 8 rush TD), Derrick Henry (BAL RB, 8 rush TD), Javonte Williams (DAL RB, 9 rush TD)
+   ⚪ Benchwarmer    ( 10 yds,  4): Christian McCaffrey (SF RB, 9 rush TD), Jahmyr Gibbs (DET RB, 9 rush TD), Bijan Robinson (ATL RB, 5 rush TD)
 
 4. [qb_game_pass] Name a QB with a 300+ yard passing game this season
    category: This season · through Week 9   id: f:qb_game_pass:2026:w9:t300   threshold: 300
    answers: 21 (target 15-50)   tiers 6..1: 6:2 5:3 4:3 3:4 2:4 1:5
    re-derived from the weekly table: 21 distinct names; builder set and stats == source: True
-   🏆 Hall of Famer  (100 yds,  2): Lamar Jackson (BAL QB, 324 pass yds in a game), Jameis Winston (NYG QB, 326 pass yds in a game)
-   🟣 All-Pro        ( 85 yds,  3): Sam Darnold (SEA QB, 379 pass yds in a game), Cam Ward (TEN QB, 304 pass yds in a game), Deshaun Watson (CLE QB, 324 pass yds in a game)
-   🔵 Pro Bowler     ( 60 yds,  3): Kirk Cousins (LV QB, 365 pass yds in a game), Bryce Young (CAR QB, 361 pass yds in a game), Geno Smith (NYJ QB, 321 pass yds in a game)
-   🟢 Starter        ( 30 yds,  4): C.J. Stroud (HOU QB, 384 pass yds in a game), Patrick Mahomes (KC QB, 382 pass yds in a game), Tyler Shough (NO QB, 410 pass yds in a game)
-   🟡 Rotation       ( 15 yds,  4): Trevor Lawrence (JAX QB, 331 pass yds in a game), Jared Goff (DET QB, 412 pass yds in a game), Dak Prescott (DAL QB, 335 pass yds in a game)
-   ⚪ Benchwarmer    ( 10 yds,  5): Josh Allen (BUF QB, 334 pass yds in a game), Joe Burrow (CIN QB, 462 pass yds in a game), Caleb Williams (CHI QB, 308 pass yds in a game)
+   🏆 Hall of Famer  (100 yds,  2): Sam Darnold (SEA QB, 379 pass yds in a game), Cam Ward (TEN QB, 304 pass yds in a game)
+   🟣 All-Pro        ( 85 yds,  3): Jameis Winston (NYG QB, 326 pass yds in a game), Geno Smith (NYJ QB, 321 pass yds in a game), Deshaun Watson (CLE QB, 324 pass yds in a game)
+   🔵 Pro Bowler     ( 60 yds,  3): Lamar Jackson (BAL QB, 324 pass yds in a game), Tyler Shough (NO QB, 410 pass yds in a game), Bryce Young (CAR QB, 361 pass yds in a game)
+   🟢 Starter        ( 30 yds,  4): Dak Prescott (DAL QB, 335 pass yds in a game), Jared Goff (DET QB, 412 pass yds in a game), Jayden Daniels (WAS QB, 300 pass yds in a game)
+   🟡 Rotation       ( 15 yds,  4): Caleb Williams (CHI QB, 308 pass yds in a game), Jordan Love (GB QB, 387 pass yds in a game), Drake Maye (NE QB, 374 pass yds in a game)
+   ⚪ Benchwarmer    ( 10 yds,  5): Matthew Stafford (LA QB, 390 pass yds in a game), Kirk Cousins (LV QB, 365 pass yds in a game), Josh Allen (BUF QB, 334 pass yds in a game)
 
 5. [qb_rush_yds] Name a QB with 100+ rushing yards this season
    category: This season · through Week 9   id: f:qb_rush_yds:2026:w9:t100   threshold: 100
    answers: 17 (target 15-50)   tiers 6..1: 6:1 5:3 4:2 3:4 2:3 1:4
    re-derived from the weekly table: 17 distinct names; builder set and stats == source: True
-   🏆 Hall of Famer  (100 yds,  1): Jalen Hurts (PHI QB, 107 rush yds)
-   🟣 All-Pro        ( 85 yds,  3): Kyler Murray (MIN QB, 167 rush yds), Lamar Jackson (BAL QB, 144 rush yds), Jalon Daniels (TB QB, 123 rush yds)
-   🔵 Pro Bowler     ( 60 yds,  2): Deshaun Watson (CLE QB, 217 rush yds), Malik Willis (MIA QB, 232 rush yds)
-   🟢 Starter        ( 30 yds,  4): Tyler Shough (NO QB, 162 rush yds), Bo Nix (DEN QB, 116 rush yds), Justin Herbert (LAC QB, 190 rush yds)
-   🟡 Rotation       ( 15 yds,  3): Dak Prescott (DAL QB, 102 rush yds), Jayden Daniels (WAS QB, 252 rush yds), C.J. Stroud (HOU QB, 100 rush yds)
-   ⚪ Benchwarmer    ( 10 yds,  4): Josh Allen (BUF QB, 285 rush yds), Brock Purdy (SF QB, 201 rush yds), Caleb Williams (CHI QB, 145 rush yds)
+   🏆 Hall of Famer  (100 yds,  1): Jalon Daniels (TB QB, 123 rush yds)
+   🟣 All-Pro        ( 85 yds,  3): Bo Nix (DEN QB, 116 rush yds), Cam Ward (TEN QB, 112 rush yds), Malik Willis (MIA QB, 232 rush yds)
+   🔵 Pro Bowler     ( 60 yds,  2): Tyler Shough (NO QB, 162 rush yds), Deshaun Watson (CLE QB, 217 rush yds)
+   🟢 Starter        ( 30 yds,  4): Jalen Hurts (PHI QB, 107 rush yds), Jayden Daniels (WAS QB, 252 rush yds), C.J. Stroud (HOU QB, 100 rush yds)
+   🟡 Rotation       ( 15 yds,  3): Caleb Williams (CHI QB, 145 rush yds), Drake Maye (NE QB, 219 rush yds), Justin Herbert (LAC QB, 190 rush yds)
+   ⚪ Benchwarmer    ( 10 yds,  4): Josh Allen (BUF QB, 285 rush yds), Dak Prescott (DAL QB, 102 rush yds), Lamar Jackson (BAL QB, 144 rush yds)
 
 6. [any_total_td] Name a player with 6+ total TDs (rushing + receiving) this season
    category: This season · through Week 9   id: f:any_total_td:2026:w9:t6   threshold: 6
    answers: 22 (target 15-50)   tiers 6..1: 6:2 5:3 4:3 3:5 2:4 1:5
    re-derived from the weekly table: 22 distinct names; builder set and stats == source: True
    🏆 Hall of Famer  (100 yds,  2): Isaiah Likely (NYG TE, 6 total TD), Mike Gesicki (CIN TE, 6 total TD)
-   🟣 All-Pro        ( 85 yds,  3): Chuba Hubbard (CAR RB, 7 total TD), Derrick Henry (BAL RB, 9 total TD), Tony Pollard (TEN RB, 6 total TD)
-   🔵 Pro Bowler     ( 60 yds,  3): Kyren Williams (LA RB, 7 total TD), Brock Bowers (LV TE, 6 total TD), Bhayshul Tuten (JAX RB, 7 total TD)
-   🟢 Starter        ( 30 yds,  5): Jonathan Taylor (IND RB, 8 total TD), Christian Watson (GB WR, 7 total TD), Tee Higgins (CIN WR, 6 total TD)
-   🟡 Rotation       ( 15 yds,  4): James Cook (BUF RB, 8 total TD), CeeDee Lamb (DAL WR, 7 total TD), Christian McCaffrey (SF RB, 10 total TD)
-   ⚪ Benchwarmer    ( 10 yds,  5): Jahmyr Gibbs (DET RB, 11 total TD), Jaxon Smith-Njigba (SEA WR, 9 total TD), Bijan Robinson (ATL RB, 6 total TD)
+   🟣 All-Pro        ( 85 yds,  3): Bhayshul Tuten (JAX RB, 7 total TD), Chuba Hubbard (CAR RB, 7 total TD), Tony Pollard (TEN RB, 6 total TD)
+   🔵 Pro Bowler     ( 60 yds,  3): Bucky Irving (TB RB, 8 total TD), Kyren Williams (LA RB, 7 total TD), Brock Bowers (LV TE, 6 total TD)
+   🟢 Starter        ( 30 yds,  5): Javonte Williams (DAL RB, 10 total TD), Jonathan Taylor (IND RB, 8 total TD), Christian Watson (GB WR, 7 total TD)
+   🟡 Rotation       ( 15 yds,  4): Kenneth Walker III (KC RB, 11 total TD), James Cook (BUF RB, 8 total TD), CeeDee Lamb (DAL WR, 7 total TD)
+   ⚪ Benchwarmer    ( 10 yds,  5): Christian McCaffrey (SF RB, 10 total TD), Jahmyr Gibbs (DET RB, 11 total TD), Jaxon Smith-Njigba (SEA WR, 9 total TD)
 
 7. [rb_game_rush] Name a RB with a 100+ yard rushing game this season
    category: This season · through Week 9   id: f:rb_game_rush:2026:w9:t100   threshold: 100
    answers: 22 (target 15-50)   tiers 6..1: 6:2 5:3 4:3 3:5 2:4 1:5
    re-derived from the weekly table: 22 distinct names; builder set and stats == source: True
    🏆 Hall of Famer  (100 yds,  2): Kenny Gainwell (TB RB, 140 rush yds in a game), Emanuel Wilson (SEA RB, 100 rush yds in a game)
-   🟣 All-Pro        ( 85 yds,  3): Braelon Allen (NYJ RB, 147 rush yds in a game), Aaron Jones (MIN RB, 113 rush yds in a game), Tyler Allgeier (ARI RB, 147 rush yds in a game)
-   🔵 Pro Bowler     ( 60 yds,  3): Cam Skattebo (NYG RB, 124 rush yds in a game), Ollie Gordon II (MIA RB, 103 rush yds in a game), Kyle Monangai (CHI RB, 146 rush yds in a game)
-   🟢 Starter        ( 30 yds,  5): Chuba Hubbard (CAR RB, 122 rush yds in a game), Derrick Henry (BAL RB, 144 rush yds in a game), Breece Hall (NYJ RB, 102 rush yds in a game)
-   🟡 Rotation       ( 15 yds,  4): D'Andre Swift (CHI RB, 124 rush yds in a game), Bucky Irving (TB RB, 170 rush yds in a game), Jaylen Warren (PIT RB, 143 rush yds in a game)
-   ⚪ Benchwarmer    ( 10 yds,  5): Jahmyr Gibbs (DET RB, 156 rush yds in a game), Bijan Robinson (ATL RB, 194 rush yds in a game), Kenneth Walker III (KC RB, 177 rush yds in a game)
+   🟣 All-Pro        ( 85 yds,  3): Kyle Monangai (CHI RB, 146 rush yds in a game), Braelon Allen (NYJ RB, 147 rush yds in a game), Tyler Allgeier (ARI RB, 147 rush yds in a game)
+   🔵 Pro Bowler     ( 60 yds,  3): Ashton Jeanty (LV RB, 102 rush yds in a game), Cam Skattebo (NYG RB, 124 rush yds in a game), Ollie Gordon II (MIA RB, 103 rush yds in a game)
+   🟢 Starter        ( 30 yds,  5): Jaylen Warren (PIT RB, 143 rush yds in a game), Bhayshul Tuten (JAX RB, 104 rush yds in a game), Chuba Hubbard (CAR RB, 122 rush yds in a game)
+   🟡 Rotation       ( 15 yds,  4): Aaron Jones (MIN RB, 113 rush yds in a game), Javonte Williams (DAL RB, 155 rush yds in a game), D'Andre Swift (CHI RB, 124 rush yds in a game)
+   ⚪ Benchwarmer    ( 10 yds,  5): Derrick Henry (BAL RB, 144 rush yds in a game), Jahmyr Gibbs (DET RB, 156 rush yds in a game), Bijan Robinson (ATL RB, 194 rush yds in a game)
 
 ALL 7 ANSWER SETS MATCH A FRESH PANDAS RECOMPUTE: True
