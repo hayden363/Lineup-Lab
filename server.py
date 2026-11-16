@@ -2331,6 +2331,11 @@ def _play_js():
     return FileResponse("static/play.js", media_type="text/javascript", headers={"Cache-Control": "no-cache"})
 
 
+@app.get("/play-field.js", include_in_schema=False)
+def _play_field_js():
+    return FileResponse("static/play-field.js", media_type="text/javascript", headers={"Cache-Control": "no-cache"})
+
+
 @app.get("/play.css", include_in_schema=False)
 def _play_css():
     return FileResponse("static/play.css", media_type="text/css", headers={"Cache-Control": "no-cache"})

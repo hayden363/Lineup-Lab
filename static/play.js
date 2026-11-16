@@ -1,16 +1,15 @@
 /* The Daily Drive: vanilla JS, no inline script (CSP script-src 'self'). Answers never reach this file until the game
    is over: every typed answer is judged by /api/play/check, and the full tier lists come from /api/play/reveal.
-   The visuals (night-field stage, play clock, radar scan, player card, touchdown, drive chart) are all CSS/SVG/canvas;
+   The visuals (the full-screen field scene with the quarterback and the six plays lives in play-field.js; HUD, play clock, result moment, touchdown, drive chart) are CSS/SVG/canvas;
    prefers-reduced-motion turns off particles, shakes and transitions (see REDUCED and the CSS media query). */
 (function () {
   "use strict";
   var PREVIEW_MS = 3000, ANSWER_MS = 25000, SAVE_TTL_MS = 12 * 3600 * 1000, MAX_YARDS = 700, YPX = 5, SCAN_MIN_MS = 450;
-  var TIER = {
-    6: ["Hall of Famer", 100, "🏆"], 5: ["All-Pro", 85, "🟡"], 4: ["Pro Bowler", 60, "🟣"],
-    3: ["Starter", 30, "🔴"], 2: ["Rotation", 15, "🔵"], 1: ["Benchwarmer", 10, "⚪"]
+  var TIER = {   // the six plays, lowest to best: [name, yards, share emoji]
+    6: ["Highlight Reel TD", 100, "🏆"], 5: ["Bomb", 85, "🟡"], 4: ["Chunk Play", 60, "🟣"],
+    3: ["Chain Mover", 30, "🔴"], 2: ["Quick Slant", 15, "🔵"], 1: ["Checkdown", 10, "⚪"]
   };
   var TIER_COLOR = { 1: "#b3bccd", 2: "#6fd0ff", 3: "#ff4b55", 4: "#b866ff", 5: "#fff04d", 6: "#ffab1a" };   // grey, light blue, red, purple, yellow, gold
-  var TIER_RGB = { 1: "179, 188, 205", 2: "111, 208, 255", 3: "255, 75, 85", 4: "184, 102, 255", 5: "255, 240, 77", 6: "255, 171, 26" };
   var TIER_GRAD = { 1: ["#e3e8f2", "#7d879c"], 2: ["#b6e9ff", "#2f9fe0"], 3: ["#ff8f94", "#c8202f"], 4: ["#dcaaff", "#7d33d6"], 5: ["#fffbb0", "#d8c200"], 6: ["#ffe4a3", "#d27800"] };
   var SACK = "⬛";
   var REDUCEDQ = window.matchMedia ? window.matchMedia("(prefers-reduced-motion: reduce)") : null;
@@ -187,186 +186,137 @@
       stop: stop
     };
   })();
-
-  // ---------------------------------------------------------------- the stage: night field, ball, depth gauge (persistent across screens)
-  function svgEl(tag, attrs) {
-    var e = document.createElementNS("http://www.w3.org/2000/svg", tag);
-    Object.keys(attrs || {}).forEach(function (k) { e.setAttribute(k, attrs[k]); });
-    return e;
+  // ---------------------------------------------------------------- drive state: where the ball is, the down and the distance (derived from the plays so far, so a resumed game matches)
+  // Every 100 yards is a touchdown; the field is 100 yards long, so the ball sits at (yards mod 100) from your own goal line.
+  function driveState(tiers) {
+    var p = 0, down = 1, dist = 10, td = 0, yards = 0;
+    tiers.forEach(function (t) {
+      var g = t ? TIER[t][1] : 0; yards += g;
+      if (g > 0) {
+        if (p + g >= 100) { td++; p = p + g - 100; down = 1; dist = 10; }
+        else { p += g; if (g >= dist) { down = 1; dist = 10; } else { dist -= g; down++; } }
+      } else down++;
+      if (down > 4) { down = 1; dist = 10; }
+    });
+    return { yards: yards, p: p, down: down, dist: dist, td: td, fd: Math.min(100, p + dist) };
   }
-  function buildBall() {
-    var s = svgEl("svg", { viewBox: "0 0 74 44", "class": "fv-ball", "aria-hidden": "true" });
-    var defs = svgEl("defs"), g = svgEl("linearGradient", { id: "ddball", x1: "0", y1: "0", x2: "0", y2: "1" });
-    g.appendChild(svgEl("stop", { offset: "0", "stop-color": "#e08a45" })); g.appendChild(svgEl("stop", { offset: "1", "stop-color": "#7a3a14" }));
-    defs.appendChild(g); s.appendChild(defs);
-    var grp = svgEl("g", { transform: "rotate(-14 37 22)" });
-    grp.appendChild(svgEl("ellipse", { cx: 37, cy: 22, rx: 32, ry: 17, fill: "url(#ddball)", stroke: "#2a1206", "stroke-width": 1.5 }));
-    grp.appendChild(svgEl("path", { d: "M12 10 Q9 22 12 34 M62 10 Q65 22 62 34", fill: "none", stroke: "#fff", "stroke-width": 2.2, opacity: 0.9 }));
-    grp.appendChild(svgEl("path", { d: "M24 22 H50", stroke: "#fff", "stroke-width": 2, "stroke-linecap": "round" }));
-    for (var i = 0; i < 5; i++) grp.appendChild(svgEl("path", { d: "M" + (27 + i * 5) + " 18.5 V25.5", stroke: "#fff", "stroke-width": 1.6, "stroke-linecap": "round" }));
-    grp.appendChild(svgEl("ellipse", { cx: 34, cy: 13.5, rx: 18, ry: 3.4, fill: "#fff", opacity: 0.16 }));
-    s.appendChild(grp);
-    return s;
-  }
-  // Field zones, one per 100 yards (Krillion's depth zones, but on the gridiron)
-  // One zone per 100 yards; every 100 is a touchdown, so the names climb with the night, not with field position.
-  var ZONES = [
-    ["The Tunnel", "everyone starts here. the crowd hasn't noticed you yet."],
-    ["Under the Lights", "first score on the board. the stadium wakes up."],
-    ["Prime Time", "the broadcast booth just learned your name."],
-    ["The Red Zone", "the channel everyone flips to. you're on it now."],
-    ["Rivalry Week", "every answer is a statement."],
-    ["Playoff Football", "only the sharpest still have the ball."],
-    ["Canton Drive", "one more score and they start sculpting the bust."]
-  ];
-  function zoneOf(y) { return ZONES[Math.min(ZONES.length - 1, Math.floor(y / 100))]; }
+  function posText(p) { return p === 0 ? "OWN GOAL" : p < 50 ? "OWN " + p : p === 50 ? "MIDFIELD" : "OPP " + (100 - p); }
+  function downText(ds) { return ["1ST", "2ND", "3RD", "4TH"][ds.down - 1] + " & " + (ds.p + ds.dist >= 100 ? "GOAL" : ds.dist); }
   function crossedTD(a, b) { return b > a && Math.floor(b / 100) > Math.floor(a / 100); }
-  // Yard line for the footer: every 100 yards is one full trip from your goal line to theirs (a touchdown),
-  // so the footer agrees with the TOUCHDOWN #n tag and the 100-yard zones.
-  function lineOf(y) {
-    var p = y % 100;
-    if (p === 0) return y === 0 ? "YOUR GOAL LINE" : "TOUCHDOWN";
-    return p === 50 ? "MIDFIELD" : p < 50 ? "YOUR " + p : "THEIR " + (100 - p);
-  }
-  var GREEN_RGB = "25, 224, 138";
-  function buildField() {
-    var lines = h("div", { "class": "fv-lines" });
-    lines.appendChild(h("div", { "class": "fv-ez" }, h("b", null, "END ZONE")));
-    for (var n = 50; n <= 650; n += 50) {
-      ["l", "r"].forEach(function (side) {
-        var s = h("span", { "class": "fv-num " + side }, String(n)); s.style.bottom = (n * YPX - 20) + "px"; lines.appendChild(s);
-      });
-    }
-    var turf = h("div", { "class": "fv-turf" }, lines);
-    var lights = h("div", { "class": "fv-lights", "aria-hidden": "true" });
-    [8, 19, 81, 92].forEach(function (x, i) { var l = h("i", { "class": "fv-lt" }); l.style.left = x + "%"; if (i % 2) l.style.top = "20%"; lights.appendChild(l); });
-    var trail = h("div", { "class": "fv-trail" }), ring = h("div", { "class": "fv-ring" }), ring2 = h("div", { "class": "fv-ring b" }), pop = h("div", { "class": "fv-pop" });
-    var ballwrap = h("div", { "class": "fv-ballwrap", "aria-hidden": "true" }, h("div", { "class": "fv-shadow" }), trail, h("div", { "class": "fv-bglow" }), ring, ring2, buildBall(), pop);
-    var beam = h("div", { "class": "fv-beam", "aria-hidden": "true" });
-    // yard markers down the side: 0 at the bottom, 700 (end zone) at the top, a pill per 100 yards
-    var gfill = h("div", { "class": "fv-gfill" }), mark = h("div", { "class": "fv-gmark" }), markw = h("div", { "class": "fv-gmw" }, mark);
-    markw.style.cssText = "position:absolute;left:0;right:0;top:0;bottom:0;transition:transform 1.25s cubic-bezier(0.2,0.85,0.2,1)";
-    var gauge = h("div", { "class": "fv-gauge", role: "img", "aria-label": "Yards gauge, 0 to 700" }, h("div", { "class": "fv-gtrack" }, gfill), markw);
-    for (var i = 0; i <= 7; i++) {
-      var tk = h("i", { "class": "fv-gtick" }), gl = h("span", { "class": "fv-gl" }, i === 7 ? "700 TD" : String(i * 100));
-      tk.style.bottom = gl.style.bottom = (i / 7 * 100) + "%"; tk.style.setProperty("--c", i === 7 ? "#ffab1a" : "#ffffff");
-      gauge.appendChild(tk); gauge.appendChild(gl);
-    }
-    var readNum = h("b", null, "0"), read = h("div", { "class": "fv-read" }, h("small", null, "YARDS"), readNum);
-    var zTd = h("div", { "class": "td" }), zName = h("div", { "class": "n" }), zFlav = h("div", { "class": "f" });
-    var zone = h("div", { "class": "fv-zone" }, zTd, zName, zFlav);
-    var liveTag = h("div", { "class": "fv-live" }, "NIGHT GAME"), foot = h("div", { "class": "fv-foot" }, lineOf(0));
-    var flare = h("div", { "class": "fv-flare", "aria-hidden": "true" }), alert = h("div", { "class": "fv-alert", "aria-hidden": "true" });
-    var stamp = h("div", { "class": "fv-stamp", "aria-hidden": "true" }, "SACKED");
-    var fv = h("div", { "class": "fv", role: "presentation" },
-      h("div", { "class": "fv-sky" }), lights, h("div", { "class": "fv-crowd" }), h("div", { "class": "fv-turf-wrap" }, turf), h("div", { "class": "fv-haze" }),
-      flare, alert, beam, ballwrap, h("div", { "class": "fv-hud" }, h("div", { "class": "fv-top" }, read, zone), liveTag), gauge, foot, stamp);
-    var cur = 0, advT = 0, flT = 0, footT = 0;
-    function showZone(y, cross) {
-      var z = zoneOf(y);
-      zName.textContent = z[0]; zFlav.textContent = z[1];
-      zTd.textContent = "TOUCHDOWN #" + Math.floor(y / 100);
-      zone.classList.remove("cross", "zin");
-      if (cross) restart(zone, "cross"); else if (zone.getAttribute("data-z") !== z[0] && zone.getAttribute("data-z")) restart(zone, "zin");
-      zone.setAttribute("data-z", z[0]);
-    }
-    showZone(0, false);
-    return {
-      el: fv,
-      yards: function () { return cur; },
-      setYards: function (y, animate, rgb) {
-        y = Math.max(0, Math.min(MAX_YARDS, y));
-        var gain = y - cur, anim = !!animate && !REDUCED, cross = anim && crossedTD(cur, y);
-        ballwrap.style.setProperty("--gc", rgb || GREEN_RGB);
-        fv.classList.toggle("fv-go", anim); void fv.offsetWidth;
-        lines.style.transform = "translate3d(0," + (y * YPX) + "px,0)";
-        gfill.style.transition = anim ? "" : "none"; markw.style.transition = anim ? "transform 1.25s cubic-bezier(0.2,0.85,0.2,1)" : "none";
-        gfill.style.transform = "scaleY(" + (y / MAX_YARDS) + ")";
-        markw.style.transform = "translateY(-" + (y / MAX_YARDS * 100) + "%)";
-        gauge.setAttribute("aria-label", "Yards gauge: " + y + " of 700");
-        countUp(readNum, y, 1100, "", cur);
-        showZone(y, cross || (!REDUCED && crossedTD(cur, y)));
-        clearTimeout(footT);
-        if (anim) footT = setTimeout(function () { foot.textContent = lineOf(y); }, 1000); else foot.textContent = lineOf(y);
-        if (anim && gain > 0) {
-          ballwrap.style.setProperty("--g", String(Math.max(0.55, Math.min(2.1, gain / 55))));
-          restart(ballwrap, "adv"); clearTimeout(advT); advT = setTimeout(function () { ballwrap.classList.remove("adv"); }, 1400);
-          if (cross) restart(read, "pulse");
-        }
-        cur = y;
-      },
-      setMode: function (m, tag) { root.setAttribute("data-mode", m); liveTag.textContent = tag || "NIGHT GAME"; },
-      flare: function (color, strength, big) {
-        flare.style.setProperty("--tc", color); flare.style.setProperty("--ti", String(strength));
-        flare.classList.toggle("big", !!big); restart(flare, "on");
-        clearTimeout(flT); flT = setTimeout(function () { flare.classList.remove("on"); }, 1700);
-      },
-      ring: function (double) { restart(ring, "on"); if (double) restart(ring2, "on"); },
-      pop: function (text) { pop.textContent = text; restart(pop, "on"); },
-      beam: function () { restart(beam, "on"); },
-      jolt: function () { restart(fv, "jolt"); },
-      stamp: function (text, big) {
-        stamp.textContent = text; stamp.classList.toggle("big", !!big); restart(stamp, "on"); setTimeout(function () { stamp.classList.remove("on"); }, 1900);
-      },
-      sack: function (quiet) {
-        if (quiet) return;
-        flare.classList.add("red"); this.flare("#ff2846", 1, false); setTimeout(function () { flare.classList.remove("red"); }, 1700);
-        this.stamp("SACKED", false);
-        restart(ballwrap, "sack"); setTimeout(function () { ballwrap.classList.remove("sack"); }, 600);
-      },
-      ballPoint: function () { var r = ballwrap.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; }
-    };
-  }
 
-  // ---------------------------------------------------------------- today's leaderboard + brand (side column; both optional)
-  var lbBox = h("div", { "class": "dd-card dd-lb", style: "display:none" });
+  // ---------------------------------------------------------------- the stage: field canvas, broadcast HUD, prompt UI, result moment, page scroller (intro/results), side panels
+  var field;
+  var cv = h("canvas", { "class": "dd-scene", "aria-hidden": "true" });
+  try { field = window.DDField.create(cv); } catch (err) {
+    field = { resize: function () {}, setNumber: function () {}, setAmbient: function () {}, setScene: function () {}, reset: function () {}, skip: function () { return false; }, playing: function () { return false; },
+      play: function (o, done) { setTimeout(done, 50); }, sack: function (o, done) { setTimeout(done, 50); }, ballPoint: function () { return { x: window.innerWidth / 2, y: window.innerHeight / 2 }; }, flash: function () {}, shake: function () {} };
+  }
+  var hudYards = h("b", null, "0"), hudPos = h("b", null, "OWN GOAL"), hudTd = h("em", null, ""), hudLbl = h("span", { "class": "hud-lbl" }, ""), downChip = h("span", { "class": "dd-down" }, "1ST & 10");
+  var pipsBox = h("div", { "class": "dd-pips", "aria-hidden": "true" });
+  var hud = h("div", { "class": "dd-hud" },
+    h("div", { "class": "sb sb-l" }, h("small", null, "YARDS"), hudYards),
+    h("div", { "class": "hud-c" }, pipsBox, hudLbl, downChip),
+    h("div", { "class": "sb sb-r" }, h("small", null, "DRIVE"), hudPos, hudTd),
+    h("a", { "class": "hud-back", href: "/" }, "‹ Lab"));
+  var promptSlot = h("div", { "class": "dd-prompt" }), resSlot = h("div", { "class": "dd-resslot" }), scroll = h("div", { "class": "dd-scroll" });
+  var stage = h("div", { "class": "dd-stage" }, cv, hud, promptSlot, resSlot, scroll);
+
+  // ---------------------------------------------------------------- today's leaderboard + brand (side panels on desktop, a card in the page on phones)
+  var lbBoxes = [], lbData = null;
+  function lbNew(aside) {
+    var box = h("div", { "class": "dd-card dd-lb", style: "display:none" }); box.setAttribute("data-aside", aside ? "1" : "");
+    lbBoxes.push(box); lbDraw(box); return box;
+  }
   var brandBox = h("div", { "class": "dd-card dd-brandbox" }, h("img", { src: "/icons/icon-192.png", alt: "", width: 44, height: 44 }),
     h("b", null, "Lineup Lab"), h("span", null, "The Daily Drive"), h("span", null, "Know more. Go further."));
-  var side = h("div", { "class": "dd-side" }, lbBox, brandBox);
   function boardRow(rank, name, yards, me) {
     return h("div", { "class": "dd-lb-row" + (me ? " me" : "") }, h("span", { "class": "r" }, String(rank)), h("span", null, name), h("span", { "class": "y" }, String(yards)));
   }
-  function renderBoard(j) {
-    lbBox.textContent = ""; lbBox.appendChild(h("h2", null, "Today's leaderboard"));
+  function lbDraw(box) {
+    if (!lbData) { box.style.display = "none"; return; }
+    box.textContent = "";
+    if (lbData.kind === "avg") {
+      box.appendChild(h("h2", null, "Today's drive"));
+      box.appendChild(h("p", { "class": "dd-lb-avg" }, "Average " + avgText(lbData.st.average_yards) + " yds across " + lbData.st.players + (lbData.st.players === 1 ? " player" : " players")));
+      box.style.display = ""; return;
+    }
+    var j = lbData.j; box.appendChild(h("h2", null, "Today's leaderboard"));
     var youRank = j.you && j.you.rank, shown = false, top = j.top.slice(0, 5);
     // tied ranks share a number, so only call a row "you" when no one else holds that rank
     var sameRank = top.filter(function (r) { return r.rank === youRank; }).length;
     top.forEach(function (r) {
       var me = youRank != null && r.rank === youRank && sameRank === 1; if (me) shown = true;
-      lbBox.appendChild(boardRow(r.rank, me ? "you" : r.name, r.yards, me));
+      box.appendChild(boardRow(r.rank, me ? "you" : r.name, r.yards, me));
     });
-    if (j.you && !shown) lbBox.appendChild(boardRow(j.you.rank, "you", j.you.yards, true));
-    lbBox.style.display = "";
+    if (j.you && !shown) box.appendChild(boardRow(j.you.rank, "you", j.you.yards, true));
+    box.style.display = "";
   }
+  function lbRefresh() { lbBoxes = lbBoxes.filter(function (b) { return b.getAttribute("data-aside") || b.isConnected; }); lbBoxes.forEach(lbDraw); }
   function loadBoard(date) {
     api("/api/play/leaderboard?date=" + encodeURIComponent(date) + "&device_id=" + encodeURIComponent(deviceId())).then(function (j) {
-      if (j && j.available && j.top && j.top.length) { renderBoard(j); return; }
+      if (j && j.available && j.top && j.top.length) { lbData = { kind: "board", j: j }; lbRefresh(); return; }
       throw new Error("no board");
     }).catch(function () {
       // No leaderboard yet: fall back to today's average, or hide the panel
-      fetchStats(date).then(function (st) {
-        if (st && st.players) {
-          lbBox.textContent = ""; lbBox.appendChild(h("h2", null, "Today's drive"));
-          lbBox.appendChild(h("p", { "class": "dd-lb-avg" }, "Average " + avgText(st.average_yards) + " yds across " + st.players + (st.players === 1 ? " player" : " players")));
-          lbBox.style.display = "";
-        } else lbBox.style.display = "none";
-      });
+      fetchStats(date).then(function (st) { lbData = st && st.players ? { kind: "avg", st: st } : null; lbRefresh(); });
     });
   }
 
-  // ---------------------------------------------------------------- app frame: top slot, persistent field, view slot, side column
-  var topSlot = h("div", { "class": "dd-topslot" }), view = h("div", { "class": "dd-view" }), field = buildField();
-  root.textContent = ""; root.appendChild(topSlot); root.appendChild(field.el); root.appendChild(view); root.appendChild(side);
+  // ---------------------------------------------------------------- the playbook (tier legend): the six plays, lowest to best
+  var PLAY_NOTE = { 1: "Short flat to the back", 2: "Sharp cut inside", 3: "Deep dig past the sticks", 4: "Post between the safeties", 5: "Go route, double coverage", 6: "Signature catch for six" };
+  var shieldN = 0;
+  function svgEl(tag, attrs) {
+    var e = document.createElementNS("http://www.w3.org/2000/svg", tag);
+    Object.keys(attrs || {}).forEach(function (k) { e.setAttribute(k, attrs[k]); });
+    return e;
+  }
+  function shield(t) {
+    var id = "ddsh" + (++shieldN), g = TIER_GRAD[t];
+    var s = svgEl("svg", { viewBox: "0 0 32 36", "aria-hidden": "true" }), d = svgEl("defs"), lg = svgEl("linearGradient", { id: id, x1: "0", y1: "0", x2: "0", y2: "1" });
+    lg.appendChild(svgEl("stop", { offset: "0", "stop-color": g[0] })); lg.appendChild(svgEl("stop", { offset: "1", "stop-color": g[1] }));
+    d.appendChild(lg); s.appendChild(d);
+    s.appendChild(svgEl("path", { d: "M16 1.5 L29.5 6.5 V17 C29.5 25.5 23.5 31.5 16 34.5 C8.5 31.5 2.5 25.5 2.5 17 V6.5 Z", fill: "url(#" + id + ")", stroke: "rgba(255,255,255,0.55)", "stroke-width": 1.4 }));
+    s.appendChild(svgEl("path", { d: "M16 5 L26.5 8.8 V17 C26.5 23.6 22 28.4 16 31 Z", fill: "rgba(255,255,255,0.22)" }));
+    return s;
+  }
+  function tierLegend() {
+    var list = h("div", { "class": "dd-plays" });
+    [1, 2, 3, 4, 5, 6].forEach(function (t) {
+      list.appendChild(h("div", { "class": "dd-pl t" + t }, shield(t), h("div", { "class": "nm" }, h("b", null, TIER[t][0]), h("span", null, PLAY_NOTE[t])), h("div", { "class": "pt" }, "+" + TIER[t][1])));
+    });
+    return h("div", { "class": "dd-card dd-tiers" }, h("h2", null, "The playbook (yards = rarity)"), list, h("p", { "class": "dd-small dd-sackline" }, "Wrong answer or out of time: a sack, 0 yards."));
+  }
+  var asideL = h("aside", { "class": "dd-aside l" }, tierLegend()), asideR = h("aside", { "class": "dd-aside r" }, lbNew(true), brandBox);
+  root.textContent = ""; root.appendChild(asideL); root.appendChild(stage); root.appendChild(asideR);
+
+  // ---------------------------------------------------------------- stage helpers
   function mount(top) {
-    topSlot.textContent = ""; if (top) topSlot.appendChild(top);
-    view.textContent = "";
-    for (var i = 1; i < arguments.length; i++) if (arguments[i]) view.appendChild(arguments[i]);
+    scroll.textContent = ""; promptSlot.textContent = ""; resSlot.textContent = ""; scroll.scrollTop = 0;
+    if (top) scroll.appendChild(top);
+    for (var i = 1; i < arguments.length; i++) if (arguments[i]) scroll.appendChild(arguments[i]);
   }
-  function setStage(mode, yards, animate, tag) {
-    root.classList.remove("urgent");
-    field.setMode(mode, tag);
-    if (yards != null) field.setYards(yards, animate);
+  function setStage(mode, ambient) {
+    root.classList.remove("urgent"); root.setAttribute("data-mode", mode); root.setAttribute("data-phase", "idle");
+    field.setAmbient(ambient !== false);
+    if (field.setView) field.setView(mode === "play" || mode === "practice" ? 0.575 : mode === "result" ? 0.3 : 0.4, mode === "play" || mode === "practice");
   }
+  function setPips(tiers, total, cur) {
+    pipsBox.textContent = "";
+    for (var i = 0; i < total; i++) pipsBox.appendChild(h("i", { "class": i < tiers.length ? (tiers[i] ? "p" + tiers[i] : "sk") : (i === cur ? "cur" : "") }));
+  }
+  function setHud(ds, o) {
+    o = o || {};
+    if (o.countFrom != null) countUp(hudYards, ds.yards, 700, "", o.countFrom); else hudYards.textContent = String(ds.yards);
+    hudPos.textContent = posText(ds.p); hudTd.textContent = ds.td ? "TD " + ds.td : ""; downChip.textContent = downText(ds);
+    if (o.label != null) hudLbl.textContent = o.label;
+  }
+  function fitStage() {   // keep the prompt bar above the on-screen keyboard
+    var vv = window.visualViewport; if (!vv) return;
+    if (vv.height < window.innerHeight - 100) { stage.style.height = vv.height + "px"; stage.style.bottom = "auto"; stage.style.top = vv.offsetTop + "px"; }
+    else { stage.style.height = ""; stage.style.bottom = ""; stage.style.top = ""; }
+    field.resize();
+  }
+  if (window.visualViewport) { window.visualViewport.addEventListener("resize", fitStage); window.visualViewport.addEventListener("scroll", fitStage); }
 
   // ---------------------------------------------------------------- saved scores + community stats
   // None of this can break the game: every failure collapses to a quiet "stats unavailable".
@@ -399,11 +349,6 @@
   function fetchStats(date) {
     return api("/api/play/stats?date=" + encodeURIComponent(date) + "&device_id=" + encodeURIComponent(deviceId()))
       .then(function (j) { return j && j.available ? j : null; }).catch(function () { return null; });
-  }
-  function svgEl(tag, attrs) {
-    var e = document.createElementNS("http://www.w3.org/2000/svg", tag);
-    Object.keys(attrs || {}).forEach(function (k) { e.setAttribute(k, attrs[k]); });
-    return e;
   }
   function avgText(v) { return v == null ? "-" : (Math.round(v) === v ? String(v) : v.toFixed(1)); }
   function histogram(dist, mine) {
@@ -467,31 +412,18 @@
       box.appendChild(btn);
     }
   }
+
   // ---------------------------------------------------------------- shared pieces
   function topBar(extra) {
-    return h("div", { "class": "dd-top" }, h("div", { "class": "dd-brand" }, "The Daily ", h("span", null, "Drive")), extra || null);
+    return h("div", { "class": "dd-top" }, h("a", { "class": "dd-backlink", href: "/" }, "\u2190 Lineup Lab"), h("div", { "class": "dd-brand" }, "The Daily ", h("span", null, "Drive")), extra || null);
   }
-  var shieldN = 0;
-  function shield(t) {
-    var id = "ddsh" + (++shieldN), g = TIER_GRAD[t];
-    var s = svgEl("svg", { viewBox: "0 0 32 36", "aria-hidden": "true" }), d = svgEl("defs"), lg = svgEl("linearGradient", { id: id, x1: "0", y1: "0", x2: "0", y2: "1" });
-    lg.appendChild(svgEl("stop", { offset: "0", "stop-color": g[0] })); lg.appendChild(svgEl("stop", { offset: "1", "stop-color": g[1] }));
-    d.appendChild(lg); s.appendChild(d);
-    s.appendChild(svgEl("path", { d: "M16 1.5 L29.5 6.5 V17 C29.5 25.5 23.5 31.5 16 34.5 C8.5 31.5 2.5 25.5 2.5 17 V6.5 Z", fill: "url(#" + id + ")", stroke: "rgba(255,255,255,0.55)", "stroke-width": 1.4 }));
-    s.appendChild(svgEl("path", { d: "M16 5 L26.5 8.8 V17 C26.5 23.6 22 28.4 16 31 Z", fill: "rgba(255,255,255,0.22)" }));
-    return s;
-  }
-  function tierLegend() {
-    var row = h("div", { "class": "dd-shields" });
-    [1, 2, 3, 4, 5, 6].forEach(function (t) { row.appendChild(h("div", { "class": "dd-sh t" + t }, shield(t), h("div", { "class": "nm" }, TIER[t][0].replace("Benchwarmer", "Bench\u00ADwarmer")), h("div", { "class": "pt" }, TIER[t][1] + " pts"))); });
-    return h("div", { "class": "dd-card dd-tiers" }, h("h2", null, "Rarity tiers (points = yards)"), row);
-  }
+  function pageFoot() { return h("div", { "class": "dd-foot" }, h("a", { href: "/" }, "Built by Lineup Lab: real NFL data for your fantasy team")); }
   function clock() {
     var C = 2 * Math.PI * 46;
     var bg = svgEl("circle", { "class": "bg", cx: 55, cy: 55, r: 46 }), fg = svgEl("circle", { "class": "fg", cx: 55, cy: 55, r: 46, "stroke-dasharray": C, "stroke-dashoffset": 0 });
     var svg = svgEl("svg", { viewBox: "0 0 110 110", "aria-hidden": "true" }); svg.appendChild(bg); svg.appendChild(fg);
-    var num = h("b", null, "3");
-    var el = h("div", { "class": "dd-clock snap", role: "img", "aria-label": "Play clock" }, svg, num);
+    var num = h("b", null, "3"), cap = h("i", null, "SNAP");
+    var el = h("div", { "class": "dd-clock snap", role: "img", "aria-label": "Play clock" }, svg, num, cap);
     return {
       el: el,
       pre: function (msLeft) {
@@ -502,38 +434,11 @@
         var s = Math.ceil(Math.max(0, msLeft) / 1000);
         fg.setAttribute("stroke-dashoffset", C * (1 - Math.max(0, msLeft) / ANSWER_MS));
         if (num.textContent !== String(s)) num.textContent = s;
+        if (cap.textContent !== "CLOCK") cap.textContent = "CLOCK";
         el.classList.remove("snap"); el.classList.toggle("low", msLeft <= 5000);
         el.setAttribute("aria-label", "Play clock: " + s + " seconds");
       }
     };
-  }
-  function pips(tiers, total, cur) {
-    var box = h("div", { "class": "dd-pips", "aria-hidden": "true" });
-    for (var i = 0; i < total; i++) {
-      var cls = i < tiers.length ? (tiers[i] ? "p" + tiers[i] : "sk") : (i === cur ? "cur" : "");
-      box.appendChild(h("i", { "class": cls }));
-    }
-    return box;
-  }
-  function touchdown(res) {
-    var box = h("div", { "class": "dd-td", "aria-hidden": "true" }, h("div", { "class": "fl" }),
-      h("div", { "class": "bn" }, h("strong", null, "TOUCHDOWN"), h("span", null, "+" + ((res && res.yards) || 100) + " YARDS · HALL OF FAMER")));
-    document.body.appendChild(box);
-    field.flare("#ffab1a", 1, true); field.stamp("END ZONE!", true);
-    fx.touchdown();
-    setTimeout(function () { if (box.parentNode) box.parentNode.removeChild(box); }, REDUCED ? 1800 : 3300);
-  }
-  // One distinct, escalating effect per tier: grey a quiet gain, light blue a crisp pop, red a hit, purple a burst,
-  // yellow a big glowing play (light beam), gold the full-screen touchdown.
-  function tierFx(t, res, crossed) {
-    var c = TIER_COLOR[t], p = field.ballPoint();
-    if (t === 1) field.pop("+" + res.yards);
-    else if (t === 2) { field.ring(false); field.flare(c, 0.35, false); field.pop("+" + res.yards); }
-    else if (t === 3) { field.ring(true); field.jolt(); field.flare(c, 0.6, false); field.pop("+" + res.yards); }
-    else if (t === 4) { field.ring(true); field.flare(c, 0.75, false); fx.sparkle(p.x, p.y, c, 64); field.pop("+" + res.yards); }
-    else if (t === 5) { field.beam(); field.ring(true); field.flare(c, 0.95, true); fx.sparkle(p.x, p.y, c, 70); setTimeout(function () { fx.sparkle(p.x, p.y - 60, "#ffffff", 50); }, 260); field.stamp("BIG PLAY", true); }
-    else if (t === 6) touchdown(res);
-    if (crossed && t !== 6 && !REDUCED) setTimeout(function () { fx.sparkle(p.x, p.y - 30, "#ffab1a", 46); }, 700);
   }
   function copyText(text, btn) {
     function done(ok) { btn.textContent = ok ? "Copied" : "Press and hold the card to copy"; setTimeout(function () { btn.textContent = "Copy result"; }, 2000); }
@@ -546,32 +451,43 @@
     ta.select(); var ok = false; try { ok = document.execCommand("copy"); } catch (e) { ok = false; }
     document.body.removeChild(ta); return ok;
   }
+  // Gold full-screen touchdown (also used when a play carries the drive past a 100-yard mark).
+  function touchdown(res, n) {
+    var box = h("div", { "class": "dd-td", "aria-hidden": "true" }, h("div", { "class": "fl" }),
+      h("div", { "class": "bn" }, h("strong", null, "TOUCHDOWN"), h("span", null, (n ? "#" + n + " · " : "") + (res ? TIER[res.tier][0].toUpperCase() + " · +" + res.yards + " YDS" : ""))));
+    document.body.appendChild(box);
+    field.tdCelebrate && field.tdCelebrate();
+    fx.touchdown();
+    setTimeout(function () { if (box.parentNode) box.parentNode.removeChild(box); }, REDUCED ? 1800 : 3300);
+  }
 
   // ---------------------------------------------------------------- one prompt (shared by daily and practice)
-  // opts: {date, prompt, index, total, tiers[], used[], resumeAnswerStart, onStart, onDone(result, passed)}
+  // opts: {date, prompt, index, total, tiers[], used[], resumeAnswerStart, state(drive state), onStart, onDone(result, passed)}
   // result = {tier, yards, name, id, token, team, position, headshot, stat, stat_label}
   function runPrompt(opts) {
     var prompt = opts.prompt, total = opts.total, deadline = 0, done = false, raf = 0, pending = false, warned = false;
     var rg = clock();
-    var tag = h("div", { "class": "pr-tag" }, total > 1 ? "Prompt " : "Practice", total > 1 ? h("b", null, (opts.index + 1) + "/" + total) : null);
-    var cat = h("div", { "class": "pr-cat" }, prompt.category);
-    var text = h("p", { "class": "pr-text", style: "display:none" }, prompt.text);
+    var kind = total > 1 ? "PLAY " + (opts.index + 1) + " OF " + total : "PRACTICE";
+    var cat = h("div", { "class": "qc-cat" }, prompt.category);
+    var text = h("p", { "class": "qc-text", style: "display:none" }, prompt.text);
     var redact = h("div", { "class": "bc-red", "aria-hidden": "true" }, h("i"), h("i"));
     var msg = h("div", { "class": "dd-msg", role: "status" });
     var sugg = h("div", { "class": "dd-sugg" });
     var input = h("input", { "class": "dd-input", type: "text", autocomplete: "off", autocapitalize: "words", autocorrect: "off",
       spellcheck: "false", enterkeyhint: "go", "aria-label": "Your answer", placeholder: "Get set..." });
-    var go = h("button", { "class": "dd-btn dd-go", type: "submit" }, "Go");
+    var go = h("button", { "class": "dd-btn dd-go", type: "submit" }, "Snap");
     var pass = h("button", { "class": "dd-pass", type: "button", onclick: function () { if (!done && !pending && deadline) finish(null, true); } }, "Pass");
     var form = h("form", { "class": "dd-form", onsubmit: function (e) { e.preventDefault(); submit(input.value); } }, rg.el, input, go);
     input.addEventListener("input", function () { input.classList.remove("bad"); });
-    var scan = h("div", { "class": "dd-scan", "aria-hidden": "true" }, h("div", { "class": "rad" }, h("div", { "class": "sw" }), h("i", { style: "left:30%;top:28%" }), h("i", { style: "left:66%;top:60%" })), h("p", null, "SCANNING ROSTER"));
-    var card = h("div", { "class": "dd-card pr" }, h("div", { "class": "pr-head" }, tag, total > 1 ? pips(opts.tiers || [], total, opts.index) : null), cat, text, redact,
-      h("div", { "class": "dd-play" }, form, h("div", { "class": "dd-help" }, h("span", null, "Press Enter to submit"), pass), msg, sugg, scan));
+    var scan = h("div", { "class": "dd-scan", "aria-hidden": "true" }, h("i"), "Checking the film");
+    var card = h("div", { "class": "dd-qcard" }, h("div", { "class": "qc-top" }, cat, h("span", { "class": "qc-kind" }, kind)), redact, text);
+    var dock = h("div", { "class": "dd-dock" }, h("div", { "class": "dd-msgrow" }, scan, msg, pass), sugg, form);
     input.disabled = true; go.disabled = true; pass.disabled = true;
-    mount(topBar(h("span", { "class": "dd-chip" }, total > 1 ? "Down " : "Practice ", total > 1 ? h("b", null, (opts.index + 1) + "/" + total) : null)), card, tierLegend());
-    setStage(total > 1 ? "play" : "practice", null, false, total > 1 ? "LIVE · PLAY " + (opts.index + 1) : "PRACTICE");
-    announce("Prompt " + (opts.index + 1) + ". Category: " + prompt.category + ". Get ready.");
+    mount(null); promptSlot.appendChild(card); promptSlot.appendChild(dock);
+    setStage(total > 1 ? "play" : "practice"); root.setAttribute("data-phase", "answer");
+    setPips(opts.tiers || [], total, opts.index); field.setNumber(total > 1 ? opts.index + 1 : 1);
+    setHud(opts.state, { label: kind });
+    announce("Play " + (opts.index + 1) + ". Category: " + prompt.category + ". Get ready.");
 
     function begin(answerStart) {
       redact.style.display = "none"; text.style.display = ""; text.classList.add("snap");
@@ -643,54 +559,84 @@
     raf = requestAnimationFrame(loop);
   }
 
-  // ---------------------------------------------------------------- result cards
-  function playerCard(res, last, next) {
-    var t = res.tier, tc = TIER_COLOR[t], team = teamColor(res.team) || tc;
-    var card = h("div", { "class": "dd-card pc t" + t });
-    card.style.setProperty("--tc", tc); card.style.setProperty("--team", team);
-    var yds = h("span", { "class": "n" }, "+0");
-    var meta = [];
-    if (res.team) meta.push(h("b", null, String(res.team).toUpperCase()));
-    if (res.position) meta.push(String(res.position).toUpperCase());
-    var sub = h("div", { "class": "pc-sub" }, meta.length ? meta.reduce(function (a, m, i) { if (i) a.push(" · "); a.push(m); return a; }, []) : "Answer accepted");
-    var statLabel = res.stat_label ? String(res.stat_label) : "";
-    var hasStat = res.stat != null && res.stat !== "";
-    card.appendChild(h("div", { "class": "pc-rib" }, h("span", { "class": "pc-shield" }, shield(t), TIER[t][0]), h("b", null, "TIER " + t)));
-    card.appendChild(h("div", { "class": "pc-body" }, photo("pc-ph", res), h("div", { "class": "pc-id" }, h("div", { "class": "pc-name" }, res.name), sub)));
-    if (hasStat || statLabel) card.appendChild(h("div", { "class": "pc-stat" }, hasStat ? h("b", null, String(res.stat)) : null, statLabel));
-    card.appendChild(h("div", { "class": "pc-yds" }, h("div", null, yds, h("span", { "class": "n" }, h("em", null, "yds")))));
-    var btn = h("button", { "class": "dd-btn", type: "button", onclick: function () { go(); } }, last ? "See results" : "Next play");
-    card.appendChild(h("div", { "class": "pc-foot" }, btn));
-    var timer = 0, went = false;
-    function go() { if (went) return; went = true; clearTimeout(timer); fx.stop(); next(); }
-    countUp(yds, res.yards, 800, "+");
-    timer = setTimeout(go, t === 6 ? 4600 : 3000);
-    announce("Accepted: " + res.name + ", " + TIER[t][0] + ", plus " + res.yards + " yards." + (t === 6 ? " Touchdown!" : ""));
-    return card;
+  // ---------------------------------------------------------------- the play and the result moment
+  // o: {res (or null), passed, before, after (drive states), last, seed, practice, next(), extra(box)}
+  // The graded answer runs its designated play on the field (a tap or key skips it), then the full-scene result moment shows with NEXT PLAY.
+  function playBanner(t) { return TIER[t][0].toUpperCase() + "!"; }
+  function playMoment(o) {
+    var res = o.res, t = res ? res.tier : 0, before = o.before, after = o.after, scored = after.td > before.td, settled = false, went = false, timer = 0, variant = 0, tdN = after.td;
+    if (res && t === 6) variant = o.variant != null ? o.variant : (window.DDField ? window.DDField.hash(String(o.seed || "x")) % 3 : 0);
+    root.setAttribute("data-phase", "anim");
+    announce(res ? "Snap. " + res.name + "." : (o.passed ? "Passed." : "Time. Sack."));
+    function skip(e) {
+      if (e && e.type === "keydown" && e.key !== "Enter" && e.key !== " " && e.key !== "Escape") return;
+      if (e && e.type === "keydown") e.preventDefault();
+      if (!settled) field.skip();
+    }
+    stage.addEventListener("pointerdown", skip); document.addEventListener("keydown", skip);
+    function landed() {
+      if (settled) return; settled = true;
+      stage.removeEventListener("pointerdown", skip); document.removeEventListener("keydown", skip);
+      setHud(after, { countFrom: before.yards });
+      showResult();
+    }
+    function showResult() {
+      root.setAttribute("data-phase", "result");
+      var tc = res ? TIER_COLOR[t] : "#ff5d7a", sub;
+      var big = res ? playBanner(t) : (o.passed ? "PASSED" : "SACKED!");
+      var meta = [];
+      if (res && res.team) meta.push(String(res.team).toUpperCase());
+      if (res && res.position) meta.push(String(res.position).toUpperCase());
+      var hasStat = res && res.stat != null && res.stat !== "";
+      var noteParts = meta.slice(); if (hasStat) noteParts.push(String(res.stat) + (res.stat_label ? " " + res.stat_label : "")); else if (res && res.stat_label) noteParts.push(String(res.stat_label));
+      var btnLabel = o.practice ? "Another prompt" : (o.last ? "See results" : "Next play");
+      var btn = h("button", { "class": "dd-btn dd-next", type: "button", onclick: function (e) { e.stopPropagation(); if (o.practice) { fx.stop(); o.next(); } else go(); } }, btnLabel);
+      var box = h("div", { "class": "dd-res" + (res ? " t" + t : " sacked") + (scored ? " scored" : ""), style: "--tc:" + tc });
+      box.appendChild(h("div", { "class": "rs-play" }, big));
+      if (res) {
+        box.appendChild(h("div", { "class": "rs-who" }, photo("rs-ph", res), h("div", { "class": "rs-ans" }, "“" + res.name + "”")));
+        box.appendChild(h("div", { "class": "rs-yds" }, "+" + res.yards + " YDS"));
+        if (noteParts.length) box.appendChild(h("div", { "class": "rs-note" }, noteParts.join(" · ")));
+        if (scored) box.appendChild(h("div", { "class": "rs-td" }, "TOUCHDOWN" + (tdN > 1 ? " #" + tdN : "")));
+      } else {
+        box.appendChild(h("div", { "class": "rs-ans" }, o.passed ? "You skipped the play." : "Time ran out."));
+        box.appendChild(h("div", { "class": "rs-yds" }, "0 YDS"));
+        box.appendChild(h("div", { "class": "rs-note" }, "The ball stays put."));
+      }
+      var acts = h("div", { "class": "rs-actions" });
+      if (o.practice) acts.appendChild(h("p", { "class": "dd-small rs-pr" }, "Practice does not count toward your streak."));
+      acts.appendChild(btn);
+      if (o.practice) acts.appendChild(h("button", { "class": "dd-btn alt dd-back", type: "button", onclick: function (e) { e.stopPropagation(); fx.stop(); boot(); } }, "Back to today's game"));
+      box.appendChild(acts);
+      resSlot.textContent = ""; resSlot.appendChild(box);
+      announce(res ? "Accepted: " + res.name + ", " + TIER[t][0] + ", plus " + res.yards + " yards." + (scored ? " Touchdown!" : "") : (o.passed ? "Passed. No yards." : "Sacked. No yards."));
+      if (res && scored) touchdown(res, tdN);
+      else if (res && t >= 4 && !REDUCED) { var bp = field.ballPoint(); fx.sparkle(bp.x, bp.y, TIER_COLOR[t], t === 5 ? 56 : 40); }
+      if (!o.practice) {
+        timer = setTimeout(go, scored ? 5600 : 3600);
+        box.addEventListener("click", function () { go(); });
+        document.addEventListener("keydown", onKey);
+      }
+      try { btn.focus({ preventScroll: true }); } catch (e) { /* ignore */ }
+    }
+    function onKey(e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(); } }
+    function go() {
+      if (went) return; went = true; clearTimeout(timer); document.removeEventListener("keydown", onKey); fx.stop();
+      resSlot.textContent = "";
+      if (scored && !o.last) field.reset(after.p, after.fd);
+      o.next();
+    }
+    if (res) field.play({ tier: t, gain: TIER[t][1], p0: before.p, fd0: before.fd, fd1: after.fd, score: scored, variant: variant, seed: o.seed }, landed);
+    else field.sack({ p0: before.p, fd0: before.fd, fd1: after.fd }, landed);
   }
-  function sackCard(last, next, passed) {
-    var card = h("div", { "class": "dd-card pc sacked" + (passed ? " passed" : "") });
-    var btn = h("button", { "class": "dd-btn", type: "button", onclick: function () { go(); } }, last ? "See results" : "Next play");
-    card.appendChild(h("div", { "class": "pc-rib" }, h("span", null, SACK + " No gain"), h("b", null, "0 YDS")));
-    card.appendChild(h("div", { "class": "pc-body" }, h("div", { "class": "pc-name" }, passed ? "PASSED" : "SACKED"),
-      h("div", { "class": "pc-sub" }, passed ? "You skipped the play. The ball stays put." : "Time ran out. The ball stays put.")));
-    card.appendChild(h("div", { "class": "pc-foot" }, btn));
-    var timer = 0, went = false;
-    function go() { if (went) return; went = true; clearTimeout(timer); fx.stop(); next(); }
-    timer = setTimeout(go, 2600);
-    announce(passed ? "Passed. No yards." : "Sacked. Time ran out. No yards.");
-    return card;
-  }
-  function resultCard(res, last, next, passed) { return res ? playerCard(res, last, next) : sackCard(last, next, passed); }
 
   // ---------------------------------------------------------------- daily game
   function startDaily(puzzle, saved) {
-    var date = puzzle.date, prompts = puzzle.prompts, total = prompts.length;
+    var date = puzzle.date, prompts = puzzle.prompts, total = prompts.length, sceneSet = false;
     var st = saved || { date: date, startedAt: Date.now(), idx: 0, tiers: [], names: [], ids: [], tokens: [], answerStart: 0 };
     if (!st.tokens) st.tokens = [];
     function persist() { lsSet("dd.saved", st); }
     persist();
-    field.setYards(yardsOf(st.tiers), false);
 
     function step() {
       if (st.idx >= total) { return finishGame(); }
@@ -698,18 +644,19 @@
       if (st.answerStart && !resume) {                           // the real deadline passed while the page was closed
         st.tiers.push(0); st.names.push(""); st.idx++; st.answerStart = 0; persist(); return step();
       }
+      var ds = driveState(st.tiers);
+      if (!sceneSet) { sceneSet = true; field.setScene(ds.p, ds.fd, { number: st.idx + 1 }); }
       runPrompt({
-        date: date, prompt: prompts[st.idx], index: st.idx, total: total, tiers: st.tiers.slice(), used: st.ids.slice(),
+        date: date, prompt: prompts[st.idx], index: st.idx, total: total, tiers: st.tiers.slice(), used: st.ids.slice(), state: ds,
         resumeAnswerStart: resume,
         onStart: function (ts) { st.answerStart = ts; persist(); },
         onDone: function (res, passed) {
-          var before = yardsOf(st.tiers);
+          var before = driveState(st.tiers), pid = prompts[st.idx].id;
           st.tiers.push(res ? res.tier : 0); st.names.push(res ? res.name : ""); if (res) { st.ids.push(res.id); if (res.token) st.tokens.push(res.token); }
           st.idx++; st.answerStart = 0; persist();
-          var last = st.idx >= total, after = yardsOf(st.tiers);
-          mount(topBar(h("span", { "class": "dd-chip" }, "Play ", h("b", null, st.idx + "/" + total))), resultCard(res, last, step, passed), tierLegend());
-          field.setYards(after, true, res ? TIER_RGB[res.tier] : null);
-          if (res) tierFx(res.tier, res, crossedTD(before, after)); else field.sack(passed);
+          var last = st.idx >= total, after = driveState(st.tiers);
+          setPips(st.tiers, total, st.idx);
+          playMoment({ res: res, passed: passed, before: before, after: after, last: last, seed: date + "|" + pid, next: step });
         }
       });
     }
@@ -778,12 +725,13 @@
       h("h2", null, "Drive chart · " + prettyDate(date)), num, h("div", { "class": "dd-small" }, "yards of " + MAX_YARDS),
       driveChart(rec.tiers), legend(),
       h("div", { "class": "dd-share", "aria-label": "Share card" }, text), copy);
-    mount(topBar(streak ? h("span", { "class": "dd-chip" }, "Streak ", h("b", null, streak)) : null), card,
-      statsBox, drivesBox,
+    mount(topBar(streak ? h("span", { "class": "dd-chip" }, "Streak ", h("b", null, streak)) : null), h("div", { "class": "dd-spacer short" }), card,
+      statsBox, h("div", { "class": "dd-inpage" }, lbNew(false)), drivesBox,
       h("div", { "class": "dd-card" }, h("h2", null, "Every answer, by tier"), rev),
       h("div", { "class": "dd-row" }, h("button", { "class": "dd-btn alt", type: "button", onclick: practice }, "Practice mode"),
-        h("a", { "class": "dd-btn alt dd-link", href: "/" }, "Open Lineup Lab")));
-    setStage("result", rec.yards, field.yards() === rec.yards ? false : true, "FINAL");
+        h("a", { "class": "dd-btn alt dd-link", href: "/" }, "Open Lineup Lab")), pageFoot());
+    setStage("result", false);
+    var fin = driveState(rec.tiers); if (field.state && field.state().los !== fin.p) field.setScene(fin.p, fin.fd);
     countUp(num, rec.yards, 1100);
     announce("Final score: " + rec.yards + " yards of " + MAX_YARDS + ".");
     var label = today ? "Today" : prettyDate(date);
@@ -844,32 +792,17 @@
 
   // ---------------------------------------------------------------- practice
   function practice() {
-    setStage("practice", 0, false, "PRACTICE");
+    setStage("intro"); field.setScene(0, 10, { number: 1 });
     mount(topBar(), h("div", { "class": "dd-card" }, h("p", null, "Finding a prompt...")));
     api("/api/play/practice").then(function (r) {
+      var ds0 = driveState([]);
       runPrompt({
-        date: r.date, prompt: r.prompt, index: 0, total: 1, used: [],
+        date: r.date, prompt: r.prompt, index: 0, total: 1, used: [], state: ds0,
         onDone: function (res, passed) {
-          var again = h("button", { "class": "dd-btn", type: "button", onclick: practice }, "Another prompt");
-          var back = h("button", { "class": "dd-btn alt", type: "button", onclick: boot }, "Back to today's game");
-          var out;
-          if (res) {
-            out = playerCard(res, false, function () {});
-            var foot = out.querySelector(".pc-foot"); foot.textContent = "";
-            foot.appendChild(h("p", { "class": "dd-small" }, "Practice does not count toward your streak.")); foot.appendChild(again);
-            foot.appendChild(h("div", { style: "height:8px" })); foot.appendChild(back);
-          } else {
-            out = sackCard(false, function () {}, passed);
-            var f2 = out.querySelector(".pc-foot"); f2.textContent = "";
-            f2.appendChild(h("p", { "class": "dd-small" }, "Practice does not count toward your streak.")); f2.appendChild(again);
-            f2.appendChild(h("div", { style: "height:8px" })); f2.appendChild(back);
-          }
-          mount(topBar(), out);
-          field.setYards(res ? res.yards : 0, true, res ? TIER_RGB[res.tier] : null);
-          if (res) tierFx(res.tier, res, false); else field.sack(passed);
+          playMoment({ res: res, passed: passed, before: ds0, after: driveState(res ? [res.tier] : []), last: false, practice: true, seed: String(r.prompt.id), next: practice });
         }
       });
-    }).catch(function (e) { mount(topBar(), h("div", { "class": "dd-card" }, h("p", null, "Practice isn't available yet: " + e.message),
+    }).catch(function (e) { setStage("intro"); mount(topBar(), h("div", { "class": "dd-card" }, h("p", null, "Practice isn't available yet: " + e.message),
       h("button", { "class": "dd-btn alt", type: "button", onclick: boot }, "Back"))); });
   }
 
@@ -879,18 +812,21 @@
     var streak = streakNow(puzzle.today);
     var start = h("button", { "class": "dd-btn", type: "button", onclick: function () { startDaily(puzzle, null); } }, "Kickoff");
     var community = h("p", { "class": "dd-small dd-community" });
-    setStage("intro", 0, false, "NIGHT GAME");
+    setStage("intro"); field.setScene(0, 10, { number: 1 });
     mount(topBar(h("span", { "class": "dd-chip" }, "Streak ", h("b", null, streak))),
-      h("div", { "class": "dd-card dd-hero" }, h("div", { "class": "k" }, "Lineup Lab · Night game"),
+      h("div", { "class": "dd-hero" }, h("div", { "class": "k" }, "Lineup Lab · Night game"),
         h("div", { "class": "plate" }, h("h1", null, "The Daily Drive")),
         h("div", null, h("span", { "class": "d" }, longDate(date) + (date === puzzle.today ? " · today" : " · archive")))),
+      h("div", { "class": "dd-spacer" }),
       h("div", { "class": "dd-card" },
         h("div", { "class": "dd-kick" }, "7 plays · 700 yards · 1 answer each"),
-        h("p", null, "Type a player who fits. The rarer your answer, the more yards you gain, and every answer is computed from real NFL data. 25 seconds on the play clock, after a 3-second snap count."),
+        h("p", null, "Type a player who fits. The rarer your answer, the bigger the play: a Checkdown gains 10 yards, a Highlight Reel TD gains 100. A wrong answer is a sack. Every answer is computed from real NFL data. 25 seconds on the play clock, after a 3-second snap count."),
         community, start),
-      tierLegend(),
-      h("div", { "class": "dd-row" },
-        h("button", { "class": "dd-btn alt", type: "button", onclick: practice }, "Practice mode")));
+      h("div", { "class": "dd-row dd-prow" },
+        h("button", { "class": "dd-btn alt", type: "button", onclick: practice }, "Practice mode")),
+      h("div", { "class": "dd-inpage" }, tierLegend()),
+      h("div", { "class": "dd-inpage" }, lbNew(false)),
+      pageFoot());
     announce("The Daily Drive. " + longDate(date) + ". Press Kickoff to start.");
     fetchStats(date).then(function (st) {
       if (st && st.players) community.textContent = (date === puzzle.today ? "Today" : prettyDate(date)) + "'s average drive: " + avgText(st.average_yards) +
@@ -900,8 +836,8 @@
 
   // ---------------------------------------------------------------- boot
   function boot() {
-    setStage("intro", 0, false, "NIGHT GAME");
-    mount(topBar(), h("div", { "class": "dd-card" }, h("p", null, "Loading today's game...")));
+    fx.stop(); setStage("intro"); field.setScene(0, 10, { number: 1 });
+    mount(topBar(), h("div", { "class": "dd-spacer" }), h("div", { "class": "dd-card" }, h("p", null, "Loading today's game...")));
     var wanted = (new URLSearchParams(window.location.search)).get("date");
     api("/api/play/daily" + (wanted && /^\d{4}-\d{2}-\d{2}$/.test(wanted) ? "?date=" + wanted : "")).then(function (puzzle) {
       loadBoard(puzzle.date);
@@ -912,9 +848,25 @@
       if (saved) lsDel("dd.saved");
       intro(puzzle);
     }).catch(function (e) {
-      mount(topBar(), h("div", { "class": "dd-card" }, h("h2", null, "Today's game isn't ready"), h("p", null, e.message),
+      mount(topBar(), h("div", { "class": "dd-spacer" }), h("div", { "class": "dd-card" }, h("h2", null, "Today's game isn't ready"), h("p", null, e.message),
         h("button", { "class": "dd-btn", type: "button", onclick: boot }, "Try again")));
     });
+  }
+
+  // ---------------------------------------------------------------- dev hook: /play?demo=1 exposes window.ddDemo to run any play from the console (not in the UI, harmless otherwise)
+  //   ddDemo.play(tier 1-6, {variant: 0-2 (tier 6 catch), p: ball yard line 0-99, number: 1-7, seek: seconds to freeze at}); ddDemo.sack({p, seek}); ddDemo.resume(); ddDemo.list
+  if (/[?&]demo=1(&|$)/.test(window.location.search)) {
+    var demoRun = function (tier, o) {
+      o = o || {}; var p0 = o.p != null ? o.p : 25, g = tier ? TIER[tier][1] : 0, np = p0 + g, sc = np >= 100;
+      var before = { yards: 0, p: p0, down: 1, dist: 10, td: 0, fd: Math.min(100, p0 + 10) };
+      var after = { yards: g, p: sc ? np - 100 : np, down: 1, dist: 10, td: sc ? 1 : 0, fd: Math.min(100, (sc ? np - 100 : np) + 10) };
+      fx.stop(); mount(null); setStage("play"); setPips([], 7, 2); setHud(before, { label: "PLAY 3 OF 7" }); field.setScene(p0, before.fd, { number: o.number || 3 });
+      var res = tier ? { tier: tier, yards: g, name: "Demo Player", team: "KC", position: "WR", stat: 1234, stat_label: "rec yds" } : null;
+      playMoment({ res: res, passed: false, before: before, after: after, last: false, variant: o.variant, seed: "demo", next: function () { root.setAttribute("data-phase", "idle"); } });
+      if (o.seek != null && field.seek) field.seek(o.seek);
+    };
+    window.ddDemo = { play: demoRun, sack: function (o) { demoRun(0, o); }, resume: function () { field.seek && field.seek(null); }, field: field,
+      list: { 1: "Checkdown", 2: "Quick Slant", 3: "Chain Mover", 4: "Chunk Play", 5: "Bomb", "6 (variant 0/1/2)": "Highlight Reel TD" } };
   }
   boot();
 })();

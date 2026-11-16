@@ -515,7 +515,7 @@ class TokenTests(unittest.TestCase):
         a = self.prompts[0]["answers"][0]
         tok = ds.sign_token(self.day, self.prompts[0]["id"], a["id"], a["tier"], key=KEY)
         left, right = tok.split(".")
-        forged_payload = ds._b64(f"{self.prompts[0]['id']}|{a['id']}|6".encode())          # bump the tier to Hall of Famer
+        forged_payload = ds._b64(f"{self.prompts[0]['id']}|{a['id']}|6".encode())          # bump the tier to Highlight Reel TD
         for bad in (forged_payload + "." + right, left + "." + ds._b64(b"x" * 16), left, "", "a.b.c", None, 12, left + "." + right[:-2]):
             self.assertIsNone(ds.verify_token(self.day, bad, key=KEY), bad)
         self.assertIsNone(ds.verify_token("2026-11-15", tok, key=KEY))                      # a real token is bound to its date
@@ -869,8 +869,10 @@ class NavigationAndMigrationTests(unittest.TestCase):
         self.assertIn('href="/play"', hero)
 
     def test_play_page_has_back_link_and_no_inline_js(self):
-        html = self._read("static/play.html")
-        self.assertIn('href="/">&larr; Back to Lineup Lab', html)
+        html, js = self._read("static/play.html"), self._read("static/play.js")
+        self.assertRegex(js, r'"dd-backlink", href: "/" \}, "[^"]*Lineup Lab"')   # back link, built by play.js on every page
+        self.assertRegex(js, r'"hud-back", href: "/" \}, "[^"]*Lab"')          # and the small one in the in-game HUD
+        self.assertIn('src="/play-field.js"', html)
 
     def test_migration_has_the_unique_constraints_and_rls(self):
         sql = self._read("migrations/20261116000000_daily_drive_scores.sql")
@@ -897,7 +899,7 @@ class PlayVisualTest(unittest.TestCase):
             self.assertEqual(inner.strip(), "")
         self.assertIn('src="/team-themes.js"', html)
         self.assertIn('id="dd-live"', html)                       # aria-live region for results
-        for f in ("static/play.js", "static/play.css", "static/play.html"):
+        for f in ("static/play.js", "static/play-field.js", "static/play.css", "static/play.html"):
             self.assertNotRegex(self._r(f), r"https?://(?!www\.w3\.org)")   # no CDNs or remote assets
 
     def test_reduced_motion_is_handled_in_css_and_js(self):
@@ -923,9 +925,10 @@ class PlayVisualTest(unittest.TestCase):
         for t in ("--t1: #b3bccd", "--t2: #6fd0ff", "--t3: #ff4b55", "--t4: #b866ff", "--t5: #fff04d", "--t6: #ffab1a"):
             self.assertIn(t, css)                                 # grey, light blue, red, purple, yellow, gold
         self.assertIn("/api/play/leaderboard", js)
-        self.assertIn("function tierFx", js)
-        self.assertIn("The Red Zone", js)
-        self.assertLess(len(js) + len(css), 100_000)              # stays light
+        for name in ("Checkdown", "Quick Slant", "Chain Mover", "Chunk Play", "Bomb", "Highlight Reel TD"):
+            self.assertIn(name, js)                               # the six plays
+        self.assertIn("DDField.create", js)                       # the field scene lives in play-field.js
+        self.assertLess(len(js) + len(css) + len(self._r("static/play-field.js")), 150_000)              # stays light
 
 
 if __name__ == "__main__":
@@ -948,7 +951,7 @@ class FameTest(unittest.TestCase):
 
 
 class SeasonFameTest(unittest.TestCase):
-    """A star with a big career but a low current consensus rank must not be the rare (Hall of Famer) answer."""
+    """A star with a big career but a low current consensus rank must not be the rare (Highlight Reel TD) answer."""
 
     def test_career_star_is_not_rare(self):
         rows = [dict(player_id=f"p{i}", name=f"Player {i}", pos="QB", team="X", headshot=None, val=150.0 + i, ppr=50.0)
