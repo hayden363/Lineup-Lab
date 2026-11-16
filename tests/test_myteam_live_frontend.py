@@ -119,7 +119,7 @@ class WiringTests(unittest.TestCase):
 
     def test_endpoint_is_declared_and_no_store(self):
         server = read("server.py")
-        self.assertIn('@app.get("/api/myteam/live")', server)
+        self.assertIn('@app.get("/api/myteam/live", dependencies=[Depends(myteam_live_rate_limit)])', server)   # polled: rate limited
         self.assertIn('"/api/myteam"', server)      # the no-store prefix covers it
 
 

@@ -265,6 +265,8 @@ news_rate_limit = rate_limit("news", limit=30, window_seconds=60)
 # engine/external_projections.py), harmless either way, but only matters
 # once FANTASYPROS_API_KEY is actually set.
 projcompare_rate_limit = rate_limit("projcompare", limit=30, window_seconds=60)
+# My Team polls /api/myteam/live every 30s during games (2/min); 20/min leaves room for retries and a few tabs.
+myteam_live_rate_limit = rate_limit("myteam_live", limit=20, window_seconds=60)
 
 OAUTH_STATE_COOKIE = "eb_oauth_state"
 _login_throttle = security.AccountThrottle(limit=8, window=15 * 60)
@@ -1569,7 +1571,7 @@ def _live_points(user, active, base):
         return {"source": None, "by_roster": {}, "note": "live points are not available from the league site right now"}
 
 
-@app.get("/api/myteam/live")
+@app.get("/api/myteam/live", dependencies=[Depends(myteam_live_rate_limit)])
 def api_my_team_live(week: Optional[int] = Query(None, ge=1, le=25),
                      scoring: Optional[dict] = Depends(scoring_from_query), user=Depends(require_user)):
     """Per-starter real points so far and live projection for my team and my opponent. Same auth and scoring params as
