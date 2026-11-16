@@ -444,7 +444,7 @@ def check_answer(answers, typed, used=()):
 
 
 SACKED_EMOJI = "\u2B1B"   # black square (red is now the Starter tier)
-TIER_COLORS = {1: "#9aa3b2", 2: "#7cc7ff", 3: "#ff4d5e", 4: "#a970ff", 5: "#ffd84d", 6: "#f5b301"}
+TIER_COLORS = {1: "#b3bccd", 2: "#6fd0ff", 3: "#ff4b55", 4: "#b866ff", 5: "#fff04d", 6: "#ffab1a"}  # same as play.css --t1..--t6
 
 
 def tier_info(tier):

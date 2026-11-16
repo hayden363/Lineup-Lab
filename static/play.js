@@ -209,21 +209,24 @@
     return s;
   }
   // Field zones, one per 100 yards (Krillion's depth zones, but on the gridiron)
+  // One zone per 100 yards; every 100 is a touchdown, so the names climb with the night, not with field position.
   var ZONES = [
     ["The Tunnel", "everyone starts here. the crowd hasn't noticed you yet."],
-    ["Own Territory", "dirt in your cleats. the long way home."],
-    ["Midfield", "no man's land. even the refs lean in."],
-    ["Enemy Territory", "their crowd is loud. your answers are louder."],
-    ["The Red Zone", "the field shrinks. so does the margin for error."],
-    ["The Goal Line", "inches from glory. don't fumble the typing."],
-    ["Paydirt", "six points on the board. keep the ball high."]
+    ["Under the Lights", "first score on the board. the stadium wakes up."],
+    ["Prime Time", "the broadcast booth just learned your name."],
+    ["The Red Zone", "the channel everyone flips to. you're on it now."],
+    ["Rivalry Week", "every answer is a statement."],
+    ["Playoff Football", "only the sharpest still have the ball."],
+    ["Canton Drive", "one more score and they start sculpting the bust."]
   ];
   function zoneOf(y) { return ZONES[Math.min(ZONES.length - 1, Math.floor(y / 100))]; }
   function crossedTD(a, b) { return b > a && Math.floor(b / 100) > Math.floor(a / 100); }
-  // Yard line for the footer: the drive starts at your own 25, and every 100 yards is a full trip down the field.
+  // Yard line for the footer: every 100 yards is one full trip from your goal line to theirs (a touchdown),
+  // so the footer agrees with the TOUCHDOWN #n tag and the 100-yard zones.
   function lineOf(y) {
-    var p = (y + 25) % 100;
-    return p === 0 ? "GOAL LINE" : p === 50 ? "MIDFIELD" : p < 50 ? "YOUR " + p : "THEIR " + (100 - p);
+    var p = y % 100;
+    if (p === 0) return y === 0 ? "YOUR GOAL LINE" : "TOUCHDOWN";
+    return p === 50 ? "MIDFIELD" : p < 50 ? "YOUR " + p : "THEIR " + (100 - p);
   }
   var GREEN_RGB = "25, 224, 138";
   function buildField() {
@@ -252,7 +255,7 @@
     var readNum = h("b", null, "0"), read = h("div", { "class": "fv-read" }, h("small", null, "YARDS"), readNum);
     var zTd = h("div", { "class": "td" }), zName = h("div", { "class": "n" }), zFlav = h("div", { "class": "f" });
     var zone = h("div", { "class": "fv-zone" }, zTd, zName, zFlav);
-    var liveTag = h("div", { "class": "fv-live" }, "NIGHT GAME"), foot = h("div", { "class": "fv-foot" }, "YOUR 25");
+    var liveTag = h("div", { "class": "fv-live" }, "NIGHT GAME"), foot = h("div", { "class": "fv-foot" }, lineOf(0));
     var flare = h("div", { "class": "fv-flare", "aria-hidden": "true" }), alert = h("div", { "class": "fv-alert", "aria-hidden": "true" });
     var stamp = h("div", { "class": "fv-stamp", "aria-hidden": "true" }, "SACKED");
     var fv = h("div", { "class": "fv", role: "presentation" },
@@ -325,9 +328,11 @@
   }
   function renderBoard(j) {
     lbBox.textContent = ""; lbBox.appendChild(h("h2", null, "Today's leaderboard"));
-    var youRank = j.you && j.you.rank, shown = false;
-    j.top.slice(0, 5).forEach(function (r) {
-      var me = youRank != null && r.rank === youRank; if (me) shown = true;
+    var youRank = j.you && j.you.rank, shown = false, top = j.top.slice(0, 5);
+    // tied ranks share a number, so only call a row "you" when no one else holds that rank
+    var sameRank = top.filter(function (r) { return r.rank === youRank; }).length;
+    top.forEach(function (r) {
+      var me = youRank != null && r.rank === youRank && sameRank === 1; if (me) shown = true;
       lbBox.appendChild(boardRow(r.rank, me ? "you" : r.name, r.yards, me));
     });
     if (j.you && !shown) lbBox.appendChild(boardRow(j.you.rank, "you", j.you.yards, true));
@@ -478,7 +483,7 @@
   }
   function tierLegend() {
     var row = h("div", { "class": "dd-shields" });
-    [1, 2, 3, 4, 5, 6].forEach(function (t) { row.appendChild(h("div", { "class": "dd-sh t" + t }, shield(t), h("div", { "class": "nm" }, TIER[t][0]), h("div", { "class": "pt" }, TIER[t][1] + " pts"))); });
+    [1, 2, 3, 4, 5, 6].forEach(function (t) { row.appendChild(h("div", { "class": "dd-sh t" + t }, shield(t), h("div", { "class": "nm" }, TIER[t][0].replace("Benchwarmer", "Bench\u00ADwarmer")), h("div", { "class": "pt" }, TIER[t][1] + " pts"))); });
     return h("div", { "class": "dd-card dd-tiers" }, h("h2", null, "Rarity tiers (points = yards)"), row);
   }
   function clock() {
@@ -657,7 +662,7 @@
     var btn = h("button", { "class": "dd-btn", type: "button", onclick: function () { go(); } }, last ? "See results" : "Next play");
     card.appendChild(h("div", { "class": "pc-foot" }, btn));
     var timer = 0, went = false;
-    function go() { if (went) return; went = true; clearTimeout(timer); next(); }
+    function go() { if (went) return; went = true; clearTimeout(timer); fx.stop(); next(); }
     countUp(yds, res.yards, 800, "+");
     timer = setTimeout(go, t === 6 ? 4600 : 3000);
     announce("Accepted: " + res.name + ", " + TIER[t][0] + ", plus " + res.yards + " yards." + (t === 6 ? " Touchdown!" : ""));
@@ -671,7 +676,7 @@
       h("div", { "class": "pc-sub" }, passed ? "You skipped the play. The ball stays put." : "Time ran out. The ball stays put.")));
     card.appendChild(h("div", { "class": "pc-foot" }, btn));
     var timer = 0, went = false;
-    function go() { if (went) return; went = true; clearTimeout(timer); next(); }
+    function go() { if (went) return; went = true; clearTimeout(timer); fx.stop(); next(); }
     timer = setTimeout(go, 2600);
     announce(passed ? "Passed. No yards." : "Sacked. Time ran out. No yards.");
     return card;
