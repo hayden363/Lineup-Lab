@@ -787,7 +787,9 @@
     countUp(num, rec.yards, 1100);
     announce("Final score: " + rec.yards + " yards of " + MAX_YARDS + ".");
     var label = today ? "Today" : prettyDate(date);
-    submitScore(puzzle, rec).then(function (saved) {
+    // Today's answer sheets unlock only after the signed-in player's score is saved, so ask for them after the save.
+    var saving = submitScore(puzzle, rec);
+    saving.then(function (saved) {
       loadBoard(date);
       return (saved && saved.stats ? Promise.resolve(saved.stats) : fetchStats(date));
     }).then(function (st) {
@@ -795,11 +797,12 @@
       return api("/api/play/me").catch(function () { return null; });
     }).then(function (me) { fillDrives(drivesBox, me); })
       .catch(function () { fillStats(statsBox, null, label); fillDrives(drivesBox, null); });
-    var jobs = puzzle.prompts.map(function (p, i) {
-      return api("/api/play/reveal?date=" + encodeURIComponent(date) + "&prompt_id=" + encodeURIComponent(p.id))
-        .then(function (r) { return { r: r, i: i }; });
-    });
-    Promise.all(jobs).then(function (all) {
+    saving.catch(function () { return null; }).then(function () {
+      return Promise.all(puzzle.prompts.map(function (p, i) {
+        return api("/api/play/reveal?date=" + encodeURIComponent(date) + "&prompt_id=" + encodeURIComponent(p.id))
+          .then(function (r) { return { r: r, i: i }; });
+      }));
+    }).then(function (all) {
       rev.textContent = "";
       all.forEach(function (x) {
         var t = rec.tiers[x.i], mine = rec.names[x.i];
@@ -832,7 +835,11 @@
         });
         rev.appendChild(d);
       });
-    }).catch(function () { rev.textContent = "Couldn't load the answer sheets. Reload to try again."; });
+    }).catch(function (e) {
+      var msg = e && e.message && e.message.indexOf("unlock") >= 0 ? e.message : "Couldn't load the answer sheets. Reload to try again.";
+      rev.textContent = "";
+      rev.appendChild(h("p", { "class": "dd-small" }, msg));
+    });
   }
 
   // ---------------------------------------------------------------- practice

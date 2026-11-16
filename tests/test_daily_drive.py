@@ -394,7 +394,15 @@ class EndpointTests(unittest.TestCase):
             yards, tiers = dds.score_from_tokens(self.today, [j["token"]], self.puzzle["prompts"])
             self.assertEqual(yards, dd.TIERS[a["tier"]][1])
 
+    def _finished_today(self):
+        """Signed in with today's score saved: the only way today's answer sheets unlock."""
+        s = self.server
+        for pt in (mock.patch.object(s, "_play_user", return_value={"id": 7}),
+                   mock.patch.object(s.db, "drive_my_day", return_value={"date": self.today, "yards": 300, "tiers": [3]})):
+            pt.start(); self.addCleanup(pt.stop)
+
     def test_reveal_has_details_per_answer_matching_the_names(self):
+        self._finished_today()
         p = self.puzzle["prompts"][0]
         j = self.client.get(f"/api/play/reveal?date={self.today}&prompt_id={p['id']}").json()
         bank = {a["name"]: a for a in p["answers"]}
@@ -423,7 +431,41 @@ class EndpointTests(unittest.TestCase):
         past = (dd.today_et() - dt.timedelta(days=3)).isoformat()
         self.assertEqual(self.client.get(f"/api/play/daily?date={past}").status_code, 200)
 
+    def test_todays_reveal_is_locked_until_a_signed_in_player_has_finished(self):
+        s = self.server
+        p = self.puzzle["prompts"][0]
+        url = f"/api/play/reveal?prompt_id={p['id']}"
+        rare = [a["name"] for a in p["answers"] if a["tier"] == 6]
+        # signed out (with or without the date): locked, and no answer leaks in the error
+        for u in (url, url + f"&date={self.today}"):
+            r = self.client.get(u)
+            self.assertEqual(r.status_code, 403)
+            self.assertIn("unlock", r.json()["detail"])
+            for name in rare:
+                self.assertNotIn(name, r.text)
+        # signed in but no saved score today: locked
+        with mock.patch.object(s, "_play_user", return_value={"id": 7}), \
+             mock.patch.object(s.db, "drive_my_day", return_value=None) as my_day:
+            self.assertEqual(self.client.get(url).status_code, 403)
+            my_day.assert_called_with(self.today, 7, None)       # looked up by account only, never a device id
+        # signed in, DB down: fail closed
+        with mock.patch.object(s, "_play_user", return_value={"id": 7}), \
+             mock.patch.object(s.db, "drive_my_day", side_effect=RuntimeError("db down")):
+            self.assertEqual(self.client.get(url).status_code, 403)
+        # signed in with today's score saved: open
+        with mock.patch.object(s, "_play_user", return_value={"id": 7}), \
+             mock.patch.object(s.db, "drive_my_day", return_value={"date": self.today, "yards": 300, "tiers": [3]}):
+            self.assertEqual(self.client.get(url).status_code, 200)
+
+    def test_past_days_reveal_is_open_to_anyone(self):
+        past = (dd.today_et() - dt.timedelta(days=1)).isoformat()
+        p = self.puzzle["prompts"][0]
+        r = self.client.get(f"/api/play/reveal?date={past}&prompt_id={p['id']}")
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual([t["tier"] for t in r.json()["tiers"]], [6, 5, 4, 3, 2, 1])
+
     def test_reveal_and_practice(self):
+        self._finished_today()
         p = self.puzzle["prompts"][0]
         j = self.client.get(f"/api/play/reveal?date={self.today}&prompt_id={p['id']}").json()
         self.assertEqual([t["tier"] for t in j["tiers"]], [6, 5, 4, 3, 2, 1])
