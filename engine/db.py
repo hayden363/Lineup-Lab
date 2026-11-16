@@ -355,6 +355,69 @@ def waitlist_counts():
         return {r["plan"]: int(r["n"]) for r in c.fetchall()}
 
 
+# --------------------------------------------------------- The Daily Drive scores ----
+def save_drive_score(game_date, yards, tiers, user_id=None, device_hash=None, now=None):
+    """Store one finished Daily Drive game. One score per (day, account) and per (day, device): a repeat is a no-op
+    and the ORIGINAL row comes back. Returns (row, created) with row = {date, yards, tiers}. A signed-in player whose
+    device already has an anonymous score for the day gets that row attached to their account instead of a second one.
+    Raises if the daily_drive_scores migration hasn't been applied or the database is down; the endpoint turns that
+    into a quiet 'stats unavailable'."""
+    now = now if now is not None else time.time()
+    with _conn() as c:
+        c.execute("INSERT INTO daily_drive_scores (game_date, user_id, device_hash, yards, tiers, created_at) "
+                  "VALUES (%s, %s, %s, %s, %s, %s) ON CONFLICT DO NOTHING RETURNING game_date, yards, tiers",
+                  (game_date, user_id, device_hash, yards, list(tiers), now))
+        row = c.fetchone()
+        if row is not None:
+            return _drive_row(row), True
+        if user_id is not None and device_hash is not None:
+            c.execute("UPDATE daily_drive_scores SET user_id = %s WHERE game_date = %s AND device_hash = %s "
+                      "AND user_id IS NULL AND NOT EXISTS (SELECT 1 FROM daily_drive_scores "
+                      "WHERE game_date = %s AND user_id = %s)", (user_id, game_date, device_hash, game_date, user_id))
+        row = _find_drive_row(c, game_date, user_id, device_hash)
+        return (_drive_row(row) if row else None), False
+
+
+def _find_drive_row(c, game_date, user_id, device_hash):
+    if user_id is not None:
+        c.execute("SELECT game_date, yards, tiers FROM daily_drive_scores WHERE game_date = %s AND user_id = %s",
+                  (game_date, user_id))
+        row = c.fetchone()
+        if row:
+            return row
+    if device_hash is not None:
+        c.execute("SELECT game_date, yards, tiers FROM daily_drive_scores WHERE game_date = %s AND device_hash = %s",
+                  (game_date, device_hash))
+        return c.fetchone()
+    return None
+
+
+def _drive_row(row):
+    return {"date": row["game_date"].isoformat(), "yards": int(row["yards"]), "tiers": [int(t) for t in row["tiers"]]}
+
+
+def drive_day_yards(game_date, limit=200000):
+    """Every saved score (yards only) for one day, for the community stats."""
+    with _conn() as c:
+        c.execute("SELECT yards FROM daily_drive_scores WHERE game_date = %s LIMIT %s", (game_date, limit))
+        return [int(r["yards"]) for r in c.fetchall()]
+
+
+def drive_my_day(game_date, user_id=None, device_hash=None):
+    """This player's saved row for one day ({date, yards, tiers}) or None."""
+    with _conn() as c:
+        row = _find_drive_row(c, game_date, user_id, device_hash)
+        return _drive_row(row) if row else None
+
+
+def drive_history(user_id, limit=1000):
+    """A signed-in player's saved scores, newest first: [{date, yards, tiers}]."""
+    with _conn() as c:
+        c.execute("SELECT game_date, yards, tiers FROM daily_drive_scores WHERE user_id = %s "
+                  "ORDER BY game_date DESC LIMIT %s", (user_id, limit))
+        return [_drive_row(r) for r in c.fetchall()]
+
+
 def delete_session(token):
     with _conn() as c:
         c.execute("DELETE FROM sessions WHERE token IN (%s, %s)", (security.hash_token(token), token))

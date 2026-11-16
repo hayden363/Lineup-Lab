@@ -76,6 +76,107 @@
     return s.count;
   }
 
+
+  // ---------------------------------------------------------------- saved scores + community stats
+  // None of this can break the game: every failure collapses to a quiet "stats unavailable".
+  var deviceMem = "";
+  function deviceId() {
+    var d = lsGet("dd.device");
+    if (typeof d === "string" && /^[A-Za-z0-9_-]{16,64}$/.test(d)) return d;
+    if (deviceMem) return deviceMem;
+    var id = "";
+    try {
+      var a = new Uint8Array(16); window.crypto.getRandomValues(a);
+      a.forEach(function (b) { id += ("0" + b.toString(16)).slice(-2); });
+    } catch (e) { for (var i = 0; i < 32; i++) id += Math.floor(Math.random() * 16).toString(16); }
+    deviceMem = id; lsSet("dd.device", id);
+    return id;
+  }
+  function postJson(path, body) {
+    return fetch(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
+      .then(function (r) { return r.json().then(function (j) { return { status: r.status, body: j }; }); });
+  }
+  // Sends only the signed tokens; the server recomputes the yards. Resolves to the response body or null.
+  function submitScore(puzzle, rec) {
+    if (puzzle.today !== puzzle.date || !rec.tokens || rec.synced) return Promise.resolve(null);
+    return postJson("/api/play/score", { date: puzzle.date, device_id: deviceId(), tokens: rec.tokens }).then(function (r) {
+      if (r.body && r.body.available) { rec.synced = true; lsSet("dd.played." + puzzle.date, rec); return r.body; }
+      if (r.status === 400) { rec.synced = true; lsSet("dd.played." + puzzle.date, rec); }   // stale or rejected: stop retrying
+      return null;
+    }).catch(function () { return null; });
+  }
+  function fetchStats(date) {
+    return api("/api/play/stats?date=" + encodeURIComponent(date) + "&device_id=" + encodeURIComponent(deviceId()))
+      .then(function (j) { return j && j.available ? j : null; }).catch(function () { return null; });
+  }
+  function svgEl(tag, attrs) {
+    var e = document.createElementNS("http://www.w3.org/2000/svg", tag);
+    Object.keys(attrs || {}).forEach(function (k) { e.setAttribute(k, attrs[k]); });
+    return e;
+  }
+  function avgText(v) { return v == null ? "-" : (Math.round(v) === v ? String(v) : v.toFixed(1)); }
+  function histogram(dist, mine) {
+    var max = Math.max.apply(null, dist.map(function (b) { return b.count; }).concat([1]));
+    var bars = h("div", { "class": "dd-hist", role: "img", "aria-label": "How everyone scored, in 100-yard groups" });
+    var labels = h("div", { "class": "dd-hist-x" });
+    dist.forEach(function (b) {
+      var fill = h("i"), me = mine != null && mine >= b.lo && mine <= b.hi;
+      fill.setAttribute("data-h", Math.max(b.count ? 6 : 2, Math.round(b.count / max * 100)));
+      bars.appendChild(h("span", { "class": "dd-bar" + (me ? " me" : ""), title: b.lo + "-" + b.hi + " yds: " + b.count + (me ? " (you)" : "") }, fill));
+      labels.appendChild(h("span", null, String(b.lo)));
+    });
+    var go = function () { Array.prototype.forEach.call(bars.querySelectorAll("i"), function (f) { f.style.height = f.getAttribute("data-h") + "%"; }); };
+    if (REDUCED) go(); else requestAnimationFrame(function () { requestAnimationFrame(go); });
+    return h("div", null, bars, labels);
+  }
+  function fillStats(box, st, label, mine) {
+    box.textContent = "";
+    box.appendChild(h("h2", null, "How everyone drove"));
+    if (!st) { box.appendChild(h("p", { "class": "dd-small" }, "Stats unavailable right now. Your score is safe on this device.")); return; }
+    if (!st.players) { box.appendChild(h("p", { "class": "dd-small" }, "No scores saved yet for " + label + ". You could be the first.")); return; }
+    var line = label + ": average " + avgText(st.average_yards) + " yds across " + st.players + (st.players === 1 ? " player" : " players");
+    if (st.percentile != null) line += " · you beat " + st.percentile + "%";
+    box.appendChild(h("p", { "class": "dd-stat-line" }, line));
+    box.appendChild(histogram(st.distribution || [], st.your_yards != null ? st.your_yards : mine));
+    box.appendChild(h("p", { "class": "dd-small" }, "Median " + avgText(st.median_yards) + " yds. Bars show how many players finished in each 100-yard group."));
+  }
+  function sparkline(vals) {
+    if (!vals || vals.length < 2) return null;
+    var W = 120, H = 32, max = Math.max.apply(null, vals.concat([MAX_YARDS / 2])), n = vals.length;
+    var pts = vals.map(function (v, i) { return (i / (n - 1) * (W - 4) + 2).toFixed(1) + "," + (H - 3 - v / max * (H - 6)).toFixed(1); }).join(" ");
+    var svg = svgEl("svg", { viewBox: "0 0 " + W + " " + H, "class": "dd-spark", role: "img", "aria-label": "Your last " + n + " scores" });
+    svg.appendChild(svgEl("polyline", { points: pts, fill: "none", stroke: "currentColor", "stroke-width": "2", "stroke-linecap": "round", "stroke-linejoin": "round" }));
+    return svg;
+  }
+  function tile(label, value) { return h("div", { "class": "dd-tile" }, h("b", null, String(value)), h("span", null, label)); }
+  function fillDrives(box, me) {
+    box.textContent = "";
+    if (me && me.signed_in === false) {
+      box.appendChild(h("h2", null, "Your drives"));
+      box.appendChild(h("p", null, "Sign in to keep your history: past scores, your average, and streaks that follow you to any device."));
+      box.appendChild(h("a", { "class": "dd-btn alt dd-link", href: "/?auth=login" }, "Sign in to keep your history"));
+      return;
+    }
+    box.appendChild(h("h2", null, "Your drives"));
+    if (!me || me.available === false) { box.appendChild(h("p", { "class": "dd-small" }, "Your history is unavailable right now. Scores you finish are still saved on this device.")); return; }
+    if (!me.games) { box.appendChild(h("p", { "class": "dd-small" }, "No saved drives yet. Finish today's game and it lands here.")); return; }
+    box.appendChild(h("div", { "class": "dd-tiles" }, tile("played", me.games), tile("average", avgText(me.average_yards)), tile("best", me.best_yards),
+      tile("streak", me.current_streak + " (best " + me.longest_streak + ")")));
+    var sp = sparkline(me.spark); if (sp) box.appendChild(h("div", { "class": "dd-spark-wrap" }, h("span", { "class": "dd-small" }, "Last " + me.spark.length + " drives"), sp));
+    var list = h("div", { "class": "dd-past" });
+    me.history.forEach(function (g, i) {
+      var row = h("div", { "class": "dd-past-row" }, h("span", { "class": "d" }, prettyDate(g.date)), h("span", { "class": "e" }, g.emoji), h("b", null, g.yards + " yds"));
+      if (i >= 7) row.classList.add("more");
+      list.appendChild(row);
+    });
+    box.appendChild(list);
+    if (me.history.length > 7) {
+      var btn = h("button", { "class": "dd-btn alt", type: "button" }, "Show all " + me.history.length);
+      btn.addEventListener("click", function () { list.classList.add("all"); btn.style.display = "none"; });
+      box.appendChild(btn);
+    }
+  }
+
   // ---------------------------------------------------------------- shared pieces
   function topBar(extra) {
     return h("div", { "class": "dd-top" },
@@ -184,7 +285,7 @@
           if (done) return;
           if (r.ok) {
             if (sentAt > deadline) return;                 // answered after the buzzer: the timeout already won
-            finish({ tier: r.tier, yards: r.yards, name: r.canonical, id: r.answer_id });
+            finish({ tier: r.tier, yards: r.yards, name: r.canonical, id: r.answer_id, token: r.token || "" });
             return;
           }
           go.disabled = false; input.value = ""; input.focus();
@@ -228,7 +329,8 @@
   // ---------------------------------------------------------------- daily game
   function startDaily(puzzle, saved) {
     var date = puzzle.date, prompts = puzzle.prompts, total = prompts.length;
-    var st = saved || { date: date, startedAt: Date.now(), idx: 0, tiers: [], names: [], ids: [], answerStart: 0 };
+    var st = saved || { date: date, startedAt: Date.now(), idx: 0, tiers: [], names: [], ids: [], tokens: [], answerStart: 0 };
+    if (!st.tokens) st.tokens = [];
     function persist() { lsSet("dd.saved", st); }
     persist();
 
@@ -243,7 +345,7 @@
         resumeAnswerStart: resume,
         onStart: function (ts) { st.answerStart = ts; persist(); },
         onDone: function (res) {
-          st.tiers.push(res ? res.tier : 0); st.names.push(res ? res.name : ""); if (res) st.ids.push(res.id);
+          st.tiers.push(res ? res.tier : 0); st.names.push(res ? res.name : ""); if (res) { st.ids.push(res.id); if (res.token) st.tokens.push(res.token); }
           st.idx++; st.answerStart = 0; persist();
           var last = st.idx >= total;
           mount(topBar(h("span", { "class": "dd-chip" }, "Prompt ", h("b", null, st.idx + "/" + total))),
@@ -254,7 +356,7 @@
 
     function finishGame() {
       var today = puzzle.today === date;
-      var rec = { tiers: st.tiers, names: st.names, yards: yardsOf(st.tiers) };
+      var rec = { tiers: st.tiers, names: st.names, yards: yardsOf(st.tiers), tokens: st.tokens.slice(), synced: false };
       lsSet("dd.played." + date, rec); lsDel("dd.saved");
       if (today) streakBump(date);
       showResults(puzzle, rec);
@@ -271,14 +373,25 @@
     copy.addEventListener("click", function () { copyText(text, copy); });
     var num = h("div", { "class": "num" }, "0");
     var rev = h("div", { "class": "dd-rev" }, h("p", { "class": "dd-small" }, "Loading the answer sheets..."));
+    var statsBox = h("div", { "class": "dd-card dd-stats" }, h("h2", null, "How everyone drove"), h("p", { "class": "dd-small" }, "Loading community stats..."));
+    var drivesBox = h("div", { "class": "dd-card dd-drives" }, h("h2", null, "Your drives"), h("p", { "class": "dd-small" }, "Loading..."));
     var card = h("div", { "class": "dd-card dd-total" },
       h("div", { "class": "dd-small" }, "Final score"), num, h("div", { "class": "dd-small" }, "yards of " + MAX_YARDS),
       h("div", { "class": "dd-share", "aria-label": "Share card" }, text), copy);
     mount(topBar(streak ? h("span", { "class": "dd-chip" }, "Streak ", h("b", null, streak)) : null), fieldBar(rec.yards), card,
+      statsBox, drivesBox,
       h("div", { "class": "dd-card" }, h("h2", null, "Every answer, by tier"), rev),
       h("div", { "class": "dd-row" }, h("button", { "class": "dd-btn alt", type: "button", onclick: practice }, "Practice mode"),
         h("a", { "class": "dd-btn alt", href: "/", style: "text-decoration:none;text-align:center;display:block" }, "Open Lineup Lab")));
     countUp(num, rec.yards, 1100);
+    var label = today ? "Today" : prettyDate(date);
+    submitScore(puzzle, rec).then(function (saved) {
+      return (saved && saved.stats ? Promise.resolve(saved.stats) : fetchStats(date));
+    }).then(function (st) {
+      fillStats(statsBox, st, label, rec.yards);
+      return api("/api/play/me").catch(function () { return null; });
+    }).then(function (me) { fillDrives(drivesBox, me); })
+      .catch(function () { fillStats(statsBox, null, label); fillDrives(drivesBox, null); });
     var jobs = puzzle.prompts.map(function (p, i) {
       return api("/api/play/reveal?date=" + encodeURIComponent(date) + "&prompt_id=" + encodeURIComponent(p.id))
         .then(function (r) { return { r: r, i: i }; });
@@ -332,14 +445,19 @@
     var start = h("button", { "class": "dd-btn", type: "button", onclick: function () { startDaily(puzzle, null); } }, "Start today's drive");
     var rows = [];
     [6, 5, 4, 3, 2, 1].forEach(function (t) { rows.push(h("span", null, TIER[t][2] + " " + TIER[t][0])); rows.push(h("span", null, TIER[t][1] + " yds")); });
+    var community = h("p", { "class": "dd-small dd-community" });
     mount(topBar(h("span", { "class": "dd-chip" }, "Streak ", h("b", null, streak))),
       h("div", { "class": "dd-card" },
         h("div", { "class": "dd-cat" }, prettyDate(date) + (date === puzzle.today ? " · today" : " · archive")),
         h("h1", null, "Seven prompts. One answer each."),
         h("p", null, "Type a player who fits. Rarer answers earn more yards, and every answer is computed from real NFL data. You get 25 seconds per prompt, after a 3-second preview."),
-        h("div", { "class": "dd-tiers" }, rows), start),
+        h("div", { "class": "dd-tiers" }, rows), community, start),
       h("div", { "class": "dd-row" },
         h("button", { "class": "dd-btn alt", type: "button", onclick: practice }, "Practice mode")));
+    fetchStats(date).then(function (st) {
+      if (st && st.players) community.textContent = (date === puzzle.today ? "Today" : prettyDate(date)) + ": average " + avgText(st.average_yards) +
+        " yds across " + st.players + (st.players === 1 ? " player" : " players") + " so far.";
+    });
   }
 
   // ---------------------------------------------------------------- boot
