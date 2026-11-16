@@ -212,11 +212,11 @@ class DailyPuzzleTests(unittest.TestCase):
             for p in day:
                 self.assertTrue(any(a["tier"] == 6 for a in p["answers"]), p["id"])
 
-    def test_history_flag_brings_back_four_plus_three(self):
-        with mock.patch.object(dd, "HISTORY_ENABLED", True):
-            a = dd.pick_day("2026-11-16", _pool())
-            self.assertEqual(collections.Counter(p["kind"] for p in a), {"fantasy": 4, "history": 3})
-            self.assertEqual(dd.day_size(), 7)
+    def test_mix_is_two_current_plus_five_history_from_mix_start(self):
+        a = dd.pick_day(dd.MIX_START, _pool())
+        n_hist = sum(1 for c in _pool() if c["kind"] == "history")
+        self.assertEqual(collections.Counter(p["kind"] for p in a), {"fantasy": 7 - min(5, n_hist), "history": min(5, n_hist)})
+        self.assertEqual(dd.day_size(), 7)
 
     def test_every_prompt_has_enough_answers_and_all_tiers(self):
         for p in dd.pick_day("2026-11-16", _pool() + [_prompt("f:tiny:2026:w1:t5", "tiny", "fantasy", n=5)]):
@@ -252,11 +252,11 @@ class DailyPuzzleTests(unittest.TestCase):
             def cands(date):
                 calls.append(date)
                 return _pool()
-            one = dd.get_puzzle("2026-11-16", d, cands)
-            two = dd.get_puzzle("2026-11-16", d, cands)
+            one = dd.get_puzzle("2026-11-15", d, cands)             # both before MIX_START: the all-current days
+            two = dd.get_puzzle("2026-11-15", d, cands)
             self.assertEqual(len(calls), 1)
             self.assertEqual([p["id"] for p in one["prompts"]], [p["id"] for p in two["prompts"]])
-            nxt = dd.get_puzzle("2026-11-17", d, cands)
+            nxt = dd.get_puzzle("2026-11-16", d, cands)
             # 10 templates, 7 used yesterday: the 3 unused ones are all taken and only 4 repeats are forced
             self.assertEqual(len({p["template"] for p in one["prompts"]} & {p["template"] for p in nxt["prompts"]}), 4)
 

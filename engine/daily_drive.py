@@ -7,7 +7,7 @@ nflverse tables the app already downloads, never typed in, so each accepted answ
 Pieces, all pure functions except the two `live_*` / `get_puzzle` helpers at the bottom:
   * prompt builders  — turn a DataFrame into {prompt, answer set}
   * rarity tiers     — rank an answer set by popularity, cut by percentile into 6 tiers
-  * daily puzzle     — deterministic (seeded by the date) pick of 7 season prompts (history/draft are behind HISTORY_ENABLED)
+  * daily puzzle     — deterministic (seeded by the date) pick of 7 prompts: from MIX_START, 2 this-season + 5 NFL history
   * answer matching  — full name / "F. Last" / last name, typo tolerance that depends on the tier
 """
 
@@ -22,21 +22,24 @@ import unicodedata
 import pandas as pd
 
 MIN_ANSWERS = 12          # a prompt is used only if at least this many answers exist
-N_FANTASY, N_HISTORY = 4, 3     # the mix when HISTORY_ENABLED; otherwise the whole day is fantasy season prompts
-HISTORY_ENABLED = False         # owner decision 2026-11-16: every prompt is about THIS season's stats. Flip to bring back history + draft
+N_FANTASY, N_HISTORY = 2, 5     # owner 2026-11-16: 2 this-season/this-week prompts + 5 NFL history prompts a day
+MIX_START = "2026-11-17"        # days before this keep the all-season mix they were built with
+HISTORY_ENABLED = False         # the OLD history/draft templates below (superseded by the history pool + classics)
 MAX_PER_CAT = 1                 # one prompt per pool category per day (14 categories, 7 prompts) so a day is varied
 POOL_START = "2026-11-17"       # owner approved the 100-prompt pool 2026-11-16; from the next day on (today's game stays as is)
 PUZZLE_VERSION = 2              # bump when the cached puzzle shape changes: older cached days are regenerated
 TARGET_MIN, TARGET_MAX = 15, 50  # the answer count a threshold rung should land in (the hard floor stays MIN_ANSWERS)
 
 
-def day_counts():
-    """(fantasy, history) prompts in a day."""
-    return (N_FANTASY, N_HISTORY) if HISTORY_ENABLED else (N_FANTASY + N_HISTORY, 0)
+def day_counts(date_str=None):
+    """(fantasy, history) prompts in a day: 2 + 5 from MIX_START on, all fantasy before it."""
+    if date_str and date_str >= MIX_START:
+        return (N_FANTASY, N_HISTORY)
+    return (N_FANTASY + N_HISTORY, 0)
 
 
 def day_size():
-    return sum(day_counts())
+    return N_FANTASY + N_HISTORY
 
 # tier -> (play name, yards, share emoji). Rarer = harder to think of = more yards. Tiers are football plays, from the
 # smallest gain to the biggest. Owner's tier colors (2026-11-16), lowest to highest: grey, light blue, red, purple,
@@ -358,14 +361,20 @@ def pick_day(date_str, candidates, avoid_templates=()):
     rng = random.Random(_seed(date_str))
     avoid = set(avoid_templates)
     out = []
-    for kind, n in zip(("fantasy", "history"), day_counts()):
+    used = set()                                          # template groups: near-duplicates (WR rec TDs vs WR/TE rec TDs) count as one
+    per_cat = {}                                          # pool prompts carry a category: at most MAX_PER_CAT a day
+    want = list(day_counts(date_str))
+    if want[1]:                                           # history comes up short (no data): fantasy fills the gap
+        n_hist = sum(1 for c in candidates if c["kind"] == "history")
+        if n_hist < want[1]:
+            want = [want[0] + want[1] - n_hist, n_hist]
+    for kind, n in zip(("fantasy", "history"), want):
         if n <= 0:
             continue
         pool = sorted((c for c in candidates if c["kind"] == kind and len(c["answers"]) >= MIN_ANSWERS and has_hall_of_famer(c["answers"])), key=lambda c: c["id"])
         rng.shuffle(pool)
         pool.sort(key=lambda c: c["template"] in avoid)   # fresh templates first; stable, so the shuffle still decides
-        used = set()                                      # template groups: near-duplicates (WR rec TDs vs WR/TE rec TDs) count as one
-        per_cat = {}                                      # pool prompts carry a category: at most MAX_PER_CAT a day
+        took = 0
         for c in pool:
             grp = c.get("group", c["template"])
             if grp in used or (c.get("cat") and per_cat.get(c["cat"], 0) >= MAX_PER_CAT):
@@ -374,7 +383,8 @@ def pick_day(date_str, candidates, avoid_templates=()):
             if c.get("cat"):
                 per_cat[c["cat"]] = per_cat.get(c["cat"], 0) + 1
             out.append(c)
-            if len(used) == n:
+            took += 1
+            if took == n:
                 break
     rng.shuffle(out)
     return out
@@ -573,6 +583,13 @@ def live_candidates(date_str):
         if not built:
             built = [p for p in (build_season_prompt(tpl, wk, season, through, ecr_rank, fame) for tpl in FANTASY_TEMPLATES) if p]
         cands.extend(built)
+    if date_str >= MIX_START:                              # the 5 history prompts: data-driven pool (precomputed) + classics
+        try:
+            from engine import daily_drive_history_snapshot, daily_drive_classics
+            cands.extend(daily_drive_history_snapshot.snapshot_candidates(date_str))
+            cands.extend(daily_drive_classics.classics_candidates(date_str))
+        except Exception as e:                           # fewer history prompts; pick_day lets fantasy fill the day
+            print(f"[daily_drive] history pools unavailable: {type(e).__name__}: {e}")
     if not HISTORY_ENABLED:
         return cands
     try:
