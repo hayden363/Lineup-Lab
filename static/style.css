@@ -5363,6 +5363,7 @@ body.sidebar-collapsed .nav-live-dot { position: absolute; top: 9px; right: 16px
   --shadow-glow: 0 10px 24px -12px var(--accent-glow);
   --sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Inter, Roboto, "Helvetica Neue", Arial, sans-serif;
   --mono: var(--sans);
+  --live-pts: #00ceb8; --live-proj: #58a7ff;   /* My Team live: real points = the skin's teal, projected = its blue. Fixed on purpose: team themes remap --accent and --info, which would make the two collide */
   --pos-qb: #ff2a6d; --pos-rb: #00ceb8; --pos-wr: #58a7ff; --pos-te: #ffae58; --pos-k: #bd66ff; --pos-def: #7988a1;
 }
 body { font-variant-numeric: tabular-nums; background: var(--bg); }
@@ -5544,3 +5545,23 @@ body.tp-open .th-title::after { content: ""; position: absolute; left: 0; right:
 @media (max-width: 900px) {
   #trade-opponent-select { font-size: 16px; }
 }
+
+/* ---- My Team live scoring --------------------------------------------------------------------------------------
+   Before kickoff the number is the projection in blue. Once the game starts it is the real points in teal, counting up,
+   with the live projection small and blue under it. Final: teal points, a quiet "Final". --live-pts / --live-proj are
+   fixed colors (see the Sleeper skin :root): a team theme can turn --accent or --info blue, teal or gold, so neither is used here. */
+.myteam-roster-row .proj-num.lv { display: flex; flex-direction: column; align-items: flex-end; line-height: 1.1; min-width: 56px; }
+.lv-main { font-weight: 800; font-size: 18px; font-variant-numeric: tabular-nums; }
+.lv-sub { font-family: var(--sans); font-size: 11px; font-weight: 600; font-variant-numeric: tabular-nums; margin-top: 2px; white-space: nowrap; }
+.lv-sub.is-empty, .mt-total-sub.is-empty { display: none; }
+.lv[data-state="pre"] .lv-main { color: var(--live-proj); }
+.lv[data-state="in"] .lv-main, .lv[data-state="post"] .lv-main { color: var(--live-pts); }
+.lv[data-state="in"] .lv-sub { color: var(--live-proj); }
+.lv[data-state="post"] .lv-sub { color: var(--muted); font-weight: 500; letter-spacing: .02em; }
+.lv[data-state="in"] .proj-range, .lv[data-state="post"] .proj-range { display: none; }
+.myteam-card .mt-total[data-state="pre"], .myteam-card.opponent .mt-total[data-state="pre"] { color: var(--live-proj); text-shadow: 0 0 20px rgba(88, 167, 255, 0.35); }
+.myteam-card .mt-total[data-state="in"], .myteam-card .mt-total[data-state="post"],
+.myteam-card.opponent .mt-total[data-state="in"], .myteam-card.opponent .mt-total[data-state="post"] { color: var(--live-pts); text-shadow: 0 0 20px rgba(0, 206, 184, 0.32); }
+.myteam-card .mt-total-sub { text-align: center; font-size: 15px; font-weight: 700; color: var(--live-proj); margin-top: 2px; }
+.myteam-card .mt-total { font-size: 44px; }
+@media (max-width: 640px) { .myteam-card .mt-total { font-size: 40px; } .lv-main { font-size: 17px; } }

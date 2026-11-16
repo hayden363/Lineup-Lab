@@ -207,11 +207,20 @@ def clear_league_caches(league_id):
         print(f"[sleeper] couldn't clear cached files for league {league_id}: {e}")
 
 
-def get_matchups(league_id, week, force=False):
+def get_matchups(league_id, week, force=False, ttl=None):
     """Head-to-head fantasy matchups for one week: a list of per-roster
-    entries sharing a matchup_id with their opponent."""
+    entries sharing a matchup_id with their opponent. `ttl` overrides the
+    default ROSTER_TTL for a caller that needs fresher data (see live_matchups)."""
     return _cached_get(f"{SLEEPER_BASE}/league/{league_id}/matchups/{week}",
-                        f"matchups_{league_id}_{week}", ROSTER_TTL, force)
+                        f"matchups_{league_id}_{week}", ROSTER_TTL if ttl is None else ttl, force)
+
+
+LIVE_MATCHUP_TTL = 30   # points move by the minute on game days; every viewer of a league shares one fetch per window
+
+
+def live_matchups(league_id, week):
+    """Matchups with players_points for live scoring: the same cache entry as get_matchups, accepted for only 30 s."""
+    return get_matchups(league_id, week, ttl=LIVE_MATCHUP_TTL)
 
 
 def get_trending(kind="add", lookback_hours=48, limit=50, force=False):

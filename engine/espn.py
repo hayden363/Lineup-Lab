@@ -163,6 +163,40 @@ def get_league(league_id, year, espn_s2=None, swid=None):
     return league
 
 
+LIVE_POINTS_TTL = 30
+_LIVE_POINTS = {}
+
+
+def live_points(league_id, year, week, espn_s2=None, swid=None):
+    """{team_id: {raw_id: points}} for every team in the week's matchups, from ESPN's own box scores (the league's exact
+    scoring, live). raw_id is the id engine/tools.py's rosters use: espn id as a string, or the NFL team code for a D/ST.
+    Cached 30 s per league. Raises on a failed fetch (the caller reports points as unavailable). Only the current ESPN
+    week has live box scores. NOT verified against a live ESPN league yet: it reads espn_api's BoxPlayer.points."""
+    key = (str(league_id), int(year), int(week), hash((espn_s2 or "", swid or "")))
+    now = time.time()
+    with _LEAGUE_LOCK:
+        hit = _LIVE_POINTS.get(key)
+        if hit and now - hit[0] < LIVE_POINTS_TTL:
+            return hit[1]
+    league = get_league(league_id, year, espn_s2, swid)
+    out = {}
+    for box in league.box_scores(week=int(week)):
+        for side in ("home", "away"):
+            tid = getattr(getattr(box, f"{side}_team"), "team_id", getattr(box, f"{side}_team"))
+            if tid in (None, 0):
+                continue
+            pts = {}
+            for bp in getattr(box, f"{side}_lineup") or []:
+                raw = bp.proTeam if bp.position == "D/ST" else str(bp.playerId)
+                pts[raw] = bp.points
+            out[tid] = pts
+    with _LEAGUE_LOCK:
+        if len(_LIVE_POINTS) > 100:
+            _LIVE_POINTS.clear()
+        _LIVE_POINTS[key] = (now, out)
+    return out
+
+
 def owner_name(team):
     if not team.owners:
         return None

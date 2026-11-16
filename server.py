@@ -56,6 +56,7 @@ from engine import league_trades as league_trades_layer
 from engine import boxscore as boxscore_layer
 from engine import schemas
 from engine import live_scores as live_scores_layer
+from engine import myteam_live as myteam_live_layer
 from engine import waitlist as waitlist_layer
 from engine import locks
 from engine.flight import FLIGHT
@@ -1524,6 +1525,60 @@ def api_my_team(week: Optional[int] = Query(None, ge=1, le=25), refresh: bool = 
                  scoring: Optional[dict] = Depends(scoring_from_query), user=Depends(require_user)):
     _, result = _load_my_team(user, week, scoring, refresh=refresh)
     return _clean(result)
+
+
+# ---- live scoring + live projections on My Team (polled ~every 30 s while games are on) ----
+LIVE_BASE_TTL = 300        # the slim starter list (ids, pregame PROJ) is rebuilt at most this often; polls never rebuild boards
+_LIVE_BASE_CACHE = {}      # key -> (computed_at, base)
+
+
+def _live_base(user, week, scoring):
+    active = db.get_active_team(user["id"])
+    if not active:
+        raise HTTPException(400, "connect a league in Settings first")
+    eff = _effective_scoring(scoring, user)
+    key = (user["id"], active.get("platform"), str(active["league_id"]), str(active["roster_id"]), week,
+           json.dumps(eff, sort_keys=True, default=str))
+    hit = _LIVE_BASE_CACHE.get(key)
+    if hit and time.time() - hit[0] < LIVE_BASE_TTL:
+        return active, hit[1]
+    _, result = _load_my_team(user, week, scoring)
+    espn = active.get("platform") == "espn"
+    crosswalk = espn_layer.id_crosswalk() if espn else sleeper_layer.id_crosswalk()
+    base = myteam_live_layer.make_base(result, crosswalk, "espn" if espn else "sleeper")
+    if len(_LIVE_BASE_CACHE) > 200:
+        _LIVE_BASE_CACHE.clear()
+    _LIVE_BASE_CACHE[key] = (time.time(), base)
+    return active, base
+
+
+def _live_points(user, active, base):
+    """{"source", "by_roster", "note"}: the league site's own points so far; source None (and a note) if unavailable."""
+    rosters = [t["roster_id"] for t in (base["my_team"], base["opponent"]) if t]
+    week = base["week"]
+    try:
+        if active.get("platform") == "espn":
+            espn_s2, swid = db.get_espn_secrets(user["id"])
+            by = espn_layer.live_points(active["league_id"], espn_layer.resolve_year(), week, espn_s2, swid)
+            return {"source": "espn", "by_roster": {r: by.get(r) or {} for r in rosters}}
+        rows = sleeper_layer.live_matchups(active["league_id"], week)
+        by = {m.get("roster_id"): {str(k): v for k, v in (m.get("players_points") or {}).items()} for m in rows}
+        return {"source": "sleeper", "by_roster": {r: by.get(r) or {} for r in rosters}}
+    except Exception as e:
+        print(f"[myteam/live] points unavailable: {type(e).__name__}")
+        return {"source": None, "by_roster": {}, "note": "live points are not available from the league site right now"}
+
+
+@app.get("/api/myteam/live")
+def api_my_team_live(week: Optional[int] = Query(None, ge=1, le=25),
+                     scoring: Optional[dict] = Depends(scoring_from_query), user=Depends(require_user)):
+    """Per-starter real points so far and live projection for my team and my opponent. Same auth and scoring params as
+    /api/myteam; the heavy part (pregame PROJ for every player) is reused from that result, not rebuilt per poll."""
+    active, base = _live_base(user, week, scoring)
+    if base.get("live_week") is None or base.get("live_week") != base.get("week"):
+        return _clean(myteam_live_layer.compose(base, [], None))
+    games = live_scores_layer.live_scoreboard()
+    return _clean(myteam_live_layer.compose(base, games, _live_points(user, active, base)))
 
 
 # --------------------------------------------------- lineup inputs (Start/Sit lineup advisor) ----

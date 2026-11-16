@@ -438,6 +438,7 @@ function switchTab(tab) {
     sub.textContent = state.user ? "Connect your league in Settings." : sub.dataset.def;
   });
   if (tab !== "draft") stopDraftPolling();
+  if (tab !== "myteam") stopMyTeamLive();
   // chat.js is a separate script: if it failed to load, navigation must still work
   if (tab !== "chat" && typeof stopChatPolling === "function") stopChatPolling();
   // The board used to load only after a pill/scoring/search change, so the
@@ -3987,15 +3988,80 @@ function secHeadHtml(icon, title, sub, right) {
 // player isn't scoring this week, so its projection is muted and excluded
 // from the team total (see engine/tools.py _roster_players).
 function rosterRowHtml(p, isBench) {
-  // DEF/K have no SCORE — this app's stat engine only covers QB/RB/WR/TE
-  // (see README) — so there's no player-detail view to open for them.
+  // DEF/K have no SCORE — this app's stat engine only covers QB/RB/WR/TE (see README) — so there's no player-detail
+  // view to open for them.
   const unscored = p.SCORE == null;
+  const range = p.floor != null && p.ceiling != null ? `<small class="proj-range" title="Typical range (10th to 90th percentile)${p.p_play != null ? `; ${Math.round(p.p_play * 100)}% chance to play` : ""}">${FMT.int(p.floor)}–${FMT.int(p.ceiling)}${p.p_play != null ? ` · ${Math.round(p.p_play * 100)}% to play` : ""}</small>` : "";
+  // Starters carry the live number (blue projected before kickoff, teal points once it starts); the bench stays a plain projection.
+  const v = isBench ? null : liveRowView(p, null);
+  const num = isBench
+    ? `<span class="proj-num tabular">${FMT.d1(p.PROJ)}${range}</span>`
+    : `<span class="proj-num tabular lv" data-state="${v.state}"><b class="lv-main" data-val="${v.main == null ? "" : v.main}">${FMT.d1(v.main)}</b><small class="lv-sub${v.sub ? "" : " is-empty"}">${esc(v.sub)}</small>${range}</span>`;
   return `<div class="myteam-roster-row${isBench ? " bench" : ""}${unscored ? " unscored" : " kbd-click"}" data-pid="${esc(p.player_id)}" ${unscored ? 'data-unscored="1"' : 'role="button" tabindex="0"'}>
     <img ${headshotAttrs(p)} alt="">
     <span class="pos-badge">${esc(p.slot || p.position)}</span>
     <span>${esc(p.player_display_name)}${p.recent_team ? ` <span class="mt-team" data-team-page="${esc(p.recent_team)}" role="link" tabindex="0" title="Open the ${esc(p.recent_team)} team page">${esc(p.recent_team)}</span>` : ""}${statusFlagsHtml(p)}</span>
-    <span class="proj-num tabular">${FMT.d1(p.PROJ)}${p.floor != null && p.ceiling != null ? `<small class="proj-range" title="Typical range (10th to 90th percentile)${p.p_play != null ? `; ${Math.round(p.p_play * 100)}% chance to play` : ""}">${FMT.int(p.floor)}–${FMT.int(p.ceiling)}${p.p_play != null ? ` · ${Math.round(p.p_play * 100)}% to play` : ""}</small>` : ""}</span>
+    ${num}
   </div>`;
+}
+
+// ---- live scoring on My Team (spec: projected = blue --live-proj, real points = teal --live-pts) -------------------
+// pre-game: big blue projected. In a game: big teal points so far, small blue live projection below. Final: big teal
+// points with a small muted "Final". `lv` is that player's record from GET /api/myteam/live (null before it answers).
+function liveRowView(p, lv) {
+  const settled = !!p.final;
+  const st = lv && (lv.game_state === "in" || lv.game_state === "post") && lv.points != null ? lv.game_state : (settled ? "post" : "pre");
+  if (st === "pre") return { state: "pre", main: p.PROJ, sub: "", subKind: "" };
+  if (st === "post") {
+    const was = lv && lv.pregame_proj != null ? `Projected ${FMT.d1(lv.pregame_proj)}` : "";
+    return { state: "post", main: lv && lv.points != null ? lv.points : p.PROJ, sub: "Final", subKind: "final", title: was };
+  }
+  const clk = lv.quarter ? `${lv.quarter > 4 ? "OT" : "Q" + lv.quarter}${lv.clock ? " " + lv.clock : ""}` : "";
+  return { state: "in", main: lv.points, sub: lv.live_proj != null ? `proj ${FMT.d1(lv.live_proj)}` : "", subKind: "proj", title: clk };
+}
+
+// A team's big number: label, state, main and the small line under it.
+function liveTeamView(team, lt) {
+  const base = { state: "pre", main: team.total_proj, sub: "", label: teamTotalLabel(team) };
+  if (!lt || lt.points_total == null) {
+    if (lt && lt.live_proj_total != null && !base.label.startsWith("FINAL")) base.main = lt.live_proj_total;
+    if (base.label === "FINAL (STARTERS)") base.state = "post";
+    return base;
+  }
+  const started = (lt.players || []).some((x) => x.game_state === "in" || x.game_state === "post");
+  if (lt.final) return { state: "post", main: lt.points_total, sub: "", label: "FINAL (STARTERS)" };
+  if (started) return { state: "in", main: lt.points_total, sub: `proj ${FMT.d1(lt.live_proj_total)}`, label: "LIVE (STARTERS)" };
+  return { ...base, main: lt.live_proj_total != null ? lt.live_proj_total : base.main };
+}
+
+// Counts el's number from `from` to `to` (tabular, one decimal). A newer call cancels an older one; reduced motion jumps.
+function animateNumber(el, to, from, ms) {
+  const tok = (el._lvTok = (el._lvTok || 0) + 1);
+  const done = () => { el.textContent = to == null ? "—" : Number(to).toFixed(1); };
+  el.dataset.val = to == null ? "" : String(to);
+  if (to == null || prefersReducedMotion || from == null || !isFinite(from) || from === to) return done();
+  const t0 = performance.now(), dur = ms || 600;
+  const tick = (now) => {
+    if (el._lvTok !== tok) return;
+    const k = Math.min(1, (now - t0) / dur);
+    el.textContent = (from + (to - from) * (1 - Math.pow(1 - k, 3))).toFixed(1);
+    if (k < 1) requestAnimationFrame(tick); else done();
+  };
+  requestAnimationFrame(tick);
+}
+
+// Puts a view into a `.lv` row number, or a `.mt-total` (+ its sub line and label) in place.
+function paintLiveNum(box, view, mainEl, subEl) {
+  const prevState = box.dataset.state, prevVal = parseFloat(mainEl.dataset.val);
+  const from = prevState === "pre" && view.state !== "pre" ? 0 : (isFinite(prevVal) ? prevVal : null);
+  box.dataset.state = view.state;
+  if (mainEl.dataset.val !== String(view.main)) animateNumber(mainEl, view.main, from);
+  if (subEl) {
+    subEl.textContent = view.sub || "";
+    subEl.classList.toggle("is-empty", !view.sub);
+    subEl.classList.toggle("is-final", view.subKind === "final");
+  }
+  if (mainEl !== box) box.title = view.title || "";
 }
 
 // A starter who can't play (bye, OUT, IR, PUP) holds a slot for nothing: name who on your bench can take it. The app
@@ -4028,7 +4094,8 @@ function teamCardHtml(team, kind) {
       <div class="mt-label">${kind === "mine" ? "MY TEAM" : "OPPONENT"}</div>
       <div class="mt-name-row">${avatar}<div class="mt-name">${esc(team.team_name)}</div></div>
       <div class="mt-total-lbl">${esc(teamTotalLabel(team))}</div>
-      <div class="mt-total tabular">${FMT.d1(team.total_proj)}</div>
+      <div class="mt-total tabular" data-state="${teamTotalLabel(team) === "FINAL (STARTERS)" ? "post" : "pre"}" data-val="${team.total_proj == null ? "" : team.total_proj}">${FMT.d1(team.total_proj)}</div>
+      <div class="mt-total-sub tabular is-empty"></div>
       <div style="margin-top:14px">${rows}</div>
     </div>`;
 }
@@ -4049,15 +4116,25 @@ function matchupSettled(mine, opp) {
   return [mine, opp].every((t) => teamTotalLabel(t) === "FINAL (STARTERS)");
 }
 
-function matchupCenterHtml(mine, opp) {
+// While games are on, the head-to-head uses the live numbers from /api/myteam/live; otherwise the settled-final logic.
+function liveEdge(mine, opp, live) {
+  const lm = live && live.live && live.scoreboard_ok ? live.my_team : null, lo = live && live.live && live.scoreboard_ok ? live.opponent : null;
+  if (!lm || !lo) return null;
+  const final = !!(lm.final && lo.final && lm.points_total != null && lo.points_total != null);
+  return { mine: final ? lm.points_total : lm.live_proj_total, opp: final ? lo.points_total : lo.live_proj_total, final };
+}
+
+function matchupCenterHtml(mine, opp, live) {
   if (!opp) return `<div class="matchup-vs-center"><div class="matchup-vs-badge">VS</div></div>`;
-  const diff = (mine.total_proj || 0) - (opp.total_proj || 0);
+  const le = liveEdge(mine, opp, live);
+  const diff = le ? (le.mine || 0) - (le.opp || 0) : (mine.total_proj || 0) - (opp.total_proj || 0);
+  const settled = le ? le.final : matchupSettled(mine, opp);
   const favoredName = diff >= 0 ? mine.team_name : opp.team_name;
   // Green only when YOU are projected ahead; an opponent edge is shown
   // plainly (it's not "good"), never in the app's success color.
   const favor = Math.abs(diff) < 0.1
     ? `<span style="color:var(--muted)">Dead even</span>`
-    : `<span class="matchup-favor-lbl">${matchupSettled(mine, opp) ? "Final margin" : "Projected edge"}</span><span class="${diff >= 0 ? "" : "is-opp"}">${esc(favoredName)} +${FMT.d1(Math.abs(diff))}</span>`;
+    : `<span class="matchup-favor-lbl">${settled ? "Final margin" : "Projected edge"}</span><span class="${diff >= 0 ? "" : "is-opp"}">${esc(favoredName)} +${FMT.d1(Math.abs(diff))}</span>`;
   return `<div class="matchup-vs-center">
     <div class="matchup-vs-badge">VS</div>
     <div class="matchup-favor">${favor}</div>
@@ -4066,8 +4143,9 @@ function matchupCenterHtml(mine, opp) {
 
 // Split bar showing each side's share of the combined projected total —
 // a quick "who's ahead, by how much" read at a glance.
-function matchupBarHtml(mine, opp) {
-  const mv = Math.max(mine.total_proj || 0, 0), ov = Math.max(opp.total_proj || 0, 0);
+function matchupBarHtml(mine, opp, live) {
+  const le = liveEdge(mine, opp, live);
+  const mv = Math.max(le ? le.mine || 0 : mine.total_proj || 0, 0), ov = Math.max(le ? le.opp || 0 : opp.total_proj || 0, 0);
   const sum = mv + ov;
   const minePct = sum > 0 ? (mv / sum) * 100 : 50;
   return `<div class="matchup-bar-wrap">
@@ -4153,6 +4231,7 @@ async function loadMyTeam(week, refresh) {
     return;
   }
 
+  stopMyTeamLive();
   content.innerHTML = `<div class="loading">Loading your team…</div>`;
   stillWorking(content.querySelector(".loading"));
   content.style.display = "";
@@ -4188,6 +4267,7 @@ async function loadMyTeam(week, refresh) {
     });
     countUpTotals(content, `${data.nfl_week}|${data.my_team.roster_id}`);
     loadTradesPanel();
+    startMyTeamLive((scoringQS() + weekQS).replace(/^&/, ""), data);
     content.querySelectorAll(".myteam-roster-row:not(.unscored)").forEach((row) => {
       row.addEventListener("click", (e) => { if (!e.target.closest("[data-team-page]")) openPlayerModal(row.dataset.pid); });
     });
@@ -4196,6 +4276,79 @@ async function loadMyTeam(week, refresh) {
     if (isServerFailure(e)) { showGateRetry(gate, "Couldn't load your team"); return; }
     gate.style.display = "";
     gate.querySelector(".gate-sub").textContent = e.message || "Connect a league in Settings first.";
+  }
+}
+
+// ---- live polling (My Team tab only) ------------------------------------------------------------------------------
+// One call when My Team opens on the live week, then every 30 s while a starter (mine or the opponent's) is in a game or
+// kicks off within 10 minutes. Nothing is polled otherwise: the server says when to wake up (wake_in_seconds, minus 10 min).
+const LIVE_POLL_MS = 30000;
+const myLive = { timer: null, epoch: 0, qs: "", team: null, data: null, fails: 0 };
+
+function stopMyTeamLive() {
+  myLive.epoch++;
+  clearTimeout(myLive.timer);
+  myLive.timer = null;
+}
+
+function startMyTeamLive(qs, data) {
+  stopMyTeamLive();
+  Object.assign(myLive, { qs, team: data, data: null, fails: 0 });
+  if (!(data.live_week && data.live_week === data.nfl_week)) return;     // a past or future week has no live games
+  pollMyTeamLive(myLive.epoch);
+}
+
+function scheduleMyTeamLive(epoch, ms) {
+  clearTimeout(myLive.timer);
+  myLive.timer = ms == null ? null : setTimeout(() => pollMyTeamLive(epoch), Math.min(ms, 2147000000));
+}
+
+async function pollMyTeamLive(epoch) {
+  if (epoch !== myLive.epoch || state.tab !== "myteam" || !state.user) return;
+  if (document.hidden) return scheduleMyTeamLive(epoch, LIVE_POLL_MS);     // no requests from a background tab
+  let live;
+  try {
+    live = await api(`/api/myteam/live?${myLive.qs}`);
+  } catch (e) {
+    if (++myLive.fails < 5) scheduleMyTeamLive(epoch, LIVE_POLL_MS * 2);
+    return;
+  }
+  if (epoch !== myLive.epoch) return;
+  myLive.fails = 0;
+  if (live && live.live && live.scoreboard_ok) {
+    applyMyTeamLive(live);
+    if (live.active) return scheduleMyTeamLive(epoch, LIVE_POLL_MS);
+    if (live.wake_in_seconds != null) return scheduleMyTeamLive(epoch, live.wake_in_seconds * 1000);
+    return scheduleMyTeamLive(epoch, null);
+  }
+  // scoreboard unavailable: keep what is on screen and keep trying only if games were on a moment ago
+  scheduleMyTeamLive(epoch, myLive.data && myLive.data.active ? LIVE_POLL_MS : null);
+}
+
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden && myLive.timer && state.tab === "myteam") { clearTimeout(myLive.timer); pollMyTeamLive(myLive.epoch); }
+});
+
+function applyMyTeamLive(live) {
+  const content = $("#myteam-content"), data = myLive.team;
+  if (!content || !data) return;
+  myLive.data = live;
+  [["mine", data.my_team, live.my_team], ["opp", data.opponent, live.opponent]].forEach(([kind, team, lt]) => {
+    const card = content.querySelector(kind === "mine" ? ".myteam-card:not(.opponent)" : ".myteam-card.opponent");
+    if (!team || !lt || !card) return;
+    const byPid = new Map((lt.players || []).map((x) => [String(x.player_id), x]));
+    (team.players || []).filter((p) => p.is_starter).forEach((p) => {
+      const row = card.querySelector(`.myteam-roster-row:not(.bench)[data-pid="${CSS.escape(String(p.player_id))}"] .lv`);
+      if (!row) return;
+      paintLiveNum(row, liveRowView(p, byPid.get(String(p.player_id))), row.querySelector(".lv-main"), row.querySelector(".lv-sub"));
+    });
+    const tv = liveTeamView(team, lt), tot = card.querySelector(".mt-total");
+    paintLiveNum(tot, tv, tot, card.querySelector(".mt-total-sub"));
+    card.querySelector(".mt-total-lbl").textContent = tv.label;
+  });
+  if (data.opponent) {
+    content.querySelector(".matchup-vs-center")?.replaceWith(el("div", "", matchupCenterHtml(data.my_team, data.opponent, live)).firstElementChild);
+    content.querySelector(".matchup-bar-wrap")?.replaceWith(el("div", "", matchupBarHtml(data.my_team, data.opponent, live)).firstElementChild);
   }
 }
 
@@ -4210,6 +4363,7 @@ function countUpTotals(root, key) {
     if (!isFinite(to) || to <= 0) return;
     const t0 = performance.now(), ms = 700;
     const tick = (now) => {
+      if (el._lvTok) return;                       // the live updater owns this number now
       const k = Math.min(1, (now - t0) / ms);
       el.textContent = (to * (1 - Math.pow(1 - k, 3))).toFixed(1);
       if (k < 1) requestAnimationFrame(tick); else el.textContent = to.toFixed(1);
