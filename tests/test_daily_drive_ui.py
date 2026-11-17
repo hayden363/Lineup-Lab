@@ -61,25 +61,26 @@ class SidebarTests(unittest.TestCase):
 
 
 class LandingTests(unittest.TestCase):
-    def test_launch_page_leads_with_the_daily_drive(self):
+    def test_launch_page_is_lineup_lab_with_one_daily_drive_door(self):
+        """Owner 2026-11-17 (round 4): Lineup Lab first; the Daily Drive is one card (cover + Play), no question shown,
+        no Daily Drive section; the rest of the page is Lineup Lab. The Daily Drive is the nav's second tab."""
         js = _r("static/landing.js")
         app = js[js.index("function App()"):]
-        # owner 2026-11-17 (round 2): Lineup Lab first, the Daily Drive second (the way in), then the fantasy tools
-        self.assertLess(app.index("<${BrandHero}/>"), app.index("<${DriveHero}/>"))
-        self.assertLess(app.index("<${DriveHero}/>"), app.index("<${Hero}/>"))
-        self.assertEqual(js.count("<h1 "), 1)                                       # one h1: the Lineup Lab headline
+        self.assertIn("<${BrandHero}/><${Hero}/>", app)
+        for gone in ("DriveHero", "HowItPlays", "useDrive", "'/api/play/daily'"):
+            self.assertNotIn(gone, js)                                              # no live question on the front door
+        self.assertEqual(js.count("<h1 "), 1)
         self.assertIn('className="lab-h1"', js)
         nav = js[js.index("function Nav("):js.index("/* ---------- HERO")]
-        links = re.findall(r"\['([^']+)','#", nav[:nav.index("];")])
-        self.assertEqual(links[1], "The Daily Drive")                               # the second tab
-        brand = js[js.index("function BrandHero"):js.index("function DriveHero")]
+        links = re.findall(r"\['([^']+)','([#/][^']*)'\]", nav[:nav.index("];")])
+        self.assertEqual(links[1], ("The Daily Drive", "/play"))                    # the second tab opens the game
+        brand = js[js.index("function BrandHero"):js.index("function Hero(")]
         self.assertIn("The Daily Drive</h2>", brand)
         self.assertIn("Fantasy tools</h2>", brand)
-        self.assertIn("fetch(u,{credentials:'same-origin'})", js)                  # live card reads the real endpoints
-        self.assertIn("'/api/play/daily'", js)
-        self.assertIn('href="/play">${Ico(\'Play\',{size:18})}Play today\'s drive', js)
+        self.assertIn('href="/play">${Ico(\'Play\',{size:16})}Play today\'s drive', brand)
         html = _r("static/landing.html")
         self.assertIn("<title>Lineup Lab", html)
+        self.assertNotIn(".dd-board", html)
 
     def test_front_door_has_no_emojis_a_real_logo_and_a_game_cover(self):
         """Owner 2026-11-17 (round 3): no emojis on the front door, the real app icon as the logo, a cover image of
