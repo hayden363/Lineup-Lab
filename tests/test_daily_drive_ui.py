@@ -60,5 +60,19 @@ class SidebarTests(unittest.TestCase):
         self.assertIn('lsSet("dd.played." + puzzle.date', _r("static/play.js"))
 
 
+class LandingTests(unittest.TestCase):
+    def test_launch_page_leads_with_the_daily_drive(self):
+        js = _r("static/landing.js")
+        app = js[js.index("function App()"):]
+        self.assertLess(app.index("<${DriveHero}/>"), app.index("<${Hero}/>"))     # the Drive comes first
+        self.assertEqual(js.count('className="dd-h1"'), 1)
+        self.assertNotIn("<h1 className=\"font-extrabold", js)                     # one h1 on the page: the Drive's
+        self.assertIn("fetch(u,{credentials:'same-origin'})", js)                  # live card reads the real endpoints
+        self.assertIn("'/api/play/daily'", js)
+        self.assertIn('href="/play">${Ico(\'Play\',{size:18})}Play today\'s drive', js)
+        html = _r("static/landing.html")
+        self.assertIn("<title>The Daily Drive", html)
+
+
 if __name__ == "__main__":
     unittest.main()

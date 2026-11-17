@@ -169,7 +169,7 @@ function optimizeRoster(pool,locked,excluded){
 
 /* ---------- NAV + AUTH ---------- */
 function Nav({user,onOpenAuth,onLogout}){
-  const links=[['Product','#product'],['Try it','#sandbox'],['Edges','#edges'],['Pricing','#pricing']];
+  const links=[['How it plays','#how'],['Lineup Lab','#lab'],['Try it','#sandbox'],['Pricing','#pricing']];
   const go=(e,h)=>{e.preventDefault();const el=document.querySelector(h);if(el)el.scrollIntoView({behavior:'smooth',block:'start'})};
   const [open,setOpen]=useState(false);
   return html`<header className="sticky top-0 z-50 gutter" style=${{top:'env(safe-area-inset-top,0px)'}}>
@@ -180,7 +180,6 @@ function Nav({user,onOpenAuth,onLogout}){
         </a>
         <div className="hidden md:flex items-center gap-1">
           ${links.map(([t,h])=>html`<a key=${h} href=${h} onClick=${e=>go(e,h)} className="px-3.5 py-2 rounded-full text-[14px] font-semibold text-[#B6CBBF] hover:text-white hover:bg-white/5 no-underline transition-colors">${t}</a>`)}
-          <a href="/play" className="px-3.5 py-2 rounded-full text-[14px] font-semibold hover:text-white hover:bg-white/5 no-underline transition-colors" style=${{color:'#7CF2A6'}}>The Daily Drive</a>
         </div>
         <div className="flex items-center gap-2">
           ${user?html`
@@ -190,7 +189,8 @@ function Nav({user,onOpenAuth,onLogout}){
               <button className="btn btn-ghost btn-sm" onClick=${onLogout} aria-label="Log out">${Ico('LogOut',{size:15})}<span className="hidden sm:inline">Log out</span></button>
             </div>`:html`
             <button className="hidden sm:inline-flex btn btn-ghost btn-sm" onClick=${()=>onOpenAuth('login')}>Log In</button>
-            <${Magnetic} className="btn btn-mint btn-sm" onClick=${()=>onOpenAuth('signup')}><span className="sm:hidden">Start Free</span><span className="hidden sm:inline">Start Free</span><span className="hidden sm:inline-flex">${Ico('ArrowRight',{size:15})}</span><//>`}
+            <button className="hidden lg:inline-flex btn btn-ghost btn-sm" onClick=${()=>onOpenAuth('signup')}>Start Free</button>
+            <${Magnetic} className="btn btn-mint btn-sm no-underline" href="/play">${Ico('Play',{size:14})}<span>Play today</span><//>`}
           <button className="md:hidden btn btn-ghost btn-sm" aria-label="Menu" aria-expanded=${open} onClick=${()=>setOpen(o=>!o)}>${Ico(open?'X':'Menu',{size:16})}</button>
         </div>
       </nav>
@@ -204,6 +204,89 @@ function Nav({user,onOpenAuth,onLogout}){
 }
 
 /* ---------- HERO ---------- */
+/* THE DAILY DRIVE leads the front door (owner 2026-11-17): it is the free daily reason to visit, and the way in to
+   Lineup Lab. Everything on the card is real: today's opening question, its answer count and the community numbers
+   come from the same /api/play endpoints the game uses; anything that fails to load simply stays hidden. */
+const DD_TIERS=[['✅','Checkdown',10,'#b3bccd'],['⚡','Quick Slant',15,'#6fd0ff'],['⛓️','Chain Mover',30,'#ff4b55'],
+  ['🚀','Chunk Play',60,'#b866ff'],['💣','Bomb',85,'#fff04d'],['🏈','Highlight Reel TD',100,'#ffab1a']];
+const DD_SAMPLE='🏈💣⛓️❌⚡✅🚀';
+function ddLongDate(iso){const p=String(iso||'').split('-');if(p.length<3)return '';const d=new Date(Date.UTC(+p[0],+p[1]-1,+p[2]));
+  return d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',timeZone:'UTC'})}
+function useDrive(){
+  const [day,setDay]=useState(null),[st,setSt]=useState(null),[lb,setLb]=useState(null);
+  useEffect(()=>{let live=true;
+    const get=u=>fetch(u,{credentials:'same-origin'}).then(r=>r.ok?r.json():null).catch(()=>null);
+    get('/api/play/daily').then(d=>{if(!live||!d||!d.prompts||!d.prompts.length)return;setDay(d);
+      get('/api/play/stats?date='+encodeURIComponent(d.date)).then(x=>{if(live&&x&&x.available&&x.players)setSt(x)});
+      get('/api/play/leaderboard?date='+encodeURIComponent(d.date)).then(x=>{if(live&&x&&x.available&&x.top&&x.top.length)setLb(x)});});
+    return()=>{live=false}},[]);
+  return {day,st,lb};
+}
+function DriveCard({day,st,lb}){
+  const q=day&&day.prompts[0];
+  return html`<div className="glass dd-board">
+    <div className="dd-bhead"><span className="eyebrow">Today's drive${day?' · '+ddLongDate(day.date):''}</span><span className="tag">7 plays · 700 yds</span></div>
+    <div className="dd-q">
+      <div className="dd-qmeta"><span className="mono mint">PLAY 1 · THE OPENER</span><span className="mono">${q?q.count.toLocaleString()+' answers':''}</span></div>
+      <h3>${q?q.text:'Name a QB who has started a game this season'}</h3>
+      <div className="dd-qmeta"><span>${q?q.category:'A new drive every day at midnight ET'}</span><span>25-sec play clock</span></div>
+    </div>
+    <div className="dd-locked">${(day?day.prompts.slice(1,4):[{},{},{}]).map((p,i)=>html`<div className="dd-lk" key=${i}>
+      <span className="n mono">PLAY ${i+2}</span><span className="c">${p.category||'Locked until kickoff'}</span>${Ico('Lock',{size:13,color:'#5E7A6C'})}</div>`)}
+      <div className="dd-lk"><span className="n mono">+3</span><span className="c">more plays, easy to deep cut</span>${Ico('Lock',{size:13,color:'#5E7A6C'})}</div>
+    </div>
+    <div className="dd-ladder" aria-label="Yards per play, by how rare your answer is">${DD_TIERS.map(t=>html`<div className="dd-rung" key=${t[1]} style=${{'--c':t[3]}} title=${t[1]}>
+      <span className="e">${t[0]}</span><span className="y mono">+${t[2]}</span><span className="t">${t[1]}</span></div>`)}</div>
+    <div className="dd-foot">${lb?html`<div className="dd-top3"><span className="mono mint">TODAY'S TOP</span>${lb.top.slice(0,3).map(r=>html`<span key=${r.rank+r.name}>#${r.rank} <b>${r.name}</b> ${r.yards}</span>`)}</div>`
+      :html`<span className="muted">Share your drive, spoiler-free:</span><span className="dd-share">${DD_SAMPLE}</span>`}</div>
+  </div>`;
+}
+function DriveHero(){
+  const {day,st,lb}=useDrive();
+  return html`<section id="top" className="gutter pt-10 sm:pt-16 pb-10">
+    <div className="wrap dd-hero">
+      <div className="min-w-0">
+        <${motion.div} initial=${{opacity:0,y:10}} animate=${{opacity:1,y:0}} transition=${{delay:.1}} className="dd-pill">
+          <span className="w-2 h-2 rounded-full" style=${{background:'var(--mint)',animation:'pulse 2s infinite'}}></span>
+          <span className="mono text-[11.5px] mint font-medium">Free daily NFL trivia · new drive at midnight ET</span>
+        <//>
+        <h1 className="dd-h1" aria-label="The Daily Drive. 7 plays. 700 yards.">
+          <span className="kinetic" aria-hidden="true"><${motion.span} style=${{display:'inline-block'}} initial=${{y:'115%'}} animate=${{y:0}} transition=${{delay:.15,duration:.8,ease:[.16,1,.3,1]}}>The Daily Drive.<//></span><br/>
+          <span className="kinetic" aria-hidden="true"><${motion.span} className="hl" style=${{display:'inline-block'}} initial=${{y:'115%'}} animate=${{y:0}} transition=${{delay:.3,duration:.8,ease:[.16,1,.3,1]}}>7 plays. 700 yards.<//></span>
+        </h1>
+        <${motion.p} initial=${{opacity:0,y:14}} animate=${{opacity:1,y:0}} transition=${{delay:.6}} className="dd-lede">
+          Seven football questions a day. Name a player who fits, and the rarer your answer, the bigger the play: a Checkdown gains 10 yards, a Highlight Reel TD gains 100. Every answer comes from real NFL data. Free, no account needed.
+        <//>
+        <${motion.div} initial=${{opacity:0,y:14}} animate=${{opacity:1,y:0}} transition=${{delay:.75}} className="dd-ctas">
+          <a className="btn btn-mint dd-play no-underline" href="/play">${Ico('Play',{size:18})}Play today's drive</a>
+          <a className="btn btn-ghost no-underline" href=${APP_URL}>${Ico('Zap',{size:15})}Open Lineup Lab</a>
+        <//>
+        <div className="dd-live mono" aria-live="polite">
+          ${st?html`<span><span className="dd-dot"></span><b>${st.players.toLocaleString()}</b> ${st.players===1?'player':'players'} today</span><span>Average drive <b>${Math.round(st.average_yards)}</b> yds</span>`
+            :html`<span><span className="dd-dot"></span>Today's drive is live</span>`}
+          <span>Streaks · leaderboards · share your emoji drive</span>
+        </div>
+      </div>
+      <${motion.div} initial=${{opacity:0,y:40}} animate=${{opacity:1,y:0}} transition=${{delay:.45,duration:.9,ease:[.16,1,.3,1]}} className="relative min-w-0">
+        <${DriveCard} day=${day} st=${st} lb=${lb}/>
+      <//>
+    </div>
+  </section>`;
+}
+function HowItPlays(){
+  const steps=[['1','Read the play call','Seven prompts, easiest first: “Name a WR with a 1,000-yard season since 2000.” The opener has hundreds of answers; the last two are deep cuts.'],
+    ['2','Name a player','25 seconds on the play clock. Type any player who fits. A wrong answer is a sack, so trust your gut.'],
+    ['3','Rarer = more yards','Name the star and pick up 10 yards. Name the guy nobody remembers and it’s a 100-yard Highlight Reel TD. Then share your emoji drive.']];
+  return html`<section id="how" className="gutter pb-16 sm:pb-20">
+    <div className="wrap">
+      <div className="dd-steps">${steps.map(s=>html`<${motion.div} key=${s[0]} ...${reveal} className="card dd-step"><span className="k mono">${s[0]}</span><h3>${s[1]}</h3><p>${s[2]}</p><//>`)}</div>
+      <${motion.div} ...${reveal} className="glass dd-bridge">
+        <p><b className="mint">Like the game? The same data sets your lineup.</b> Lineup Lab syncs your Sleeper or ESPN league and finds the start/sit calls, pickups and trades that win weeks.</p>
+        <a className="btn btn-ghost no-underline" href="#lab" onClick=${e=>{e.preventDefault();const el=document.querySelector('#lab');if(el)el.scrollIntoView({behavior:'smooth'})}}>See Lineup Lab ${Ico('ArrowDown',{size:15})}</a>
+      <//>
+    </div>
+  </section>`;
+}
 const WORDS=['Stop','losing','weeks','you','should','have','won.'];
 const HERO_LINEUP=[['QB','goff'],['RB','cook','hall'],['RB','kyren'],['WR','nico'],['WR','higgins','dkmet'],['WR','mclaurin'],['TE','kittle','kincaid'],['FLEX','tracy','laporta'],['W/R/T','flowers'],['K','mclaughlin','dicker'],['DST','dstbuf']]
  .map(([slot,id,from])=>({slot,id,name:SBID[id].name,base:SBID[id].proj,from:from?SBID[from].name:null,gain:from?SBID[id].proj-SBID[from].proj:0,pickup:SBID[id].fa}));
@@ -303,17 +386,17 @@ function Hero(){
   const flat=useTransform(scrollY,[0,520],[1,0]);
   const rxs=useTransform([rx,flat],([a,f])=>a*f), rys=useTransform([ry,flat],([a,f])=>a*f);
   const scl=useTransform(scrollY,[0,520],[1,1.04]);
-  return html`<section id="top" className="gutter pt-10 sm:pt-16 pb-10">
+  return html`<section id="lab" className="gutter pt-10 sm:pt-16 pb-10">
     <div className="wrap grid grid-cols-1 gap-12 lg:gap-8 lg:grid-cols-[1.02fr_1fr] items-center">
       <div className="min-w-0">
         <${motion.div} initial=${{opacity:0,y:10}} animate=${{opacity:1,y:0}} transition=${{delay:.1}} className="inline-flex items-center gap-2 rounded-full pl-2.5 pr-3.5 py-1.5 mb-6" style=${{border:'1px solid var(--line)',background:'rgba(124,242,166,.06)'}}>
           <span className="w-2 h-2 rounded-full" style=${{background:'var(--mint)',animation:'pulse 2s infinite'}}></span>
           <span className="mono text-[11.5px] mint font-medium">Sleeper and ESPN leagues sync in 30 seconds</span>
         <//>
-        <h1 className="font-extrabold tracking-[-0.035em] leading-[.98] text-[clamp(42px,6.2vw,80px)]" aria-label="Stop losing weeks you should have won.">
+        <h2 className="font-extrabold tracking-[-0.035em] leading-[.98] text-[clamp(42px,6.2vw,80px)]" aria-label="Stop losing weeks you should have won.">
           ${WORDS.map((w,i)=>html`<${Fragment} key=${i}><span className="kinetic" aria-hidden="true"><${motion.span} style=${{display:'inline-block'}} className=${i>=4?'hl':''}
             initial=${{y:'115%',rotate:4}} animate=${{y:0,rotate:0}} transition=${{delay:.15+i*.09,duration:.8,ease:[.16,1,.3,1]}}>${w}<//></span>${' '}<//>`)}
-        </h1>
+        </h2>
         <${motion.p} initial=${{opacity:0,y:14}} animate=${{opacity:1,y:0}} transition=${{delay:.85}} className="text-[18px] leading-[1.6] max-w-[520px] mt-6" style=${{color:'#B6CBBF'}}>
           Somewhere on your roster or the waiver wire is a better lineup than the one you set. Lineup Lab finds it every week: who to start, who to pick up, and which trades actually help your team.
         <//>
@@ -749,7 +832,7 @@ function App(){
   return html`<${MotionConfig} reducedMotion="user">
     <${Nav} user=${user} onOpenAuth=${open} onLogout=${()=>{}}/>
     <main>
-      <${Hero}/><${Ticker2}/><${Bento} onOpenAuth=${open}/><${Sandbox} onOpenAuth=${open}/><${Edges}/><${Pricing} onOpenAuth=${open}/><${Final} onOpenAuth=${open}/>
+      <${DriveHero}/><${HowItPlays}/><${Hero}/><${Ticker2}/><${Bento} onOpenAuth=${open}/><${Sandbox} onOpenAuth=${open}/><${Edges}/><${Pricing} onOpenAuth=${open}/><${Final} onOpenAuth=${open}/>
     </main>
     <${Footer}/>
   <//>`;

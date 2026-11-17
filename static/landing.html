@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Lineup Lab | Stop losing weeks you should have won</title>
-<meta name="description" content="Lineup Lab turns real NFL data into start/sit calls, matchup and weather numbers, and an optimal lineup for your fantasy league.">
+<title>The Daily Drive | Daily NFL trivia from Lineup Lab</title>
+<meta name="description" content="The Daily Drive: 7 NFL trivia plays a day, built on real NFL data. The rarer your answer, the bigger the play. Free from Lineup Lab, the fantasy football lab that sets your lineup.">
 <meta name="theme-color" content="#040A08">
 <link rel="icon" href="/icons/favicon-32.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -71,6 +71,45 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;heigh
 input[type=range]::-moz-range-thumb{width:12px;height:12px;border-radius:50%;background:#fff;border:5px solid var(--mint);box-shadow:0 0 0 6px rgba(124,242,166,.16)}
 .scroll-x{overflow-x:auto;scrollbar-width:thin;scrollbar-color:#1C5E49 transparent}
 .row{display:grid;align-items:center}
+/* ---------- THE DAILY DRIVE front door (owner 2026-11-17: the launch page leads with the Daily Drive) ---------- */
+.dd-hero{display:grid;gap:44px;align-items:center}
+@media(min-width:1024px){.dd-hero{grid-template-columns:1.05fr 1fr;gap:40px}}
+.dd-pill{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);background:rgba(124,242,166,.06);border-radius:999px;padding:6px 14px 6px 10px;margin-bottom:22px}
+.dd-h1{font-weight:800;letter-spacing:-.035em;line-height:.98;font-size:clamp(42px,5.2vw,74px);margin:0}
+@media(max-width:420px){.dd-bhead .tag{display:none}}
+.dd-lede{font-size:18px;line-height:1.6;max-width:540px;margin:22px 0 0;color:#B6CBBF}
+.dd-ctas{display:flex;flex-wrap:wrap;gap:12px;margin-top:30px}
+.dd-play{font-size:17px;padding:16px 28px}
+.dd-live{display:flex;flex-wrap:wrap;gap:8px 20px;margin-top:26px;font-size:12.5px;color:var(--muted)}
+.dd-live b{color:#fff;font-weight:700}
+.dd-dot{width:8px;height:8px;border-radius:50%;background:var(--mint);display:inline-block;margin-right:8px;animation:pulse 2s infinite;vertical-align:1px}
+.dd-board{border-radius:26px;padding:20px;position:relative;box-shadow:0 30px 80px -30px rgba(0,0,0,.8),0 0 0 1px rgba(124,242,166,.18)}
+.dd-board::before{content:"";position:absolute;inset:-40px;z-index:-1;background:radial-gradient(60% 60% at 50% 45%,rgba(28,94,73,.65),transparent 70%);filter:blur(30px)}
+.dd-bhead{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:14px}
+.dd-q{border-radius:18px;padding:16px 16px 14px;background:linear-gradient(180deg,rgba(124,242,166,.14),rgba(124,242,166,.04));border:1px solid rgba(124,242,166,.35)}
+.dd-q h3{margin:8px 0 10px;font-size:clamp(19px,2.1vw,23px);line-height:1.25;font-weight:800;letter-spacing:-.01em}
+.dd-qmeta{display:flex;justify-content:space-between;gap:10px;font-size:12px;color:var(--muted)}
+.dd-locked{display:grid;gap:6px;margin-top:10px}
+.dd-lk{display:grid;grid-template-columns:54px 1fr auto;gap:10px;align-items:center;padding:9px 12px;border-radius:12px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);font-size:13px;color:var(--muted)}
+.dd-lk .n{font-weight:700;color:#cfe3d7}
+.dd-lk .c{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dd-ladder{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px;margin-top:14px}
+.dd-rung{border-radius:12px;padding:8px 4px;text-align:center;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08)}
+.dd-rung .e{font-size:20px;line-height:1.2;display:block}
+.dd-rung .y{font-size:12px;font-weight:800;color:var(--c)}
+.dd-rung .t{display:block;font-size:9.5px;color:var(--dim);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dd-foot{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:14px;padding-top:14px;border-top:1px dashed rgba(255,255,255,.12);font-size:13px}
+.dd-share{font-size:19px;letter-spacing:2px}
+.dd-top3{display:flex;flex-wrap:wrap;gap:6px 14px;color:var(--muted)}
+.dd-top3 b{color:#fff}
+.dd-steps{display:grid;gap:14px}
+@media(min-width:768px){.dd-steps{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.dd-step{padding:22px;border-radius:22px}
+.dd-step .k{display:inline-grid;place-items:center;width:34px;height:34px;border-radius:10px;background:rgba(124,242,166,.12);color:var(--mint);font-weight:800;margin-bottom:12px}
+.dd-step h3{margin:0 0 6px;font-size:18px;font-weight:800}
+.dd-step p{margin:0;color:#B6CBBF;font-size:14.5px}
+.dd-bridge{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:16px;margin-top:22px;padding:20px 22px;border-radius:22px}
+.dd-bridge p{margin:0;font-size:16px;color:#d9e8df;max-width:640px}
 @keyframes pulse{0%,100%{opacity:.55;transform:scale(1)}50%{opacity:1;transform:scale(1.35)}}
 @keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
 @media (prefers-reduced-motion:reduce){*{animation-duration:.001s!important;animation-iteration-count:1!important;transition-duration:.001s!important}html{scroll-behavior:auto}}
