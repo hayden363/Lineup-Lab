@@ -817,13 +817,11 @@
         ctx.fillStyle = "#6c7690"; ctx.fillRect(-hr * 0.93 - 0.9 * k, hy - 0.4 * k, 1.8 * k, 1.8 * k); ctx.fillRect(hr * 0.93 - 0.9 * k, hy - 0.4 * k, 1.8 * k, 1.8 * k);
       } else {
         if (stripe) { ctx.fillStyle = stripe; ctx.fillRect(-0.9 * k, hy - hr * 0.97, 1.8 * k, hr * 0.55); }
-        ctx.fillStyle = skin; ctx.fillRect(-hr * 0.74, hy - 2.4 * k, hr * 1.48, hr * 1.2);                              // a real face
-        ctx.fillStyle = "#ffffff"; ctx.fillRect(-2.9 * k, hy - 1.1 * k, 2 * k, 1.6 * k); ctx.fillRect(0.9 * k, hy - 1.1 * k, 2 * k, 1.6 * k);   // eyes
-        ctx.fillStyle = "#12151e"; ctx.fillRect(-2.1 * k, hy - 0.9 * k, 1.1 * k, 1.3 * k); ctx.fillRect(1.6 * k, hy - 0.9 * k, 1.1 * k, 1.3 * k);
-        ctx.fillRect(-3 * k, hy - 2.1 * k, 2.1 * k, 0.6 * k); ctx.fillRect(0.9 * k, hy - 2.1 * k, 2.1 * k, 0.6 * k);                         // brows
-        ctx.fillStyle = "#5a2a22"; ctx.fillRect(-1.5 * k, hy + 1.8 * k, 3 * k, 0.8 * k); ctx.fillRect(-2.1 * k, hy + 1.3 * k, 0.7 * k, 0.7 * k); ctx.fillRect(1.4 * k, hy + 1.3 * k, 0.7 * k, 0.7 * k);   // grin
-        ctx.strokeStyle = off ? "#dfe7f5" : "#7b88a6"; ctx.lineWidth = 0.85 * k; ctx.beginPath();                    // light cage: just the chin bar
-        ctx.moveTo(-hr * 0.8, hy + 1 * k); ctx.lineTo(-hr * 0.72, hy + 4.1 * k); ctx.lineTo(hr * 0.72, hy + 4.1 * k); ctx.lineTo(hr * 0.8, hy + 1 * k); ctx.stroke();
+        ctx.fillStyle = skin; ctx.fillRect(-hr * 0.62, hy - 1.6 * k, hr * 1.24, hr * 0.95);                             // plain face, no features
+        ctx.fillStyle = "rgba(0,0,0,0.28)"; ctx.fillRect(-hr * 0.62, hy - 1.6 * k, hr * 1.24, 1.2 * k);                  // shade under the brim
+        ctx.strokeStyle = off ? "#dfe7f5" : "#7b88a6"; ctx.lineWidth = 0.85 * k; ctx.beginPath();                    // simple two-bar facemask
+        ctx.moveTo(-hr * 0.78, hy + 0.9 * k); ctx.lineTo(hr * 0.78, hy + 0.9 * k); ctx.moveTo(-hr * 0.74, hy + 2.9 * k); ctx.lineTo(hr * 0.74, hy + 2.9 * k);
+        ctx.moveTo(0, hy + 0.9 * k); ctx.lineTo(0, hy + 2.9 * k); ctx.stroke();
       }
       ctx.fillStyle = "rgba(255,255,255,0.42)"; ctx.fillRect(-hr * 0.7, hy - hr * 0.78, hr * 0.62, hr * 0.26);
       ctx.restore();
