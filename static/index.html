@@ -78,6 +78,12 @@
 
     <div class="sidebar-nav">
       <div class="nav-active-indicator" id="nav-active-indicator"></div>
+      <!-- The Daily Drive is its own page (/play), not a tab: a plain link, so the tab router ignores it. First in the list (owner
+           2026-11-17); app.js adds .fresh (a soft halo) until today's drive is played. -->
+      <a class="nav-item nav-play" id="nav-play" href="/play">
+        <span class="nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="10" cy="10" rx="7" ry="4.2" transform="rotate(-35 10 10)"/><path d="M7.4 12.6l5.2-5.2M9 8.6l1 1M10.6 10.2l1 1"/></svg></span>
+        <span class="nav-label">The Daily Drive</span>
+      </a>
       <button class="nav-item active" data-tab="myteam">
         <span class="nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2.5l6 2.2v4.4c0 4-2.6 6.6-6 8.4-3.4-1.8-6-4.4-6-8.4V4.7z"/></svg></span>
         <span class="nav-label">My Team</span>
@@ -110,11 +116,6 @@
         <span class="nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h12a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H9l-4 3v-3H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/></svg></span>
         <span class="nav-label">League Chat</span>
       </button>
-      <!-- The Daily Drive is its own page (/play), not a tab: a plain link, so the tab router ignores it. -->
-      <a class="nav-item nav-play" id="nav-play" href="/play">
-        <span class="nav-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="10" cy="10" rx="7" ry="4.2" transform="rotate(-35 10 10)"/><path d="M7.4 12.6l5.2-5.2M9 8.6l1 1M10.6 10.2l1 1"/></svg></span>
-        <span class="nav-label">The Daily Drive</span>
-      </a>
     </div>
 
     <div class="sidebar-middle">

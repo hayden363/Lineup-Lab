@@ -6091,3 +6091,31 @@ if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
     }
   }).observe(document.getElementById("app"), { childList: true, subtree: true });
 }
+
+
+// ---- The Daily Drive link (first in the sidebar): a soft halo until today's drive is played (owner 2026-11-17).
+// Played = this browser finished today's game (the /play page saves dd.played.<date>), or the signed-in account has a
+// saved score for today (so a game finished on a phone counts here too). The Drive's day rolls over at midnight ET.
+function ddTodayEt() {
+  try { return new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date()); }
+  catch (e) { return new Date(Date.now() - 5 * 3600 * 1000).toISOString().slice(0, 10); }
+}
+function ddPlayedHere(day) { try { return !!window.localStorage.getItem("dd.played." + day); } catch (e) { return false; } }
+function markDailyDrive() {
+  const link = document.getElementById("nav-play");
+  if (!link) return;
+  const day = ddTodayEt();
+  const set = (played) => {
+    link.classList.toggle("fresh", !played);
+    link.setAttribute("aria-label", played ? "The Daily Drive (played today)" : "The Daily Drive: today's game is ready");
+  };
+  if (ddPlayedHere(day)) { set(true); return; }
+  set(false);
+  fetch("/api/play/me", { credentials: "same-origin" })
+    .then((r) => (r.ok ? r.json() : null))
+    .then((me) => { if (me && me.history && me.history.some((g) => g.date === day)) set(true); })
+    .catch(() => {});
+}
+markDailyDrive();
+document.addEventListener("visibilitychange", () => { if (!document.hidden) markDailyDrive(); });
+window.addEventListener("pageshow", markDailyDrive);

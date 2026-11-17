@@ -63,14 +63,15 @@ def day_size():
 
 # tier -> (play name, yards, share emoji). Rarer = harder to think of = more yards. Tiers are football plays, from the
 # smallest gain to the biggest. Owner's tier colors (2026-11-16), lowest to highest: grey, light blue, red, purple,
-# yellow, gold. The share emoji follows the same colors. A wrong answer or timeout is a Sack (0 yards, not a tier).
+# yellow, gold. Share emojis (owner 2026-11-17): one football picture per play, so a share row reads like a drive.
+# A wrong answer or timeout is a Sack (0 yards, not a tier).
 TIERS = {
-    6: ("Highlight Reel TD", 100, "\U0001F3C6"),   # gold trophy
-    5: ("Bomb", 85, "\U0001F7E1"),                 # yellow
-    4: ("Chunk Play", 60, "\U0001F7E3"),           # purple
-    3: ("Chain Mover", 30, "\U0001F534"),          # red
-    2: ("Quick Slant", 15, "\U0001F535"),          # (light) blue
-    1: ("Checkdown", 10, "⚪"),                      # grey/white
+    6: ("Highlight Reel TD", 100, "\U0001F3C8"),   # football
+    5: ("Bomb", 85, "\U0001F4A3"),                 # bomb
+    4: ("Chunk Play", 60, "\U0001F680"),           # rocket
+    3: ("Chain Mover", 30, "\u26D3\uFE0F"),        # chains
+    2: ("Quick Slant", 15, "\u26A1"),              # lightning
+    1: ("Checkdown", 10, "\u2705"),                # check mark
 }
 # percentile of the popularity ranking (0 = most popular answer) at which each tier starts, from the
 # easiest tier up: top 20% Checkdown, next 20% Quick Slant, next 20% Chain Mover, next 15% Chunk Play, next 15%
@@ -666,7 +667,7 @@ def check_answer(answers, typed, used=()):
     return {"ok": False, "reason": "not in the answer bank", "suggestions": []}
 
 
-SACKED_EMOJI = "\u2B1B"   # black square (red is now the Starter tier)
+SACKED_EMOJI = "\u274C"   # cross mark (owner 2026-11-17)
 TIER_COLORS = {1: "#b3bccd", 2: "#6fd0ff", 3: "#ff4b55", 4: "#b866ff", 5: "#fff04d", 6: "#ffab1a"}  # same as play.css --t1..--t6
 
 

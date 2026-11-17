@@ -2291,8 +2291,9 @@ def play_stats(request: Request, date: Optional[str] = None, device_id: Optional
 
 @app.get("/api/play/leaderboard", dependencies=[Depends(play_rate_limit)])
 def play_leaderboard(request: Request, date: Optional[str] = None, device_id: Optional[str] = None):
-    """Today's top 5 signed-in players by yards, plus the caller's own rank among ALL players (anonymous included)
-    if they have a saved score. {available, players, top:[{rank, name, yards}], you:{rank, yards}|null}."""
+    """Today's top 10 signed-in players by yards, plus the caller's own rank among ALL players (anonymous included)
+    if they have a saved score. {available, players, top:[{rank, name, yards, emoji}], you:{rank, yards, emoji}|null}.
+    `emoji` is the spoiler-free drive row (which play each answer was)."""
     key, _ = _play_puzzle(date)
     dev_hash = dd_scores.device_hash(device_id)
     user = _play_user(request)
@@ -2303,7 +2304,7 @@ def play_leaderboard(request: Request, date: Optional[str] = None, device_id: Op
     except Exception as e:
         print(f"[play] leaderboard unavailable: {type(e).__name__}")
         return {"available": False}
-    return _clean(dd_scores.leaderboard_body(top, yards, mine["yards"] if mine else None))
+    return _clean(dd_scores.leaderboard_body(top, yards, mine["yards"] if mine else None, mine.get("tiers") if mine else None))
 
 
 @app.get("/api/play/me", dependencies=[Depends(play_rate_limit)])

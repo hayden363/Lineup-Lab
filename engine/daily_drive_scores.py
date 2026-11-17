@@ -206,15 +206,21 @@ def my_history(rows, today, recent=60, spark=14):
     }
 
 
-def leaderboard_body(top, all_yards, my_yards=None):
+def leaderboard_body(top, all_yards, my_yards=None, my_tiers=None):
     """Ranks for the leaderboard. Competition ranking: equal yards share a rank (1, 2, 2, 4). `top` comes from
-    db.drive_leaderboard (signed-in players only); `all_yards` is every score today, anonymous included."""
+    db.drive_leaderboard (signed-in players only); `all_yards` is every score today, anonymous included. Rows that
+    carry their tiers also get the spoiler-free emoji row (which play each answer was, never the answer)."""
     ranked, prev, rank = [], None, 0
     for i, row in enumerate(top):
         if row["yards"] != prev:
             rank, prev = i + 1, row["yards"]
-        ranked.append({"rank": rank, "name": row["name"], "yards": row["yards"]})
+        r = {"rank": rank, "name": row["name"], "yards": row["yards"]}
+        if row.get("tiers"):
+            r["emoji"] = emoji_row(row["tiers"])
+        ranked.append(r)
     you = None
     if my_yards is not None:
         you = {"rank": 1 + sum(1 for y in all_yards if y > my_yards), "yards": int(my_yards)}
+        if my_tiers:
+            you["emoji"] = emoji_row(my_tiers)
     return {"available": True, "players": len(all_yards), "top": ranked, "you": you}

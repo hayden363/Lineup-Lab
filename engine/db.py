@@ -403,13 +403,14 @@ def drive_day_yards(game_date, limit=200000):
         return [int(r["yards"]) for r in c.fetchall()]
 
 
-def drive_leaderboard(game_date, limit=5):
-    """Today's top signed-in players: [{name, yards}] best first, earliest finisher first on a tie. Anonymous
-    (device-only) scores count toward ranks and averages but never appear by name."""
+def drive_leaderboard(game_date, limit=10):
+    """Today's top signed-in players: [{name, yards, tiers}] best first, earliest finisher first on a tie. Anonymous
+    (device-only) scores count toward ranks and averages but never appear by name. `tiers` is the spoiler-free drive
+    (which play each answer was), shown as an emoji row on the board."""
     with _conn() as c:
-        c.execute("SELECT u.username, s.yards FROM daily_drive_scores s JOIN users u ON u.id = s.user_id "
+        c.execute("SELECT u.username, s.yards, s.tiers FROM daily_drive_scores s JOIN users u ON u.id = s.user_id "
                   "WHERE s.game_date = %s ORDER BY s.yards DESC, s.created_at ASC LIMIT %s", (game_date, limit))
-        return [{"name": r["username"], "yards": int(r["yards"])} for r in c.fetchall()]
+        return [{"name": r["username"], "yards": int(r["yards"]), "tiers": [int(t) for t in (r["tiers"] or [])]} for r in c.fetchall()]
 
 
 def drive_my_day(game_date, user_id=None, device_hash=None):

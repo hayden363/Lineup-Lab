@@ -337,7 +337,7 @@ class MatchingTests(unittest.TestCase):
     def test_share_card_is_spoiler_free(self):
         s = dd.share_text("2026-11-16", [6, 3, 0, 4, 2, 5, 3])
         self.assertEqual(s.splitlines()[0], "The Daily Drive · Nov 16 · 320 yds")
-        self.assertEqual(s.splitlines()[1], "\U0001F3C6\U0001F534\u2B1B\U0001F7E3\U0001F535\U0001F7E1\U0001F534")
+        self.assertEqual(s.splitlines()[1], "\U0001F3C8\u26D3\uFE0F\u274C\U0001F680\u26A1\U0001F4A3\u26D3\uFE0F")
         self.assertTrue(s.endswith("/play"))
 
 
@@ -602,7 +602,7 @@ class StatsMathTests(unittest.TestCase):
         h = ds.my_history(rows, "2026-11-16")
         self.assertEqual((h["games"], h["average_yards"], h["best_yards"], h["current_streak"], h["longest_streak"]), (3, 300.0, 500, 3, 3))
         self.assertEqual([g["date"] for g in h["history"]], ["2026-11-16", "2026-11-15", "2026-11-14"])
-        self.assertEqual(h["history"][1]["emoji"], "\U0001F3C6\U0001F7E1\U0001F7E3\U0001F534\U0001F535⚪\u2B1B")
+        self.assertEqual(h["history"][1]["emoji"], "\U0001F3C8\U0001F4A3\U0001F680\u26D3\uFE0F\u26A1\u2705\u274C")
         self.assertEqual(h["spark"], [300, 500, 100])                               # oldest to newest
 
 
@@ -922,7 +922,7 @@ class PlayVisualTest(unittest.TestCase):
 
     def test_tier_colors_emoji_and_leaderboard_wiring(self):
         js, css = self._r("static/play.js"), self._r("static/play.css")
-        for e in ("\u26aa", "\U0001F535", "\U0001F534", "\U0001F7E3", "\U0001F7E1", "\U0001F3C6", "\u2b1b"):
+        for e in ("\u2705", "\u26A1", "\u26D3\uFE0F", "\U0001F680", "\U0001F4A3", "\U0001F3C8", "\u274C"):
             self.assertIn(e, js)
         self.assertNotIn("\U0001F7E5", js)                       # old sacked square
         for t in ("--t1: #b3bccd", "--t2: #6fd0ff", "--t3: #ff4b55", "--t4: #b866ff", "--t5: #fff04d", "--t6: #ffab1a"):
@@ -931,7 +931,7 @@ class PlayVisualTest(unittest.TestCase):
         for name in ("Checkdown", "Quick Slant", "Chain Mover", "Chunk Play", "Bomb", "Highlight Reel TD"):
             self.assertIn(name, js)                               # the six plays
         self.assertIn("DDField.create", js)                       # the field scene lives in play-field.js
-        self.assertLess(len(js) + len(css) + len(self._r("static/play-field.js")), 200_000)              # stays light (raised from 190k for the NFL field + pixel players, owner Nov 16)
+        self.assertLess(len(js) + len(css) + len(self._r("static/play-field.js")), 215_000)              # stays light (190k -> 200k for the NFL field + pixel players Nov 16; 215k for the desktop columns, podium leaderboard and tabbed end screen Nov 17)
 
 
 if __name__ == "__main__":
@@ -975,9 +975,17 @@ class LeaderboardTest(unittest.TestCase):
         self.assertEqual(body["players"], 6)
         self.assertIsNone(ds.leaderboard_body([], [], None)["you"])
 
+    def test_board_rows_carry_the_spoiler_free_drive(self):
+        top = [{"name": "a", "yards": 185, "tiers": [6, 5, 0, 0, 0, 0, 0]}, {"name": "b", "yards": 10}]
+        body = ds.leaderboard_body(top, [185, 10], my_yards=10, my_tiers=[1, 0, 0, 0, 0, 0, 0])
+        self.assertEqual(body["top"][0]["emoji"], ds.emoji_row([6, 5, 0, 0, 0, 0, 0]))
+        self.assertNotIn("emoji", body["top"][1])                          # older rows without tiers still render
+        self.assertEqual(body["you"]["emoji"], ds.emoji_row([1, 0, 0, 0, 0, 0, 0]))
+        self.assertNotIn("name", body["you"])
+
     def test_tier_colors_follow_owner_order(self):
         self.assertEqual([dd.tier_info(t)["emoji"] for t in range(1, 7)],
-                         ["\u26AA", "\U0001F535", "\U0001F534", "\U0001F7E3", "\U0001F7E1", "\U0001F3C6"])
+                         ["\u2705", "\u26A1", "\u26D3\uFE0F", "\U0001F680", "\U0001F4A3", "\U0001F3C8"])
 
 
 class LeaderboardEndpointTest(unittest.TestCase):
@@ -1002,7 +1010,7 @@ class LeaderboardEndpointTest(unittest.TestCase):
              mock.patch.object(s.db, "drive_my_day", return_value={"date": "x", "yards": 300, "tiers": [1]}):
             j = self.client.get("/api/play/leaderboard?device_id=0123456789abcdef0123456789abcdef").json()
         self.assertEqual(j["top"], [{"rank": 1, "name": "hayden", "yards": 455}])
-        self.assertEqual(j["you"], {"rank": 2, "yards": 300})
+        self.assertEqual(j["you"], {"rank": 2, "yards": 300, "emoji": "\u2705"})      # your own drive row, spoiler-free
         s._PLAY_STATS_CACHE.clear()
         with mock.patch.object(s.db, "drive_leaderboard", side_effect=RuntimeError("db down")):
             self.assertEqual(self.client.get("/api/play/leaderboard").json(), {"available": False})
