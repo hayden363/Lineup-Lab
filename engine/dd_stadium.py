@@ -5,11 +5,11 @@ crowd, their real starters' jersey numbers (no names), and this week's real oppo
 
 Rosters change slowly and the owner asked for this to be cheap, so the numbers are built ONCE, offline, into
 engine/dd_stadium.json from data already on disk:
-  - offense skill players (RB, 2 WR, TE): the nflverse depth chart (latest snapshot, rank 1-2)
+  - offense skill players (QB, RB, 2 WR, TE): the nflverse depth chart (latest snapshot, rank 1-2)
   - defense (4 DL, 2 LB, 2 CB, 2 S) and jersey numbers: Sleeper's player list (depth_chart_order 1)
   - offensive line: Sleeper has no line order, so 5 real active linemen (most experienced first)
   - roof, surface, stadium name and the full regular-season schedule: the nflverse schedule
-The QB keeps the question number (owner, 2026-11-16), so the QB's real number is not used on the field.
+The QB wears his real number on a team field (owner, 2026-11-16); the default field keeps the question number.
 
 Rebuild whenever fresher numbers are wanted:
     python -m engine.dd_stadium
@@ -68,7 +68,7 @@ INSIDE = ("NT", "LDT", "RDT", "DT")
 ILB = ("LILB", "RILB", "MLB", "WLB", "SLB")
 OL_POS = ("T", "G", "C", "OL", "OT", "OG")
 FALLBACK = {"dl": ("DE", "DT", "NT", "DL"), "lb": ("LB", "ILB", "OLB"), "cb": ("CB",), "s": ("S", "SS", "FS", "DB"),
-            "rb": ("RB",), "wr": ("WR",), "te": ("TE",)}
+            "qb": ("QB",), "rb": ("RB",), "wr": ("WR",), "te": ("TE",)}
 
 
 def _norm(name):
@@ -86,7 +86,7 @@ def _num(p):
 
 
 def _team_numbers(code, dc, players):
-    """{rb, wr:[2], te, ol:[5], dl:[4], lb:[2], cb:[2], s:[2], bench:[...]} of real jersey numbers for one team."""
+    """{qb, rb, wr:[2], te, ol:[5], dl:[4], lb:[2], cb:[2], s:[2], bench:[...]} of real jersey numbers for one team."""
     sc = SLEEPER_CODE.get(code, code)
     mine = [p for p in players if p.get("team") == sc and p.get("active") and _num(p) is not None]
     by_gsis = {p.get("gsis_id"): p for p in mine if p.get("gsis_id")}
@@ -136,6 +136,7 @@ def _team_numbers(code, dc, players):
                     out.append(n)
         return out
 
+    qb = fill(from_depth("QB", 1), "qb", 1)
     rb = fill(from_depth("RB", 1), "rb", 1)
     wr = fill(from_depth("WR", 2), "wr", 2)
     te = fill(from_depth("TE", 1), "te", 1)
@@ -166,7 +167,7 @@ def _team_numbers(code, dc, players):
         n = take(p)
         if n is not None:
             bench.append(n)
-    return {"rb": rb, "wr": wr, "te": te, "ol": ol, "dl": dl, "lb": lb, "cb": cb, "s": s, "bench": bench}
+    return {"qb": qb, "rb": rb, "wr": wr, "te": te, "ol": ol, "dl": dl, "lb": lb, "cb": cb, "s": s, "bench": bench}
 
 
 def _home_venue(code, sched):
@@ -249,7 +250,7 @@ def stadium(code, today, path=PATH):
         return None
     t, opp = teams[code], opponent(code, today, teams)
     o = teams[opp]
-    keep = ("rb", "wr", "te", "ol")
+    keep = ("qb", "rb", "wr", "te", "ol")
     return {
         "home": {"code": code, "uniform": _uniform(code), "numbers": {k: t[k] for k in keep}, "bench": t["bench"],
                  "roof": t["roof"], "surface": t["surface"], "stadium": t["stadium"]},

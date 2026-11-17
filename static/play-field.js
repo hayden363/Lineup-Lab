@@ -57,12 +57,12 @@
 
   // ------------------------------------------------------------------ formation (x right of center, y past the line of scrimmage, in yards)
   var FORM = [
-    { k: "ol1", t: "ol", o: 1, x: -5, y: 0, n: 70 }, { k: "ol2", t: "ol", o: 1, x: -2.5, y: 0, n: 64 }, { k: "c", t: "ol", o: 1, x: 0, y: 0, n: 52 },
-    { k: "ol4", t: "ol", o: 1, x: 2.5, y: 0, n: 66 }, { k: "ol5", t: "ol", o: 1, x: 5, y: 0, n: 76 },
-    { k: "te", t: "te", o: 1, x: 8, y: 0, n: 85 }, { k: "wrL", t: "wr", o: 1, x: -15, y: 0, n: 11 }, { k: "wrR", t: "wr", o: 1, x: 15, y: 0, n: 18 },
-    { k: "rb", t: "rb", o: 1, x: -4, y: -5, n: 28 }, { k: "qb", t: "qb", o: 1, x: 0, y: -4.6, n: 1 },
-    { k: "dl1", t: "dl", x: -4, y: 1.8, n: 91 }, { k: "dl2", t: "dl", x: -1.4, y: 1.8, n: 97 }, { k: "dl3", t: "dl", x: 1.4, y: 1.8, n: 93 }, { k: "dl4", t: "dl", x: 4, y: 1.8, n: 99 },
-    { k: "lbL", t: "lb", x: -5.5, y: 5, n: 54 }, { k: "lbR", t: "lb", x: 5.5, y: 5, n: 52 },
+    { k: "ol1", t: "ol", o: 1, x: -7.2, y: 0, n: 70 }, { k: "ol2", t: "ol", o: 1, x: -3.6, y: 0, n: 64 }, { k: "c", t: "ol", o: 1, x: 0, y: 0, n: 52 },
+    { k: "ol4", t: "ol", o: 1, x: 3.6, y: 0, n: 66 }, { k: "ol5", t: "ol", o: 1, x: 7.2, y: 0, n: 76 },
+    { k: "te", t: "te", o: 1, x: 11, y: 0, n: 85 }, { k: "wrL", t: "wr", o: 1, x: -15, y: 0, n: 11 }, { k: "wrR", t: "wr", o: 1, x: 15, y: 0, n: 18 },
+    { k: "rb", t: "rb", o: 1, x: -4.6, y: -6, n: 28 }, { k: "qb", t: "qb", o: 1, x: 0, y: -5.2, n: 1 },
+    { k: "dl1", t: "dl", x: -5.8, y: 2.2, n: 91 }, { k: "dl2", t: "dl", x: -2, y: 2.2, n: 97 }, { k: "dl3", t: "dl", x: 2, y: 2.2, n: 93 }, { k: "dl4", t: "dl", x: 5.8, y: 2, n: 99 },
+    { k: "lbL", t: "lb", x: -7, y: 5.8, n: 54 }, { k: "lbR", t: "lb", x: 7, y: 5.8, n: 52 },
     { k: "cbL", t: "cb", x: -15.5, y: 6.5, n: 24 }, { k: "cbR", t: "cb", x: 15.5, y: 6.5, n: 21 },
     { k: "sL", t: "s", x: -8, y: 19, n: 29 }, { k: "sR", t: "s", x: 8, y: 19, n: 31 }
   ];
@@ -178,7 +178,7 @@
       OLX.drawImage(PXC, -1, 0); OLX.drawImage(PXC, 1, 0); OLX.drawImage(PXC, 0, -1); OLX.drawImage(PXC, 0, 1);
       OLX.globalCompositeOperation = "source-in"; OLX.fillStyle = "#05080f"; OLX.fillRect(0, 0, PXN, PXN);
       OLX.globalCompositeOperation = "source-over"; OLX.drawImage(PXC, 0, 0);
-      var wb = e.t === "ol" || e.t === "dl" ? 1.2 : 1, shs = 1 - Math.min(0.5, e.z / 36);                 // ground shadow, snapped to whole pixels
+      var wb = e.t === "ol" || e.t === "dl" ? 1.1 : 1, shs = 1 - Math.min(0.5, e.z / 36);                 // ground shadow, snapped to whole pixels
       ctx.fillStyle = "rgba(0,0,0,0.38)"; ctx.fillRect(Math.round(sx - 7 * k * wb * shs), Math.round(sy - 1.6 * k * shs), Math.round(14 * k * wb * shs), Math.max(2, Math.round(3.4 * k * shs)));
       ctx.imageSmoothingEnabled = false;
       ctx.drawImage(OLC, Math.round(sx - ox * sc), Math.round(sy - oy * sc), PXN * sc, PXN * sc);
@@ -215,9 +215,10 @@
         e.wx = e.ix; e.wy = S.los + e.iy; e.px = e.wx; e.py = e.wy;
         e.z = 0; e.rot = 0; e.sxs = 1; e.sys = 1; idleE(e); e.back = e.team === "o"; e.vy = 0;
       });
-      EK.qb.n = S.number;
+      EK.qb.n = qbN();
       var g = S.ballG; g.x = 0; g.y = S.los + 0.3; g.h = 2; g.held = null; g.sc = 1; g.ang = 0.25;
     }
+    function qbN() { return TU && TU.qbNum != null ? TU.qbNum : S.number; }   // a team field: the QB's real number; default field: the question number
     function idleE(e) { e.run = false; e.aq = 0; e.cq = 0; e.ov = 0; e.amp = 1; e.tapL = 0; e.tapR = 0; e.lvl = 1; e.cr = e.t === "ol" || e.t === "dl" ? 1 : 0; e.arms = e.k === "qb" ? "hold" : e.cr ? "set" : "idle"; }
     function applyIdlePose(e, t) { idleE(e); e.z = e.team === "o" ? 0.35 * Math.sin(t * 2.1 + e.bob) : 0; }
     function need() { if (!raf && !document.hidden) { last = performance.now(); raf = requestAnimationFrame(frame); } }
@@ -288,7 +289,7 @@
 
     // ---------------------------------------------------------------- evaluating a play at time t
     var QP = { x: 0, y: 0 }, CP = { x: 0, y: 0 }, DP = { x: 0, y: 0 };
-    var PAIR = { dl1: -5, dl2: -2.5, dl3: 2.5, dl4: 5 };
+    var PAIR = { dl1: -7.2, dl2: -3.6, dl3: 3.6, dl4: 7.2 };
     function olY(t) { return -0.5 * sstep(t / 0.45) - 0.9 * sstep((t - 0.5) / 2.2); }
     function resetE(e) { e.rx = e.ix; e.ry = e.iy; e.z = 0; e.rot = 0; e.sxs = 1; e.sys = 1; e.arms = "idle"; e.aq = 0; e.cq = 0; e.run = false; e.ov = 0; e.cr = 0; e.amp = 1; e.tapL = 0; e.tapR = 0; e.lvl = 1; }
     function evalPlay(t) {
@@ -739,8 +740,8 @@
     function limb(sx0, sy0, hx, hy, side, k, sleeve, skin, glove, wb) {
       var ex = (sx0 + hx) / 2 + side * 1.7 * k, ey = (sy0 + hy) / 2 + 1.3 * k;
       ctx.lineCap = "square"; ctx.lineJoin = "miter"; ctx.strokeStyle = "rgba(0,0,0,0.55)"; ctx.lineWidth = 5 * k; ctx.beginPath(); ctx.moveTo(sx0, sy0); ctx.lineTo(ex, ey); ctx.lineTo(hx, hy); ctx.stroke();
-      ctx.lineCap = "butt"; ctx.strokeStyle = skin; ctx.lineWidth = 3.2 * k; ctx.beginPath(); ctx.moveTo(ex, ey); ctx.lineTo(hx, hy); ctx.stroke();
-      ctx.strokeStyle = sleeve; ctx.lineWidth = 4.4 * k; ctx.beginPath(); ctx.moveTo(sx0, sy0); ctx.lineTo(ex, ey); ctx.stroke();
+      ctx.lineCap = "butt"; ctx.strokeStyle = skin; ctx.lineWidth = 3.7 * k; ctx.beginPath(); ctx.moveTo(sx0, sy0); ctx.lineTo(ex, ey); ctx.lineTo(hx, hy); ctx.stroke();   // bare arms
+      ctx.strokeStyle = sleeve; ctx.lineWidth = 4.6 * k; ctx.beginPath(); ctx.moveTo(sx0, sy0); ctx.lineTo(lerp(sx0, ex, 0.45), lerp(sy0, ey, 0.45)); ctx.stroke();          // short sleeve
       ctx.fillStyle = "rgba(0,0,0,0.55)"; ctx.fillRect(hx - 2.5 * k, hy - 2.5 * k, 5 * k, 5 * k); ctx.fillStyle = glove; ctx.fillRect(hx - 1.9 * k, hy - 1.9 * k, 3.8 * k, 3.8 * k);
     }
     function leg(sd, lift, spread, hipY, k, wb, pants, sock, front) {
@@ -753,8 +754,8 @@
     }
     function drawSprite(e, sx, sy, k) {
       var off = e.team === "o", qb = e.k === "qb", back = e.back, ty0 = e.t;
-      if (qb) k *= 1.26; else if (ty0 === "wr" || ty0 === "rb" || ty0 === "te") k *= 1.06; else if (ty0 === "ol" || ty0 === "dl") k *= 1.04;
-      var wb = ty0 === "ol" || ty0 === "dl" ? 1.2 : ty0 === "lb" ? 1.1 : ty0 === "wr" || ty0 === "cb" ? 0.94 : 1;
+      if (qb) k *= 1.14; else if (ty0 === "wr" || ty0 === "rb" || ty0 === "te") k *= 1.06; else if (ty0 === "ol" || ty0 === "dl") k *= 1.04;
+      var wb = ty0 === "ol" || ty0 === "dl" ? 1.1 : ty0 === "lb" ? 1.1 : ty0 === "wr" || ty0 === "cb" ? 0.94 : 1;
       var jersey = off ? "#16d27f" : "#eef2f9", trim = off ? "#0a7d4c" : "#9ba7c0", pants = off ? "#eef2f8" : "#303b56", sock = off ? "#16d27f" : "#cfd7e8", num = off ? "#ffffff" : "#16203a", skin = e.skin, glove = off ? "#ffffff" : "#d8e0f0";
       var nstroke = off ? "rgba(0,50,25,0.9)" : "rgba(255,255,255,0.9)", stripe = off ? "#ffffff" : "#33426a";
       if (TU) { var u = off ? TU.o : TU.d; jersey = u.jersey; trim = u.trim; pants = u.pants; sock = u.sock; num = u.num; glove = u.glove; nstroke = u.nstroke; stripe = u.stripe; }
@@ -766,6 +767,10 @@
       var lL = Math.max(0, sw) * 3.6 + e.tapL * 3, lR = Math.max(0, -sw) * 3.6 + e.tapR * 3, spr = e.cr * 1.9;
       leg(-1, lL, spr, hipY, k, wb, pants, sock, !back); leg(1, lR, spr, hipY, k, wb, pants, sock, !back);
       ctx.translate(0, bob + cr * k); if (e.run) ctx.rotate(Math.sin(ph) * 0.045 * e.amp);
+      // arms + gloves (poses: swing, block, hold, throw, catch, carry, wrap, celebrate); from behind they sit behind the torso so the back number shows
+      hands(e);
+      var ax = 7 * wb * k, ay = -17.9 * k;
+      if (back) { limb(-ax, ay, HDS[0] * k, HDS[1] * k, -1, k, jersey, skin, glove, wb); limb(ax, ay, HDS[2] * k, HDS[3] * k, 1, k, jersey, skin, glove, wb); }
       // hips + torso (shoulder pads wider than the waist)
       ctx.fillStyle = pants; ctx.fillRect(-5.8 * wb * k, -11.6 * k, 11.6 * wb * k, 3.4 * k);
       ctx.fillStyle = jersey; ctx.strokeStyle = "rgba(0,0,0,0.55)"; ctx.lineWidth = 1.1 * k; ctx.lineJoin = "miter"; ctx.beginPath();
@@ -775,10 +780,7 @@
       var label = String(e.n), nsz = (qb ? 9.8 : ty0 === "ol" || ty0 === "dl" ? 7.2 : 8) * k, ny = -14.4 * k;
       if (PIX) pixNum(label, 0, ny, num, nstroke);
       else { ctx.font = "800 " + nsz.toFixed(1) + "px " + FONT; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.lineJoin = "round"; ctx.lineWidth = 1.8 * k; ctx.strokeStyle = nstroke; ctx.strokeText(label, 0, ny); ctx.fillStyle = num; ctx.fillText(label, 0, ny); }
-      // arms + gloves (poses: swing, block, hold, throw, catch, carry, wrap, celebrate)
-      hands(e);
-      var ax = 7 * wb * k, ay = -17.9 * k;
-      limb(-ax, ay, HDS[0] * k, HDS[1] * k, -1, k, jersey, skin, glove, wb); limb(ax, ay, HDS[2] * k, HDS[3] * k, 1, k, jersey, skin, glove, wb);
+      if (!back) { limb(-ax, ay, HDS[0] * k, HDS[1] * k, -1, k, jersey, skin, glove, wb); limb(ax, ay, HDS[2] * k, HDS[3] * k, 1, k, jersey, skin, glove, wb); }
       // hand position on screen (the ball is pinned to it)
       var hxl = HDS[2] * k * e.sxs, hyl = HDS[3] * k * e.sys + (bob + cr * k) * e.sys, cs = e.rot ? Math.cos(e.rot) : 1, sn = e.rot ? Math.sin(e.rot) : 0;
       e.hsx = sx + hxl * cs - hyl * sn; e.hsy = sy - e.z * k + hxl * sn + hyl * cs;
@@ -788,8 +790,9 @@
       ctx.fillRect(ax - 3.8 * k, ay - 2.6 * k, 7.6 * k, 5.4 * k); ctx.strokeRect(ax - 3.8 * k, ay - 2.6 * k, 7.6 * k, 5.4 * k);
       ctx.fillStyle = "rgba(255,255,255,0.28)"; ctx.fillRect(-ax - 3 * k, ay - 1.9 * k, 5 * k, 1.2 * k); ctx.fillRect(ax - 3 * k, ay - 1.9 * k, 5 * k, 1.2 * k);
       // neck roll + helmet (a squared-off shell with highlight, stripe, facemask when facing us)
-      ctx.fillStyle = "#171b27"; ctx.fillRect(-3.6 * k, -21.6 * k, 7.2 * k, 2.2 * k);
-      var hy = -25.3 * k, hr = 5.8 * k;
+      ctx.fillStyle = skin; ctx.fillRect(-2.5 * k, -22.6 * k, 5 * k, 3.2 * k);                                     // neck
+      ctx.fillStyle = "#171b27"; ctx.fillRect(-3.6 * k, -20.4 * k, 7.2 * k, 1.2 * k);                                // collar
+      var hy = -26.2 * k, hr = 5.8 * k;
       ctx.save(); ctx.translate(0, hy); ctx.scale(hr, hr * 0.97); ctx.fillStyle = off ? HG[0] : HG[1]; roundRect(-1, -1, 2, 2, 0.3); ctx.fill(); ctx.restore();
       ctx.strokeStyle = "rgba(0,0,0,0.6)"; ctx.lineWidth = 1.1 * k; roundRect(-hr, hy - hr * 0.97, 2 * hr, 1.94 * hr, hr * 0.3); ctx.stroke();
       if (back) {
@@ -797,11 +800,13 @@
         ctx.fillStyle = "#6c7690"; ctx.fillRect(-hr * 0.93 - 0.9 * k, hy - 0.4 * k, 1.8 * k, 1.8 * k); ctx.fillRect(hr * 0.93 - 0.9 * k, hy - 0.4 * k, 1.8 * k, 1.8 * k);
       } else {
         if (stripe) { ctx.fillStyle = stripe; ctx.fillRect(-0.9 * k, hy - hr * 0.97, 1.8 * k, hr * 0.55); }
-        ctx.fillStyle = skin; ctx.fillRect(-hr * 0.66, hy - 1.4 * k, hr * 1.32, hr * 0.95);
-        ctx.fillStyle = "#12151e"; ctx.fillRect(-2.4 * k, hy + 0.5 * k, 1.5 * k, 1.2 * k); ctx.fillRect(0.9 * k, hy + 0.5 * k, 1.5 * k, 1.2 * k);
-        ctx.strokeStyle = off ? "#dfe7f5" : "#7b88a6"; ctx.lineWidth = 0.95 * k; ctx.beginPath();
-        ctx.moveTo(-hr * 0.78, hy - 0.4 * k); ctx.lineTo(-hr * 0.7, hy + 3.9 * k); ctx.lineTo(hr * 0.7, hy + 3.9 * k); ctx.lineTo(hr * 0.78, hy - 0.4 * k);
-        ctx.moveTo(-hr * 0.78, hy + 0.9 * k); ctx.lineTo(hr * 0.78, hy + 0.9 * k); ctx.moveTo(-hr * 0.74, hy + 2.4 * k); ctx.lineTo(hr * 0.74, hy + 2.4 * k); ctx.moveTo(0, hy - 0.4 * k); ctx.lineTo(0, hy + 3.9 * k); ctx.stroke();
+        ctx.fillStyle = skin; ctx.fillRect(-hr * 0.74, hy - 2.4 * k, hr * 1.48, hr * 1.2);                              // a real face
+        ctx.fillStyle = "#ffffff"; ctx.fillRect(-2.9 * k, hy - 1.1 * k, 2 * k, 1.6 * k); ctx.fillRect(0.9 * k, hy - 1.1 * k, 2 * k, 1.6 * k);   // eyes
+        ctx.fillStyle = "#12151e"; ctx.fillRect(-2.1 * k, hy - 0.9 * k, 1.1 * k, 1.3 * k); ctx.fillRect(1.6 * k, hy - 0.9 * k, 1.1 * k, 1.3 * k);
+        ctx.fillRect(-3 * k, hy - 2.1 * k, 2.1 * k, 0.6 * k); ctx.fillRect(0.9 * k, hy - 2.1 * k, 2.1 * k, 0.6 * k);                         // brows
+        ctx.fillStyle = "#5a2a22"; ctx.fillRect(-1.5 * k, hy + 1.8 * k, 3 * k, 0.8 * k); ctx.fillRect(-2.1 * k, hy + 1.3 * k, 0.7 * k, 0.7 * k); ctx.fillRect(1.4 * k, hy + 1.3 * k, 0.7 * k, 0.7 * k);   // grin
+        ctx.strokeStyle = off ? "#dfe7f5" : "#7b88a6"; ctx.lineWidth = 0.85 * k; ctx.beginPath();                    // light cage: just the chin bar
+        ctx.moveTo(-hr * 0.8, hy + 1 * k); ctx.lineTo(-hr * 0.72, hy + 4.1 * k); ctx.lineTo(hr * 0.72, hy + 4.1 * k); ctx.lineTo(hr * 0.8, hy + 1 * k); ctx.stroke();
       }
       ctx.fillStyle = "rgba(255,255,255,0.42)"; ctx.fillRect(-hr * 0.7, hy - hr * 0.78, hr * 0.62, hr * 0.26);
       ctx.restore();
@@ -834,7 +839,7 @@
     function drawBall(owner) {
       var g = S.ballG; pj(g.x, g.y); var k = ksz(PR.s), sx = PR.x, sy = PR.y, fl = !owner, hh, bx, by;
       if (fl) { ctx.fillStyle = "rgba(0,0,0," + (0.42 - Math.min(0.25, g.h / 500)).toFixed(2) + ")"; ctx.beginPath(); ctx.ellipse(sx, sy, 5 * k * (1 + g.h / 260), 1.9 * k * (1 + g.h / 400), 0, 0, TAU); ctx.fill(); }
-      hh = (owner ? g.h + owner.z : g.h) * k * (owner ? (owner.k === "qb" ? 1.26 : 1.06) : 1);
+      hh = (owner ? g.h + owner.z : g.h) * k * (owner ? (owner.k === "qb" ? 1.14 : 1.06) : 1);
       bx = sx; by = sy - hh;
       if (owner) { bx = owner.hsx + 0.5 * k; by = owner.hsy - 0.4 * k; if (g.held === "qb" && P && !P.sack) { bx = owner.hsx; by = owner.hsy - 0.6 * k; } }
       else {
@@ -1066,7 +1071,7 @@
     function setReduced() { return !!(reducedQ && reducedQ.matches); }
     var api = {
       resize: layout,
-      setNumber: function (n) { S.number = n; EK.qb.n = n; need(); },
+      setNumber: function (n) { S.number = n; EK.qb.n = qbN(); need(); },
       setAmbient: function (on) { S.ambient = !!on; need(); },
       setRuler: function (on) { S.ruler = !!on; need(); },
       // Where the line of scrimmage sits on screen (fraction of the height) and whether the yard ruler shows.
@@ -1110,7 +1115,7 @@
       flash: flash, shake: shake,
       tdCelebrate: function () { flash("#ffab1a", 0.4, 0.8); },
       // The favorite-team stadium (from /api/play/stadium): {home: {code, uniform, numbers, bench, roof, surface, stadium},
-      // away: {code, uniform, numbers, bench}}. null puts the Lineup Lab default field back. The QB keeps the question number.
+      // away: {code, uniform, numbers, bench}}. null puts the Lineup Lab default field back. The QB wears his real number.
       setTeam: function (sk) {
         var themes = window.TEAM_THEMES || {};
         if (!sk || !sk.home || !sk.away || !sk.home.uniform || !sk.away.uniform) {
@@ -1126,14 +1131,14 @@
             d: { jersey: "#f1f3f7", trim: au.jersey, pants: au.pants, sock: au.jersey, num: awayNum, glove: "#e8ecf4", nstroke: "rgba(255,255,255,0.9)", stripe: au.stripe, polo: mix(au.jersey, "#000000", 0.2) },
             ez: hu.jersey, ezBand: hu.trim, ezText: hu.num, ezStroke: mix(hu.jersey, "#000000", 0.55),
             turf: sk.home.surface === "grass" ? ["#17652f", "#11532a"] : ["#0e6a3c", "#0d6238"],
-            crowd: null, rail: th.primary || hu.trim, railAway: ta.primary || au.jersey, benchH: sk.home.bench || [], benchA: sk.away.bench || [] };
+            qbNum: sk.home.numbers && sk.home.numbers.qb && sk.home.numbers.qb[0] != null ? sk.home.numbers.qb[0] : null, crowd: null, rail: th.primary || hu.trim, railAway: ta.primary || au.jersey, benchH: sk.home.bench || [], benchA: sk.away.bench || [] };
           TU.crowd = [mix(hu.jersey, "#ffffff", 0.28), mix(hu.trim, "#ffffff", 0.1), mix(au.jersey, "#ffffff", 0.2)].map(function (c) { return c.slice(4, -1); });
           helmetGrads([shell(hu.helmet), shell(au.helmet)]);
           [["o", sk.home.numbers || {}], ["d", sk.away.numbers || {}]].forEach(function (pair) {
             SLOTS[pair[0]].forEach(function (s) { var arr = pair[1][s[1]], n = arr && arr[s[2]]; EK[s[0]].n = n != null ? n : FORM.filter(function (f) { return f.k === s[0]; })[0].n; });
           });
         }
-        EK.qb.n = S.number;
+        EK.qb.n = qbN();
         if (W) bake();
         need();
       },

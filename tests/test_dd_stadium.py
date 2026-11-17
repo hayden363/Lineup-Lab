@@ -21,11 +21,11 @@ class SnapshotTests(unittest.TestCase):
     def test_every_team_has_a_full_lineup_of_real_numbers(self):
         teams = st.load()["teams"]
         self.assertEqual(sorted(teams), st.TEAMS)
-        need = {"rb": 1, "wr": 2, "te": 1, "ol": 5, "dl": 4, "lb": 2, "cb": 2, "s": 2}
+        need = {"qb": 1, "rb": 1, "wr": 2, "te": 1, "ol": 5, "dl": 4, "lb": 2, "cb": 2, "s": 2}
         for code, t in teams.items():
             for k, n in need.items():
                 self.assertEqual(len(t[k]), n, f"{code} {k}")
-            offense = t["rb"] + t["wr"] + t["te"] + t["ol"]
+            offense = t["qb"] + t["rb"] + t["wr"] + t["te"] + t["ol"]
             defense = t["dl"] + t["lb"] + t["cb"] + t["s"]
             for nums in (offense, defense):
                 self.assertEqual(len(nums), len(set(nums)), f"{code} repeats a number")
@@ -65,7 +65,7 @@ class OpponentTests(unittest.TestCase):
     def test_stadium_shape(self):
         sk = st.stadium("sea", datetime.date(2026, 11, 16))
         self.assertEqual(sk["home"]["code"], "SEA")
-        self.assertEqual(set(sk["home"]["numbers"]), {"rb", "wr", "te", "ol"})      # the QB wears the question number
+        self.assertEqual(set(sk["home"]["numbers"]), {"qb", "rb", "wr", "te", "ol"})  # the QB wears his real number
         self.assertEqual(set(sk["away"]["numbers"]), {"dl", "lb", "cb", "s"})
         self.assertNotEqual(sk["away"]["code"], "SEA")
         self.assertNotIn("name", json.dumps(sk["home"]["numbers"]))                   # numbers only, no names
@@ -115,7 +115,7 @@ class ClientTests(unittest.TestCase):
         self.assertIn("preview=1", js)
         field = open(os.path.join(ROOT, "static", "play-field.js"), encoding="utf-8").read()
         self.assertIn("setTeam: function", field)
-        self.assertIn("EK.qb.n = S.number", field)                                     # the QB keeps the question number
+        self.assertIn("TU && TU.qbNum != null ? TU.qbNum : S.number", field)            # team field: real QB number; default: question number
 
 
 if __name__ == "__main__":
