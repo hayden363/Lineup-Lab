@@ -3,8 +3,20 @@ plus the explosive-play thresholds in the season-level *_advanced() functions.
 
 What is pinned:
   * Real-data anchors (cached 2025 play-by-play and weekly stats, skipped if a
-    parquet is absent): mean EPA per play times play count equals the weekly
-    rushing_epa / receiving_epa column on every RB/WR/TE player-week.
+    parquet is absent), mean EPA per play times play count vs the weekly
+    rushing_epa / receiving_epa column on RB/WR/TE player-weeks, in two tiers:
+      - tracks (always run): the joined row count is exact and the two agree
+        with Pearson r >= 0.99. A mean-instead-of-sum bug gives r 0.66-0.75.
+      - exact (|diff| <= 0.01 on every row): only when both files come from
+        the same nflfastR EPA model, else skipped with the reason. On
+        2026-11-17 nflverse rebuilt every season's play_by_play with
+        nflfastR PR #625 (new field goal model, regulation WP, raw data
+        fixes) but left stats_player_week_2025 on its Aug 13 build: the pbp
+        epa column changed on 44,913 of 48,771 plays (nothing else changed),
+        totals shrank ~17% (slope 0.82-0.83, r 0.996-0.997), max diff 3.9.
+        The old pbp matched to 0.0, so weekly_epa's aggregation is right.
+        "Same model" = at least half the rows match to 0.01; when nflverse
+        rebuilds stats_player the exact tier comes back on its own.
   * The output shape: MultiIndex (player_id, week), Series named "epa", only
     rows whose play_type matches the position.
   * The explosive thresholds: pass >= 20 yards (QB, WR/TE), run >= 10 yards.
@@ -28,6 +40,10 @@ _CACHE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))
 PBP_PATH = os.path.join(_CACHE, "pbp_2025.parquet")
 WEEKLY_PATH = os.path.join(_CACHE, "weekly_2025.parquet")
 
+EXACT_TOL = 0.01         # same EPA model: totals agree to rounding
+SAME_MODEL_SHARE = 0.5   # at least this share of rows exact => same nflfastR build
+TRACK_MIN_R = 0.99       # measured 0.996-0.997 across a model change; mean-vs-sum bug gives 0.66-0.75
+
 
 @unittest.skipUnless(
     os.path.exists(PBP_PATH) and os.path.exists(WEEKLY_PATH),
@@ -39,7 +55,7 @@ class RealDataAnchors(unittest.TestCase):
         cls.pbp = pd.read_parquet(PBP_PATH)
         cls.weekly = pd.read_parquet(WEEKLY_PATH)
 
-    def _anchor(self, position, col, play_type, weekly_col, expected_rows):
+    def _joined(self, position, col, play_type, weekly_col, expected_rows):
         epa = weekly_epa(self.pbp, position).reset_index()
         counts = (
             self.pbp[self.pbp["play_type"] == play_type]
@@ -52,17 +68,40 @@ class RealDataAnchors(unittest.TestCase):
         joined = merged.merge(official, on=["player_id", "week"])
         # row count first, so a silent join shrink fails
         self.assertEqual(len(joined), expected_rows)
-        off = (joined["total"] - joined[weekly_col]).abs()
-        self.assertTrue((off <= 0.01).all(), f"max difference {off.max():.4f}")
+        return joined, (joined["total"] - joined[weekly_col]).abs()
+
+    def _tracks(self, position, col, play_type, weekly_col, expected_rows):
+        joined, _ = self._joined(position, col, play_type, weekly_col, expected_rows)
+        r = joined["total"].corr(joined[weekly_col])
+        self.assertGreaterEqual(r, TRACK_MIN_R, f"pbp totals vs {weekly_col}: r={r:.4f}")
+
+    def _exact(self, position, col, play_type, weekly_col, expected_rows):
+        _, off = self._joined(position, col, play_type, weekly_col, expected_rows)
+        share = (off <= EXACT_TOL).mean()
+        if share < SAME_MODEL_SHARE:
+            self.skipTest(
+                f"pbp and stats_player use different nflfastR EPA models "
+                f"({share:.0%} of rows within {EXACT_TOL}, max diff {off.max():.2f}); see module docstring"
+            )
+        self.assertTrue((off <= EXACT_TOL).all(), f"max difference {off.max():.4f}")
+
+    def test_rb_tracks_rushing_epa(self):
+        self._tracks("RB", "rusher_player_id", "run", "rushing_epa", 1332)
+
+    def test_wr_tracks_receiving_epa(self):
+        self._tracks("WR", "receiver_player_id", "pass", "receiving_epa", 2200)
+
+    def test_te_tracks_receiving_epa(self):
+        self._tracks("TE", "receiver_player_id", "pass", "receiving_epa", 1172)
 
     def test_rb_matches_rushing_epa(self):
-        self._anchor("RB", "rusher_player_id", "run", "rushing_epa", 1332)
+        self._exact("RB", "rusher_player_id", "run", "rushing_epa", 1332)
 
     def test_wr_matches_receiving_epa(self):
-        self._anchor("WR", "receiver_player_id", "pass", "receiving_epa", 2200)
+        self._exact("WR", "receiver_player_id", "pass", "receiving_epa", 2200)
 
     def test_te_matches_receiving_epa(self):
-        self._anchor("TE", "receiver_player_id", "pass", "receiving_epa", 1172)
+        self._exact("TE", "receiver_player_id", "pass", "receiving_epa", 1172)
 
 
 def _plays(rows):
