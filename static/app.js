@@ -2966,7 +2966,9 @@ async function runStartSit() {
     // the hero badge, the "why" bullets and the verdict card must agree (they
     // could disagree before — the hero used the lens-ranked first player).
     const decided = data.decision && valid.find((p) => p.player_id === data.decision.pick);
-    const top = decided || valid[0];
+    // Without a decision, the server's own `recommended` flag picks the hero; when nobody in the comparison plays
+    // (byes, Out) none is set, so no one gets a "Start Recommendation" badge or a "Why this call" write-up.
+    const top = decided || valid.find((p) => p.recommended);
     const errors = sorted.filter((p) => p.error)
       .map((p) => `<div class="result-card"><span>${esc(p.player_id)}: ${esc(p.error)}</span></div>`).join("");
 
