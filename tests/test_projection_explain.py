@@ -2,7 +2,7 @@
 
 import unittest
 
-from engine import profile, tools, waivers
+from engine import data, profile, tools, waivers
 
 
 class ExplainTests(unittest.TestCase):
@@ -11,7 +11,17 @@ class ExplainTests(unittest.TestCase):
         cls.bundle = waivers.load_bundle()
         cls.slate = waivers.target_week(cls.bundle["schedule"])
         cls.pool, _ = waivers.cached_pool(None, cls.bundle)
-        cls.byes = {t for t, w in profile.bye_weeks(cls.bundle["schedule"]).items() if w == cls.slate}
+        # "On bye" uses the engine's own rule (tools._bye_before_next_game), not just bye == slate week. From
+        # Sunday to Tuesday the app's week is one most teams already played, so a team whose bye is NEXT week
+        # (next game two weeks out) is also idle: on Tue Nov 17 the "healthy" WR came from SEA (bye wk 11,
+        # next game wk 12, slate wk 10) and projection_explain correctly called him out on a bye.
+        sched = cls.bundle["schedule"]
+        byes = profile.bye_weeks(sched)
+
+        def idle(team):
+            _, next_wk = data.next_opponent(sched, team)
+            return next_wk is None or tools._bye_before_next_game(byes.get(team), cls.slate, next_wk) is not None
+        cls.byes = {t for t in set(sched["home_team"]) | set(sched["away_team"]) if idle(t)}
 
     def healthy_wr(self, on_bye):
         wr = self.pool[(self.pool["position"] == "WR") & self.pool["injury_status"].isna() & (self.pool["games"] >= 4)]
