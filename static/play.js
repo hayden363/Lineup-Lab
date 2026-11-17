@@ -216,10 +216,24 @@
   var hud = h("div", { "class": "dd-hud" },
     h("div", { "class": "sb sb-l" }, h("small", null, "YARDS"), hudYards),
     h("div", { "class": "hud-c" }, pipsBox, hudLbl, downChip),
-    h("div", { "class": "sb sb-r" }, h("small", null, "DRIVE"), hudPos, hudTd),
-    h("a", { "class": "hud-back", href: "/" }, "‹ Lab"));
+    h("div", { "class": "sb sb-r" }, h("small", null, "DRIVE"), hudPos, hudTd));
   var promptSlot = h("div", { "class": "dd-prompt" }), resSlot = h("div", { "class": "dd-resslot" }), scroll = h("div", { "class": "dd-scroll" });
   var stage = h("div", { "class": "dd-stage" }, cv, hud, promptSlot, resSlot, scroll);
+
+  // ---------------------------------------------------------------- the Lineup Lab top bar (same brand and buttons as the rest of the site)
+  var navStreak = h("span", { "class": "ll-streak" }), navAuth = h("div", { "class": "ll-auth" });
+  var nav = h("header", { "class": "ll-nav" },
+    h("a", { "class": "ll-brand", href: "/", "aria-label": "Lineup Lab home" }, h("img", { src: "/icons/icon-192.png", alt: "", width: 30, height: 30 }), h("span", null, "Lineup Lab")),
+    h("span", { "class": "ll-here", "aria-current": "page" }, "The Daily Drive"),
+    h("div", { "class": "ll-right" }, navStreak, navAuth));
+  function setNavAuth(signedIn) {      // true: back into the app; false: the same sign-in buttons as the landing page; null: unknown yet
+    navAuth.textContent = "";
+    if (signedIn === true) navAuth.appendChild(h("a", { "class": "ll-btn", href: "/" }, "Open app"));
+    else if (signedIn === false) {
+      navAuth.appendChild(h("a", { "class": "ll-btn ghost", href: "/?auth=login" }, "Log in"));
+      navAuth.appendChild(h("a", { "class": "ll-btn", href: "/?auth=signup" }, "Start free"));
+    }
+  }
 
   // ---------------------------------------------------------------- today's leaderboard + brand (side panels on desktop, a card in the page on phones)
   var lbBoxes = [], lbData = null;
@@ -227,8 +241,6 @@
     var box = h("div", { "class": "dd-card dd-lb", style: "display:none" }); box.setAttribute("data-aside", aside ? "1" : "");
     lbBoxes.push(box); lbDraw(box); return box;
   }
-  var brandBox = h("div", { "class": "dd-card dd-brandbox" }, h("img", { src: "/icons/icon-192.png", alt: "", width: 44, height: 44 }),
-    h("b", null, "Lineup Lab"), h("span", null, "The Daily Drive"), h("span", null, "Know more. Go further."));
   function boardRow(rank, name, yards, me) {
     return h("div", { "class": "dd-lb-row" + (me ? " me" : "") }, h("span", { "class": "r" }, String(rank)), h("span", null, name), h("span", { "class": "y" }, String(yards)));
   }
@@ -286,8 +298,8 @@
     });
     return h("div", { "class": "dd-card dd-tiers" }, h("h2", null, "The playbook (yards = rarity)"), list, h("p", { "class": "dd-small dd-sackline" }, "Wrong answer or out of time: a sack, 0 yards."));
   }
-  var asideL = h("aside", { "class": "dd-aside l" }, tierLegend()), asideR = h("aside", { "class": "dd-aside r" }, lbNew(true), brandBox);
-  root.textContent = ""; root.appendChild(asideL); root.appendChild(stage); root.appendChild(asideR);
+  var asideL = h("aside", { "class": "dd-aside l" }, tierLegend()), asideR = h("aside", { "class": "dd-aside r" }, lbNew(true));
+  root.textContent = ""; root.appendChild(nav); root.appendChild(asideL); root.appendChild(stage); root.appendChild(asideR);
 
   // ---------------------------------------------------------------- stage helpers
   function mount(top) {
@@ -414,8 +426,9 @@
   }
 
   // ---------------------------------------------------------------- shared pieces
-  function topBar(extra) {
-    return h("div", { "class": "dd-top" }, h("a", { "class": "dd-backlink", href: "/" }, "\u2190 Lineup Lab"), h("div", { "class": "dd-brand" }, "The Daily ", h("span", null, "Drive")), extra || null);
+  function topBar(extra) {             // page chips (the streak) live in the Lineup Lab top bar now
+    navStreak.textContent = ""; if (extra) navStreak.appendChild(extra);
+    return null;
   }
   function pageFoot() { return h("div", { "class": "dd-foot" }, h("a", { href: "/" }, "Built by Lineup Lab: real NFL data for your fantasy team")); }
   function clock() {
@@ -875,7 +888,6 @@
   // their team's field (real starters' numbers, this week's real opponent). Anyone else keeps the Lineup Lab field. Any failure is cosmetic.
   // The demo page previews a team without an account: /play?demo=1&team=SEA (or ddDemo.team("GB")).
   function loadStadium(previewCode) {
-    if (!field.setTeam) return Promise.resolve(null);
     var url;
     if (previewCode != null) url = "/api/play/stadium?preview=1&team=" + encodeURIComponent(previewCode);
     else {
@@ -884,7 +896,8 @@
       url = "/api/play/stadium" + (/^[A-Z]{2,3}$/.test(code) ? "?team=" + code : "");
     }
     return api(url).then(function (r) {
-      if (r && (r.signed_in || previewCode != null)) field.setTeam(r.stadium || null);
+      if (previewCode == null) setNavAuth(r ? !!r.signed_in : null);
+      if (field.setTeam && r && (r.signed_in || previewCode != null)) field.setTeam(r.stadium || null);
       return r;
     }).catch(function () { return null; });
   }

@@ -870,8 +870,9 @@ class NavigationAndMigrationTests(unittest.TestCase):
 
     def test_play_page_has_back_link_and_no_inline_js(self):
         html, js = self._read("static/play.html"), self._read("static/play.js")
-        self.assertRegex(js, r'"dd-backlink", href: "/" \}, "[^"]*Lineup Lab"')   # back link, built by play.js on every page
-        self.assertRegex(js, r'"hud-back", href: "/" \}, "[^"]*Lab"')          # and the small one in the in-game HUD
+        self.assertIn('"ll-brand", href: "/"', js)                              # the Lineup Lab top bar links home on every screen
+        self.assertIn('"Open app"', js)                                         # signed in: back into the app
+        self.assertIn('href: "/?auth=login"', js)                               # signed out: the landing page's sign-in buttons
         self.assertIn('src="/play-field.js"', html)
 
     def test_migration_has_the_unique_constraints_and_rls(self):
@@ -899,8 +900,10 @@ class PlayVisualTest(unittest.TestCase):
             self.assertEqual(inner.strip(), "")
         self.assertIn('src="/team-themes.js"', html)
         self.assertIn('id="dd-live"', html)                       # aria-live region for results
-        for f in ("static/play.js", "static/play-field.js", "static/play.css", "static/play.html"):
+        for f in ("static/play.js", "static/play-field.js", "static/play.css"):
             self.assertNotRegex(self._r(f), r"https?://(?!www\.w3\.org)")   # no CDNs or remote assets
+        # the page loads only the app's own Google Fonts (same as index.html; the CSP allows exactly these hosts)
+        self.assertNotRegex(html, r"https?://(?!fonts\.googleapis\.com|fonts\.gstatic\.com)")
 
     def test_reduced_motion_is_handled_in_css_and_js(self):
         self.assertIn("prefers-reduced-motion: reduce", self._r("static/play.css"))

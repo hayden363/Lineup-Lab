@@ -965,7 +965,13 @@
         ctx.fillStyle = P.color; ctx.fillText(lab, x + 42 * u + w1, yy + hgt / 2 + 0.5); ctx.globalAlpha = 1;
       }
     }
+    function fitAy() {     // in play, near your own goal line: slide the line of scrimmage down so the field reaches the answer bar (no empty band)
+      var base = H * L.ayF; if (!S.ruler) { L.ay = base; return; }
+      var zEnd = Z0 - 12 - S.cam, below = zEnd > 12 ? L.ppy * Z0 * Math.log(Z0 / zEnd) : 1e9;
+      L.ay = Math.max(base, Math.min(H * 0.74, H - 92 * L.u - below));
+    }
     function render() {
+      fitAy();
       var t = S.time, g = S.ballG, z = S.zoom, sk = S.shake, ox = 0, oy = 0;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       if (sk) { var age = (t - sk.t0) / sk.dur; if (age >= 1) S.shake = null; else { var m = sk.a * (1 - age) * L.u; ox = (Math.sin(t * 91) + Math.sin(t * 57)) * 0.5 * m; oy = Math.cos(t * 83) * m; } }
