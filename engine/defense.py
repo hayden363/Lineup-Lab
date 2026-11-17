@@ -85,7 +85,31 @@ def build_defense_profile(pbp):
     ypt = thrown.groupby("defteam").apply(lambda d: d["yards_gained"].sum() / max(len(d), 1))
     pass_profile["ypt_allowed"] = ypt
 
-    return pass_profile.join(run_profile, how="outer")
+    out = pass_profile.join(run_profile, how="outer")
+    out["qb_rush_ypg_allowed"] = qb_rush_allowed(pbp).reindex(out.index)
+    return out
+
+
+QB_RUSH_SHRINK_GAMES = 4.0   # pseudo-games of league-average QB rushing mixed into each defense (small, noisy samples)
+QB_MIN_DROPBACKS = 10        # a "QB" here = anyone with 10+ dropbacks in the data (keeps trick-play passers out)
+
+
+def qb_rush_allowed(pbp):
+    """QB rushing yards per game a defense allows: scrambles and designed QB runs (nflverse records both as run plays),
+    QBs identified from the same play-by-play as passers. Owner 2026-11-17: a QB's rushing should be graded against how
+    a defense handles QB runs, not its yards per carry against running backs. The backtest
+    (analysis/qb_matchup_backtest.py) found this the best way to grade it. Shrunk toward the league mean with
+    QB_RUSH_SHRINK_GAMES pseudo-games, since a few games of QB runs are noisy."""
+    if pbp is None or not len(pbp) or "rusher_player_id" not in pbp.columns:
+        return pd.Series(dtype=float)
+    drop = pbp[pbp["qb_dropback"] == 1] if "qb_dropback" in pbp.columns else pbp[pbp["play_type"] == "pass"]
+    counts = drop["passer_player_id"].value_counts()
+    qbs = set(counts[counts >= QB_MIN_DROPBACKS].index)
+    games = pbp.groupby("defteam")["week"].nunique()
+    runs = pbp[(pbp["play_type"] == "run") & pbp["rusher_player_id"].isin(qbs)]
+    yds = runs.groupby("defteam")["yards_gained"].sum().reindex(games.index).fillna(0.0)
+    league = yds.sum() / games.sum() if games.sum() else 0.0
+    return (yds + QB_RUSH_SHRINK_GAMES * league) / (games + QB_RUSH_SHRINK_GAMES)
 
 
 def _team_week_opponent_map(schedule):
@@ -199,7 +223,7 @@ METRIC_TO_DEFENSE = {
         "td_rate": "pass_td_rate_allowed",
         "int_rate": "int_rate_forced",
         "sack_rate": "sack_rate_generated",
-        "rush_yards_per_game": "ypc_allowed",
+        "rush_yards_per_game": "qb_rush_ypg_allowed",   # QB runs allowed, not RB yards per carry (owner 2026-11-17, backtested)
         "dakota": "pass_epa_cpoe_allowed",
     },
     "RB": {
@@ -249,7 +273,24 @@ def league_average_composite(position, factors):
     return round(sum(vals) / len(vals), 3) if vals else 1.0
 
 
-def composite_multiplier(position, opponent, factors):
+# How much of the matchup composite reaches PROJ, per position: factor = 1 + strength * (composite - 1).
+# QB 0.35 from analysis/qb_matchup_backtest.py (2021-2025, walk-forward): the full-strength QB factor swung projections
+# about +/-14% and made the head-to-head probabilities worse than no matchup at all; ~1/3 strength gave the lowest
+# pairwise log loss, picked on 2022-23 and confirmed on held-out 2024-25. Positions not listed keep full strength.
+MATCHUP_STRENGTH = {"QB": 0.35}
+
+
+def composite_multiplier(position, opponent, factors, full=False):
+    """The matchup multiplier PROJ uses: the raw composite (composite_raw) scaled by MATCHUP_STRENGTH for the
+    position. full=True returns the raw composite (used for the soft/tough label, which describes the defense)."""
+    raw = composite_raw(position, opponent, factors)
+    if full:
+        return raw
+    k = MATCHUP_STRENGTH.get(position, 1.0)
+    return round(float(1 + k * (raw - 1)), 3)
+
+
+def composite_raw(position, opponent, factors):
     """Single blended matchup multiplier for PROJ: a weight-magnitude
     weighted average of every metric's real defensive factor. Metrics with
     no defensive analog count as neutral (1.0) but still weigh into the

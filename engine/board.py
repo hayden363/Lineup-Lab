@@ -718,7 +718,9 @@ def project_vs(board, position, opp, bundle=None, season=None, scoring=None):
     board = board.copy()
     board["opponent"] = opp
     board["matchup_factor"] = factor
-    board["matchup_tag"] = matchup_tag(factor)
+    # the soft/tough label describes the defense, so it reads the full-strength composite (PROJ uses the scaled one)
+    raw = defense_layer.composite_multiplier(position, opp, bundle["defense_factors"], full=True) if opp in bundle["defense_factors"].index else 1.0
+    board["matchup_tag"] = matchup_tag(raw)
     board["injury_factor"] = injury_mult
     board["injury_sample_n"] = injury_n
     board["PROJ"] = (_rate(board) * form_mult * factor * injury_mult).round(1)

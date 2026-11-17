@@ -49,7 +49,7 @@ class CompositeSignGuard(unittest.TestCase):
         factors = pd.DataFrame(
             {"int_rate_forced": [int_factor], "ypa_allowed": [1.0]}, index=["DEF"])
         with mock.patch.dict(defense.WEIGHTS, self.WEIGHTS, clear=True):
-            return composite_multiplier("QB", "DEF", factors)
+            return composite_multiplier("QB", "DEF", factors, full=True)   # the direction rule lives in the raw composite
 
     def test_defense_forcing_more_ints_is_a_tougher_matchup(self):
         # effective factors [2 - 1.3, 1.0] -> (10*0.7 + 10*1.0) / 20
