@@ -325,9 +325,15 @@ def _defense_proj(row, def_board, bundle, team_code, week=None):
     """PROJ for a DEF/ST: shrunk rate adjusted by the betting market's implied total for the offense
     it faces (engine/kdef_model.py). Falls back to neutral when there's no schedule/line."""
     ctx = None
+    sack = None
     if bundle is not None:
         ctx = kdef_model.game_context(bundle["schedule"], defense_scoring.to_nflverse_team(team_code), week)
-    return kdef_model.defense_projection(_row_rate(row), _pool_rate(def_board), (ctx or {}).get("itt_opp"))
+        if ctx and ctx.get("opp"):
+            try:   # the opposing offense's sack rate allowed this season (the one pbp stat that beat the market alone)
+                sack = kdef_model.offense_sack_ratio(bundle.get("pbp") if hasattr(bundle, "get") else bundle["pbp"], ctx["opp"])
+            except Exception:
+                sack = None
+    return kdef_model.defense_projection(_row_rate(row), _pool_rate(def_board), (ctx or {}).get("itt_opp"), sack)
 
 
 def _kicker_proj(rate, k_pool, bundle, team_code, week=None):

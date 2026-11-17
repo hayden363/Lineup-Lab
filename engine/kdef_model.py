@@ -46,7 +46,13 @@ NEUTRAL_INDOOR = 0.33        # share of kicker games played under a roof (2023-2
 ITT_RANGE = (14.0, 31.0)     # implied totals outside this are clamped; the fit saw ~15-29.5
 RATIO_RANGE = (0.25, 2.0)    # keeps a freak line from projecting a defense below -75% or past 2x the average
 
-DEF_COEF = {"base": 0.9993, "rate": 0.0844, "itt_opp": -0.0747}
+# opp_sack added 2026-11-17 (analysis/kdef_adv_backtest.py): the opposing offense's sack rate allowed, from this season's
+# play-by-play, is the one play-by-play stat that beat the market model out of sample (2024-25: RMSE 5.351 -> 5.339,
+# weekly rank 0.338 -> 0.343, top-20% picks 9.01 -> 9.14 pts). Giveaway rate, red-zone rate and wind did not; kickers stay
+# as they were. Refit on 2023-25 with the new term (`--fit`).
+DEF_COEF = {"base": 0.9976, "rate": 0.1188, "itt_opp": -0.0685, "opp_sack": 0.2472}
+SACK_SHRINK_DROPBACKS = 75.0     # pseudo-dropbacks of league-average sack rate mixed into each offense
+SACK_RANGE = (0.6, 1.6)
 K_COEF = {"base": 0.9656, "rate": 0.1709, "itt": 0.0174, "indoor": 0.0934}
 
 
@@ -77,20 +83,40 @@ def game_context(schedule, team, week=None):
         itt, itt_opp = (total + sgn * spread) / 2, (total - sgn * spread) / 2
     roof = row.get("roof")
     indoor = None if roof is None or pd.isna(roof) else (1.0 if str(roof) in ("dome", "closed") else 0.0)
-    return {"itt": itt, "itt_opp": itt_opp, "indoor": indoor}
+    opp = row["away_team"] if row["home_team"] == team else row["home_team"]
+    return {"itt": itt, "itt_opp": itt_opp, "indoor": indoor, "opp": opp}
 
 
 def _ratio(x):
     return float(np.clip(x, *RATIO_RANGE))
 
 
-def defense_projection(rate, pool, itt_opp=None):
-    """Points this defense is expected to score against an offense implied for `itt_opp`."""
+def offense_sack_ratio(pbp, team):
+    """The offense's sack rate allowed (sacks per dropback) this season as a ratio to the league (1.0 = average),
+    shrunk with SACK_SHRINK_DROPBACKS pseudo-dropbacks. None when there's no play-by-play to read."""
+    if pbp is None or not len(pbp) or not team or not {"qb_dropback", "sack", "posteam"} <= set(pbp.columns):
+        return None
+    d = pbp[pbp["qb_dropback"] == 1]
+    if d.empty:
+        return None
+    league = float(d["sack"].fillna(0).mean())
+    if league <= 0:
+        return None
+    mine = d[d["posteam"] == team]
+    rate = (float(mine["sack"].fillna(0).sum()) + SACK_SHRINK_DROPBACKS * league) / (len(mine) + SACK_SHRINK_DROPBACKS)
+    return float(np.clip(rate / league, *SACK_RANGE))
+
+
+def defense_projection(rate, pool, itt_opp=None, opp_sack=None):
+    """Points this defense is expected to score against an offense implied for `itt_opp` that allows sacks at
+    `opp_sack` times the league rate (None = average)."""
     if not pool or pool <= 0:
         return float(rate)
     itt = float(np.clip(_clean(itt_opp, NEUTRAL_ITT), *ITT_RANGE))
+    sk = float(np.clip(_clean(opp_sack, 1.0), *SACK_RANGE))
     c = DEF_COEF
-    return round(pool * _ratio(c["base"] + c["rate"] * (rate / pool - 1) + c["itt_opp"] * (itt - NEUTRAL_ITT)), 1)
+    return round(pool * _ratio(c["base"] + c["rate"] * (rate / pool - 1) + c["itt_opp"] * (itt - NEUTRAL_ITT)
+                               + c["opp_sack"] * (sk - 1)), 1)
 
 
 def kicker_projection(rate, pool, itt=None, indoor=None):

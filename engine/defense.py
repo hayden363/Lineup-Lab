@@ -90,6 +90,57 @@ def build_defense_profile(pbp):
     return out
 
 
+# ---- what a defense gives up to EACH position (owner 2026-11-17: our own position-specific metrics) ---------------
+# Team-wide "yards per target allowed" mixes WRs, TEs and RBs; a defense can smother WRs and leak to TEs. Every
+# target/carry is tagged with the receiving/rushing player's position (nflverse weekly roster) and each stat is shrunk
+# toward the league mean with pseudo-observations, since a few games per defense are noisy.
+# analysis/pos_matchup_backtest.py picked these over the team-wide stats for RB, WR and TE (2021-2025, walk-forward).
+POS_SHRINK_TARGETS, POS_SHRINK_CARRIES, POS_SHRINK_GAMES = 60.0, 60.0, 4.0
+
+
+def position_allowed(pbp, pos_of):
+    """DataFrame (index = defense) of per-position allowed stats: ypt/catch/td/yac_allowed_{WR,TE,RB},
+    tgt_pg_allowed_{WR,TE,RB}, ypc_allowed_RB, rush_td_allowed_RB, touch_pg_allowed_RB. `pos_of` maps player_id to
+    position. Empty frame when the inputs can't support it."""
+    need = {"defteam", "week", "play_type", "receiver_player_id", "rusher_player_id", "yards_gained", "complete_pass",
+            "pass_touchdown", "rush_touchdown", "yards_after_catch", "sack"}
+    if pbp is None or not len(pbp) or not need <= set(pbp.columns) or pos_of is None or not len(pos_of):
+        return pd.DataFrame()
+    idx = sorted(pbp["defteam"].dropna().unique())
+    out = pd.DataFrame(index=idx)
+    games = pbp.groupby("defteam")["week"].nunique().reindex(idx).fillna(0)
+
+    def shrunk(num, den, k):
+        league = num.sum() / den.sum() if den.sum() else 0.0
+        return (num + k * league) / (den + k)
+
+    z = lambda s_: s_.reindex(idx).fillna(0.0)
+    tg = pbp[(pbp["play_type"] == "pass") & (pbp["sack"] == 0) & pbp["receiver_player_id"].notna()]
+    rpos = tg["receiver_player_id"].map(pos_of)
+    rb_targets = None
+    for P in ("WR", "TE", "RB"):
+        t = tg[rpos == P]
+        g = t.groupby("defteam")
+        n, yds = z(g.size()), z(g["yards_gained"].sum())
+        cat, td = z(g["complete_pass"].sum()), z(g["pass_touchdown"].sum())
+        yac = z(t[t["complete_pass"] == 1].groupby("defteam")["yards_after_catch"].sum())
+        out[f"ypt_allowed_{P}"] = shrunk(yds, n, POS_SHRINK_TARGETS)
+        out[f"catch_allowed_{P}"] = shrunk(cat, n, POS_SHRINK_TARGETS)
+        out[f"td_allowed_{P}"] = shrunk(td, n, POS_SHRINK_TARGETS)
+        out[f"yac_allowed_{P}"] = shrunk(yac, cat, POS_SHRINK_TARGETS / 2)
+        out[f"tgt_pg_allowed_{P}"] = shrunk(n, games, POS_SHRINK_GAMES)
+        if P == "RB":
+            rb_targets = n
+    ru = pbp[(pbp["play_type"] == "run") & pbp["rusher_player_id"].notna()]
+    ru = ru[ru["rusher_player_id"].map(pos_of) == "RB"]
+    g = ru.groupby("defteam")
+    n, yds, td = z(g.size()), z(g["yards_gained"].sum()), z(g["rush_touchdown"].sum())
+    out["ypc_allowed_RB"] = shrunk(yds, n, POS_SHRINK_CARRIES)
+    out["rush_td_allowed_RB"] = shrunk(td, n, POS_SHRINK_CARRIES)
+    out["touch_pg_allowed_RB"] = shrunk(n + rb_targets, games, POS_SHRINK_GAMES)
+    return out
+
+
 QB_RUSH_SHRINK_GAMES = 4.0   # pseudo-games of league-average QB rushing mixed into each defense (small, noisy samples)
 QB_MIN_DROPBACKS = 10        # a "QB" here = anyone with 10+ dropbacks in the data (keeps trick-play passers out)
 
@@ -226,25 +277,35 @@ METRIC_TO_DEFENSE = {
         "rush_yards_per_game": "qb_rush_ypg_allowed",   # QB runs allowed, not RB yards per carry (owner 2026-11-17, backtested)
         "dakota": "pass_epa_cpoe_allowed",
     },
+    # RB / WR / TE read what the defense allows to THAT position, plus how much volume it funnels to it
+    # (owner 2026-11-17; analysis/pos_matchup_backtest.py "pos_vol" won on 2022-23 and held out on 2024-25).
     "RB": {
-        "yards_per_carry": "ypc_allowed",
-        "td_rate": "rush_td_rate_allowed",
-        "touches_per_game": None,
-        "yards_per_target": "ypt_allowed",
-        "target_share": None,
-        "rushing_epa_per_carry": "rush_efficiency_allowed",
+        "yards_per_carry": "ypc_allowed_RB",
+        "td_rate": "rush_td_allowed_RB",
+        "touches_per_game": "touch_pg_allowed_RB",
+        "yards_per_target": "ypt_allowed_RB",
+        "target_share": "tgt_pg_allowed_RB",
+        "rushing_epa_per_carry": "ypc_allowed_RB",
     },
     "WR": {
-        "target_share": None,
-        "yards_per_target": "ypt_allowed",
-        "td_rate_targets": "pass_td_rate_allowed",
-        "catch_rate": "sep_allowed",
-        "air_yards_share": None,
-        "wopr": None,
-        "yac_per_reception": "yac_oe_allowed",
+        "target_share": "tgt_pg_allowed_WR",
+        "yards_per_target": "ypt_allowed_WR",
+        "td_rate_targets": "td_allowed_WR",
+        "catch_rate": "catch_allowed_WR",
+        "air_yards_share": "tgt_pg_allowed_WR",
+        "wopr": "tgt_pg_allowed_WR",
+        "yac_per_reception": "yac_allowed_WR",
+    },
+    "TE": {
+        "target_share": "tgt_pg_allowed_TE",
+        "yards_per_target": "ypt_allowed_TE",
+        "td_rate_targets": "td_allowed_TE",
+        "catch_rate": "catch_allowed_TE",
+        "air_yards_share": "tgt_pg_allowed_TE",
+        "wopr": "tgt_pg_allowed_TE",
+        "yac_per_reception": "yac_allowed_TE",
     },
 }
-METRIC_TO_DEFENSE["TE"] = METRIC_TO_DEFENSE["WR"]
 
 
 def matchup_breakdown(position, opponent, factors):
@@ -277,7 +338,10 @@ def league_average_composite(position, factors):
 # QB 0.35 from analysis/qb_matchup_backtest.py (2021-2025, walk-forward): the full-strength QB factor swung projections
 # about +/-14% and made the head-to-head probabilities worse than no matchup at all; ~1/3 strength gave the lowest
 # pairwise log loss, picked on 2022-23 and confirmed on held-out 2024-25. Positions not listed keep full strength.
-MATCHUP_STRENGTH = {"QB": 0.35}
+# RB 0.5, WR 0.25, TE 0.25 from analysis/pos_matchup_backtest.py (same method, picked on 2022-23, held out 2024-25):
+# RB clearly gains; WR matchups carry almost no signal (0.25 of the position-specific composite is no worse than none
+# and better than the old full-strength team-wide one); TE is a tie with the old setting.
+MATCHUP_STRENGTH = {"QB": 0.35, "RB": 0.5, "WR": 0.25, "TE": 0.25}
 
 
 def composite_multiplier(position, opponent, factors, full=False):

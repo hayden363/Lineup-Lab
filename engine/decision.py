@@ -38,15 +38,21 @@ MODES = {"safe": "floor", "balanced": "balanced", "upside": "ceiling"}
 DEF_LABELS = {
     "ypt_allowed": "yards per target", "pass_td_rate_allowed": "passing TD rate", "sep_allowed": "receiver separation",
     "yac_oe_allowed": "yards after catch", "ypc_allowed": "yards per carry", "rush_td_rate_allowed": "rushing TD rate",
+    "ypc_allowed_RB": "yards per carry to RBs", "rush_td_allowed_RB": "rushing TDs to RBs", "touch_pg_allowed_RB": "RB touches",
+    "ypt_allowed_RB": "yards per target to RBs", "ypt_allowed_WR": "yards per target to WRs", "td_allowed_WR": "TDs to WRs",
+    "catch_allowed_WR": "catch rate to WRs", "yac_allowed_WR": "yards after catch to WRs", "tgt_pg_allowed_WR": "WR targets",
+    "ypt_allowed_TE": "yards per target to TEs", "td_allowed_TE": "TDs to TEs", "catch_allowed_TE": "catch rate to TEs",
+    "yac_allowed_TE": "yards after catch to TEs", "tgt_pg_allowed_TE": "TE targets",
     "rush_efficiency_allowed": "rushing efficiency", "ypa_allowed": "yards per attempt", "comp_pct_allowed": "completion %",
     "pass_epa_cpoe_allowed": "passing efficiency", "explosive_pass_rate_allowed": "explosive pass rate",
     "explosive_run_rate_allowed": "explosive run rate",
 }
 POS_DEF_COLS = {
     "QB": ["ypa_allowed", "pass_td_rate_allowed", "comp_pct_allowed", "explosive_pass_rate_allowed"],
-    "RB": ["ypc_allowed", "rush_td_rate_allowed", "explosive_run_rate_allowed", "ypt_allowed"],
-    "WR": ["ypt_allowed", "pass_td_rate_allowed", "sep_allowed", "yac_oe_allowed", "explosive_pass_rate_allowed"],
-    "TE": ["ypt_allowed", "pass_td_rate_allowed", "sep_allowed", "yac_oe_allowed"],
+    # what the defense gives up to THIS position (the stats the matchup factor reads, engine/defense.position_allowed)
+    "RB": ["ypc_allowed_RB", "rush_td_allowed_RB", "touch_pg_allowed_RB", "ypt_allowed_RB"],
+    "WR": ["ypt_allowed_WR", "td_allowed_WR", "catch_allowed_WR", "yac_allowed_WR", "tgt_pg_allowed_WR"],
+    "TE": ["ypt_allowed_TE", "td_allowed_TE", "catch_allowed_TE", "yac_allowed_TE", "tgt_pg_allowed_TE"],
 }
 
 

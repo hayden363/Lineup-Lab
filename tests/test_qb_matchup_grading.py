@@ -38,7 +38,7 @@ class QbRushAllowedTests(unittest.TestCase):
 class MappingAndStrengthTests(unittest.TestCase):
     def test_qb_rushing_reads_qb_runs_not_rb_yards_per_carry(self):
         self.assertEqual(defense.METRIC_TO_DEFENSE["QB"]["rush_yards_per_game"], "qb_rush_ypg_allowed")
-        self.assertEqual(defense.METRIC_TO_DEFENSE["RB"]["yards_per_carry"], "ypc_allowed")   # RBs still face the run D
+        self.assertEqual(defense.METRIC_TO_DEFENSE["RB"]["yards_per_carry"], "ypc_allowed_RB")   # RBs: run D vs RBs
 
     def test_qb_factor_is_scaled_and_the_label_reads_the_full_composite(self):
         f = pd.DataFrame({c: [1.3, 0.7] for c in set(defense.METRIC_TO_DEFENSE["QB"].values()) if c}, index=["SOFT", "HARD"])
@@ -47,7 +47,7 @@ class MappingAndStrengthTests(unittest.TestCase):
         k = defense.MATCHUP_STRENGTH["QB"]
         self.assertAlmostEqual(used, round(1 + k * (raw - 1), 3))
         self.assertLess(abs(used - 1), abs(raw - 1))
-        self.assertEqual(defense.MATCHUP_STRENGTH.get("WR", 1.0), 1.0)                     # other positions unchanged
+        self.assertEqual(set(defense.MATCHUP_STRENGTH), {"QB", "RB", "WR", "TE"})
         ranks = sorted(f.index, key=lambda t: -defense.composite_multiplier("QB", t, f))
         self.assertEqual(ranks, sorted(f.index, key=lambda t: -defense.composite_multiplier("QB", t, f, full=True)))
 
@@ -56,6 +56,45 @@ class MappingAndStrengthTests(unittest.TestCase):
                             yards_after_catch=3, rush_touchdown=0)
         prof = defense.build_defense_profile(pbp)
         self.assertIn("qb_rush_ypg_allowed", prof.columns)
+
+
+
+class PositionAllowedTests(unittest.TestCase):
+    """RB / WR / TE read what a defense gives up to that position (analysis/pos_matchup_backtest.py)."""
+
+    def _pbp(self):
+        r = []
+        for d in ("X", "Y"):
+            for wk in (1, 2):
+                # X lets WRs catch everything for 15; Y holds WRs to 5 a target; both the same against TEs
+                r += [dict(defteam=d, week=wk, play_type="pass", sack=0, receiver_player_id="wr1", rusher_player_id=None,
+                           yards_gained=15 if d == "X" else 5, complete_pass=1, pass_touchdown=0, rush_touchdown=0,
+                           yards_after_catch=4)] * 8
+                r += [dict(defteam=d, week=wk, play_type="pass", sack=0, receiver_player_id="te1", rusher_player_id=None,
+                           yards_gained=8, complete_pass=1, pass_touchdown=0, rush_touchdown=0, yards_after_catch=3)] * 4
+                r += [dict(defteam=d, week=wk, play_type="run", sack=0, receiver_player_id=None, rusher_player_id="rb1",
+                           yards_gained=4, complete_pass=0, pass_touchdown=0, rush_touchdown=0, yards_after_catch=0)] * 10
+        return pd.DataFrame(r)
+
+    def test_splits_by_position_and_shrinks(self):
+        pos_of = pd.Series({"wr1": "WR", "te1": "TE", "rb1": "RB"})
+        a = defense.position_allowed(self._pbp(), pos_of)
+        self.assertGreater(a.loc["X", "ypt_allowed_WR"], a.loc["Y", "ypt_allowed_WR"])
+        self.assertLess(a.loc["X", "ypt_allowed_WR"], 15)                                   # shrunk toward the mean
+        self.assertAlmostEqual(a.loc["X", "ypt_allowed_TE"], a.loc["Y", "ypt_allowed_TE"])     # same vs TEs
+        self.assertAlmostEqual(a.loc["X", "ypc_allowed_RB"], 4.0)
+        self.assertAlmostEqual(a.loc["X", "tgt_pg_allowed_WR"], 8.0)
+
+    def test_every_rb_wr_te_metric_column_is_built(self):
+        pos_of = pd.Series({"wr1": "WR", "te1": "TE", "rb1": "RB"})
+        cols = set(defense.position_allowed(self._pbp(), pos_of).columns)
+        for P in ("RB", "WR", "TE"):
+            for c in defense.METRIC_TO_DEFENSE[P].values():
+                self.assertIn(c, cols, (P, c))
+
+    def test_missing_inputs_are_safe(self):
+        self.assertTrue(defense.position_allowed(None, None).empty)
+        self.assertTrue(defense.position_allowed(self._pbp(), pd.Series(dtype=object)).empty)
 
 
 if __name__ == "__main__":

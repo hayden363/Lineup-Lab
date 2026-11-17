@@ -80,9 +80,11 @@ class FlagsTest(unittest.TestCase):
         self.assertIn("Snap share down 20", text)
 
     def test_matchup_flags_from_factors(self):
-        f = pd.DataFrame({"ypt_allowed": [1.2, 1.0, 0.8], "pass_td_rate_allowed": [1.0, 1.0, 1.0]}, index=["AAA", "BBB", "CCC"])
+        # WR flags read what the defense gives up to WRs specifically (engine/defense.position_allowed)
+        f = pd.DataFrame({"ypt_allowed_WR": [1.2, 1.0, 0.8], "td_allowed_WR": [1.0, 1.0, 1.0]}, index=["AAA", "BBB", "CCC"])
         good, bad = D.matchup_flags("WR", "AAA", f)
         self.assertTrue(good and "20% above average" in good[0])
+        self.assertIn("to WRs", good[0])
         good, bad = D.matchup_flags("WR", "CCC", f)
         self.assertTrue(bad and "20% below average" in bad[0])
 

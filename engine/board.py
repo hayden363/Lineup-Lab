@@ -281,6 +281,11 @@ def _load_bundle_locked(season, key, force) -> Bundle:
     defense_profile = defense_layer.build_defense_profile(pbp)
     ngs_defense_profile = defense_layer.build_ngs_defense_profile(ngs_pass, ngs_rush, ngs_rec, schedule)
     defense_profile = defense_profile.join(ngs_defense_profile, how="outer")
+    try:   # what each defense gives up to WRs / TEs / RBs specifically (the RB/WR/TE matchup reads these)
+        pos_of = wk.drop_duplicates("player_id", keep="last").set_index("player_id")["position"] if "position" in wk.columns else None
+        defense_profile = defense_profile.join(defense_layer.position_allowed(pbp, pos_of), how="left")
+    except Exception as e:
+        print(f"[data] couldn't build position-specific defense stats (RB/WR/TE matchups go neutral): {type(e).__name__}: {e}")
     defense_factors, defense_league_avg = defense_layer.league_relative_factors(defense_profile)
 
     try:
