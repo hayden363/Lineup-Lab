@@ -928,7 +928,7 @@ class PlayVisualTest(unittest.TestCase):
         for name in ("Checkdown", "Quick Slant", "Chain Mover", "Chunk Play", "Bomb", "Highlight Reel TD"):
             self.assertIn(name, js)                               # the six plays
         self.assertIn("DDField.create", js)                       # the field scene lives in play-field.js
-        self.assertLess(len(js) + len(css) + len(self._r("static/play-field.js")), 190_000)              # stays light
+        self.assertLess(len(js) + len(css) + len(self._r("static/play-field.js")), 200_000)              # stays light (raised from 190k for the NFL field + pixel players, owner Nov 16)
 
 
 if __name__ == "__main__":

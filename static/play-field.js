@@ -591,6 +591,19 @@
       ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y - 17 * k); ctx.moveTo(x - 11 * k, y - 22 * k); ctx.lineTo(x + 11 * k, y - 22 * k); ctx.moveTo(x - 11 * k, y - 22 * k); ctx.lineTo(x - 11 * k, y - 50 * k); ctx.moveTo(x + 11 * k, y - 22 * k); ctx.lineTo(x + 11 * k, y - 50 * k); ctx.stroke();
       ctx.beginPath(); ctx.moveTo(x, y - 17 * k); ctx.lineTo(x, y - 22 * k); ctx.stroke();
     }
+    function fieldNum(Y) {          // NFL yard numbers: 2 yards tall, tops 9 yards in from the sideline, turned to face it, split by the line, arrow to the nearer goal
+      var v = Y <= 50 ? Y : 100 - Y, d1 = String(v / 10 | 0), sd, s, tx, ty, lx, ly, dir = Y < 50 ? -1 : 1;
+      for (sd = -1; sd <= 1; sd += 2) {
+        pj(sd * 18.65, Y); s = PR.s; if (PR.y < -40 || PR.y > H + 40) continue;
+        ctx.save(); ctx.translate(PR.x, PR.y); ctx.scale(L.pxX * s / 50, L.ppy * s / 50); ctx.rotate(-sd * PI / 2);
+        ctx.font = "800 145px " + FONT; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.globalAlpha = 0.8; ctx.fillStyle = "#ffffff";
+        ctx.fillText(d1, -60, 6); ctx.fillText("0", 60, 6); ctx.restore();
+        if (v === 50) continue;
+        pj(sd * 17.85, Y + dir * 3.1); tx = PR.x; ty = PR.y; pj(sd * 17.45, Y + dir * 2.4); lx = PR.x; ly = PR.y; pj(sd * 18.25, Y + dir * 2.4);
+        ctx.globalAlpha = 0.75; ctx.fillStyle = "#ffffff"; ctx.beginPath(); ctx.moveTo(tx, ty); ctx.lineTo(lx, ly); ctx.lineTo(PR.x, PR.y); ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+    }
     function drawEmblem() {          // the Lineup Lab logo (football + rising bars + arrow), softly painted at midfield; never team colors
       pj(0, 50); var cx = PR.x, s = PR.s; if (PR.y < -80 || PR.y > H + 80) return;
       pj(0, 44); var y0 = PR.y; pj(0, 56); var y1 = PR.y, rx = 9 * L.pxX * s, ry = Math.abs(y0 - y1) / 2, i;
@@ -606,7 +619,7 @@
       ctx.restore();
     }
     function drawBench(sd) {        // the team areas: the home bench on the left, the visitors (road whites) on the right
-      var u = sd < 0 ? TU.o : TU.d, nums = sd < 0 ? TU.benchH : TU.benchA, Y, i, k, bx, by, idx = 0, coach, row, x0 = sd * (XS + 1.4), x1 = sd * (XS + 8.5);
+      var u = sd < 0 ? TU.o : TU.d, nums = sd < 0 ? TU.benchH : TU.benchA, Y, i, k, bx, by, idx = 0, coach, row, x0 = sd * (XS + 2.3), x1 = sd * (XS + 8.8);
       ctx.save(); ctx.globalAlpha = sd < 0 ? 0.42 : 0.3; quad(18, 82, Math.min(x0, x1), Math.max(x0, x1)); ctx.fillStyle = sd < 0 ? u.jersey : u.trim; ctx.fill();   // the painted team area
       ctx.globalAlpha = 0.85; ctx.strokeStyle = "#f3d34a"; ctx.lineWidth = 1.4 * L.u; ctx.beginPath(); wline(x0, 18, x0, 82); ctx.stroke();
       ctx.globalAlpha = 0.9; quad(24, 76, Math.min(sd * (XS + 7.2), sd * (XS + 8.2)), Math.max(sd * (XS + 7.2), sd * (XS + 8.2))); ctx.fillStyle = "#0d121c"; ctx.fill(); ctx.restore();   // the bench
@@ -640,9 +653,12 @@
       ctx.drawImage(litCv, 0, 0, W, H);
       // out-of-bounds apron, then the mowed turf (alternating 5-yard stripes + fine mow lines) and the painted end zones
       quad(-44, 125, -XA, XA); ctx.fillStyle = "#082519"; ctx.fill();
+      ctx.fillStyle = "#e9eef2";                                                                    // the 6-foot white border (short pieces: the projection bends long edges)
+      for (Y = -12; Y < 112; Y += 4) { quad(Y, Y + 4, -XS - 2, -XS + 0.1); ctx.fill(); quad(Y, Y + 4, XS - 0.1, XS + 2); ctx.fill(); }
+      quad(-12, -9.9, -XS, XS); ctx.fill(); quad(109.9, 112, -XS, XS); ctx.fill();
       for (Y = -10; Y < 110; Y += 5) {
         if (Y < 0 || Y >= 100) continue;
-        quad(Y, Y + 5, -XS, XS); ctx.fillStyle = ((Y / 5) & 1) ? (TU ? TU.turf[0] : "#0f6139") : (TU ? TU.turf[1] : "#0b5130"); ctx.fill();
+        quad(Y, Y + 5, -XS, XS); ctx.fillStyle = ((Y / 5) & 1) ? (TU ? TU.turf[0] : "#1b7436") : (TU ? TU.turf[1] : "#16642f"); ctx.fill();
       }
       ctx.lineCap = "butt"; ctx.strokeStyle = "rgba(255,255,255," + (TU && !TU.grass ? 0.02 : 0.05) + ")"; ctx.lineWidth = 2.6 * L.u; ctx.beginPath();
       for (i = -XS + 1.1; i < XS; i += 2.2) wline(i, 0, i, 100);
@@ -662,12 +678,13 @@
         ctx.beginPath(); ctx.moveTo(lx, ly); ctx.lineTo(PR.x, PR.y); ctx.stroke();
       }
       ctx.globalAlpha = 0.5; ctx.lineWidth = 1.1 * L.u; ctx.beginPath();
-      for (Y = 1; Y < 100; Y++) { if (Y % 5 === 0) continue; wline(-3.65, Y, -2.55, Y); wline(2.55, Y, 3.65, Y); wline(-XS + 0.85, Y, -XS + 1.95, Y); wline(XS - 1.95, Y, XS - 0.85, Y); }
+      for (Y = 1; Y < 100; Y++) { if (Y % 5 === 0) continue; wline(-3.42, Y, -2.75, Y); wline(2.75, Y, 3.42, Y); wline(-XS + 0.85, Y, -XS + 1.95, Y); wline(XS - 1.95, Y, XS - 0.85, Y); }
       ctx.stroke(); ctx.globalAlpha = 1;
       ctx.strokeStyle = "rgba(255,255,255,0.92)"; ctx.lineWidth = 3 * L.u; ctx.beginPath();
       wline(-XS, -10, -XS, 110); wline(XS, -10, XS, 110); ctx.stroke();
       ctx.lineWidth = 2.4 * L.u; ctx.beginPath(); wline(-XS, 110, XS, 110); wline(-XS, -10, XS, -10); ctx.stroke();
-      for (Y = 10; Y <= 90; Y += 10) { var num = String(Y <= 50 ? Y : 100 - Y); ftext(num, -XS + 11.5, Y, 3.4, "#ffffff", 0.55); ftext(num, XS - 11.5, Y, 3.4, "#ffffff", 0.55); }
+      ctx.beginPath(); ctx.lineWidth = 1.6 * L.u; ctx.strokeStyle = "rgba(255,255,255,0.8)"; wline(-0.5, 2, 0.5, 2); wline(-0.5, 98, 0.5, 98); ctx.stroke();                                    // the 2-yard try marks
+      for (Y = 10; Y <= 90; Y += 10) fieldNum(Y);
       if (TU) {         // painted end zones (city in one, nickname in the other) and the midfield emblem
         ftext(TU.city, 0, -5, TU.citySz, TU.ezText, 0.92, TU.ezStroke); ftext("THE DAILY DRIVE", 0, -8.9, 2.1, TU.ezText, 0.6);
         ftext(TU.name, 0, 105, TU.nameSz, TU.ezText, 0.92, TU.ezStroke); if (TU.stadium) ftext(TU.stadium, 0, 108.6, 1.9, TU.ezText, 0.6);
@@ -1130,7 +1147,7 @@
             o: { jersey: hu.jersey, trim: hu.trim, pants: hu.pants, sock: hu.jersey, num: hu.num, glove: "#ffffff", nstroke: hu.trim, stripe: hu.stripe, polo: mix(hu.jersey, "#000000", 0.35) },
             d: { jersey: "#f1f3f7", trim: au.jersey, pants: au.pants, sock: au.jersey, num: awayNum, glove: "#e8ecf4", nstroke: "rgba(255,255,255,0.9)", stripe: au.stripe, polo: mix(au.jersey, "#000000", 0.2) },
             ez: hu.jersey, ezBand: hu.trim, ezText: hu.num, ezStroke: mix(hu.jersey, "#000000", 0.55),
-            turf: sk.home.surface === "grass" ? ["#17652f", "#11532a"] : ["#0e6a3c", "#0d6238"],
+            turf: sk.home.surface === "grass" ? ["#1f7b37", "#196a30"] : ["#187a3e", "#156f39"],
             qbNum: sk.home.numbers && sk.home.numbers.qb && sk.home.numbers.qb[0] != null ? sk.home.numbers.qb[0] : null, crowd: null, rail: th.primary || hu.trim, railAway: ta.primary || au.jersey, benchH: sk.home.bench || [], benchA: sk.away.bench || [] };
           TU.crowd = [mix(hu.jersey, "#ffffff", 0.28), mix(hu.trim, "#ffffff", 0.1), mix(au.jersey, "#ffffff", 0.2)].map(function (c) { return c.slice(4, -1); });
           helmetGrads([shell(hu.helmet), shell(au.helmet)]);
