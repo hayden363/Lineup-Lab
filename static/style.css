@@ -5615,3 +5615,8 @@ a.nav-item { text-decoration: none; box-sizing: border-box; }
   50% { box-shadow: inset 0 0 0 1px rgba(255, 240, 190, 0.85), 0 0 22px -2px rgba(255, 222, 130, 0.65); }
 }
 @media (prefers-reduced-motion: reduce) { .nav-item.nav-play.fresh { animation: none; } }
+
+
+/* Inside the Lineup Lab iOS app the native tab bar is the navigation: no sidebar, drawer button or backdrop */
+html.in-app #sidebar, html.in-app #sidebar-backdrop, html.in-app #mobile-menu-btn { display: none !important; }
+html.in-app #app { margin-left: auto !important; }

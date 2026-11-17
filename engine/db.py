@@ -221,10 +221,6 @@ def find_or_create_oauth_user(provider, provider_id, email, name_hint=None):
     password of its own until/unless the person later sets one from
     Settings, not built yet, tracked as a gap) until then."""
     email = (email or "").strip().lower()
-    if not email:
-        raise AuthError("Your Google/Apple account didn't share an email address — can't sign in without one.")
-    if not EMAIL_RE.match(email):
-        raise AuthError("Google/Apple returned an email address that doesn't look valid.")
     col = "google_id" if provider == "google" else "apple_id"
     # `col` only ever comes from the hardcoded ternary above — never from
     # `provider` directly — so the f-strings below are safe today. This
@@ -240,6 +236,11 @@ def find_or_create_oauth_user(provider, provider_id, email, name_hint=None):
         row = c.fetchone()
         if row:
             return _public(row)
+        # a NEW sign-in needs an email (Apple sends it only the first time; a returning user was found above)
+        if not email:
+            raise AuthError("Your Google/Apple account didn't share an email address — can't sign in without one.")
+        if not EMAIL_RE.match(email):
+            raise AuthError("Google/Apple returned an email address that doesn't look valid.")
 
         c.execute("SELECT * FROM users WHERE lower(email) = lower(%s)", (email,))
         row = c.fetchone()
@@ -835,3 +836,45 @@ def get_track_record(user_id):
 
 
 init_db()
+
+
+# ---------------------------------------------------------------- push devices (iOS app) ----
+def save_push_device(user_id, token, environment, drive_reminder=True):
+    """Store (or move to this account) an iOS device's APNs token. A token belongs to one device, so it is the key."""
+    now = time.time()
+    with _conn() as c:
+        c.execute(
+            "INSERT INTO push_devices (token, user_id, platform, environment, drive_reminder, lineup_alerts, created_at, updated_at) "
+            "VALUES (%s, %s, 'ios', %s, %s, TRUE, %s, %s) "
+            "ON CONFLICT (token) DO UPDATE SET user_id = EXCLUDED.user_id, environment = EXCLUDED.environment, "
+            "drive_reminder = EXCLUDED.drive_reminder, updated_at = EXCLUDED.updated_at",
+            (token, user_id, environment, bool(drive_reminder), now, now),
+        )
+
+
+def delete_push_device(token, user_id=None):
+    with _conn() as c:
+        if user_id is None:
+            c.execute("DELETE FROM push_devices WHERE token = %s", (token,))
+        else:
+            c.execute("DELETE FROM push_devices WHERE token = %s AND user_id = %s", (token, user_id))
+
+
+def push_devices_for_reminder():
+    """[{token, environment, user_id}] for every device that wants the daily Daily Drive reminder."""
+    with _conn() as c:
+        c.execute("SELECT token, environment, user_id FROM push_devices WHERE drive_reminder")
+        return [dict(r) for r in c.fetchall()]
+
+
+def push_devices_for_user(user_id):
+    with _conn() as c:
+        c.execute("SELECT token, environment, user_id FROM push_devices WHERE user_id = %s AND lineup_alerts", (user_id,))
+        return [dict(r) for r in c.fetchall()]
+
+
+def users_who_played(game_date):
+    """Set of user ids with a saved Daily Drive score on `game_date`."""
+    with _conn() as c:
+        c.execute("SELECT user_id FROM daily_drive_scores WHERE game_date = %s AND user_id IS NOT NULL", (game_date,))
+        return {r["user_id"] for r in c.fetchall()}

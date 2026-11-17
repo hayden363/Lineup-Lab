@@ -374,3 +374,7 @@ button { font-family: inherit; }
   .dd-td .bn { opacity: 1; }
   .dd-fx { display: none; }
 }
+
+/* Inside the iOS app the native tab bar replaces the Lineup Lab top bar */
+html.in-app .ll-nav { display: none; }
+html.in-app { --nav-h: 0px; --stage-top: 8px; }

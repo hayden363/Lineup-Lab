@@ -1,6 +1,6 @@
 # Privacy Policy — Lineup Lab
 
-Last updated: 2026-10-18 · Effective date: 2026-10-18
+Last updated: 2026-11-17 · Effective date: 2026-11-17
 
 ## What we collect, and why
 
@@ -11,6 +11,8 @@ Last updated: 2026-10-18 · Effective date: 2026-10-18
 | Sleeper league ID(s) you connect | Sync your real roster/matchups | Plain — this is public information on Sleeper's own platform, not a secret |
 | ESPN `espn_s2` / `SWID` cookies, if you connect an ESPN league | Read your ESPN league on your behalf (see Terms of Service, Section 5) | Encrypted at rest; never sent back to your browser or shown to anyone after you save it, including you — only "connected: yes/no" is ever displayed |
 | Your league scoring preference, connected-team selection | Personalizes SCORE/PROJ to your actual league | Plain, tied to your account |
+| Push notification device token, if you allow notifications in the iOS app | Sends the notifications you turned on (the daily Daily Drive reminder) | Tied to your account; deleted when you sign out on that device, when Apple reports it invalid, or with your account |
+| Daily Drive scores | Your streaks, history and the daily leaderboard (signed-in players appear by username) | Tied to your account, or to a random browser id if you play signed out |
 | Player news article text (headlines/snippets) you view | Sent to Anthropic's API to generate the optional AI summary on a player's page, only when you view that page | Not stored by Lineup Lab beyond a short-lived cache to avoid re-summarizing the same headlines repeatedly; see Anthropic's own privacy policy for how they handle a request once sent |
 
 ## What we don't do
@@ -32,6 +34,10 @@ Last updated: 2026-10-18 · Effective date: 2026-10-18
 - **ESPN/CBS RSS** — public news headlines.
 - **Google** — only if you use "Continue with Google" to sign in; we
   receive your name/email/a stable ID from Google, nothing else.
+- **Apple** — only if you use "Sign in with Apple" in the iOS app; we
+  receive a stable ID and the email Apple gives us (which can be a private
+  relay address Apple forwards to you), nothing else. Push notifications are
+  delivered through Apple's push service.
 - **Gmail (Google)** — sends your account-verification and password-reset
   emails from lineuplabfootball@gmail.com. Your email address and the
   message pass through Google's mail servers to reach you.

@@ -61,6 +61,10 @@ APPLE_TOKEN_URL = "https://appleid.apple.com/auth/token"
 APPLE_JWKS_URL = "https://appleid.apple.com/auth/keys"
 APPLE_ISSUER = "https://appleid.apple.com"
 
+# The iOS app's bundle ID: a native Sign in with Apple identity token is issued to the app itself (its `aud`), so it is
+# verified against this, with no client secret (unlike the web flow above, which needs the Services ID + .p8 key).
+APPLE_APP_BUNDLE_ID = os.environ.get("APPLE_APP_BUNDLE_ID", "com.lineuplab.app")
+
 _JWKS_CACHE = {}
 _JWKS_TTL = 60 * 60  # provider signing keys rotate rarely — an hour is plenty fresh
 
@@ -187,4 +191,18 @@ def apple_exchange_code(code, redirect_uri):
     if not id_token:
         raise OAuthError("Apple didn't return an ID token.")
     claims = _verify_id_token(id_token, APPLE_JWKS_URL, APPLE_CLIENT_ID, (APPLE_ISSUER,))
+    return {"provider_id": claims["sub"], "email": claims.get("email"), "name": None}
+
+
+def apple_verify_native(identity_token, raw_nonce):
+    """Verify the identity token the iOS app got from Sign in with Apple (AuthenticationServices). Proves it is Apple's,
+    unexpired, issued to our app, and bound to this sign-in attempt: the app sent Apple sha256(raw_nonce) and sends us
+    raw_nonce, so a token copied from another attempt is refused. Returns {provider_id, email, name}; email can be
+    missing on a returning user (Apple only promises it on the first sign-in) or be a private relay address."""
+    import hashlib
+    if not identity_token or not raw_nonce:
+        raise OAuthError("Sign in with Apple didn't send a token.")
+    claims = _verify_id_token(identity_token, APPLE_JWKS_URL, APPLE_APP_BUNDLE_ID, (APPLE_ISSUER,))
+    if claims.get("nonce") != hashlib.sha256(raw_nonce.encode("utf-8")).hexdigest():
+        raise OAuthError("Sign in with Apple didn't match this sign-in attempt.")
     return {"provider_id": claims["sub"], "email": claims.get("email"), "name": None}

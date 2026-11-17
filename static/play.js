@@ -15,6 +15,13 @@
   var REDUCEDQ = window.matchMedia ? window.matchMedia("(prefers-reduced-motion: reduce)") : null;
   var REDUCED = !!(REDUCEDQ && REDUCEDQ.matches);
   if (REDUCEDQ && REDUCEDQ.addEventListener) REDUCEDQ.addEventListener("change", function (e) { REDUCED = e.matches; });
+  // iOS app (user agent "LineupLabApp/<version>"): the native tab bar replaces the top bar; share and haptics go native
+  var NATIVE = (window.webkit && window.webkit.messageHandlers) || null;
+  if (/LineupLabApp\//.test(navigator.userAgent)) document.documentElement.classList.add("in-app");
+  function nativeCall(name, value) {
+    try { if (NATIVE && NATIVE[name]) { NATIVE[name].postMessage(value); return true; } } catch (e) { /* not in the app */ }
+    return false;
+  }
   var root = document.getElementById("app");
   var live = document.getElementById("dd-live");
 
@@ -630,6 +637,7 @@
     function landed() {
       if (settled) return; settled = true;
       stage.removeEventListener("pointerdown", skip); document.removeEventListener("keydown", skip);
+      nativeCall("haptic", res ? (t >= 5 ? "success" : "light") : "error");   // iOS app: a tap as the play lands
       setHud(after, { countFrom: before.yards });
       showResult();
     }
@@ -765,7 +773,8 @@
     return box;
   }
   function ansName(a) { return typeof a === "string" ? a : (a && a.name) || ""; }
-  function shareResult(text, btn) {   // the phone share sheet when there is one, else copy
+  function shareResult(text, btn) {   // the iOS app's share sheet, else the phone share sheet, else copy
+    if (nativeCall("share", text)) return;
     var coarse = window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
     if (coarse && navigator.share) { navigator.share({ text: text }).catch(function () { copyText(text, btn); }); return; }
     copyText(text, btn);

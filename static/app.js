@@ -399,6 +399,11 @@ function scoringQS() {
 const TAB_IDS = ["board", "myteam", "live", "draft", "startsit", "trade", "waivers", "news", "chat", "settings"];
 // The home/landing tab once the gate clears — My Team, not Big Board.
 const DEFAULT_TAB = "myteam";
+// The iOS app opens each native tab at /?tab=<name>; anything else (or no ?tab) lands on DEFAULT_TAB.
+function requestedTab() {
+  const t = new URLSearchParams(window.location.search).get("tab");
+  return t && document.getElementById(`tab-${t}`) ? t : DEFAULT_TAB;
+}
 
 // One shared indicator bar that slides to whichever sidebar tab is
 // active (Settings lives outside .sidebar-nav in its own section, so it
@@ -5861,7 +5866,7 @@ async function proceedPastGate(firstConnect) {
   if (!state.teams.length) { renderGateConnectLeague(); return; }
   hideGate();
   initScoringSelect();
-  switchTab(DEFAULT_TAB);
+  switchTab(requestedTab());
   if (firstConnect && state.tab === "myteam") showNextStepCard();
 }
 

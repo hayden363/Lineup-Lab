@@ -76,6 +76,7 @@ from engine import security
 from engine import news as news_layer
 from engine import oauth as oauth_layer
 from engine import projection_blend
+from engine import push as push_layer
 from engine import refresh_scheduler
 from engine import sleeper as sleeper_layer
 from engine import tools
@@ -100,6 +101,7 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         print(f"[db] housekeeping skipped: {e}")
     news_layer.warm()   # fill the news cache in the background so the first visitor isn't the one waiting
+    push_layer.start_reminder_loop(db, daily_drive.today_et)   # iOS app: daily Daily Drive reminder (off unless APNs is set)
     try:
         yield
     finally:
@@ -444,7 +446,7 @@ def _oauth_redirect_uri(request: Request, provider: str) -> str:
 
 
 @app.get("/api/auth/google/start")
-def oauth_google_start(request: Request):
+def oauth_google_start(request: Request, app: int = 0):
     state = secrets.token_urlsafe(24)
     try:
         url = oauth_layer.google_authorize_url(_oauth_redirect_uri(request, "google"), state)
@@ -455,7 +457,73 @@ def oauth_google_start(request: Request):
     # through the provider and back; not a real session
     resp.set_cookie(OAUTH_STATE_COOKIE, state, httponly=True, samesite="lax",
                      secure=(request.url.scheme == "https"), max_age=600)
+    if app:   # the iOS app: Google refuses sign-in inside an embedded web view, so it runs in the system sign-in sheet
+        resp.set_cookie(OAUTH_APP_COOKIE, "1", httponly=True, samesite="lax", secure=(request.url.scheme == "https"), max_age=600)
     return resp
+
+
+# ---- iOS app sign-in hand-off -------------------------------------------------------------------------------------
+# The system sign-in sheet (ASWebAuthenticationSession) has its own cookies, separate from the app's web views. So
+# after Google, the app gets a one-time code on its own URL scheme and trades it for a session it puts in its web views.
+# Codes live in memory for APP_CODE_TTL seconds and work once (the server is one process: render.yaml).
+OAUTH_APP_COOKIE = "eb_oauth_app"
+APP_CODE_TTL = 120
+_APP_CODES = {}
+_APP_CODES_LOCK = threading.Lock()
+
+
+def _issue_app_code(session_token):
+    code = secrets.token_urlsafe(32)
+    now = time.time()
+    with _APP_CODES_LOCK:
+        for k in [k for k, (_, exp) in _APP_CODES.items() if exp < now]:
+            _APP_CODES.pop(k, None)
+        _APP_CODES[code] = (session_token, now + APP_CODE_TTL)
+    return code
+
+
+def _redeem_app_code(code):
+    with _APP_CODES_LOCK:
+        hit = _APP_CODES.pop(code or "", None)
+    if not hit or hit[1] < time.time():
+        return None
+    return hit[0]
+
+
+class AppleNativeRequest(BaseModel):
+    identity_token: str
+    nonce: str
+    full_name: Optional[str] = None
+
+
+@app.post("/api/auth/apple", dependencies=[Depends(oauth_rate_limit)])
+def auth_apple_native(req: AppleNativeRequest, request: Request, response: Response, background: BackgroundTasks):
+    """Sign in with Apple from the iOS app: verify Apple's identity token (engine/oauth.apple_verify_native), find or
+    create the account, start a session (cookie). Apple requires this whenever Google sign-in is offered (4.8)."""
+    try:
+        claims = oauth_layer.apple_verify_native(req.identity_token, req.nonce)
+        user = db.find_or_create_oauth_user("apple", claims["provider_id"], claims["email"], req.full_name)
+    except (oauth_layer.OAuthError, db.AuthError) as e:
+        print(f"[oauth] apple sign-in failed: {e}")
+        raise HTTPException(400, "Sign in with Apple didn't work. Please try again.")
+    _set_session_cookie(request, response, db.create_session(user["id"]))
+    if user.get("just_created"):
+        background.add_task(_notify_welcome, security.public_base_url(request.base_url), user)
+    return {"status": "ok", "created": bool(user.get("just_created"))}
+
+
+class AppExchangeRequest(BaseModel):
+    code: str
+
+
+@app.post("/api/auth/app-exchange", dependencies=[Depends(oauth_rate_limit)])
+def auth_app_exchange(req: AppExchangeRequest, request: Request, response: Response):
+    """The iOS app trades the one-time code from lineuplab://auth for the session the sign-in sheet started."""
+    token = _redeem_app_code(req.code)
+    if not token:
+        raise HTTPException(400, "That sign-in link expired. Please sign in again.")
+    _set_session_cookie(request, response, token)
+    return {"status": "ok"}
 
 
 @app.get("/api/auth/google/callback", dependencies=[Depends(oauth_rate_limit)])
@@ -470,9 +538,17 @@ def oauth_google_callback(request: Request, response: Response, background: Back
     except (oauth_layer.OAuthError, db.AuthError) as e:
         print(f"[oauth] google sign-in failed: {e}")
         return RedirectResponse(url="/?oauth_error=1")
+    session_token = db.create_session(user["id"])
+    if request.cookies.get(OAUTH_APP_COOKIE):   # back to the iOS app with a one-time code (see _issue_app_code)
+        resp = RedirectResponse(url="lineuplab://auth?code=" + _issue_app_code(session_token))
+        resp.delete_cookie(OAUTH_STATE_COOKIE)
+        resp.delete_cookie(OAUTH_APP_COOKIE)
+        if user.get("just_created"):
+            background.add_task(_notify_welcome, security.public_base_url(request.base_url), user)
+        return resp
     resp = RedirectResponse(url="/?oauth=1")
     resp.delete_cookie(OAUTH_STATE_COOKIE)
-    _set_session_cookie(request, resp, db.create_session(user["id"]))
+    _set_session_cookie(request, resp, session_token)
     if user.get("just_created"):
         background.add_task(_notify_welcome, security.public_base_url(request.base_url), user)
     return resp
@@ -2365,7 +2441,49 @@ def _play_css():
     return FileResponse("static/play.css", media_type="text/css", headers={"Cache-Control": "no-cache"})
 
 
-_LEGAL_PAGES = {"terms": "legal/TERMS_OF_SERVICE.md", "privacy": "legal/PRIVACY_POLICY.md"}
+class PushRegisterRequest(BaseModel):
+    token: str
+    environment: str = "production"
+    drive_reminder: bool = True
+
+
+_PUSH_TOKEN = re.compile(r"^[0-9a-fA-F]{32,200}$")
+
+
+@app.post("/api/push/register")
+def push_register(req: PushRegisterRequest, user=Depends(require_user)):
+    """The iOS app's APNs device token for this account (engine/push.py sends to it)."""
+    if not _PUSH_TOKEN.match(req.token or "") or req.environment not in ("production", "sandbox"):
+        raise HTTPException(400, "Invalid device token.")
+    try:
+        db.save_push_device(user["id"], req.token.lower(), req.environment, req.drive_reminder)
+    except Exception as e:
+        print(f"[push] couldn't save a device: {type(e).__name__}")
+        raise HTTPException(503, "Couldn't turn on notifications right now.")
+    return {"status": "ok"}
+
+
+class PushUnregisterRequest(BaseModel):
+    token: str
+
+
+@app.post("/api/push/unregister")
+def push_unregister(req: PushUnregisterRequest, user=Depends(require_user)):
+    """Sign-out from the iOS app: this device stops getting this account's notifications."""
+    try:
+        db.delete_push_device((req.token or "").lower(), user["id"])
+    except Exception as e:
+        print(f"[push] couldn't remove a device: {type(e).__name__}")
+    return {"status": "ok"}
+
+
+@app.get("/support", include_in_schema=False)
+def _support():
+    """The App Store's Support URL."""
+    return RedirectResponse(url="/legal/support")
+
+
+_LEGAL_PAGES = {"terms": "legal/TERMS_OF_SERVICE.md", "privacy": "legal/PRIVACY_POLICY.md", "support": "legal/SUPPORT.md"}
 
 
 @app.get("/legal/{page}", include_in_schema=False)
