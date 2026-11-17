@@ -1,6 +1,6 @@
 # Lineup Lab for iPhone and iPad — design
 
-Date: 2026-11-17 · Owner: Hayden · Status: draft for review
+Date: 2026-11-17 · Owner: Hayden · Status: approved 2026-11-17 (owner: "go"); building
 
 ## Goal
 Lineup Lab on the App Store as soon as possible, for iPhone and iPad, without rebuilding the product. The app shows the
@@ -33,7 +33,7 @@ The app identifies itself with a user-agent suffix `LineupLabApp/<version>`; the
 |---|---|---|
 | **Sign in with Apple** (required by Guideline 4.8 because Google sign-in is offered) | `AuthenticationServices`; the app sends Apple's identity token to the server | `POST /api/auth/apple`: verify the token against Apple's public keys (PyJWT + cryptography, already installed), find or create the user, start a session; the app puts the session cookie into the web views |
 | **Google sign-in** | Google blocks sign-in inside embedded web views, so the app opens it in `ASWebAuthenticationSession` | `/api/auth/google/start?app=1` ends with a redirect to `lineuplab://auth?code=…` (one-time, 60-second code); `POST /api/auth/app-exchange` turns the code into a session |
-| **Push notifications** | APNs; the app registers its device token after the user allows it | `POST /api/push/register`; a sender using an APNs auth key (.p8). Version 1 sends two kinds: **Daily Drive is live** (once a day, only if not played, can be turned off) and **lineup alerts** (the existing alert-bell events: a starter ruled out or questionable) |
+| **Push notifications** | APNs; the app registers its device token after the user allows it | `POST /api/push/register`; a sender using an APNs auth key (.p8). Version 1 sends **Daily Drive is live** (once a day at 11am ET, only if not played, can be turned off). **Lineup-alert pushes move to 1.1**: the bell's alerts are computed in the browser from each user's roster, so a server push needs a roster job first |
 | **Native share** | Daily Drive results open the iOS share sheet (`window.webkit.messageHandlers.share`) | none |
 | **Haptics** | a tap on each Daily Drive play result | none |
 | **Offline screen** | a native "you're offline, try again" view instead of a browser error | none |
