@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>The Daily Drive | Daily NFL trivia from Lineup Lab</title>
-<meta name="description" content="The Daily Drive: 7 NFL trivia plays a day, built on real NFL data. The rarer your answer, the bigger the play. Free from Lineup Lab, the fantasy football lab that sets your lineup.">
+<title>Lineup Lab | The Daily Drive + fantasy football tools</title>
+<meta name="description" content="Lineup Lab: play The Daily Drive, a free daily NFL trivia game built on real data, then let the same data set your fantasy lineup with start/sit calls, waiver pickups and trades.">
 <meta name="theme-color" content="#040A08">
 <link rel="icon" href="/icons/favicon-32.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -82,6 +82,8 @@ input[type=range]::-moz-range-thumb{width:12px;height:12px;border-radius:50%;bac
 .dd-play{font-size:17px;padding:16px 28px}
 .dd-live{display:flex;flex-wrap:wrap;gap:8px 20px;margin-top:26px;font-size:12.5px;color:var(--muted)}
 .dd-live b{color:#fff;font-weight:700}
+.dd-live>span{display:inline-flex;align-items:center;gap:6px}
+.lab-h1 .kinetic{padding-bottom:.2em;margin-bottom:-.2em}
 .dd-dot{width:8px;height:8px;border-radius:50%;background:var(--mint);display:inline-block;margin-right:8px;animation:pulse 2s infinite;vertical-align:1px}
 .dd-board{border-radius:26px;padding:20px;position:relative;box-shadow:0 30px 80px -30px rgba(0,0,0,.8),0 0 0 1px rgba(124,242,166,.18)}
 .dd-board::before{content:"";position:absolute;inset:-40px;z-index:-1;background:radial-gradient(60% 60% at 50% 45%,rgba(28,94,73,.65),transparent 70%);filter:blur(30px)}
@@ -110,6 +112,28 @@ input[type=range]::-moz-range-thumb{width:12px;height:12px;border-radius:50%;bac
 .dd-step p{margin:0;color:#B6CBBF;font-size:14.5px}
 .dd-bridge{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:16px;margin-top:22px;padding:20px 22px;border-radius:22px}
 .dd-bridge p{margin:0;font-size:16px;color:#d9e8df;max-width:640px}
+/* ---------- LINEUP LAB front door: the brand first, then its two doors (owner 2026-11-17) ---------- */
+section[id]{scroll-margin-top:92px}
+.lab-hero{text-align:center}
+.lab-brand{display:inline-flex;align-items:center;gap:12px;margin-bottom:20px}
+.lab-brand b{font-size:22px;font-weight:800;letter-spacing:-.02em}
+.lab-h1{font-weight:800;letter-spacing:-.035em;line-height:1;font-size:clamp(40px,6vw,78px);margin:0 auto;max-width:980px}
+.lab-lede{font-size:18px;line-height:1.6;max-width:640px;margin:20px auto 0;color:#B6CBBF}
+.lab-doors{display:grid;gap:16px;margin-top:40px;text-align:left}
+@media(min-width:900px){.lab-doors{grid-template-columns:1.12fr 1fr}}
+.door{padding:26px 24px 24px;border-radius:26px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.door-drive{border-color:rgba(124,242,166,.5);background:radial-gradient(90% 120% at 0% 0%,rgba(74,222,128,.22),rgba(13,28,22,.96) 55%);box-shadow:0 20px 60px -28px rgba(74,222,128,.55)}
+.door-top{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.door-badge{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;padding:5px 10px;border-radius:999px;background:linear-gradient(180deg,#8CF7B2,#4ADE80);color:#04140D;font-weight:700}
+.door h2{margin:0;font-size:clamp(26px,3vw,34px);font-weight:800;letter-spacing:-.02em;line-height:1.05}
+.door p{margin:0;color:#B6CBBF;font-size:15.5px}
+.door-row{display:flex;flex-wrap:wrap;gap:8px}
+.door-chip{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;padding:6px 10px;border-radius:999px;border:1px solid var(--line);color:#d9e8df;background:rgba(255,255,255,.03)}
+.door-emo{font-size:24px;letter-spacing:4px}
+.door-cta{display:flex;flex-wrap:wrap;gap:10px;margin-top:auto;padding-top:6px}
+.dd-sec-k{display:block;margin-bottom:14px}
+.dd-h2{font-weight:800;letter-spacing:-.035em;line-height:.98;font-size:clamp(38px,4.6vw,66px);margin:0}
+.dd-next{display:inline-flex;align-items:center;gap:8px}
 @keyframes pulse{0%,100%{opacity:.55;transform:scale(1)}50%{opacity:1;transform:scale(1.35)}}
 @keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
 @media (prefers-reduced-motion:reduce){*{animation-duration:.001s!important;animation-iteration-count:1!important;transition-duration:.001s!important}html{scroll-behavior:auto}}

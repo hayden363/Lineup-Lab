@@ -169,7 +169,7 @@ function optimizeRoster(pool,locked,excluded){
 
 /* ---------- NAV + AUTH ---------- */
 function Nav({user,onOpenAuth,onLogout}){
-  const links=[['How it plays','#how'],['Lineup Lab','#lab'],['Try it','#sandbox'],['Pricing','#pricing']];
+  const links=[['Home','#top'],['The Daily Drive','#drive'],['Fantasy tools','#lab'],['Try it','#sandbox'],['Pricing','#pricing']];
   const go=(e,h)=>{e.preventDefault();const el=document.querySelector(h);if(el)el.scrollIntoView({behavior:'smooth',block:'start'})};
   const [open,setOpen]=useState(false);
   return html`<header className="sticky top-0 z-50 gutter" style=${{top:'env(safe-area-inset-top,0px)'}}>
@@ -241,31 +241,71 @@ function DriveCard({day,st,lb}){
       :html`<span className="muted">Share your drive, spoiler-free:</span><span className="dd-share">${DD_SAMPLE}</span>`}</div>
   </div>`;
 }
+function msToEtMidnight(){   // time left until the next drive (the Drive's day rolls over at midnight US Eastern)
+  try{const now=new Date();const et=new Date(now.toLocaleString('en-US',{timeZone:'America/New_York'}));
+    const next=new Date(et);next.setHours(24,0,0,0);return next-et}catch(e){return null}}
+function useCountdown(){
+  const [left,setLeft]=useState(msToEtMidnight());
+  useEffect(()=>{const t=setInterval(()=>setLeft(msToEtMidnight()),30000);return()=>clearInterval(t)},[]);
+  if(left==null)return '';const m=Math.max(0,Math.round(left/60000));return Math.floor(m/60)+'h '+(m%60)+'m';
+}
+function BrandHero(){
+  const jump=(e,h)=>{e.preventDefault();const el=document.querySelector(h);if(el)el.scrollIntoView({behavior:'smooth',block:'start'})};
+  return html`<section id="top" className="gutter pt-10 sm:pt-16 pb-6">
+    <div className="wrap lab-hero">
+      <${motion.div} initial=${{opacity:0,y:10}} animate=${{opacity:1,y:0}} className="lab-brand"><${Logo} size=${48}/><b>Lineup Lab</b><//>
+      <h1 className="lab-h1" aria-label="Play football every day. Win your league on Sunday.">
+        <span className="kinetic" aria-hidden="true"><${motion.span} style=${{display:'inline-block'}} initial=${{y:'115%'}} animate=${{y:0}} transition=${{delay:.1,duration:.8,ease:[.16,1,.3,1]}}>Play football every day.<//></span><br/>
+        <span className="kinetic" aria-hidden="true"><${motion.span} className="hl" style=${{display:'inline-block'}} initial=${{y:'115%'}} animate=${{y:0}} transition=${{delay:.25,duration:.8,ease:[.16,1,.3,1]}}>Win your league on Sunday.<//></span>
+      </h1>
+      <${motion.p} initial=${{opacity:0,y:14}} animate=${{opacity:1,y:0}} transition=${{delay:.5}} className="lab-lede">
+        A free daily NFL game you'll want to play every morning, and a fantasy football lab that sets your lineup. Both run on the same real NFL data.
+      <//>
+      <div className="lab-doors">
+        <${motion.div} initial=${{opacity:0,y:24}} animate=${{opacity:1,y:0}} transition=${{delay:.6}} className="card door door-drive">
+          <div className="door-top"><span className="eyebrow">Every day · free</span><span className="door-badge">Start here</span></div>
+          <h2>The Daily Drive</h2>
+          <p>Seven NFL trivia plays a day. Name a player who fits; the rarer your answer, the bigger the play. Keep your streak alive and climb today's leaderboard.</p>
+          <span className="door-emo" aria-hidden="true">${DD_SAMPLE}</span>
+          <div className="door-cta">
+            <a className="btn btn-mint no-underline" href="/play">${Ico('Play',{size:16})}Play today's drive</a>
+            <a className="btn btn-ghost no-underline" href="#drive" onClick=${e=>jump(e,'#drive')}>How it plays</a>
+          </div>
+        <//>
+        <${motion.div} initial=${{opacity:0,y:24}} animate=${{opacity:1,y:0}} transition=${{delay:.72}} className="card door">
+          <div className="door-top"><span className="eyebrow">For your fantasy league</span><span className="tag">Sleeper · ESPN</span></div>
+          <h2>Fantasy tools</h2>
+          <p>Sync your league in 30 seconds. Lineup Lab finds who to start, who to pick up, and which trades actually help your team, every week.</p>
+          <div className="door-row">${[['ArrowLeftRight','Start/Sit'],['TrendingUp','Waivers'],['Repeat','Trades'],['Tv','Live scores'],['BarChart3','Big Board']].map(c=>html`<span className="door-chip" key=${c[1]}>${Ico(c[0],{size:13,color:'#7CF2A6'})}${c[1]}</span>`)}</div>
+          <div className="door-cta">
+            <a className="btn btn-ghost no-underline" href=${APP_URL} style=${{borderColor:'rgba(124,242,166,.5)'}}>${Ico('Zap',{size:15})}Launch Lineup Lab free</a>
+            <a className="btn btn-ghost no-underline" href="#lab" onClick=${e=>jump(e,'#lab')}>See the tools</a>
+          </div>
+        <//>
+      </div>
+    </div>
+  </section>`;
+}
 function DriveHero(){
   const {day,st,lb}=useDrive();
-  return html`<section id="top" className="gutter pt-10 sm:pt-16 pb-10">
+  const left=useCountdown();
+  return html`<section id="drive" className="gutter pt-16 sm:pt-24 pb-10">
     <div className="wrap dd-hero">
       <div className="min-w-0">
-        <${motion.div} initial=${{opacity:0,y:10}} animate=${{opacity:1,y:0}} transition=${{delay:.1}} className="dd-pill">
-          <span className="w-2 h-2 rounded-full" style=${{background:'var(--mint)',animation:'pulse 2s infinite'}}></span>
-          <span className="mono text-[11.5px] mint font-medium">Free daily NFL trivia · new drive at midnight ET</span>
+        <span className="eyebrow dd-sec-k">Lineup Lab · The Daily Drive</span>
+        <${motion.h2} ...${reveal} className="dd-h2">The Daily Drive.<br/><span className="hl">7 plays. 700 yards.</span><//>
+        <${motion.p} ...${reveal} className="dd-lede">
+          Seven football questions a day, easiest first. Name a player who fits, and the rarer your answer, the bigger the play: a Checkdown gains 10 yards, a Highlight Reel TD gains 100. Every answer comes from real NFL data. Free, no account needed.
         <//>
-        <h1 className="dd-h1" aria-label="The Daily Drive. 7 plays. 700 yards.">
-          <span className="kinetic" aria-hidden="true"><${motion.span} style=${{display:'inline-block'}} initial=${{y:'115%'}} animate=${{y:0}} transition=${{delay:.15,duration:.8,ease:[.16,1,.3,1]}}>The Daily Drive.<//></span><br/>
-          <span className="kinetic" aria-hidden="true"><${motion.span} className="hl" style=${{display:'inline-block'}} initial=${{y:'115%'}} animate=${{y:0}} transition=${{delay:.3,duration:.8,ease:[.16,1,.3,1]}}>7 plays. 700 yards.<//></span>
-        </h1>
-        <${motion.p} initial=${{opacity:0,y:14}} animate=${{opacity:1,y:0}} transition=${{delay:.6}} className="dd-lede">
-          Seven football questions a day. Name a player who fits, and the rarer your answer, the bigger the play: a Checkdown gains 10 yards, a Highlight Reel TD gains 100. Every answer comes from real NFL data. Free, no account needed.
-        <//>
-        <${motion.div} initial=${{opacity:0,y:14}} animate=${{opacity:1,y:0}} transition=${{delay:.75}} className="dd-ctas">
+        <${motion.div} ...${reveal} className="dd-ctas">
           <a className="btn btn-mint dd-play no-underline" href="/play">${Ico('Play',{size:18})}Play today's drive</a>
-          <a className="btn btn-ghost no-underline" href=${APP_URL}>${Ico('Zap',{size:15})}Open Lineup Lab</a>
         <//>
         <div className="dd-live mono" aria-live="polite">
           ${st?html`<span><span className="dd-dot"></span><b>${st.players.toLocaleString()}</b> ${st.players===1?'player':'players'} today</span><span>Average drive <b>${Math.round(st.average_yards)}</b> yds</span>`
             :html`<span><span className="dd-dot"></span>Today's drive is live</span>`}
-          <span>Streaks · leaderboards · share your emoji drive</span>
+          ${left?html`<span className="dd-next">${Ico('Clock',{size:13,color:'#7CF2A6'})}Next drive in <b>${left}</b></span>`:null}
         </div>
+        <div className="dd-live mono" style=${{marginTop:10}}><span>${Ico('Flame',{size:13,color:'#F5C26B'})} Daily streaks</span><span>${Ico('Trophy',{size:13,color:'#F5C26B'})} Daily leaderboard</span><span>${Ico('Share2',{size:13,color:'#F5C26B'})} Share your emoji drive</span></div>
       </div>
       <${motion.div} initial=${{opacity:0,y:40}} animate=${{opacity:1,y:0}} transition=${{delay:.45,duration:.9,ease:[.16,1,.3,1]}} className="relative min-w-0">
         <${DriveCard} day=${day} st=${st} lb=${lb}/>
@@ -281,8 +321,8 @@ function HowItPlays(){
     <div className="wrap">
       <div className="dd-steps">${steps.map(s=>html`<${motion.div} key=${s[0]} ...${reveal} className="card dd-step"><span className="k mono">${s[0]}</span><h3>${s[1]}</h3><p>${s[2]}</p><//>`)}</div>
       <${motion.div} ...${reveal} className="glass dd-bridge">
-        <p><b className="mint">Like the game? The same data sets your lineup.</b> Lineup Lab syncs your Sleeper or ESPN league and finds the start/sit calls, pickups and trades that win weeks.</p>
-        <a className="btn btn-ghost no-underline" href="#lab" onClick=${e=>{e.preventDefault();const el=document.querySelector('#lab');if(el)el.scrollIntoView({behavior:'smooth'})}}>See Lineup Lab ${Ico('ArrowDown',{size:15})}</a>
+        <p><b className="mint">Like the game? The same data sets your lineup.</b> Lineup Lab's fantasy tools sync your Sleeper or ESPN league and find the start/sit calls, pickups and trades that win weeks.</p>
+        <a className="btn btn-ghost no-underline" href="#lab" onClick=${e=>{e.preventDefault();const el=document.querySelector('#lab');if(el)el.scrollIntoView({behavior:'smooth'})}}>See the fantasy tools ${Ico('ArrowDown',{size:15})}</a>
       <//>
     </div>
   </section>`;
@@ -832,7 +872,7 @@ function App(){
   return html`<${MotionConfig} reducedMotion="user">
     <${Nav} user=${user} onOpenAuth=${open} onLogout=${()=>{}}/>
     <main>
-      <${DriveHero}/><${HowItPlays}/><${Hero}/><${Ticker2}/><${Bento} onOpenAuth=${open}/><${Sandbox} onOpenAuth=${open}/><${Edges}/><${Pricing} onOpenAuth=${open}/><${Final} onOpenAuth=${open}/>
+      <${BrandHero}/><${DriveHero}/><${HowItPlays}/><${Hero}/><${Ticker2}/><${Bento} onOpenAuth=${open}/><${Sandbox} onOpenAuth=${open}/><${Edges}/><${Pricing} onOpenAuth=${open}/><${Final} onOpenAuth=${open}/>
     </main>
     <${Footer}/>
   <//>`;

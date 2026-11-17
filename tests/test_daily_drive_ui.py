@@ -64,14 +64,22 @@ class LandingTests(unittest.TestCase):
     def test_launch_page_leads_with_the_daily_drive(self):
         js = _r("static/landing.js")
         app = js[js.index("function App()"):]
-        self.assertLess(app.index("<${DriveHero}/>"), app.index("<${Hero}/>"))     # the Drive comes first
-        self.assertEqual(js.count('className="dd-h1"'), 1)
-        self.assertNotIn("<h1 className=\"font-extrabold", js)                     # one h1 on the page: the Drive's
+        # owner 2026-11-17 (round 2): Lineup Lab first, the Daily Drive second (the way in), then the fantasy tools
+        self.assertLess(app.index("<${BrandHero}/>"), app.index("<${DriveHero}/>"))
+        self.assertLess(app.index("<${DriveHero}/>"), app.index("<${Hero}/>"))
+        self.assertEqual(js.count("<h1 "), 1)                                       # one h1: the Lineup Lab headline
+        self.assertIn('className="lab-h1"', js)
+        nav = js[js.index("function Nav("):js.index("/* ---------- HERO")]
+        links = re.findall(r"\['([^']+)','#", nav[:nav.index("];")])
+        self.assertEqual(links[1], "The Daily Drive")                               # the second tab
+        brand = js[js.index("function BrandHero"):js.index("function DriveHero")]
+        self.assertIn("The Daily Drive</h2>", brand)
+        self.assertIn("Fantasy tools</h2>", brand)
         self.assertIn("fetch(u,{credentials:'same-origin'})", js)                  # live card reads the real endpoints
         self.assertIn("'/api/play/daily'", js)
         self.assertIn('href="/play">${Ico(\'Play\',{size:18})}Play today\'s drive', js)
         html = _r("static/landing.html")
-        self.assertIn("<title>The Daily Drive", html)
+        self.assertIn("<title>Lineup Lab", html)
 
 
 if __name__ == "__main__":
