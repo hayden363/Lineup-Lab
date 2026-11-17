@@ -867,7 +867,28 @@
       if (o.seek != null && field.seek) field.seek(o.seek);
     };
     window.ddDemo = { play: demoRun, sack: function (o) { demoRun(0, o); }, resume: function () { field.seek && field.seek(null); }, field: field,
+      team: function (code) { return loadStadium(code || ""); },
       list: { 1: "Checkdown", 2: "Quick Slant", 3: "Chain Mover", 4: "Chunk Play", 5: "Bomb", "6 (variant 0/1/2)": "Highlight Reel TD" } };
   }
+
+  // ---------------------------------------------------------------- the favorite-team stadium: signed-in players with a favorite team play on
+  // their team's field (real starters' numbers, this week's real opponent). Anyone else keeps the Lineup Lab field. Any failure is cosmetic.
+  // The demo page previews a team without an account: /play?demo=1&team=SEA (or ddDemo.team("GB")).
+  function loadStadium(previewCode) {
+    if (!field.setTeam) return Promise.resolve(null);
+    var url;
+    if (previewCode != null) url = "/api/play/stadium?preview=1&team=" + encodeURIComponent(previewCode);
+    else {
+      var code = "";
+      try { code = (window.localStorage && window.localStorage.getItem("eb_team")) || ""; } catch (e) { code = ""; }
+      url = "/api/play/stadium" + (/^[A-Z]{2,3}$/.test(code) ? "?team=" + code : "");
+    }
+    return api(url).then(function (r) {
+      if (r && (r.signed_in || previewCode != null)) field.setTeam(r.stadium || null);
+      return r;
+    }).catch(function () { return null; });
+  }
+  var demoTeam = /[?&]demo=1(&|$)/.test(window.location.search) && /[?&]team=([A-Za-z]{2,3})(&|$)/.exec(window.location.search);
+  loadStadium(demoTeam ? demoTeam[1].toUpperCase() : undefined);
   boot();
 })();

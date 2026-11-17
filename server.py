@@ -51,6 +51,7 @@ from engine import chat as chat_layer
 from engine import correlation
 from engine import daily_drive
 from engine import daily_drive_scores as dd_scores
+from engine import dd_stadium
 from engine import data as data_layer
 from engine import db
 from engine import espn as espn_layer
@@ -2319,6 +2320,28 @@ def play_me(request: Request):
         return {"signed_in": True, "available": False}
     return _clean({"signed_in": True, "available": True,
                    **dd_scores.my_history(rows, daily_drive.today_et().isoformat())})
+
+
+@app.get("/api/play/stadium", dependencies=[Depends(play_rate_limit)])
+def play_stadium(request: Request, team: Optional[str] = None, preview: bool = False):
+    """The favorite-team field skin: team colors, real starters' jersey numbers, this week's real opponent on defense.
+    Only for a signed-in player (owner, 2026-11-16). `team` is this browser's saved pick (it wins, as in Settings);
+    without one the account's saved team is used. preview=1 is the dev demo page (/play?demo=1&team=SEA): the skin
+    is public roster data, so it is returned without an account there."""
+    today = daily_drive.today_et()
+    if preview:
+        return _clean({"signed_in": None, "stadium": dd_stadium.stadium(team, today)})
+    user = _play_user(request)
+    if not user:
+        return {"signed_in": False, "stadium": None}
+    code = (team or "").upper()
+    if code not in dd_stadium.UNIFORMS:
+        try:
+            code = (db.get_settings(user["id"]).get("theme") or "").upper()
+        except Exception as e:
+            print(f"[play] stadium team lookup failed: {type(e).__name__}")
+            code = ""
+    return _clean({"signed_in": True, "stadium": dd_stadium.stadium(code, today)})
 
 
 @app.get("/play", include_in_schema=False)

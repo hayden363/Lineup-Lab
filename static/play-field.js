@@ -13,6 +13,12 @@
   var NAMES = ["", "CHECKDOWN", "QUICK SLANT", "CHAIN MOVER", "CHUNK PLAY", "BOMB", "HIGHLIGHT REEL TD"];
   var RB = ["#ff3b3b", "#ff9a1f", "#ffe92e", "#37e66a", "#2ec8ff", "#7b61ff", "#d65bff"], CONF = ["#ffd36a", "#ffb84d", "#ffffff", "#ff8a3d", "#fff04d", "#19e08a"];
   var SKINS = ["#f0c8a0", "#c68642", "#8d5524", "#e0ac69", "#a86f45"];
+  function rgbOf(hex) { var h = String(hex || "#000").replace("#", ""); if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2]; var n = parseInt(h, 16) || 0; return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; }
+  function mix(a, b, t) { var x = rgbOf(a), y = rgbOf(b); return "rgb(" + Math.round(lerp(x[0], y[0], t)) + "," + Math.round(lerp(x[1], y[1], t)) + "," + Math.round(lerp(x[2], y[2], t)) + ")"; }
+  function luma(hex) { var c = rgbOf(hex); return (0.299 * c[0] + 0.587 * c[1] + 0.114 * c[2]) / 255; }
+  // The favorite-team skin (setTeam): which formation slot wears which real jersey number.
+  var SLOTS = { o: [["ol1", "ol", 0], ["ol2", "ol", 1], ["c", "ol", 2], ["ol4", "ol", 3], ["ol5", "ol", 4], ["te", "te", 0], ["wrL", "wr", 0], ["wrR", "wr", 1], ["rb", "rb", 0]],
+    d: [["dl1", "dl", 0], ["dl2", "dl", 1], ["dl3", "dl", 2], ["dl4", "dl", 3], ["lbL", "lb", 0], ["lbR", "lb", 1], ["cbL", "cb", 0], ["cbR", "cb", 1], ["sL", "s", 0], ["sR", "s", 1]] };
 
   function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
   function lerp(a, b, t) { return a + (b - a) * t; }
@@ -141,10 +147,13 @@
     for (i0 = 0; i0 < 12; i0++) CFL.push({ on: 0, x: 0, y: 0, t0: 0 });
     for (i0 = 0; i0 < 24; i0++) IT.push({ y: 0, e: null });
     for (i0 = 0; i0 < 8; i0++) DUST.push("rgba(214,204,176," + (0.42 * i0 / 7).toFixed(2) + ")");
-    (function () {   // helmet shells: highlight, body, dark rim (unit circle; scaled per use)
-      var c = [["#2fd88f", "#0d8a54", "#06462b"], ["#f3f6fc", "#b4bfd6", "#5f6c8c"]];
+    function helmetGrads(c) {   // helmet shells: highlight, body, dark rim (unit circle; scaled per use)
+      HG.length = 0;
       for (var j = 0; j < 2; j++) { var g = ctx.createRadialGradient(-0.35, -0.4, 0.05, 0, 0, 1.05); g.addColorStop(0, c[j][0]); g.addColorStop(0.55, c[j][1]); g.addColorStop(1, c[j][2]); HG.push(g); }
-    })();
+    }
+    helmetGrads([["#2fd88f", "#0d8a54", "#06462b"], ["#f3f6fc", "#b4bfd6", "#5f6c8c"]]);
+    function shell(hex) { return [mix(hex, "#ffffff", 0.45), hex, mix(hex, "#000000", 0.6)]; }
+    var TU = null;     // the favorite-team skin, derived once by setTeam (null = the Lineup Lab default look)
     var rnd = rng(7);
 
     FORM.forEach(function (f, i) {
@@ -425,7 +434,7 @@
     function burst(x, wy, c, n) { for (var i = 0; i < n; i++) { var a = rnd() * TAU, v = 20 + rnd() * 70; put(x, wy, Math.cos(a) * v, Math.sin(a) * v * 0.7 - 24, 90, 0.5 + rnd() * 0.5, c, 1 + rnd() * 1.7, 0); } }
     function stars(x, wy, c, n) { for (var i = 0; i < n; i++) { var a = rnd() * TAU, v = 14 + rnd() * 46; put(x, wy, Math.cos(a) * v, Math.sin(a) * v * 0.6 - 18, 20, 0.45 + rnd() * 0.4, c, 2 + rnd() * 2.4, 3); } }
     function dust(x, wy, n) { for (var i = 0; i < n; i++) put(x + (rnd() - 0.5) * 1.5, wy, (rnd() - 0.5) * 44, -8 - rnd() * 24, -10, 0.55 + rnd() * 0.4, "d", 3 + rnd() * 3.5, 1); }
-    function turf(x, wy, n) { for (var i = 0; i < n; i++) put(x + (rnd() - 0.5), wy, (rnd() - 0.5) * 70, -26 - rnd() * 40, 150, 0.5 + rnd() * 0.3, i % 3 ? "#1d7a3f" : "#4a2f17", 1.2 + rnd() * 1.4, 4); }
+    function turf(x, wy, n) { for (var i = 0; i < n; i++) put(x + (rnd() - 0.5), wy, (rnd() - 0.5) * 70, -26 - rnd() * 40, 150, 0.5 + rnd() * 0.3, i % 3 ? "#1d7a3f" : (TU && !TU.grass ? "#141414" : "#4a2f17"), 1.2 + rnd() * 1.4, 4); }
     function tapSpark(x, wy) { burst(x, wy, "#ffffff", 8); dust(x, wy, 4); put(x, wy, 0, 0, 0, 0.3, "#ffffff", 5, 2); }
     function catchFx(ti, x, wy, col) {
       var n = [0, 6, 12, 22, 38, 60, 90][ti];
@@ -463,22 +472,41 @@
         b.fillStyle = "rgba(0,0,0,0.28)"; b.fillRect(0, y + 3.2 * u, W, 1.2 * u);
         var step = (4.6 + (bandH - y) / bandH * 3.2) * u, ds = 1.8 * u + (bandH - y) / bandH * 1.7 * u;
         for (x = rr() * step; x < W; x += step * (0.85 + rr() * 0.4)) {
-          var q = rr(); c = q < 0.3 ? "70,92,140" : q < 0.5 ? "120,130,150" : q < 0.66 ? "25,224,138" : q < 0.8 ? "255,205,140" : "235,240,255";
+          var q = rr(); c = TU ? (q < 0.42 ? TU.crowd[0] : q < 0.6 ? TU.crowd[1] : q < 0.7 ? "120,130,150" : q < 0.8 ? TU.crowd[2] : q < 0.9 ? "255,205,140" : "235,240,255")
+            : q < 0.3 ? "70,92,140" : q < 0.5 ? "120,130,150" : q < 0.66 ? "25,224,138" : q < 0.8 ? "255,205,140" : "235,240,255";
           b.fillStyle = "rgba(" + c + "," + (0.22 + rr() * 0.4).toFixed(2) + ")"; b.fillRect(x, y, ds, ds * 1.05);
           b.fillStyle = "rgba(255,226,196," + (0.25 + rr() * 0.3).toFixed(2) + ")"; b.fillRect(x + ds * 0.18, y - ds * 0.62, ds * 0.64, ds * 0.6);
         }
       }
       for (i = 1; i < 6; i++) { b.fillStyle = "rgba(0,0,0,0.3)"; b.fillRect(W * i / 6, 0, 1.4 * u, bandH - wallH); }             // aisle gaps
       var rg = b.createLinearGradient(0, 0, 0, bandH * 0.3); rg.addColorStop(0, "rgba(0,0,0,0.85)"); rg.addColorStop(1, "rgba(0,0,0,0)"); b.fillStyle = rg; b.fillRect(0, 0, W, bandH * 0.3);   // roof overhang
+      if (TU && TU.dome) {                     // a closed roof: steel trusses and a ring of fixtures instead of a night sky
+        var rh = bandH * 0.34, tg = b.createLinearGradient(0, 0, 0, rh); tg.addColorStop(0, "#0b0f18"); tg.addColorStop(1, "#1c2433"); b.fillStyle = tg; b.fillRect(0, 0, W, rh);
+        b.strokeStyle = "rgba(160,175,200,0.22)"; b.lineWidth = 1.2 * u; b.beginPath();
+        for (x = -W; x < 2 * W; x += 26 * u) { b.moveTo(x, 0); b.lineTo(x + 18 * u, rh); b.moveTo(x + 18 * u, 0); b.lineTo(x, rh); }
+        b.moveTo(0, rh * 0.5); b.lineTo(W, rh * 0.5); b.stroke();
+        b.fillStyle = "rgba(0,0,0,0.5)"; b.fillRect(0, rh - 2.5 * u, W, 2.5 * u);
+        for (x = 9 * u; x < W; x += 18 * u) { b.fillStyle = "rgba(255,248,230,0.95)"; b.fillRect(x - 3 * u, rh - 5.5 * u, 6 * u, 2.4 * u); }
+      }
       var n = 8, bw = W / n; b.font = "800 " + (8.4 * u).toFixed(1) + "px " + FONT; b.textAlign = "center"; b.textBaseline = "middle";
       for (j = 0; j < n; j++) {                                                                                                 // LED ad boards
-        var lg = b.createLinearGradient(0, bandH - wallH, 0, bandH); lg.addColorStop(0, j % 2 ? "#0fa868" : "#16233a"); lg.addColorStop(1, j % 2 ? "#0a6e46" : "#0b1424"); b.fillStyle = lg; b.fillRect(j * bw, bandH - wallH, bw + 1, wallH);
-        b.fillStyle = j % 2 ? "rgba(255,255,255,0.9)" : "rgba(25,224,138,0.9)"; b.fillText(j % 2 ? "LINEUP LAB" : "DAILY DRIVE", j * bw + bw / 2, bandH - wallH / 2 + 0.5);
+        var lg = b.createLinearGradient(0, bandH - wallH, 0, bandH);
+        if (TU) { lg.addColorStop(0, j % 2 ? TU.o.jersey : "#141a26"); lg.addColorStop(1, j % 2 ? mix(TU.o.jersey, "#000000", 0.4) : "#0b0f18"); }
+        else { lg.addColorStop(0, j % 2 ? "#0fa868" : "#16233a"); lg.addColorStop(1, j % 2 ? "#0a6e46" : "#0b1424"); }
+        b.fillStyle = lg; b.fillRect(j * bw, bandH - wallH, bw + 1, wallH);
+        if (TU) { b.fillStyle = j % 2 ? TU.o.num : TU.accent; b.fillText(j % 4 === 1 ? TU.name : j % 4 === 3 ? TU.city : j % 4 === 0 ? "LINEUP LAB" : "DAILY DRIVE", j * bw + bw / 2, bandH - wallH / 2 + 0.5); }
+        else { b.fillStyle = j % 2 ? "rgba(255,255,255,0.9)" : "rgba(25,224,138,0.9)"; b.fillText(j % 2 ? "LINEUP LAB" : "DAILY DRIVE", j * bw + bw / 2, bandH - wallH / 2 + 0.5); }
         b.fillStyle = "rgba(255,255,255,0.16)"; b.fillRect(j * bw, bandH - wallH, bw, 1.2 * u);
       }
       b.fillStyle = "rgba(0,0,0,0.5)"; b.fillRect(0, bandH - 2, W, 2); bandCv = B.c;
       // stadium lights: glow cores and soft beams, additive, screen space
       var Lq = mk(W, H), l = Lq.x; l.globalCompositeOperation = "lighter";
+      if (TU && TU.dome) {                     // even indoor light: many soft fixtures, no light towers
+        for (i = 0; i < 9; i++) {
+          var dx = W * (0.06 + i * 0.11), dy = H * 0.03, dr = Math.min(W, H) * 0.28, dg = l.createRadialGradient(dx, dy, 0, dx, dy, dr);
+          dg.addColorStop(0, "rgba(255,246,225,0.34)"); dg.addColorStop(0.3, "rgba(255,240,215,0.08)"); dg.addColorStop(1, "rgba(255,240,215,0)"); l.fillStyle = dg; l.fillRect(0, 0, W, H * 0.7);
+        }
+      } else
       [[0.08, 0.025], [0.92, 0.025], [0.3, 0.0], [0.7, 0.0]].forEach(function (p, ix) {
         var lx = W * p[0], ly = H * p[1], rd = Math.min(W, H) * (ix < 2 ? 0.5 : 0.32), g = l.createRadialGradient(lx, ly, 0, lx, ly, rd);
         g.addColorStop(0, "rgba(215,235,255," + (ix < 2 ? 0.6 : 0.34) + ")"); g.addColorStop(0.16, "rgba(150,200,255," + (ix < 2 ? 0.2 : 0.1) + ")"); g.addColorStop(1, "rgba(80,140,255,0)"); l.fillStyle = g; l.fillRect(0, 0, W, H * 0.75);
@@ -532,6 +560,54 @@
       ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y - 17 * k); ctx.moveTo(x - 11 * k, y - 22 * k); ctx.lineTo(x + 11 * k, y - 22 * k); ctx.moveTo(x - 11 * k, y - 22 * k); ctx.lineTo(x - 11 * k, y - 50 * k); ctx.moveTo(x + 11 * k, y - 22 * k); ctx.lineTo(x + 11 * k, y - 50 * k); ctx.stroke();
       ctx.beginPath(); ctx.moveTo(x, y - 17 * k); ctx.lineTo(x, y - 22 * k); ctx.stroke();
     }
+    function shieldPath(sc) {        // a league-style shield in a 100-unit box centred on 0,0 (scaled by sc)
+      ctx.beginPath(); ctx.moveTo(-46 * sc, -40 * sc); ctx.quadraticCurveTo(-22 * sc, -34 * sc, 0, -48 * sc); ctx.quadraticCurveTo(22 * sc, -34 * sc, 46 * sc, -40 * sc);
+      ctx.lineTo(44 * sc, 8 * sc); ctx.quadraticCurveTo(38 * sc, 36 * sc, 0, 50 * sc); ctx.quadraticCurveTo(-38 * sc, 36 * sc, -44 * sc, 8 * sc); ctx.closePath();
+    }
+    function drawEmblem() {          // the midfield Daily Drive shield in the team's colors, laid flat on the turf
+      pj(0, 50); var cx = PR.x, s = PR.s; if (PR.y < -80 || PR.y > H + 80) return;
+      pj(0, 43); var y0 = PR.y; pj(0, 57); var y1 = PR.y, rx = 5.6 * L.pxX * s, ry = Math.abs(y0 - y1) / 2, i;
+      var body = TU.o.jersey, band = mix(TU.o.jersey, "#000000", 0.45), ink = TU.o.num, edge = TU.o.trim;
+      ctx.save(); ctx.translate(cx, (y0 + y1) / 2); ctx.scale(rx / 50, ry / 50); ctx.globalAlpha = 0.93; ctx.lineJoin = "round";
+      shieldPath(1); ctx.fillStyle = "#f4f6fa"; ctx.fill();                                   // white outer rim
+      shieldPath(0.9); ctx.fillStyle = body; ctx.fill(); ctx.lineWidth = 2.4; ctx.strokeStyle = edge; ctx.stroke();
+      ctx.save(); shieldPath(0.9); ctx.clip(); ctx.fillStyle = band; ctx.fillRect(-50, -50, 100, 30); ctx.restore();   // the star band
+      ctx.fillStyle = "#ffffff"; for (i = 0; i < 7; i++) star(-27 + i * 9, -27, 3.1);           // one star per play
+      ctx.fillStyle = "#8a4a22"; ctx.beginPath(); ctx.ellipse(0, -46, 8, 4.4, 0, 0, TAU); ctx.fill();                   // the football on top
+      ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(-3, -46); ctx.lineTo(3, -46); ctx.moveTo(-1.5, -47.5); ctx.lineTo(-1.5, -44.5); ctx.moveTo(1.5, -47.5); ctx.lineTo(1.5, -44.5); ctx.stroke();
+      ctx.font = "800 italic 38px " + FONT; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.lineWidth = 5; ctx.strokeStyle = edge; ctx.strokeText("DD", 0, 6); ctx.fillStyle = ink; ctx.fillText("DD", 0, 6);
+      ctx.font = "800 9px " + FONT; ctx.fillStyle = ink; ctx.fillText("DAILY DRIVE", 0, 30);
+      ctx.restore();
+    }
+    function drawBench(sd) {        // the team areas: the home bench on the left, the visitors (road whites) on the right
+      var u = sd < 0 ? TU.o : TU.d, nums = sd < 0 ? TU.benchH : TU.benchA, Y, i, k, bx, by, idx = 0, coach, row, x0 = sd * (XS + 1.4), x1 = sd * (XS + 8.5);
+      ctx.save(); ctx.globalAlpha = sd < 0 ? 0.42 : 0.3; quad(18, 82, Math.min(x0, x1), Math.max(x0, x1)); ctx.fillStyle = sd < 0 ? u.jersey : u.trim; ctx.fill();   // the painted team area
+      ctx.globalAlpha = 0.85; ctx.strokeStyle = "#f3d34a"; ctx.lineWidth = 1.4 * L.u; ctx.beginPath(); wline(x0, 18, x0, 82); ctx.stroke();
+      ctx.globalAlpha = 0.9; quad(24, 76, Math.min(sd * (XS + 7.2), sd * (XS + 8.2)), Math.max(sd * (XS + 7.2), sd * (XS + 8.2))); ctx.fillStyle = "#0d121c"; ctx.fill(); ctx.restore();   // the bench
+      for (row = 1; row >= 0; row--)
+      for (Y = 82 - row * 1.3; Y >= 18; Y -= 2.6) {
+        idx++; coach = row === 0 && idx % 5 === 0;
+        pj(sd * (XS + 3.0 + row * 2.6 + ((idx * 7) % 3) * 0.45), Y); if (PR.y < -40 || PR.y > H + 40) continue;
+        k = ksz(PR.s) * 0.9; bx = PR.x; by = PR.y;
+        ctx.fillStyle = "rgba(0,0,0,0.32)"; ctx.fillRect(bx - 4 * k, by - 0.5 * k, 8 * k, 1.5 * k);
+        ctx.fillStyle = coach ? "#1b2130" : u.pants; ctx.fillRect(bx - 2.6 * k, by - 5.6 * k, 2.2 * k, 5.4 * k); ctx.fillRect(bx + 0.4 * k, by - 5.6 * k, 2.2 * k, 5.4 * k);
+        ctx.fillStyle = coach ? u.polo : u.jersey; ctx.fillRect(bx - 3.4 * k, by - 12.6 * k, 6.8 * k, 7.4 * k);
+        if (!coach) { ctx.fillStyle = u.trim; ctx.fillRect(bx - 3.4 * k, by - 12.6 * k, 6.8 * k, 0.9 * k); }
+        ctx.fillStyle = SKINS[idx % SKINS.length]; ctx.beginPath(); ctx.arc(bx, by - 14.6 * k, 2.3 * k, 0, TAU); ctx.fill();
+        if (coach) { ctx.strokeStyle = "#e9edf5"; ctx.lineWidth = 0.7 * k; ctx.beginPath(); ctx.arc(bx, by - 14.6 * k, 2.6 * k, PI * 1.05, PI * 1.95); ctx.stroke(); }
+        else if (nums.length && 4.8 * k >= 5) {
+          ctx.font = "800 " + (4.8 * k).toFixed(1) + "px " + FONT; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+          ctx.fillStyle = u.num; ctx.fillText(String(nums[(idx * 7) % nums.length]), bx, by - 8.9 * k);
+        }
+      }
+      for (Y = -6; Y < 108; Y += 7.5) {            // staff and photographers outside the team areas
+        if (Y > 12 && Y < 88) continue;
+        pj(sd * (XS + 4 + ((Y * 7) & 3) * 0.6), Y); if (PR.y < -40 || PR.y > H + 40) continue;
+        k = ksz(PR.s) * 0.7; bx = PR.x; by = PR.y; ctx.fillStyle = "#2a3346"; ctx.fillRect(bx - 3 * k, by - 12 * k, 6 * k, 11.5 * k);
+        ctx.fillStyle = "#d8b08a"; ctx.beginPath(); ctx.arc(bx, by - 14.2 * k, 2.3 * k, 0, TAU); ctx.fill();
+      }
+    }
     function drawScene() {
       var Y, i, XA = XS + 26;
       ctx.fillStyle = "#04120d"; ctx.fillRect(-W, -H, 3 * W, 3 * H);
@@ -541,12 +617,13 @@
       quad(-44, 125, -XA, XA); ctx.fillStyle = "#082519"; ctx.fill();
       for (Y = -10; Y < 110; Y += 5) {
         if (Y < 0 || Y >= 100) continue;
-        quad(Y, Y + 5, -XS, XS); ctx.fillStyle = ((Y / 5) & 1) ? "#0f6139" : "#0b5130"; ctx.fill();
+        quad(Y, Y + 5, -XS, XS); ctx.fillStyle = ((Y / 5) & 1) ? (TU ? TU.turf[0] : "#0f6139") : (TU ? TU.turf[1] : "#0b5130"); ctx.fill();
       }
-      ctx.lineCap = "butt"; ctx.strokeStyle = "rgba(255,255,255,0.05)"; ctx.lineWidth = 2.6 * L.u; ctx.beginPath();
+      ctx.lineCap = "butt"; ctx.strokeStyle = "rgba(255,255,255," + (TU && !TU.grass ? 0.02 : 0.05) + ")"; ctx.lineWidth = 2.6 * L.u; ctx.beginPath();
       for (i = -XS + 1.1; i < XS; i += 2.2) wline(i, 0, i, 100);
       ctx.stroke();
-      endZone(-10, 0, "#0a3d4c", "#19e08a"); endZone(100, 110, "#5a4511", "#ffcf6b");
+      if (TU) { endZone(-10, 0, TU.ez, TU.ezBand); endZone(100, 110, TU.ez, TU.ezBand); }
+      else { endZone(-10, 0, "#0a3d4c", "#19e08a"); endZone(100, 110, "#5a4511", "#ffcf6b"); }
       // light pools (world anchored)
       ctx.save(); ctx.globalCompositeOperation = "lighter";
       var pools = [[-10, S.los + 10, 34, 0.1], [11, S.los + 26, 38, 0.08], [0, S.los + 52, 46, 0.06]];
@@ -566,17 +643,24 @@
       wline(-XS, -10, -XS, 110); wline(XS, -10, XS, 110); ctx.stroke();
       ctx.lineWidth = 2.4 * L.u; ctx.beginPath(); wline(-XS, 110, XS, 110); wline(-XS, -10, XS, -10); ctx.stroke();
       for (Y = 10; Y <= 90; Y += 10) { var num = String(Y <= 50 ? Y : 100 - Y); ftext(num, -XS + 11.5, Y, 3.4, "#ffffff", 0.55); ftext(num, XS - 11.5, Y, 3.4, "#ffffff", 0.55); }
-      ftext("LINEUP LAB", 0, -5, 6.6, "#ffffff", 0.62, "rgba(0,40,30,0.7)"); ftext("THE DAILY DRIVE", 0, -8.9, 2.1, "#19e08a", 0.7);
-      ftext("LINEUP LAB", 0, 105, 6.6, "#ffe9a8", 0.7, "rgba(60,30,0,0.7)"); ftext("THE DAILY DRIVE", 0, 108.6, 2.1, "#ffffff", 0.55);
+      if (TU) {         // painted end zones (city in one, nickname in the other) and the midfield emblem
+        ftext(TU.city, 0, -5, TU.citySz, TU.ezText, 0.92, TU.ezStroke); ftext("THE DAILY DRIVE", 0, -8.9, 2.1, TU.ezText, 0.6);
+        ftext(TU.name, 0, 105, TU.nameSz, TU.ezText, 0.92, TU.ezStroke); if (TU.stadium) ftext(TU.stadium, 0, 108.6, 1.9, TU.ezText, 0.6);
+        drawEmblem();
+      } else {
+        ftext("LINEUP LAB", 0, -5, 6.6, "#ffffff", 0.62, "rgba(0,40,30,0.7)"); ftext("THE DAILY DRIVE", 0, -8.9, 2.1, "#19e08a", 0.7);
+        ftext("LINEUP LAB", 0, 105, 6.6, "#ffe9a8", 0.7, "rgba(60,30,0,0.7)"); ftext("THE DAILY DRIVE", 0, 108.6, 2.1, "#ffffff", 0.55);
+      }
       // sideline area: LED boards and the people standing on the apron
       var sd, bx, by, k;
       for (sd = -1; sd <= 1; sd += 2) {
         pj(sd * (XS + 9), -22); var nx = PR.x, ny = PR.y, ns = PR.s; pj(sd * (XS + 9), 118); var fx = PR.x, fy = PR.y, fs = PR.s, nh = 15 * L.u * Math.pow(ns, 0.7), fh = 15 * L.u * Math.pow(fs, 0.7);
         poly([nx, ny, fx, fy, fx, fy - fh, nx, ny - nh]); ctx.fillStyle = "#0a1424"; ctx.fill();
-        ctx.strokeStyle = "rgba(25,224,138,0.9)"; ctx.lineWidth = 2 * L.u; ctx.beginPath(); ctx.moveTo(nx, ny - nh); ctx.lineTo(fx, fy - fh); ctx.stroke();
+        ctx.strokeStyle = TU ? (sd < 0 ? TU.rail : TU.railAway) : "rgba(25,224,138,0.9)"; ctx.lineWidth = 2 * L.u; ctx.beginPath(); ctx.moveTo(nx, ny - nh); ctx.lineTo(fx, fy - fh); ctx.stroke();
         ctx.strokeStyle = "rgba(255,255,255,0.12)"; ctx.lineWidth = 1; ctx.beginPath();
         for (Y = -20; Y < 118; Y += 6) { pj(sd * (XS + 9), Y); ctx.moveTo(PR.x, PR.y); ctx.lineTo(PR.x, PR.y - 15 * L.u * Math.pow(PR.s, 0.7)); }
         ctx.stroke();
+        if (TU) { drawBench(sd); continue; }
         for (Y = -6; Y < 108; Y += 3.4) {
           pj(sd * (XS + 3.4 + ((Y * 7) & 3) * 0.6), Y); if (PR.y < -40 || PR.y > H + 40) continue;
           k = ksz(PR.s) * 0.72; bx = PR.x; by = PR.y; ctx.fillStyle = "rgba(0,0,0,0.3)"; ctx.fillRect(bx - 4 * k, by - 0.5 * k, 8 * k, 1.5 * k);
@@ -648,6 +732,8 @@
       if (qb) k *= 1.26; else if (ty0 === "wr" || ty0 === "rb" || ty0 === "te") k *= 1.06; else if (ty0 === "ol" || ty0 === "dl") k *= 1.04;
       var wb = ty0 === "ol" || ty0 === "dl" ? 1.2 : ty0 === "lb" ? 1.1 : ty0 === "wr" || ty0 === "cb" ? 0.94 : 1;
       var jersey = off ? "#16d27f" : "#eef2f9", trim = off ? "#0a7d4c" : "#9ba7c0", pants = off ? "#eef2f8" : "#303b56", sock = off ? "#16d27f" : "#cfd7e8", num = off ? "#ffffff" : "#16203a", skin = e.skin, glove = off ? "#ffffff" : "#d8e0f0";
+      var nstroke = off ? "rgba(0,50,25,0.9)" : "rgba(255,255,255,0.9)", stripe = off ? "#ffffff" : "#33426a";
+      if (TU) { var u = off ? TU.o : TU.d; jersey = u.jersey; trim = u.trim; pants = u.pants; sock = u.sock; num = u.num; glove = u.glove; nstroke = u.nstroke; stripe = u.stripe; }
       var ph = e.phase, sw = e.run ? Math.sin(ph) * e.amp : 0, bob = e.run ? -Math.abs(Math.sin(ph)) * 1.1 * k * e.amp : 0, cr = e.cr * 2.6, hipY = -10 + cr;
       // ground shadow
       ctx.fillStyle = "rgba(0,0,0,0.4)"; var shs = 1 - Math.min(0.5, e.z / 36); ctx.beginPath(); ctx.ellipse(sx, sy + 0.4 * k, 7.6 * k * wb * shs, 2.5 * k * shs, 0, 0, TAU); ctx.fill();
@@ -663,7 +749,7 @@
       ctx.fillStyle = "rgba(0,0,0,0.16)"; ctx.fillRect(2.2 * wb * k, -18 * k, 3.4 * wb * k, 7.2 * k);
       ctx.fillStyle = trim; ctx.fillRect(-5.6 * wb * k, -11.6 * k, 11.2 * wb * k, 1.1 * k);
       var label = String(e.n), nsz = (qb ? 9.8 : ty0 === "ol" || ty0 === "dl" ? 7.2 : 8) * k, ny = -14.4 * k;
-      ctx.font = "800 " + nsz.toFixed(1) + "px " + FONT; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.lineJoin = "round"; ctx.lineWidth = 1.8 * k; ctx.strokeStyle = off ? "rgba(0,50,25,0.9)" : "rgba(255,255,255,0.9)"; ctx.strokeText(label, 0, ny); ctx.fillStyle = num; ctx.fillText(label, 0, ny);
+      ctx.font = "800 " + nsz.toFixed(1) + "px " + FONT; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.lineJoin = "round"; ctx.lineWidth = 1.8 * k; ctx.strokeStyle = nstroke; ctx.strokeText(label, 0, ny); ctx.fillStyle = num; ctx.fillText(label, 0, ny);
       // arms + gloves (poses: swing, block, hold, throw, catch, carry, wrap, celebrate)
       hands(e);
       var ax = 7 * wb * k, ay = -17.9 * k;
@@ -681,10 +767,10 @@
       ctx.save(); ctx.translate(0, hy); ctx.scale(hr, hr * 0.97); ctx.fillStyle = off ? HG[0] : HG[1]; ctx.beginPath(); ctx.arc(0, 0, 1, 0, TAU); ctx.fill(); ctx.restore();
       ctx.strokeStyle = "rgba(0,0,0,0.6)"; ctx.lineWidth = 1.1 * k; ctx.beginPath(); ctx.arc(0, hy, hr, 0, TAU); ctx.stroke();
       if (back) {
-        ln(0, hy - hr * 0.98, 0, hy + hr * 0.5, off ? "#ffffff" : "#33426a", 1.7 * k);
+        if (stripe) ln(0, hy - hr * 0.98, 0, hy + hr * 0.5, stripe, 1.7 * k);
         ctx.fillStyle = "#6c7690"; ctx.beginPath(); ctx.arc(-hr * 0.93, hy + 0.5 * k, 0.9 * k, 0, TAU); ctx.fill(); ctx.beginPath(); ctx.arc(hr * 0.93, hy + 0.5 * k, 0.9 * k, 0, TAU); ctx.fill();
       } else {
-        ln(0, hy - hr, 0, hy - hr * 0.42, off ? "#ffffff" : "#33426a", 1.7 * k);
+        if (stripe) ln(0, hy - hr, 0, hy - hr * 0.42, stripe, 1.7 * k);
         ctx.fillStyle = skin; ctx.beginPath(); ctx.ellipse(0, hy + 1.3 * k, hr * 0.68, hr * 0.5, 0, 0, TAU); ctx.fill();
         ctx.fillStyle = "#12151e"; ctx.fillRect(-2.4 * k, hy + 0.5 * k, 1.5 * k, 1.2 * k); ctx.fillRect(0.9 * k, hy + 0.5 * k, 1.5 * k, 1.2 * k);
         ctx.strokeStyle = off ? "#dfe7f5" : "#7b88a6"; ctx.lineWidth = 0.95 * k; ctx.beginPath();
@@ -997,6 +1083,35 @@
       ballPoint: function () { var g = S.ballG; pj(g.x, g.y); var r = canvas.getBoundingClientRect(); return { x: r.left + PR.x, y: r.top + PR.y - g.h * ksz(PR.s) }; },
       flash: flash, shake: shake,
       tdCelebrate: function () { flash("#ffab1a", 0.4, 0.8); },
+      // The favorite-team stadium (from /api/play/stadium): {home: {code, uniform, numbers, bench, roof, surface, stadium},
+      // away: {code, uniform, numbers, bench}}. null puts the Lineup Lab default field back. The QB keeps the question number.
+      setTeam: function (sk) {
+        var themes = window.TEAM_THEMES || {};
+        if (!sk || !sk.home || !sk.away || !sk.home.uniform || !sk.away.uniform) {
+          TU = null; helmetGrads([["#2fd88f", "#0d8a54", "#06462b"], ["#f3f6fc", "#b4bfd6", "#5f6c8c"]]);
+          FORM.forEach(function (f) { EK[f.k].n = f.n; });
+        } else {
+          var hu = sk.home.uniform, au = sk.away.uniform, th = themes[sk.home.code] || {}, ta = themes[sk.away.code] || {};
+          var city = String(th.city || sk.home.code).toUpperCase(), name = String(th.name || sk.home.code).toUpperCase(), stad = String(sk.home.stadium || "").toUpperCase();
+          var awayNum = luma(au.jersey) > 0.8 ? au.trim : au.jersey;
+          TU = { code: sk.home.code, city: city, name: name, stadium: stad, citySz: Math.min(6.6, 100 / city.length), nameSz: Math.min(6.6, 100 / name.length),
+            dome: sk.home.roof === "dome", grass: sk.home.surface === "grass", accent: th.primary || hu.trim,
+            o: { jersey: hu.jersey, trim: hu.trim, pants: hu.pants, sock: hu.jersey, num: hu.num, glove: "#ffffff", nstroke: hu.trim, stripe: hu.stripe, polo: mix(hu.jersey, "#000000", 0.35) },
+            d: { jersey: "#f1f3f7", trim: au.jersey, pants: au.pants, sock: au.jersey, num: awayNum, glove: "#e8ecf4", nstroke: "rgba(255,255,255,0.9)", stripe: au.stripe, polo: mix(au.jersey, "#000000", 0.2) },
+            ez: hu.jersey, ezBand: hu.trim, ezText: hu.num, ezStroke: mix(hu.jersey, "#000000", 0.55),
+            turf: sk.home.surface === "grass" ? ["#17652f", "#11532a"] : ["#0e6a3c", "#0d6238"],
+            crowd: null, rail: th.primary || hu.trim, railAway: ta.primary || au.jersey, benchH: sk.home.bench || [], benchA: sk.away.bench || [] };
+          TU.crowd = [mix(hu.jersey, "#ffffff", 0.28), mix(hu.trim, "#ffffff", 0.1), mix(au.jersey, "#ffffff", 0.2)].map(function (c) { return c.slice(4, -1); });
+          helmetGrads([shell(hu.helmet), shell(au.helmet)]);
+          [["o", sk.home.numbers || {}], ["d", sk.away.numbers || {}]].forEach(function (pair) {
+            SLOTS[pair[0]].forEach(function (s) { var arr = pair[1][s[1]], n = arr && arr[s[2]]; EK[s[0]].n = n != null ? n : FORM.filter(function (f) { return f.k === s[0]; })[0].n; });
+          });
+        }
+        EK.qb.n = S.number;
+        if (W) bake();
+        need();
+      },
+      team: function () { return TU ? TU.code : ""; },
       state: function () { return { los: S.los, fd: S.fd, number: S.number, playing: !!P, tier: P ? P.tier : 0, t: P ? P.t : 0 }; }
     };
     window.addEventListener("resize", layout);
