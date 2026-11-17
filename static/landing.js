@@ -99,7 +99,24 @@ const SB=[
 ].map(a=>{const g=GAMES[a[6]];const mu=r1(((a[7]-16.5)/15.5)*0.1*a[3]);const wx=r1(wxAdj(a[2],g));
   return {id:a[0],name:a[1],pos:a[2],proj:a[3],floor:a[4],ceil:a[5],g,rank:a[7],mu,wx,base:r1(a[3]-mu-wx),fa:a.length>8,rostered:a[8]||0,sd:(a[5]-a[4])/3.3}});
 const SBID=Object.fromEntries(SB.map(p=>[p.id,p]));
-const mEm=p=>p.rank>=22?'🟢':p.rank>=11?'🟡':'🔴';
+// Player photos: the real NFL headshots nflverse publishes (static.www.nfl.com), through the app's same-origin image proxy.
+const HEAD={"goff":"kaicbot8qhzrvddilbtp","nix":"zvo9xatffmqn9lnukpgk","cook":"anjbznqb9i21wzcgrtbs","achane":"xk1xwio0bryfxo1ylweu","kyren":"xti3pek6rmojqchakxpy","hall":"pb9i8clrmkhwwjs7jndy","nico":"pyevyueqikk1vbkh9ju1","flowers":"xzhto2dejy2pflkfx40c","higgins":"gpwtyv3viwy9q4ewderl","mclaurin":"tmfl2zruajmkrtcg4zxp","dkmet":"kxql4sjfelubhxawu2zh","kittle":"vkicdglglkyukgyxtmpx","laporta":"wxlk7ysg2nfq6h6ntdcu","kincaid":"cmrfup2mfx13pjb0qznw","dicker":"fvkop13kntnwv3amucpf","tracy":"b9nje50lohbprf06xoom","coker":"yynz8rxen6tsvhojggiv","kraft":"n6vu44jbq31rydoaadaq","mclaughlin":"enkzsuyzk232mbq5oe4w"};
+const headSrc=id=>HEAD[id]?'/api/img?url='+encodeURIComponent('https://static.www.nfl.com/image/upload/f_auto,q_auto/league/'+HEAD[id]):null;
+function Face({p,size=28}){
+  const [bad,setBad]=useState(false);const src=headSrc(p.id);
+  const ini=(p.name.match(/\b[A-Z]/g)||['?']).slice(0,2).join('');
+  return html`<span className="face" style=${{width:size,height:size}} aria-hidden="true">${src&&!bad?html`<img src=${src} alt="" loading="lazy" onError=${()=>setBad(true)}/>`:html`<b>${ini}</b>`}</span>`;
+}
+// The opponent instead of a dot (owner 2026-11-17): its abbreviation, colored on a red (toughest) -> green (softest) scale
+// by the matchup rank for that player's position (32 = softest). QB/WR/TE ranks are against the pass, RB against the run.
+const oppOf=g=>g.vs.replace(/^(@|vs)\s+/,''), atOf=g=>g.vs.charAt(0)==='@'?'@':'vs';
+const muHue=r=>Math.round(((Math.max(1,Math.min(32,r))-1)/31)*130);
+const muSide=pos=>pos==='RB'?'run defense':pos==='K'?'kicking matchup':pos==='DST'?'opposing offense':'pass defense';
+function Opp({p}){
+  const h=muHue(p.rank);
+  return html`<span className="opp mono" title=${mTier(p)+': '+oppOf(p.g)+' '+muSide(p.pos)+' ranks '+p.rank+' of 32 (32 = softest) · '+wxText(p.g)}>
+    <i>${atOf(p.g)}</i><b style=${{backgroundImage:'linear-gradient(90deg,hsl('+h+' 85% 62%),hsl('+Math.min(140,h+18)+' 80% 70%))'}}>${oppOf(p.g)}</b></span>`;
+}
 const mTier=p=>p.rank>=22?'Soft matchup':p.rank>=11?'Neutral matchup':'Tough matchup';
 const wxText=g=>g.dome?'Dome, '+g.t+'°F':g.t+'°F, wind '+g.w+' mph';
 const sgn=x=>(x>=0?'+':'−')+Math.abs(x).toFixed(1);
@@ -271,15 +288,16 @@ function HeroApp({model,seed,busy,reopt}){
           <span className="mono text-[11.5px] muted">+<${Ticker} value=${total-baseTotal} className="mint font-bold"/> pts</span>
         </div>
         <div className="grid gap-1">
-          ${rows.map((p,i)=>html`<${motion.div} layout key=${p.slot+p.name} className="row gap-2.5 px-2.5 py-1.5 rounded-lg" style=${{gridTemplateColumns:'44px minmax(0,1fr) auto',background:p.from?'rgba(124,242,166,.07)':'rgba(255,255,255,.03)',border:'1px solid '+(p.from?'rgba(124,242,166,.22)':'transparent')}}
+          ${rows.map((p,i)=>html`<${motion.div} layout key=${p.slot+p.name} className="row gap-2.5 px-2.5 py-1.5 rounded-lg" style=${{gridTemplateColumns:'44px 28px minmax(0,1fr) auto',background:p.from?'rgba(124,242,166,.07)':'rgba(255,255,255,.03)',border:'1px solid '+(p.from?'rgba(124,242,166,.22)':'transparent')}}
             animate=${{opacity:busy?.35:1}} transition=${{delay:i*.02}}>
             <span className="mono text-[10px] font-bold px-1 py-1 rounded-md text-center" style=${{background:'rgba(124,242,166,.1)',color:'var(--mint)'}}>${p.slot}</span>
+            <${Face} p=${SBID[p.id]||p}/>
             <div className="min-w-0"><div className="font-semibold text-[13.5px] truncate leading-tight">${p.name}${p.pickup?html` <span className="tag" style=${{marginLeft:4,color:'var(--mint)',borderColor:'rgba(124,242,166,.4)'}}>Waiver add</span>`:''}</div>
               ${p.from&&html`<div className="mono text-[10.5px] mint truncate">in for ${p.from} · +${fmt(p.gain)}</div>`}</div>
-            <div className="flex items-center gap-2"><span className="text-[13px]" title=${mTier(SBID[p.id])+' · '+wxText(SBID[p.id].g)} aria-label=${mTier(SBID[p.id])+', '+wxText(SBID[p.id].g)}>${mEm(SBID[p.id])}${SBID[p.id].g.e}</span><${Ticker} value=${p.proj} className="text-[13.5px] font-bold w-[46px] text-right"/></div>
+            <div className="flex items-center gap-2"><${Opp} p=${SBID[p.id]}/><${Ticker} value=${p.proj} className="text-[13.5px] font-bold w-[46px] text-right"/></div>
           <//>`)}
         </div>
-        <div className="mono text-[10.5px] dim mt-2 px-1">🟢 soft · 🟡 neutral · 🔴 tough matchup, with that game's weather</div>
+        <div className="mono text-[10.5px] dim mt-2 px-1 flex items-center gap-2">Opponent: <span className="mu-scale" aria-hidden="true"></span> tough to soft (pass defense for QB/WR/TE, run defense for RB)</div>
         <div className="flex items-end justify-between mt-2 px-1">
           <div><div className="eyebrow">Projected total</div><div className="flex items-baseline gap-2"><${Ticker} value=${total} className="text-[28px] font-bold leading-none"/><span className="mono text-[11px] dim">was ${fmt(baseTotal)}</span></div></div>
           <div className="text-right"><div className="eyebrow">Chance to win</div><div className="flex items-baseline justify-end gap-2"><span className="mono text-[11px] dim line-through">${Math.round(winNow)}%</span><${Ticker} value=${winOpt} decimals=${0} suffix="%" className="text-[28px] font-bold leading-none mint"/></div></div>
@@ -413,8 +431,8 @@ function StartSit({onOpenAuth}){
             ${c&&html`<${motion.span} initial=${{opacity:0}} animate=${{opacity:1}} className="mono text-[11px]" style=${{color:c===win?'var(--mint)':'var(--warn)'}}>${c===win?'Matches Lineup Lab':'Lineup Lab picks '+SBID[win].name.split(' ').slice(-1)[0]+' · +'+fmt(Math.abs(A.proj-B.proj))+' pts'}<//>`}</div>
           <div className="grid grid-cols-2 gap-2">
             ${[A,B].map(P=>html`<button key=${P.id} disabled=${!!c} onClick=${()=>setPicks(o=>({...o,[i]:P.id}))} className="text-left rounded-xl px-3 py-2" style=${{background:c===P.id?'rgba(124,242,166,.14)':'rgba(255,255,255,.04)',border:'1px solid '+(c===P.id?'rgba(124,242,166,.5)':'rgba(255,255,255,.08)'),cursor:c?'default':'pointer'}}>
-              <div className="text-[13.5px] font-semibold leading-tight truncate">${P.name}</div>
-              <div className="mono text-[11px] muted mt-0.5" title=${mTier(P)+' · '+wxText(P.g)}>${mEm(P)} ${P.g.vs} ${P.g.e}${c?html` · <span className=${P.id===win?'mint font-bold':''}>${fmt(P.proj)} pts</span> · ${fmt(P.floor,0)}–${fmt(P.ceil,0)}`:''}</div>
+              <div className="flex items-center gap-2"><${Face} p=${P} size=${30}/><div className="text-[13.5px] font-semibold leading-tight truncate">${P.name}</div></div>
+              <div className="mono text-[11px] muted mt-1"><${Opp} p=${P}/>${c?html` · <span className=${P.id===win?'mint font-bold':''}>${fmt(P.proj)} pts</span> · ${fmt(P.floor,0)}–${fmt(P.ceil,0)}`:''}</div>
             </button>`)}
           </div></div>`})}
     </div>
@@ -616,9 +634,10 @@ function Sandbox({onOpenAuth}){
             <div className="grid gap-1.5">
               <${AnimatePresence} initial=${false}>
               ${list.map(p=>{const lk=locked.has(p.id),ex=excl.has(p.id);return html`<${motion.div} layout key=${p.id} initial=${{opacity:0}} animate=${{opacity:ex?.45:1}} exit=${{opacity:0}} className="row gap-2.5 px-2.5 py-2 rounded-xl"
-                style=${{gridTemplateColumns:'34px minmax(0,1fr) 44px 64px',background:lk?'rgba(124,242,166,.1)':'rgba(255,255,255,.03)',border:'1px solid '+(lk?'rgba(124,242,166,.4)':'transparent')}}>
+                style=${{gridTemplateColumns:'34px 28px minmax(0,1fr) 44px 64px',background:lk?'rgba(124,242,166,.1)':'rgba(255,255,255,.03)',border:'1px solid '+(lk?'rgba(124,242,166,.4)':'transparent')}}>
                 <span className="mono text-[10.5px] font-bold mint">${p.pos}</span>
-                <div className="min-w-0"><div className="text-[13.5px] font-semibold truncate" style=${{textDecoration:ex?'line-through':'none'}}>${p.name} <span className="text-[12px]" title=${mTier(p)+' · '+wxText(p.g)}>${mEm(p)}${p.g.e}</span></div><div className="mono text-[10.5px] truncate" style=${{color:p.fa?'var(--mint)':'var(--dim)'}}>${ex?'Out this week':p.fa?'Free agent · '+p.rostered+'% rostered':'On your roster · '+p.g.vs}</div></div>
+                <${Face} p=${p}/>
+                <div className="min-w-0"><div className="text-[13.5px] font-semibold truncate" style=${{textDecoration:ex?'line-through':'none'}}>${p.name} <${Opp} p=${p}/></div><div className="mono text-[10.5px] truncate" style=${{color:p.fa?'var(--mint)':'var(--dim)'}}>${ex?'Out this week':p.fa?'Free agent · '+p.rostered+'% rostered':'On your roster'}</div></div>
                 <span className="mono text-[12.5px] font-bold text-right">${fmt(p.proj)}</span>
                 <div className="flex gap-1 justify-end">
                   <button aria-pressed=${lk} aria-label=${'Always start '+p.name} title="Always start" onClick=${()=>toggle(locked,setLocked,p.id,excl,setExcl)} className="w-7 h-7 rounded-lg grid place-items-center" style=${{background:lk?'var(--mint)':'rgba(255,255,255,.06)',color:lk?'#04140D':'#9DB5A8'}}>${Ico('Lock',{size:13})}</button>
@@ -644,17 +663,18 @@ function Sandbox({onOpenAuth}){
               return html`<div>
               ${close&&html`<div className="rounded-xl px-3 py-2 mb-2 text-[12.5px]" style=${{background:'rgba(245,194,107,.09)',border:'1px solid rgba(245,194,107,.35)'}}><span style=${{color:'var(--warn)'}} className="font-bold">Closest call:</span> <span className="muted">${close.name} over ${edges[close.id].alt.name}, ${Math.round(edges[close.id].prob*100)}% to outscore him</span></div>`}
               <div className="grid gap-1">
-                ${res.players.map((p,i)=>{const e=edges[p.id];const on=p.id===cur.id;return html`<${motion.button} key=${p.id} onClick=${()=>setSel(p.id)} aria-pressed=${on} initial=${{opacity:0,x:24}} animate=${{opacity:1,x:0}} transition=${{delay:i*.04,type:'spring',stiffness:240,damping:22}} className="row gap-2 px-3 py-1.5 rounded-lg text-left" style=${{gridTemplateColumns:'44px minmax(0,1fr) auto',background:on?'rgba(124,242,166,.13)':p.fa?'rgba(124,242,166,.07)':'rgba(255,255,255,.04)',border:'1px solid '+(on?'rgba(124,242,166,.55)':p.fa?'rgba(124,242,166,.25)':'transparent'),cursor:'pointer'}}>
+                ${res.players.map((p,i)=>{const e=edges[p.id];const on=p.id===cur.id;return html`<${motion.button} key=${p.id} onClick=${()=>setSel(p.id)} aria-pressed=${on} initial=${{opacity:0,x:24}} animate=${{opacity:1,x:0}} transition=${{delay:i*.04,type:'spring',stiffness:240,damping:22}} className="row gap-2 px-3 py-1.5 rounded-lg text-left" style=${{gridTemplateColumns:'44px 28px minmax(0,1fr) auto',background:on?'rgba(124,242,166,.13)':p.fa?'rgba(124,242,166,.07)':'rgba(255,255,255,.04)',border:'1px solid '+(on?'rgba(124,242,166,.55)':p.fa?'rgba(124,242,166,.25)':'transparent'),cursor:'pointer'}}>
                   <span className="mono text-[10.5px] font-bold mint">${p.slot}</span>
+                  <${Face} p=${p}/>
                   <span className="min-w-0"><span className="block text-[13.5px] font-semibold truncate">${p.name}${locked.has(p.id)?html` <span className="mono text-[10px] mint">locked</span>`:''}${p.fa?html` <span className="tag" style=${{marginLeft:4,color:'var(--mint)',borderColor:'rgba(124,242,166,.4)'}}>Add</span>`:''}</span>
-                    <span className="block mono text-[10.5px] dim truncate">${mEm(p)} ${p.g.vs} · ${p.g.e} ${p.g.dome?'dome':p.g.t+'°'}${e?' · '+Math.round(e.prob*100)+'% over '+e.alt.name.split(' ').slice(-1)[0]:''}</span></span>
+                    <span className="block mono text-[10.5px] dim truncate"><${Opp} p=${p}/> · ${p.g.dome?'dome':p.g.t+'°'}${e?' · '+Math.round(e.prob*100)+'% over '+e.alt.name.split(' ').slice(-1)[0]:''}</span></span>
                   <span className="text-right"><span className="block mono text-[13px] font-bold">${fmt(p.proj)}</span><span className="block mono text-[10px] dim">${fmt(p.floor,0)}–${fmt(p.ceil,0)}</span></span><//>`})}
               </div>
               <${AnimatePresence} mode="wait"><${motion.div} key=${cur.id} initial=${{opacity:0,y:8}} animate=${{opacity:1,y:0}} exit=${{opacity:0}} transition=${{duration:.2}} className="rounded-2xl p-4 mt-3" style=${{background:'linear-gradient(180deg,#10261D,#0C1B15)',border:'1px solid rgba(124,242,166,.22)'}}>
                 <div className="flex items-baseline justify-between gap-3"><div className="font-bold text-[15px] truncate">Why ${cur.name} ${cur.slot==='K'||cur.slot==='DST'?'is your '+cur.slot:'starts'}</div>${ce&&html`<span className="tag shrink-0" style=${{color:ce.prob>=.58?'var(--mint)':'var(--warn)',borderColor:ce.prob>=.58?'rgba(124,242,166,.4)':'rgba(245,194,107,.5)'}}>${ce.label}</span>`}</div>
                 <div className="mono text-[12px] mt-2.5 leading-relaxed">
-                  <div><span className="dim">Base</span> ${fmt(cur.base)} <span className="dim">·</span> <span className=${cur.mu>=0?'mint':''} style=${{color:cur.mu<0?'var(--bad)':undefined}}>${mEm(cur)} matchup ${sgn(cur.mu)}</span> <span className="dim">·</span> <span style=${{color:cur.wx<0?'var(--bad)':undefined}}>${cur.g.e} weather ${sgn(cur.wx)}</span> <span className="dim">=</span> <span className="font-bold mint">${fmt(cur.proj)}</span></div>
-                  <div className="muted mt-1">${mTier(cur)}: ranks ${cur.rank} of 32 for this position (32 = softest)</div>
+                  <div><span className="dim">Base</span> ${fmt(cur.base)} <span className="dim">·</span> <span className=${cur.mu>=0?'mint':''} style=${{color:cur.mu<0?'var(--bad)':undefined}}>matchup ${sgn(cur.mu)}</span> <span className="dim">·</span> <span style=${{color:cur.wx<0?'var(--bad)':undefined}}>weather ${sgn(cur.wx)}</span> <span className="dim">=</span> <span className="font-bold mint">${fmt(cur.proj)}</span></div>
+                  <div className="muted mt-1">${mTier(cur)}: ${oppOf(cur.g)}'s ${muSide(cur.pos)} ranks ${cur.rank} of 32 for ${cur.pos}s (32 = softest)</div>
                   <div className="muted">${cur.g.vs} · ${wxText(cur.g)}</div>
                   <div className="muted">Range ${fmt(cur.floor,0)} to ${fmt(cur.ceil,0)} points${cur.fa?' · rostered in '+cur.rostered+'% of leagues':''}</div>
                   ${ce?html`<div className="mt-1.5">${ce.d>=0?'+'+fmt(ce.d)+' pts over ':fmt(ce.d)+' pts vs. '}<span className="font-bold text-white">${ce.alt.name}</span>${ce.d<0?' (you locked him in)':''}. He outscores him in ${Math.round(ce.prob*100)} of 100 simulated games.</div>`:html`<div className="mt-1.5 dim">No other ${cur.slot==='FLEX'?'flex player':cur.pos} on your bench to compare.</div>`}

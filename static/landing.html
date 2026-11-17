@@ -98,6 +98,14 @@ section[id]{scroll-margin-top:92px}
 .door-li b{display:block;font-size:15px}
 .door-li span{display:block;font-size:13.5px;color:#B6CBBF;line-height:1.4}
 .door-cta{display:flex;flex-wrap:wrap;gap:10px;margin-top:auto;padding-top:6px}
+/* player photos + opponent tags in the Lineup Lab demos (owner 2026-11-17: no dots, the opponent colored by difficulty) */
+.face{position:relative;display:inline-grid;place-items:center;flex:none;border-radius:50%;overflow:hidden;background:linear-gradient(160deg,#1C5E49,#0B1813);box-shadow:0 0 0 1px rgba(124,242,166,.25)}
+.face img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 12%}
+.face b{font-size:10px;font-weight:800;color:#d9e8df}
+.opp{display:inline-flex;align-items:baseline;gap:4px;white-space:nowrap;cursor:help}
+.opp i{font-style:normal;color:var(--dim);font-size:.92em}
+.opp b{font-weight:800;letter-spacing:.04em;-webkit-background-clip:text;background-clip:text;color:transparent}
+.mu-scale{display:inline-block;width:64px;height:6px;border-radius:999px;background:linear-gradient(90deg,hsl(0 85% 62%),hsl(45 90% 60%),hsl(130 80% 62%))}
 @keyframes pulse{0%,100%{opacity:.55;transform:scale(1)}50%{opacity:1;transform:scale(1.35)}}
 @keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
 @media (prefers-reduced-motion:reduce){*{animation-duration:.001s!important;animation-iteration-count:1!important;transition-duration:.001s!important}html{scroll-behavior:auto}}

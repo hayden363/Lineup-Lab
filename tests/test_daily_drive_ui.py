@@ -95,5 +95,20 @@ class LandingTests(unittest.TestCase):
         self.assertNotIn("krillion.io", js.lower())
 
 
+class LabDemoTests(unittest.TestCase):
+    def test_demo_rows_show_photos_and_a_colored_opponent_not_dots(self):
+        """Owner 2026-11-17: player photos on the sample players; no green/yellow/red dots; the opponent's abbreviation
+        colored on a tough-to-soft gradient; QB/WR/TE graded against the pass, RB against the run."""
+        js = _r("static/landing.js")
+        for dot in ("\U0001F7E2", "\U0001F7E1", "\U0001F534"):
+            self.assertNotIn(dot, js)
+        self.assertNotIn("mEm(", js)
+        self.assertIn("function Face(", js)
+        self.assertIn("'/api/img?url='+encodeURIComponent('https://static.www.nfl.com/", js)   # real headshots via the proxy
+        self.assertIn("function Opp(", js)
+        self.assertIn("pos==='RB'?'run defense'", js)
+        self.assertIn(":'pass defense'", js)
+
+
 if __name__ == "__main__":
     unittest.main()
