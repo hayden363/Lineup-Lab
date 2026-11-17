@@ -2,7 +2,7 @@
 
 import unittest
 
-from engine import profile, tools, waivers
+from engine import data, profile, tools, waivers
 
 
 class ByeStartSitTests(unittest.TestCase):
@@ -13,10 +13,18 @@ class ByeStartSitTests(unittest.TestCase):
         bye_teams = {t for t, w in byes.items() if w == slate}
         if not bye_teams:
             self.skipTest("no team is on bye in this week's slate")
+        # "Playing" means the team's next game comes with no idle week first. From Sunday to Tuesday the app's
+        # week is one most teams already played, so a team whose bye is NEXT week (next game two weeks out) is
+        # also out in Start/Sit (tools._bye_before_next_game). Excluding only `bye == slate` here once paired
+        # the bye QB with another bye QB, both at 0, and the tie went to whichever was listed first.
+        def idle(team):
+            _, next_wk = data.next_opponent(bundle["schedule"], team)
+            return next_wk is None or tools._bye_before_next_game(byes.get(team), slate, next_wk) is not None
+        idle_teams = {t for t in set(bundle["schedule"]["home_team"]) | set(bundle["schedule"]["away_team"]) if idle(t)}
         pool, _ = waivers.cached_pool(None, bundle)
         qbs = pool[(pool["position"] == "QB") & pool["injury_status"].isna()]
         on_bye = qbs[qbs["recent_team"].isin(bye_teams)].sort_values("value", ascending=False)
-        playing = qbs[~qbs["recent_team"].isin(bye_teams)].sort_values("value")
+        playing = qbs[~qbs["recent_team"].isin(idle_teams | bye_teams)].sort_values("value")
         if on_bye.empty or playing.empty:
             self.skipTest("no healthy QB on a bye team")
         res = tools.start_sit([on_bye.index[0], playing.index[len(playing) // 2]])
