@@ -217,6 +217,10 @@ POOL = [
     T("f_rb1", "Fantasy finishes", "topfinish", "Name a RB who has finished a week as a top-12 RB in PPR scoring {t}+ times", (1, 2, 3, 4, 5, 6), "RB1 weeks", pos=("RB",), top=12),
     T("f_te1", "Fantasy finishes", "topfinish", "Name a TE who has finished a week as a top-6 TE in PPR scoring {t}+ times", (1, 2, 3, 4, 5), "TE1 weeks", pos=("TE",), top=6),
     T("f_qb1", "Fantasy finishes", "topfinish", "Name a QB who has finished a week as a top-6 QB in PPR scoring {t}+ times", (1, 2, 3, 4, 5, 6), "QB1 weeks", pos=("QB",), top=6),
+
+    # ---- WARM-UPS (owner 2026-11-17: easy to put any answer in, still with deep cuts at the bottom) ---------------
+    # starting QBs come from the schedule's own home_qb_id / away_qb_id of FINISHED games, never guessed
+    T("qb_starts", "Starters", "starts", "Name a QB who has started {t}+ games this season", (1, 2, 3, 4, 5, 6, 8, 10), "starts", pos=("QB",), tie="val", warmup=True, banded_only=True),
 ]
 
 
@@ -300,6 +304,18 @@ def _game_table(sched, through):
     return g
 
 
+def qb_starts(sched, through):
+    """{player_id: starts} from the schedule's starting-QB ids of finished regular-season games through `through`.
+    Empty when the schedule has no QB columns."""
+    if not {"home_qb_id", "away_qb_id"} <= set(sched.columns):
+        return pd.Series(dtype=float)
+    s = sched[sched["home_score"].notna() & (sched["week"] <= through)]
+    if "game_type" in s.columns:
+        s = s[s["game_type"] == "REG"]
+    ids = pd.concat([s["home_qb_id"], s["away_qb_id"]]).dropna()
+    return ids.value_counts().astype(float)
+
+
 def build_context(wk, sched, season, through, draft=None):
     """Everything the evaluators read, for `season` through its latest finished week `through`.
     wk = that season's weekly player rows, sched = that season's schedule, draft = the draft-picks table (optional:
@@ -314,7 +330,7 @@ def build_context(wk, sched, season, through, draft=None):
     # weekly finish among the same position (PPR), for the top-finish prompts
     gm["pos_rank"] = gm.groupby(["week", "position"])["fpts"].rank(method="min", ascending=False)
     ctx = {"g": gm, "season": season, "through": int(through), "rookies": None, "college": None,
-           "ppr": gm.groupby("player_id")["fpts"].sum()}
+           "ppr": gm.groupby("player_id")["fpts"].sum(), "qb_starts": qb_starts(sched, through)}
     if draft is not None and len(draft):
         d = draft[draft["gsis_id"].notna()]
         ctx["rookies"] = set(d.loc[d["season"] == season, "gsis_id"])
@@ -403,6 +419,11 @@ def evaluate(tpl, ctx, scope=None):
     elif kind == "range":
         n = grp.size()
         vals = (grp[tpl["stat"]].max() - grp[tpl["stat"]].min()).where(n >= tpl["min_games_pg"] * through)
+    elif kind == "starts":
+        st = ctx.get("qb_starts")
+        if st is None or not len(st):
+            return _frame(rows.iloc[0:0], pd.Series(dtype=float), ctx, tie)
+        vals = st.reindex(rows["player_id"].unique()).dropna().astype(float)
     elif kind == "topfinish":
         vals = rows[rows["pos_rank"] <= tpl["top"]].groupby("player_id").size().astype(float)
     elif kind == "streak":
@@ -448,6 +469,8 @@ _TIDY = [
     (r"\b1\+ touchdowns\b", "a touchdown"),
     (r"\bwith 1\+ games of ", "with a game of "),
     (r" 1\+ times\b", " at least once"),
+    (r"\bstarted 1\+ games\b", "started a game"),
+    (r"\bwith 1\+ catches for\b", "who caught a pass for"),
     (r"\b([Aa]) (AFC|NFC|ACC|SEC)\b", lambda m: m.group(1) + "n " + m.group(2)),   # "a NFC North" -> "an NFC North"
 ]
 
@@ -475,11 +498,54 @@ def build_pool_prompt(tpl, ctx, ecr_rank=None, fame=None, scope=None):
             "cat": tpl["cat"], "answers": answers, "threshold": t, "group": tpl.get("group", tpl["key"])}
 
 
-def pool_candidates(ctx, date_str, ecr_rank=None, fame=None, pool=None):
-    """Every buildable prompt for `date_str` (one per template; scoped templates use that day's scope)."""
+SHAPE = {"sum": "season", "max": "game"}
+# This season's warm-ups (owner 2026-11-17): the round lines a casual fan knows. Mid-season fewer players clear any line,
+# so a this-season warm-up counts from dd.WARMUP_EASY_MIN answers and aims at EASY_TARGET.
+EASY_TARGET = 50
+EASY_LINES = {
+    "wr_rec_yds": (400, 500, 600, 700, 800, 1000), "rb_rush_yds": (300, 400, 500, 600, 800, 1000), "te_rec_yds": (300, 400, 500),
+    "qb_pass_yds": (1500, 2000, 2500, 3000), "qb_pass_td": (8, 10, 12, 15, 20), "any_total_td": (4, 5, 6, 8, 10),
+    "any_scrim": (500, 600, 800, 1000), "wr_game_yds": (100,), "rb_game_yds": (100,), "qb_game_yds": (300,),
+    "d_sacks": (4, 5, 6, 8), "qb_starts": (1,), "any_ppr": (100, 125, 150), "any_targets": (50, 60, 70),
+    "rb_catches": (20, 25, 30), "d_picks": (2, 3), "k_fg": (10, 12, 15),
+}
+# near-duplicates on the easy -> hard days ("a 100+ yard receiving game" vs "a game of 100+ receiving yards")
+BAND_GROUP = {"n_wr_100": "wr_game_yds", "n_rb_100": "rb_game_yds", "n_qb_300": "qb_game_yds", "w_wr_100": "wr_game_yds",
+              "w_rb_100": "rb_game_yds", "w_qb_300": "qb_game_yds"}
+for _tpl in POOL:
+    if _tpl["key"] in EASY_LINES:
+        _tpl["easy_lines"] = EASY_LINES[_tpl["key"]]      # kinds that read as a season-total / single-game stat line
+
+
+def build_pool_bands(tpl, ctx, ecr_rank=None, fame=None, scope=None):
+    """Up to one prompt per difficulty band (dd.BANDS) for the easy -> hard days, each through the real tiering path
+    and each playable (dd.FLOOR answers, every tier). Variants of one template share a group: a day uses one."""
+    through, season = ctx["through"], ctx["season"]
+    per = evaluate(tpl, ctx, scope)
+    if per.empty:
+        return []
+    sid = f":{scope}" if scope else ""
+    out = []
+    for band, (t, answers) in dd.band_thresholds(per, tpl["ladder"], ecr_rank, tpl["label"], fame, easy_lines=tpl.get("easy_lines", ()),
+                                                warmup=True, easy_target=EASY_TARGET).items():
+        out.append({"id": f"p:{tpl['key']}:{season}:w{through}:t{t}{sid}".replace(" ", "_"), "template": tpl["key"], "kind": "fantasy",
+                    "text": render_text(tpl, t, through, scope), "category": f"This season · through Week {through}",
+                    "cat": tpl["cat"], "answers": answers, "threshold": t, "group": BAND_GROUP.get(tpl["key"], tpl.get("group", tpl["key"])),
+                    "band": band, "pos_tag": dd.pos_tag(tpl["pos"]), "shape": SHAPE.get(tpl["kind"])})
+    return out
+
+
+def pool_candidates(ctx, date_str, ecr_rank=None, fame=None, pool=None, banded=False):
+    """Every buildable prompt for `date_str` (one per template; scoped templates use that day's scope). `banded`: up
+    to one variant per difficulty band per template, for the easy -> hard days."""
     out = []
     for tpl in (POOL if pool is None else pool):
+        if tpl.get("banded_only") and not banded:
+            continue
         scope = scope_for(tpl, date_str) if tpl.get("scope") else None
+        if banded:
+            out.extend(build_pool_bands(tpl, ctx, ecr_rank, fame, scope))
+            continue
         p = build_pool_prompt(tpl, ctx, ecr_rank, fame, scope)
         if p:
             out.append(p)

@@ -587,6 +587,41 @@ def build_history_prompt(tpl, ctx, scope=None, ecr_rank=None):
             "threshold": t, "group": tpl.get("group", tpl["key"]), "scope": scope}
 
 
+SHAPE = {"best": "season", "game": "game", "post": "game"}
+
+
+def _hist_pos_tag(tpl):
+    if tpl["kind"] == "draft":
+        return None
+    p = tpl.get("pos")
+    return "DEF" if p is None else dd.pos_tag(p)
+
+
+def build_history_bands(tpl, ctx, scope=None, ecr_rank=None):
+    """Up to one prompt per difficulty band (dd.BANDS) for the easy -> hard days. The ladder gets the template's
+    `easy_lines` (hand-picked round lines) as the only easy rungs; there is no 50-answer ceiling here, a warm-up
+    may have hundreds of answers (owner, 2026-11-17). Each variant is playable: dd.FLOOR answers, every tier."""
+    per = evaluate(tpl, ctx, scope)
+    if per.empty:
+        return []
+    got = dd.band_thresholds(per, tpl["ladder"], ecr_rank if ecr_rank is not None else ctx["ecr"], tpl["label"], _fame_for(tpl, ctx),
+                             easy_lines=tpl.get("easy_lines", ()), warmup=tpl.get("warmup", False))
+    sid = f":{scope}" if scope else ""
+    kind_cat = {"draft": "Draft since 2000", "post": "Playoffs since 2000", "postn": "Playoffs since 2000", "postsum": "Playoffs since 2000"}
+    cat_line = kind_cat.get(tpl["kind"], "Since 2000") if tpl.get("scope") != "decade" else f"The {scope}"
+    if tpl["cat"] in (SUPERBOWL,) and tpl.get("scope") != "decade":
+        cat_line = "Super Bowls since 2000"
+    if tpl.get("since") and tpl.get("scope") != "decade":
+        cat_line = cat_line.replace("since 2000", f"since {tpl['since']}")
+    out = []
+    for band, (t, answers) in got.items():
+        out.append({"id": f"hh:{tpl['key']}:{ctx['last']}:t{fmt_threshold(t)}{sid}".replace(" ", "_"), "template": tpl["key"],
+                    "kind": "history", "text": render_text(tpl, t, scope), "category": f"NFL history · {cat_line}", "cat": tpl["cat"],
+                    "answers": answers, "threshold": t, "group": tpl.get("group", tpl["key"]), "scope": scope, "band": band,
+                    "pos_tag": _hist_pos_tag(tpl), "shape": SHAPE.get(tpl["kind"])})
+    return out
+
+
 def build_any_scope(tpl, ctx, date_str, ecr_rank=None):
     """The prompt for `date_str`: unscoped templates build directly; scoped ones try their scope variants in the
     date's deterministic order and use the first that passes."""
@@ -906,3 +941,28 @@ HISTORY_POOL += [
     _tm("h_t_c_rec", "career", "Name a player with {t}+ receiving yards for the {scope} since 2000", (1500, 2000, 3000, 4000, 5000, 6000), "rec yds", pos="SKILL", stat="receiving_yards"),
     _tm("h_t_c_sacks", "career", "Name a defender with {t}+ sacks for the {scope} since 2000", (15, 20, 25, 30, 35, 40, 50), "sacks", stat="def_sacks"),
 ]
+
+
+# ---- EASY DAYS (owner 2026-11-17): warm-up questions anyone can answer, still with deep cuts at the bottom ----------
+# The hand-picked round lines a casual fan knows (a 4,000-yard season, a 1,000-yard season, 10+ sacks). Only these ever
+# make an easy-band question (dd.band_rungs); medium and hard walk the template's own ladder, which is unchanged, so the
+# days before dd.VARIETY_START are unchanged too.
+EASY_LINES = {
+    "h_qb_pass_yds": (4000,), "h_qb_pass_td": (30,), "h_rb_rush_yds": (1000, 1200), "h_rb_rush_td": (10,),
+    "h_wr_rec_yds": (1000, 1200), "h_wr_rec": (90, 100), "h_wr_rec_td": (10,), "h_te_rec_yds": (800, 1000), "h_sacks": (10, 12),
+    "h_c_qb_yds": (20000, 30000), "h_c_rb_yds": (5000, 7000), "h_c_wr_yds": (7000, 8000, 10000), "h_c_sacks": (50, 80),
+    "h_n_wr_1000": (2,), "h_n_rb_1000": (2,), "h_n_qb_4000": (2,), "h_t_catches": (25, 50, 100), "h_t_c_rec": (1000, 2000),
+    "h_t_c_rush": (1000, 2000), "h_d_r1_pos": (0,), "h_d_r1_recent": (0,), "h_dc_r1": (0,), "h_dc_pb": (0,),
+    "h_sb_qb_played": (1,), "h_po_qb_yds": (300,), "h_ng_qb_400": (1,),
+}
+WARMUPS = {"h_sb_qb_played"}                    # a Super Bowl QB is a warm-up even with ~40 answers
+HISTORY_POOL += [
+    _tm("h_t_catches", "career", "Name a player with {t}+ catches for the {scope} since 2000", (10, 25, 50, 75, 100, 150, 200, 300),
+        "rec", pos="SKILL", stat="receptions"),
+    _d("h_d_r1_recent", "Name a first-round pick since 2020{pb}", ladder=(0, 1, 2, 3), since=2020, rd=(1, 1)),
+]
+for _tpl in HISTORY_POOL:
+    if _tpl["key"] in EASY_LINES:
+        _tpl["easy_lines"] = EASY_LINES[_tpl["key"]]
+    if _tpl["key"] in WARMUPS:
+        _tpl["warmup"] = True

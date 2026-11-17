@@ -61,7 +61,8 @@ def _tpl(key):
 
 class PoolShapeTests(unittest.TestCase):
     def test_exactly_100_prompts(self):
-        self.assertEqual(len(pool.POOL), 100)
+        """The approved 100 plus the warm-ups added for the easy -> hard days (banded_only: never on older days)."""
+        self.assertEqual(len([t for t in pool.POOL if not t.get("banded_only")]), 100)
 
     def test_unique_keys(self):
         keys = [t["key"] for t in pool.POOL]
@@ -71,7 +72,7 @@ class PoolShapeTests(unittest.TestCase):
         for t in pool.POOL:
             for f in ("key", "cat", "kind", "text", "ladder", "label", "pos"):
                 self.assertIn(f, t, t["key"])
-            self.assertIn(t["kind"], {"sum", "max", "games", "ratio", "mean", "streak", "topfinish", "range"}, t["key"])
+            self.assertIn(t["kind"], {"sum", "max", "games", "ratio", "mean", "streak", "topfinish", "range", "starts"}, t["key"])
             self.assertTrue(t["text"].startswith("Name a"), t["key"])
             self.assertGreaterEqual(len(t["ladder"]), 2, t["key"])
             self.assertEqual(list(t["ladder"]), sorted(t["ladder"]), t["key"])

@@ -30,6 +30,26 @@ POOL_START = "2026-11-17"       # owner approved the 100-prompt pool 2026-11-16;
 PUZZLE_VERSION = 2              # bump when the cached puzzle shape changes: older cached days are regenerated
 TARGET_MIN, TARGET_MAX = 15, 50  # the answer count a threshold rung should land in (the hard floor stays MIN_ANSWERS)
 
+# ---- VARIETY DAYS (owner 2026-11-17): from VARIETY_START a day runs easy -> hard. Questions 1-3 are warm-ups anyone can
+# answer (big answer sets, still with obscure Highlight Reel TD answers at the bottom), 4-5 medium, 6-7 deep cuts.
+# Every question has at least FLOOR answers and at least one answer in EVERY tier. Days before VARIETY_START keep the
+# original picker (pick_day_legacy) so a deploy never rewrites a day that is already being played.
+VARIETY_START = "2026-11-18"
+FLOOR = 10
+# band -> (fewest answers, most answers, the count a rung should land nearest)
+BANDS = {"easy": (60, 500, 120), "medium": (25, 59, 35), "hard": (FLOOR, 24, 15)}
+BAND_ORDER = ("easy", "medium", "hard")
+WARMUP_EASY_MIN = 30      # a template flagged warmup (QB starters, Super Bowl QBs, ...) is easy from 30 answers up
+# the day, slot by slot: (band, kind). 2 this-season + 5 history, as before.
+DAY_PLAN = (("easy", "fantasy"), ("easy", "history"), ("easy", "history"),
+            ("medium", "fantasy"), ("medium", "history"),
+            ("hard", "history"), ("hard", "history"))
+MAX_PER_POS = 2           # no position more than twice in a day
+MAX_PER_SHAPE = 1         # at most one single-game question and one season-total question a day
+# history cats that are not a stat line (draft, teams, Super Bowls, awards, records): at least one a day
+BREADTH_CATS = {"NFL Draft", "Draft: colleges", "Draft: teams", "Draft careers", "Draft pedigree", "Team history",
+                "Super Bowls", "Super Bowl", "NFL awards", "Hall of Fame", "Stadiums & teams", "NFL franchises", "Career records"}
+
 
 def day_counts(date_str=None):
     """(fantasy, history) prompts in a day: 2 + 5 from MIX_START on, all fantasy before it."""
@@ -227,6 +247,91 @@ def pick_threshold(per, ladder, ecr_rank, label, fame=None):
     return fallback
 
 
+def all_tiers(answers):
+    """Owner rule (2026-11-17): every question has at least one answer in every tier, Checkdown to Highlight Reel TD."""
+    return {a["tier"] for a in answers} >= set(TIERS)
+
+
+def playable(answers):
+    return len(answers) >= FLOOR and all_tiers(answers)
+
+
+def band_range(band, warmup=False):
+    lo, hi, target = BANDS[band]
+    if band == "easy" and warmup:
+        lo = WARMUP_EASY_MIN
+    return lo, hi, target
+
+
+def band_of_count(n, warmup=False):
+    """The easiest band a set of `n` answers fits (hand-written banks have one fixed answer set)."""
+    for b in BAND_ORDER:
+        lo, hi, _ = band_range(b, warmup)
+        if lo <= n <= hi:
+            return b
+    return None
+
+
+def round_line(t):
+    """A line a fan would say out loud (owner 2026-11-17, no "55+ yards", "64%"): small counts and halves under 10, then
+    multiples of 5 under 30, of 10 under 100, of 50 under 1,000 and of 100 above."""
+    a = abs(float(t))
+    if a < 10:
+        return (a * 2) == int(a * 2)
+    if a < 30:
+        return a % 5 == 0
+    if a < 100:
+        return a % 10 == 0
+    if a < 1000:
+        return a % 50 == 0
+    return a % 100 == 0
+
+
+def band_rungs(per, ladder, easy_lines=(), warmup=False, easy_target=None):
+    """{band: [rung, ...]} the rungs whose raw answer count lands in each band, best first (nearest the band's target
+    count, on a log scale). The EASY band only ever uses the template's hand-picked `easy_lines` (round, meaningful
+    lines: a 1,000-yard season, a 100-yard game): a machine-picked low line ("100+ rushing yards", "a touchdown")
+    is a list, not a question (owner, 2026-11-17). Medium and hard walk the template's own ladder."""
+    import math
+    vals = per["val"]
+    out = {}
+    for b in BAND_ORDER:
+        lo, hi, target = band_range(b, warmup)
+        if b == "easy" and easy_target:
+            target = easy_target
+        rungs = tuple(easy_lines) if b == "easy" else tuple(t for t in ladder if round_line(t))
+        counts = {t: int((vals >= t).sum()) for t in rungs}
+        ok = [t for t, n in counts.items() if lo <= n <= hi]
+        out[b] = sorted(ok, key=lambda t: (abs(math.log(counts[t] / target)), -t))
+    return out
+
+
+def band_thresholds(per, ladder, ecr_rank, label, fame=None, easy_lines=(), warmup=False, easy_target=None):
+    """{band: (threshold, answers)} - for each band the best rung whose tiered answer set is playable (FLOOR answers,
+    every tier). A rung already used by an easier band is not reused."""
+    out, used = {}, set()
+    for b, rungs in band_rungs(per, ladder, easy_lines, warmup, easy_target).items():
+        for t in rungs:
+            if t in used:
+                continue
+            ans = _answers_at(per, t, ecr_rank, label, fame)
+            if playable(ans):
+                out[b] = (t, ans)
+                used.add(t)
+                break
+    return out
+
+
+def pos_tag(pos):
+    """One position tag for the no-position-more-than-twice rule; None for mixed sets (any player, flex)."""
+    if pos is None:
+        return None
+    if isinstance(pos, str):
+        return pos if pos in ("QB", "RB", "WR", "TE", "K", "P") else ("DEF" if pos in ("DEF", "DB", "PASSRUSH", "BACK7") else None)
+    pos = tuple(pos)
+    return pos[0] if len(pos) == 1 else None
+
+
 def build_season_prompt(tpl, wk, season, through, ecr_rank=None, fame=None):
     """One fantasy prompt about `season` through its latest finished regular-season week `through`. `wk` = that
     season's REG weekly rows. `ecr_rank` maps normalized-name|POS -> FantasyPros consensus rank; a player the
@@ -355,6 +460,89 @@ def _seed(date_str):
 
 
 def pick_day(date_str, candidates, avoid_templates=()):
+    """The day's prompts: the easy -> hard plan from VARIETY_START, the original shuffled pick before it."""
+    if date_str >= VARIETY_START and any(c.get("band") for c in candidates):
+        return pick_day_banded(date_str, candidates, avoid_templates)
+    return pick_day_legacy(date_str, candidates, avoid_templates)
+
+
+def _shape(c):
+    return c.get("shape")
+
+
+def pick_day_banded(date_str, candidates, avoid_templates=()):
+    """Seven prompts in DAY_PLAN order, easiest first (owner, 2026-11-17).
+
+    Hard rules: every prompt playable (FLOOR answers, every tier), no template group twice, the same date always gives
+    the same day. Variety rules, relaxed one at a time only when the pool cannot meet them: one prompt per category,
+    no position more than MAX_PER_POS times, at most MAX_PER_SHAPE single-game and season-total questions, at least one
+    breadth (draft / team / Super Bowl / awards) history question, none of yesterday's templates. A slot that still has
+    nothing takes the nearest band of its kind, then the other kind. Inside a band the biggest answer set goes first."""
+    rng = random.Random(_seed(date_str))
+    avoid = set(avoid_templates)
+    pool = sorted((c for c in candidates if c.get("band") and playable(c["answers"])), key=lambda c: c["id"])
+    rng.shuffle(pool)
+    rested = lambda c: c["template"] in avoid or c.get("group", c["template"]) in avoid
+    pool.sort(key=rested)                                    # fresh templates first; stable, so the shuffle still decides
+    day, groups, cats, poses, shapes = [], set(), {}, {}, {}
+
+    def fits(c, level):
+        if c.get("group", c["template"]) in groups:
+            return False
+        if level >= 3:
+            return True
+        if c.get("cat") and cats.get(c["cat"], 0) >= MAX_PER_CAT:
+            return False
+        if level >= 2:
+            return True
+        tag = c.get("pos_tag")
+        if tag and poses.get(tag, 0) >= MAX_PER_POS:
+            return False
+        sh = _shape(c)
+        if sh in ("game", "season") and shapes.get(sh, 0) >= MAX_PER_SHAPE:
+            return False
+        if level >= 1:
+            return True
+        return not rested(c)
+
+    def take(c, slot_band):
+        groups.add(c.get("group", c["template"]))
+        if c.get("cat"):
+            cats[c["cat"]] = cats.get(c["cat"], 0) + 1
+        if c.get("pos_tag"):
+            poses[c["pos_tag"]] = poses.get(c["pos_tag"], 0) + 1
+        if _shape(c):
+            shapes[_shape(c)] = shapes.get(_shape(c), 0) + 1
+        day.append((BAND_ORDER.index(slot_band), c))
+
+    def nearest(band):
+        i = BAND_ORDER.index(band)
+        return sorted(BAND_ORDER, key=lambda b: (abs(BAND_ORDER.index(b) - i), BAND_ORDER.index(b)))
+
+    plan = list(DAY_PLAN)
+    breadth_slot = next(i for i, (b, k) in enumerate(plan) if b == "medium" and k == "history")
+    for i, (band, kind) in enumerate(plan):
+        got = None
+        for k in (kind, "history" if kind == "fantasy" else "fantasy"):
+            for b in nearest(band):
+                for level in range(4):
+                    opts = [c for c in pool if c["kind"] == k and c["band"] == b and fits(c, level)]
+                    if i == breadth_slot and not any(c.get("cat") in BREADTH_CATS for _, c in day):
+                        opts = [c for c in opts if c.get("cat") in BREADTH_CATS] or opts
+                    if opts:
+                        got = opts[0]
+                        break
+                if got:
+                    break
+            if got:
+                break
+        if got:
+            take(got, got["band"])
+    day.sort(key=lambda bc: (bc[0], -len(bc[1]["answers"])))
+    return [c for _, c in day]
+
+
+def pick_day_legacy(date_str, candidates, avoid_templates=()):
     """The same prompts for the same date, every time: day_counts() prompts per kind from `candidates` (prompt
     dicts), no template (or near-duplicate group) twice in a day, and none of `avoid_templates` (yesterday's) unless the pool runs dry.
     Returned in a seeded shuffled order."""
@@ -576,7 +764,7 @@ def live_candidates(date_str):
                 except Exception:
                     picks_tbl = None                       # rookie/college prompts drop out; never guessed
                 ctx = daily_drive_pool.build_context(wk, sched, season, through, picks_tbl)
-                built = daily_drive_pool.pool_candidates(ctx, date_str, ecr_rank, fame)
+                built = daily_drive_pool.pool_candidates(ctx, date_str, ecr_rank, fame, banded=date_str >= VARIETY_START)
             except Exception as e:
                 print(f"[daily_drive] prompt pool failed, using the original templates: {type(e).__name__}: {e}")
                 built = None
@@ -586,8 +774,11 @@ def live_candidates(date_str):
     if date_str >= MIX_START:                              # the 5 history prompts: data-driven pool (precomputed) + classics
         try:
             from engine import daily_drive_history_snapshot, daily_drive_classics
-            cands.extend(daily_drive_history_snapshot.snapshot_candidates(date_str))
-            cands.extend(daily_drive_classics.classics_candidates(date_str))
+            if date_str >= VARIETY_START:
+                cands.extend(daily_drive_history_snapshot.banded_candidates(date_str))
+            else:
+                cands.extend(daily_drive_history_snapshot.snapshot_candidates(date_str))
+            cands.extend(daily_drive_classics.classics_candidates(date_str, banded=date_str >= VARIETY_START))
         except Exception as e:                           # fewer history prompts; pick_day lets fantasy fill the day
             print(f"[daily_drive] history pools unavailable: {type(e).__name__}: {e}")
     if not HISTORY_ENABLED:
@@ -636,6 +827,23 @@ def yesterday_templates(cache_dir, date_str, candidates):
     return {p["template"] for p in pick_day(prev, candidates)}
 
 
+COOLDOWN_DAYS = 6          # easy -> hard days: a template rests this many days (yesterday only, before VARIETY_START)
+
+
+def recent_templates(cache_dir, date_str, candidates, days=COOLDOWN_DAYS):
+    """Templates used in the `days` days before `date_str` (cached puzzles, else that day's deterministic pick from the
+    same candidates). Feeds the rest-a-template-for-a-few-days rule of the easy -> hard days."""
+    out = set()
+    d = dt.date.fromisoformat(date_str)
+    for i in range(1, days + 1):
+        prev = (d - dt.timedelta(days=i)).isoformat()
+        puz = _read_puzzle(_puzzle_path(cache_dir, prev))
+        prompts = puz["prompts"] if puz else (pick_day(prev, candidates) if prev >= VARIETY_START else [])
+        for p in prompts:                               # the group too: the same question asked two ways rests as one
+            out |= {p["template"], p.get("group") or p["template"]}
+    return out
+
+
 def get_puzzle(date_str, cache_dir, candidates_fn=live_candidates):
     """The day's puzzle {v, date, prompts:[full prompt dicts]}, from the disk cache or generated and cached. The day
     is built from data through the latest completed week, so a new week flows in on its own (new ids)."""
@@ -645,7 +853,8 @@ def get_puzzle(date_str, cache_dir, candidates_fn=live_candidates):
         if puz:
             return puz
     cands = candidates_fn(date_str)
-    prompts = pick_day(date_str, cands, yesterday_templates(cache_dir, date_str, cands))
+    avoid = recent_templates(cache_dir, date_str, cands) if date_str >= VARIETY_START else yesterday_templates(cache_dir, date_str, cands)
+    prompts = pick_day(date_str, cands, avoid)
     puzzle = {"v": PUZZLE_VERSION, "date": date_str, "prompts": prompts}
     if len(prompts) == day_size():                      # never freeze a short day: it may just be missing data
         os.makedirs(cache_dir, exist_ok=True)

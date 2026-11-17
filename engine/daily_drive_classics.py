@@ -67,12 +67,36 @@ def classic_prompt(bank):
             "threshold": None, "group": bank.get("group") or ("c:" + bank["key"]), "era": bank["era"]}
 
 
-def classics_candidates(date_str=None, bank_dir=None):
-    """Prompt dicts for every classic bank that meets the Daily Drive rules (>= MIN_ANSWERS answers, a tier-6 answer)."""
+# How hard a hand-written bank plays, by editorial judgement (an answer count says little here: "a team that has won a
+# Super Bowl" has 20 answers and is a warm-up). Banks not listed fall back to dd.band_of_count.
+CLASSIC_BAND = {
+    "nfl-franchise": "easy", "nfl-mascot": "easy", "current-stadium": "easy", "sb-starting-qb-2000": "easy",
+    "hof-quarterback": "easy", "sb-winning-teams": "easy", "sb-teams-2000": "easy",
+    "sb-mvp-2000": "medium", "sb-winning-qb-2000": "medium", "nfl-mvp-2000": "medium", "first-overall-pick-2000": "medium",
+    "career-rushing-10k": "medium", "sb-coach-2000": "medium", "nfl-oroy-2000": "medium", "nfl-opoy-2000": "medium",
+    "team-no1-pick-2000": "medium", "sb-city-2000": "medium",
+    "career-fg-400": "hard", "career-passing-47k": "hard", "career-receiving-13k": "hard", "career-sacks-100": "hard",
+    "nfl-dpoy-2000": "hard", "nfl-droy-2000": "hard", "sb-coach-pre2000": "hard", "sb-mvp-pre2000": "hard",
+    "sb-stadium-2000": "hard", "sb-winning-qb-pre2000": "hard", "team-new-stadium-2000": "hard",
+}
+# a bank that asks the same thing as a stats template shares its group, so a day never has both
+SAME_AS = {"sb-starting-qb-2000": "h_sb_qb_played", "first-overall-pick-2000": "h_d_first_overall"}
+
+
+def classics_candidates(date_str=None, bank_dir=None, banded=False):
+    """Prompt dicts for every classic bank that meets the Daily Drive rules (>= MIN_ANSWERS answers, a tier-6 answer).
+    `banded` (the easy -> hard days): every bank that is playable (dd.FLOOR answers, every tier), tagged with the band its
+    answer count fits; general-knowledge banks count as warm-ups from dd.WARMUP_EASY_MIN answers."""
     try:
         out = []
         for b in load_banks(bank_dir):
             p = classic_prompt(b)
+            if banded:
+                band = CLASSIC_BAND.get(b["key"]) or dd.band_of_count(len(p["answers"]))
+                if band and dd.playable(p["answers"]):
+                    out.append({**p, "band": band, "pos_tag": None, "shape": None,
+                                "group": SAME_AS.get(b["key"], p["group"])})
+                continue
             if len(p["answers"]) >= dd.MIN_ANSWERS and dd.has_hall_of_famer(p["answers"]):
                 out.append(p)
         return out

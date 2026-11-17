@@ -115,7 +115,7 @@ class PoolShapeTests(unittest.TestCase):
                     self.assertFalse(re.search(r"\b(19\d\d)\b", txt), txt)
                     self.assertFalse(re.search(r"\b(1980s|1990s)\b", txt), txt)
                     self.assertNotIn("{", txt)
-                    self.assertTrue(re.search(r"since 2000|of the (2000s|2010s|2020s)|in the (2000s|2010s|2020s)|the \d{4} NFL Draft|2000s|2010s|2020s", txt), txt)
+                    self.assertTrue(re.search(r"since 20[0-2]\d|of the (2000s|2010s|2020s)|in the (2000s|2010s|2020s)|the \d{4} NFL Draft|2000s|2010s|2020s", txt), txt)
             self.assertGreaterEqual(t.get("since", 2000), 2000, t["key"])
 
     def test_scope_options_never_reach_before_2000(self):
