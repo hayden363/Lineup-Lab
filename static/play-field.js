@@ -154,6 +154,36 @@
     helmetGrads([["#2fd88f", "#0d8a54", "#06462b"], ["#f3f6fc", "#b4bfd6", "#5f6c8c"]]);
     function shell(hex) { return [mix(hex, "#ffffff", 0.45), hex, mix(hex, "#000000", 0.6)]; }
     var TU = null;     // the favorite-team skin, derived once by setTeam (null = the Lineup Lab default look)
+    // Pixel-art players in a modern scene: each player is drawn small on its own sprite canvas, outlined 1px, then
+    // blitted up with smoothing off so the pixels stay crisp. The field, lights, ball and effects stay smooth.
+    var PIX = false, PXC = null, PXX = null, OLC = null, OLX = null, PXN = 112, PXO = [56, 94];
+    var GLY = ["111101101101111", "010110010010111", "111001111100111", "111001111001111", "101101111001001", "111100111001111", "111100111101111", "111001010010010", "111101111101111", "111101111001111"];
+    function pixNum(str, cx, cy, fg, bg) {      // 3x5 pixel digits, with a 1px drop outline
+      var m = ctx.getTransform(), ax = m.a * cx + m.c * cy + m.e, ay = m.b * cx + m.d * cy + m.f;     // snap to whole sprite pixels, upright
+      var n = str.length, x0 = Math.round(ax - (n * 4 - 1) / 2), y0 = Math.round(ay - 2.5), pass, i, j, g;
+      ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0);
+      for (pass = 0; pass < 2; pass++) {
+        ctx.fillStyle = pass ? fg : bg;
+        for (i = 0; i < n; i++) { g = GLY[str.charCodeAt(i) - 48]; if (!g) continue; for (j = 0; j < 15; j++) if (g[j] === "1") ctx.fillRect(x0 + i * 4 + (j % 3) + (pass ? 0 : 1), y0 + ((j / 3) | 0) + (pass ? 0 : 1), 1, 1); }
+      }
+      ctx.restore();
+    }
+    function drawPix(e, sx, sy, k) {
+      if (!PXC) { PXC = document.createElement("canvas"); PXC.width = PXC.height = PXN; PXX = PXC.getContext("2d"); OLC = document.createElement("canvas"); OLC.width = OLC.height = PXN; OLX = OLC.getContext("2d"); }
+      var kp = Math.min(0.8, k), sc = k / kp, ox = PXO[0], oy = PXO[1], main = ctx;
+      PXX.setTransform(1, 0, 0, 1, 0, 0); PXX.clearRect(0, 0, PXN, PXN);
+      ctx = PXX; PIX = true; try { drawSprite(e, ox, oy, kp); } finally { ctx = main; PIX = false; }
+      e.hsx = sx + (e.hsx - ox) * sc; e.hsy = sy + (e.hsy - oy) * sc;          // the ball is pinned to the hand on screen
+      OLX.globalCompositeOperation = "source-over"; OLX.clearRect(0, 0, PXN, PXN);
+      OLX.drawImage(PXC, -1, 0); OLX.drawImage(PXC, 1, 0); OLX.drawImage(PXC, 0, -1); OLX.drawImage(PXC, 0, 1);
+      OLX.globalCompositeOperation = "source-in"; OLX.fillStyle = "#05080f"; OLX.fillRect(0, 0, PXN, PXN);
+      OLX.globalCompositeOperation = "source-over"; OLX.drawImage(PXC, 0, 0);
+      var wb = e.t === "ol" || e.t === "dl" ? 1.2 : 1, shs = 1 - Math.min(0.5, e.z / 36);                 // ground shadow, snapped to whole pixels
+      ctx.fillStyle = "rgba(0,0,0,0.38)"; ctx.fillRect(Math.round(sx - 7 * k * wb * shs), Math.round(sy - 1.6 * k * shs), Math.round(14 * k * wb * shs), Math.max(2, Math.round(3.4 * k * shs)));
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(OLC, Math.round(sx - ox * sc), Math.round(sy - oy * sc), PXN * sc, PXN * sc);
+      ctx.imageSmoothingEnabled = true;
+    }
     var rnd = rng(7);
 
     FORM.forEach(function (f, i) {
@@ -730,7 +760,7 @@
       if (TU) { var u = off ? TU.o : TU.d; jersey = u.jersey; trim = u.trim; pants = u.pants; sock = u.sock; num = u.num; glove = u.glove; nstroke = u.nstroke; stripe = u.stripe; }
       var ph = e.phase, sw = e.run ? Math.sin(ph) * e.amp : 0, bob = e.run ? -Math.abs(Math.sin(ph)) * 1.1 * k * e.amp : 0, cr = e.cr * 2.6, hipY = -10 + cr;
       // ground shadow
-      ctx.fillStyle = "rgba(0,0,0,0.4)"; var shs = 1 - Math.min(0.5, e.z / 36); ctx.fillRect(sx - 7.6 * k * wb * shs, sy - 1.6 * k * shs, 15.2 * k * wb * shs, 3.6 * k * shs);
+      if (!PIX) { ctx.fillStyle = "rgba(0,0,0,0.4)"; var shs = 1 - Math.min(0.5, e.z / 36); ctx.fillRect(sx - 7.6 * k * wb * shs, sy - 1.6 * k * shs, 15.2 * k * wb * shs, 3.6 * k * shs); }
       ctx.save(); ctx.translate(sx, sy - e.z * k); if (e.rot) ctx.rotate(e.rot); if (e.sxs !== 1 || e.sys !== 1) ctx.scale(e.sxs, e.sys);
       // legs (run cycle: alternating lift, knee drive) + stance spread
       var lL = Math.max(0, sw) * 3.6 + e.tapL * 3, lR = Math.max(0, -sw) * 3.6 + e.tapR * 3, spr = e.cr * 1.9;
@@ -743,7 +773,8 @@
       ctx.fillStyle = "rgba(0,0,0,0.16)"; ctx.fillRect(2.2 * wb * k, -18 * k, 3.4 * wb * k, 7.2 * k);
       ctx.fillStyle = trim; ctx.fillRect(-5.6 * wb * k, -11.6 * k, 11.2 * wb * k, 1.1 * k);
       var label = String(e.n), nsz = (qb ? 9.8 : ty0 === "ol" || ty0 === "dl" ? 7.2 : 8) * k, ny = -14.4 * k;
-      ctx.font = "800 " + nsz.toFixed(1) + "px " + FONT; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.lineJoin = "round"; ctx.lineWidth = 1.8 * k; ctx.strokeStyle = nstroke; ctx.strokeText(label, 0, ny); ctx.fillStyle = num; ctx.fillText(label, 0, ny);
+      if (PIX) pixNum(label, 0, ny, num, nstroke);
+      else { ctx.font = "800 " + nsz.toFixed(1) + "px " + FONT; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.lineJoin = "round"; ctx.lineWidth = 1.8 * k; ctx.strokeStyle = nstroke; ctx.strokeText(label, 0, ny); ctx.fillStyle = num; ctx.fillText(label, 0, ny); }
       // arms + gloves (poses: swing, block, hold, throw, catch, carry, wrap, celebrate)
       hands(e);
       var ax = 7 * wb * k, ay = -17.9 * k;
@@ -830,7 +861,7 @@
       for (i = 1; i < n; i++) { var it = IT[i], j = i - 1; while (j >= 0 && IT[j].y < it.y) { IT[j + 1] = IT[j]; j--; } IT[j + 1] = it; }
       for (i = 0; i < n; i++) {
         e = IT[i].e;
-        if (e) { pj(e.wx, e.wy); if (PR.y > -80 && PR.y < H + 120) drawSprite(e, PR.x, PR.y, ksz(PR.s)); }
+        if (e) { pj(e.wx, e.wy); if (PR.y > -80 && PR.y < H + 120) drawPix(e, PR.x, PR.y, ksz(PR.s)); }
         else drawBall(owner);
       }
       drawTrail();
