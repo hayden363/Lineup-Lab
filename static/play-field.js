@@ -560,22 +560,18 @@
       ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y - 17 * k); ctx.moveTo(x - 11 * k, y - 22 * k); ctx.lineTo(x + 11 * k, y - 22 * k); ctx.moveTo(x - 11 * k, y - 22 * k); ctx.lineTo(x - 11 * k, y - 50 * k); ctx.moveTo(x + 11 * k, y - 22 * k); ctx.lineTo(x + 11 * k, y - 50 * k); ctx.stroke();
       ctx.beginPath(); ctx.moveTo(x, y - 17 * k); ctx.lineTo(x, y - 22 * k); ctx.stroke();
     }
-    function shieldPath(sc) {        // a league-style shield in a 100-unit box centred on 0,0 (scaled by sc)
-      ctx.beginPath(); ctx.moveTo(-46 * sc, -40 * sc); ctx.quadraticCurveTo(-22 * sc, -34 * sc, 0, -48 * sc); ctx.quadraticCurveTo(22 * sc, -34 * sc, 46 * sc, -40 * sc);
-      ctx.lineTo(44 * sc, 8 * sc); ctx.quadraticCurveTo(38 * sc, 36 * sc, 0, 50 * sc); ctx.quadraticCurveTo(-38 * sc, 36 * sc, -44 * sc, 8 * sc); ctx.closePath();
-    }
-    function drawEmblem() {          // the midfield shield: a soft Lineup Lab mark painted into the turf (never team colors)
+    function drawEmblem() {          // the Lineup Lab logo (football + rising bars + arrow), softly painted at midfield; never team colors
       pj(0, 50); var cx = PR.x, s = PR.s; if (PR.y < -80 || PR.y > H + 80) return;
-      pj(0, 43); var y0 = PR.y; pj(0, 57); var y1 = PR.y, rx = 5.6 * L.pxX * s, ry = Math.abs(y0 - y1) / 2, i;
-      ctx.save(); ctx.translate(cx, (y0 + y1) / 2); ctx.scale(rx / 50, ry / 50); ctx.lineJoin = "round";
-      ctx.globalAlpha = 0.16; shieldPath(0.95); ctx.fillStyle = ACCENT; ctx.fill();
-      ctx.save(); shieldPath(0.95); ctx.clip(); ctx.globalAlpha = 0.22; ctx.fillStyle = "#04120d"; ctx.fillRect(-50, -50, 100, 30); ctx.restore();
-      ctx.globalAlpha = 0.45; shieldPath(0.95); ctx.lineWidth = 2.6; ctx.strokeStyle = "#ffffff"; ctx.stroke();
-      ctx.globalAlpha = 0.4; shieldPath(0.84); ctx.lineWidth = 1.4; ctx.strokeStyle = ACCENT; ctx.stroke();
-      ctx.globalAlpha = 0.45; ctx.fillStyle = "#ffffff"; for (i = 0; i < 7; i++) star(-27 + i * 9, -27, 2.8);    // one star per play
-      ctx.font = "800 italic 36px " + FONT; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-      ctx.globalAlpha = 0.5; ctx.fillStyle = "#ffffff"; ctx.fillText("DD", 0, 6);
-      ctx.font = "800 8.5px " + FONT; ctx.globalAlpha = 0.5; ctx.fillStyle = ACCENT; ctx.fillText("LINEUP LAB", 0, 30);
+      pj(0, 44); var y0 = PR.y; pj(0, 56); var y1 = PR.y, rx = 9 * L.pxX * s, ry = Math.abs(y0 - y1) / 2, i;
+      ctx.save(); ctx.translate(cx, (y0 + y1) / 2); ctx.scale(rx / 50, ry / 50); ctx.rotate(-0.16); ctx.lineJoin = "round"; ctx.lineCap = "round";
+      ctx.beginPath(); ctx.moveTo(-47, 0); ctx.quadraticCurveTo(0, -44, 47, 0); ctx.quadraticCurveTo(0, 44, -47, 0); ctx.closePath();
+      ctx.globalAlpha = 0.12; ctx.fillStyle = "#04120d"; ctx.fill();
+      ctx.globalAlpha = 0.5; ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 3.4; ctx.stroke();
+      ctx.lineWidth = 2.6; ctx.beginPath(); ctx.moveTo(-34, -10); ctx.quadraticCurveTo(-30, 0, -34, 10); ctx.moveTo(34, -10); ctx.quadraticCurveTo(30, 0, 34, 10);   // tip stripes
+      ctx.moveTo(-12, -15); ctx.lineTo(12, -15); for (i = -9; i <= 9; i += 6) { ctx.moveTo(i, -18.5); ctx.lineTo(i, -11.5); } ctx.stroke();                // laces
+      ctx.globalAlpha = 0.45; ctx.fillStyle = ACCENT; ctx.fillRect(-17, 6, 7, 9); ctx.fillRect(-7, 0, 7, 15); ctx.fillRect(3, -6, 7, 21);                     // rising bars
+      ctx.strokeStyle = ACCENT; ctx.lineWidth = 2.6; ctx.beginPath(); ctx.moveTo(-20, 3); ctx.lineTo(-8, -4); ctx.lineTo(1, -1); ctx.lineTo(17, -12); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(19.5, -13.8); ctx.lineTo(11, -13.4); ctx.lineTo(16.6, -6.6); ctx.closePath(); ctx.fillStyle = ACCENT; ctx.fill();              // arrowhead
       ctx.restore();
     }
     function drawBench(sd) {        // the team areas: the home bench on the left, the visitors (road whites) on the right
@@ -592,7 +588,7 @@
         ctx.fillStyle = coach ? "#1b2130" : u.pants; ctx.fillRect(bx - 2.6 * k, by - 5.6 * k, 2.2 * k, 5.4 * k); ctx.fillRect(bx + 0.4 * k, by - 5.6 * k, 2.2 * k, 5.4 * k);
         ctx.fillStyle = coach ? u.polo : u.jersey; ctx.fillRect(bx - 3.4 * k, by - 12.6 * k, 6.8 * k, 7.4 * k);
         if (!coach) { ctx.fillStyle = u.trim; ctx.fillRect(bx - 3.4 * k, by - 12.6 * k, 6.8 * k, 0.9 * k); }
-        ctx.fillStyle = SKINS[idx % SKINS.length]; ctx.beginPath(); ctx.arc(bx, by - 14.6 * k, 2.3 * k, 0, TAU); ctx.fill();
+        ctx.fillStyle = SKINS[idx % SKINS.length]; ctx.fillRect(bx - 2.3 * k, by - 16.9 * k, 4.6 * k, 4.6 * k);
         if (coach) { ctx.strokeStyle = "#e9edf5"; ctx.lineWidth = 0.7 * k; ctx.beginPath(); ctx.arc(bx, by - 14.6 * k, 2.6 * k, PI * 1.05, PI * 1.95); ctx.stroke(); }
         else if (nums.length && 4.8 * k >= 5) {
           ctx.font = "800 " + (4.8 * k).toFixed(1) + "px " + FONT; ctx.textAlign = "center"; ctx.textBaseline = "middle";
@@ -603,7 +599,7 @@
         if (Y > 12 && Y < 88) continue;
         pj(sd * (XS + 4 + ((Y * 7) & 3) * 0.6), Y); if (PR.y < -40 || PR.y > H + 40) continue;
         k = ksz(PR.s) * 0.7; bx = PR.x; by = PR.y; ctx.fillStyle = "#2a3346"; ctx.fillRect(bx - 3 * k, by - 12 * k, 6 * k, 11.5 * k);
-        ctx.fillStyle = "#d8b08a"; ctx.beginPath(); ctx.arc(bx, by - 14.2 * k, 2.3 * k, 0, TAU); ctx.fill();
+        ctx.fillStyle = "#d8b08a"; ctx.fillRect(bx - 2.3 * k, by - 16.5 * k, 4.6 * k, 4.6 * k);
       }
     }
     function drawScene() {
@@ -644,11 +640,11 @@
       if (TU) {         // painted end zones (city in one, nickname in the other) and the midfield emblem
         ftext(TU.city, 0, -5, TU.citySz, TU.ezText, 0.92, TU.ezStroke); ftext("THE DAILY DRIVE", 0, -8.9, 2.1, TU.ezText, 0.6);
         ftext(TU.name, 0, 105, TU.nameSz, TU.ezText, 0.92, TU.ezStroke); if (TU.stadium) ftext(TU.stadium, 0, 108.6, 1.9, TU.ezText, 0.6);
-        drawEmblem();
       } else {
         ftext("LINEUP LAB", 0, -5, 6.6, "#ffffff", 0.62, "rgba(0,40,30,0.7)"); ftext("THE DAILY DRIVE", 0, -8.9, 2.1, "#19e08a", 0.7);
         ftext("LINEUP LAB", 0, 105, 6.6, "#ffe9a8", 0.7, "rgba(60,30,0,0.7)"); ftext("THE DAILY DRIVE", 0, 108.6, 2.1, "#ffffff", 0.55);
       }
+      drawEmblem();
       // sideline area: LED boards and the people standing on the apron
       var sd, bx, by, k;
       for (sd = -1; sd <= 1; sd += 2) {
@@ -662,7 +658,7 @@
         for (Y = -6; Y < 108; Y += 3.4) {
           pj(sd * (XS + 3.4 + ((Y * 7) & 3) * 0.6), Y); if (PR.y < -40 || PR.y > H + 40) continue;
           k = ksz(PR.s) * 0.72; bx = PR.x; by = PR.y; ctx.fillStyle = "rgba(0,0,0,0.3)"; ctx.fillRect(bx - 4 * k, by - 0.5 * k, 8 * k, 1.5 * k);
-          ctx.fillStyle = ((Y * 3) & 3) ? "#223049" : "#19e08a"; ctx.fillRect(bx - 3 * k, by - 12 * k, 6 * k, 11.5 * k); ctx.fillStyle = "#d8b08a"; ctx.beginPath(); ctx.arc(bx, by - 14.2 * k, 2.3 * k, 0, TAU); ctx.fill();
+          ctx.fillStyle = ((Y * 3) & 3) ? "#223049" : "#19e08a"; ctx.fillRect(bx - 3 * k, by - 12 * k, 6 * k, 11.5 * k); ctx.fillStyle = "#d8b08a"; ctx.fillRect(bx - 2.3 * k, by - 16.5 * k, 4.6 * k, 4.6 * k);
         }
       }
       post(110);
@@ -712,18 +708,18 @@
     }
     function limb(sx0, sy0, hx, hy, side, k, sleeve, skin, glove, wb) {
       var ex = (sx0 + hx) / 2 + side * 1.7 * k, ey = (sy0 + hy) / 2 + 1.3 * k;
-      ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.strokeStyle = "rgba(0,0,0,0.5)"; ctx.lineWidth = 5 * k; ctx.beginPath(); ctx.moveTo(sx0, sy0); ctx.lineTo(ex, ey); ctx.lineTo(hx, hy); ctx.stroke();
-      ctx.strokeStyle = skin; ctx.lineWidth = 3.1 * k; ctx.beginPath(); ctx.moveTo(ex, ey); ctx.lineTo(hx, hy); ctx.stroke();
-      ctx.strokeStyle = sleeve; ctx.lineWidth = 4.3 * k; ctx.beginPath(); ctx.moveTo(sx0, sy0); ctx.lineTo(ex, ey); ctx.stroke();
-      ctx.fillStyle = glove; ctx.beginPath(); ctx.arc(hx, hy, 2.1 * k, 0, TAU); ctx.fill();
+      ctx.lineCap = "square"; ctx.lineJoin = "miter"; ctx.strokeStyle = "rgba(0,0,0,0.55)"; ctx.lineWidth = 5 * k; ctx.beginPath(); ctx.moveTo(sx0, sy0); ctx.lineTo(ex, ey); ctx.lineTo(hx, hy); ctx.stroke();
+      ctx.lineCap = "butt"; ctx.strokeStyle = skin; ctx.lineWidth = 3.2 * k; ctx.beginPath(); ctx.moveTo(ex, ey); ctx.lineTo(hx, hy); ctx.stroke();
+      ctx.strokeStyle = sleeve; ctx.lineWidth = 4.4 * k; ctx.beginPath(); ctx.moveTo(sx0, sy0); ctx.lineTo(ex, ey); ctx.stroke();
+      ctx.fillStyle = "rgba(0,0,0,0.55)"; ctx.fillRect(hx - 2.5 * k, hy - 2.5 * k, 5 * k, 5 * k); ctx.fillStyle = glove; ctx.fillRect(hx - 1.9 * k, hy - 1.9 * k, 3.8 * k, 3.8 * k);
     }
     function leg(sd, lift, spread, hipY, k, wb, pants, sock, front) {
       var hx = sd * 2.4 * wb * k, fx = sd * (2.5 + spread) * wb * k, fy = (-0.7 - lift) * k, hyy = hipY * k;
       var kx = (hx + fx) / 2 + sd * (0.9 + lift * 0.14 + spread * 0.5) * k, ky = (hyy + fy) / 2 - lift * 0.1 * k;
-      ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.strokeStyle = "rgba(0,0,0,0.55)"; ctx.lineWidth = 5.2 * wb * k; ctx.beginPath(); ctx.moveTo(hx, hyy); ctx.lineTo(kx, ky); ctx.lineTo(fx, fy); ctx.stroke();
-      ctx.strokeStyle = sock; ctx.lineWidth = 3.6 * k; ctx.beginPath(); ctx.moveTo(kx, ky); ctx.lineTo(fx, fy); ctx.stroke();
-      ctx.strokeStyle = pants; ctx.lineWidth = 4.7 * wb * k; ctx.beginPath(); ctx.moveTo(hx, hyy); ctx.lineTo(kx, ky + 0.8 * k); ctx.stroke();
-      ctx.fillStyle = "#12151e"; ctx.beginPath(); ctx.ellipse(fx + sd * 0.3 * k, fy + 0.2 * k, (front ? 2.6 : 2.2) * k, 1.3 * k, 0, 0, TAU); ctx.fill();
+      ctx.lineCap = "square"; ctx.lineJoin = "miter"; ctx.strokeStyle = "rgba(0,0,0,0.55)"; ctx.lineWidth = 5.2 * wb * k; ctx.beginPath(); ctx.moveTo(hx, hyy); ctx.lineTo(kx, ky); ctx.lineTo(fx, fy); ctx.stroke();
+      ctx.lineCap = "butt"; ctx.strokeStyle = sock; ctx.lineWidth = 3.8 * k; ctx.beginPath(); ctx.moveTo(kx, ky); ctx.lineTo(fx, fy); ctx.stroke();
+      ctx.strokeStyle = pants; ctx.lineWidth = 4.9 * wb * k; ctx.beginPath(); ctx.moveTo(hx, hyy); ctx.lineTo(kx, ky + 0.8 * k); ctx.stroke();
+      var bw0 = (front ? 5.4 : 4.6) * k; ctx.fillStyle = "#12151e"; ctx.fillRect(fx + sd * 0.3 * k - bw0 / 2, fy - 1 * k, bw0, 2.4 * k);   // block cleat
     }
     function drawSprite(e, sx, sy, k) {
       var off = e.team === "o", qb = e.k === "qb", back = e.back, ty0 = e.t;
@@ -734,16 +730,16 @@
       if (TU) { var u = off ? TU.o : TU.d; jersey = u.jersey; trim = u.trim; pants = u.pants; sock = u.sock; num = u.num; glove = u.glove; nstroke = u.nstroke; stripe = u.stripe; }
       var ph = e.phase, sw = e.run ? Math.sin(ph) * e.amp : 0, bob = e.run ? -Math.abs(Math.sin(ph)) * 1.1 * k * e.amp : 0, cr = e.cr * 2.6, hipY = -10 + cr;
       // ground shadow
-      ctx.fillStyle = "rgba(0,0,0,0.4)"; var shs = 1 - Math.min(0.5, e.z / 36); ctx.beginPath(); ctx.ellipse(sx, sy + 0.4 * k, 7.6 * k * wb * shs, 2.5 * k * shs, 0, 0, TAU); ctx.fill();
+      ctx.fillStyle = "rgba(0,0,0,0.4)"; var shs = 1 - Math.min(0.5, e.z / 36); ctx.fillRect(sx - 7.6 * k * wb * shs, sy - 1.6 * k * shs, 15.2 * k * wb * shs, 3.6 * k * shs);
       ctx.save(); ctx.translate(sx, sy - e.z * k); if (e.rot) ctx.rotate(e.rot); if (e.sxs !== 1 || e.sys !== 1) ctx.scale(e.sxs, e.sys);
       // legs (run cycle: alternating lift, knee drive) + stance spread
       var lL = Math.max(0, sw) * 3.6 + e.tapL * 3, lR = Math.max(0, -sw) * 3.6 + e.tapR * 3, spr = e.cr * 1.9;
       leg(-1, lL, spr, hipY, k, wb, pants, sock, !back); leg(1, lR, spr, hipY, k, wb, pants, sock, !back);
       ctx.translate(0, bob + cr * k); if (e.run) ctx.rotate(Math.sin(ph) * 0.045 * e.amp);
       // hips + torso (shoulder pads wider than the waist)
-      ctx.fillStyle = pants; roundRect(-5.5 * wb * k, -11.4 * k, 11 * wb * k, 3.2 * k, 1.4 * k); ctx.fill();
-      ctx.fillStyle = jersey; ctx.strokeStyle = "rgba(0,0,0,0.55)"; ctx.lineWidth = 1.1 * k; ctx.beginPath();
-      ctx.moveTo(-7.7 * wb * k, -18 * k); ctx.quadraticCurveTo(0, -21 * k, 7.7 * wb * k, -18 * k); ctx.lineTo(5.8 * wb * k, -10.8 * k); ctx.lineTo(-5.8 * wb * k, -10.8 * k); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = pants; ctx.fillRect(-5.8 * wb * k, -11.6 * k, 11.6 * wb * k, 3.4 * k);
+      ctx.fillStyle = jersey; ctx.strokeStyle = "rgba(0,0,0,0.55)"; ctx.lineWidth = 1.1 * k; ctx.lineJoin = "miter"; ctx.beginPath();
+      ctx.rect(-6.8 * wb * k, -19.6 * k, 13.6 * wb * k, 8.8 * k); ctx.fill(); ctx.stroke();                     // boxy torso
       ctx.fillStyle = "rgba(0,0,0,0.16)"; ctx.fillRect(2.2 * wb * k, -18 * k, 3.4 * wb * k, 7.2 * k);
       ctx.fillStyle = trim; ctx.fillRect(-5.6 * wb * k, -11.6 * k, 11.2 * wb * k, 1.1 * k);
       var label = String(e.n), nsz = (qb ? 9.8 : ty0 === "ol" || ty0 === "dl" ? 7.2 : 8) * k, ny = -14.4 * k;
@@ -757,25 +753,26 @@
       e.hsx = sx + hxl * cs - hyl * sn; e.hsy = sy - e.z * k + hxl * sn + hyl * cs;
       // shoulder pads
       ctx.fillStyle = jersey; ctx.strokeStyle = "rgba(0,0,0,0.5)"; ctx.lineWidth = 1 * k;
-      ctx.beginPath(); ctx.ellipse(-ax, ay + 0.2 * k, 3.7 * k, 2.8 * k, -0.25, 0, TAU); ctx.fill(); ctx.stroke(); ctx.beginPath(); ctx.ellipse(ax, ay + 0.2 * k, 3.7 * k, 2.8 * k, 0.25, 0, TAU); ctx.fill(); ctx.stroke();
-      ctx.fillStyle = "rgba(255,255,255,0.28)"; ctx.beginPath(); ctx.ellipse(-ax - 0.6 * k, ay - 0.9 * k, 2.1 * k, 1 * k, -0.25, 0, TAU); ctx.fill(); ctx.beginPath(); ctx.ellipse(ax - 0.6 * k, ay - 0.9 * k, 2.1 * k, 1 * k, 0.25, 0, TAU); ctx.fill();
-      // neck roll + helmet (shell with highlight, stripe, facemask when facing us)
-      ctx.fillStyle = "#171b27"; ctx.beginPath(); ctx.ellipse(0, -20.5 * k, 3.7 * k, 1.5 * k, 0, 0, TAU); ctx.fill();
+      ctx.fillRect(-ax - 3.8 * k, ay - 2.6 * k, 7.6 * k, 5.4 * k); ctx.strokeRect(-ax - 3.8 * k, ay - 2.6 * k, 7.6 * k, 5.4 * k);   // square shoulder pads
+      ctx.fillRect(ax - 3.8 * k, ay - 2.6 * k, 7.6 * k, 5.4 * k); ctx.strokeRect(ax - 3.8 * k, ay - 2.6 * k, 7.6 * k, 5.4 * k);
+      ctx.fillStyle = "rgba(255,255,255,0.28)"; ctx.fillRect(-ax - 3 * k, ay - 1.9 * k, 5 * k, 1.2 * k); ctx.fillRect(ax - 3 * k, ay - 1.9 * k, 5 * k, 1.2 * k);
+      // neck roll + helmet (a squared-off shell with highlight, stripe, facemask when facing us)
+      ctx.fillStyle = "#171b27"; ctx.fillRect(-3.6 * k, -21.6 * k, 7.2 * k, 2.2 * k);
       var hy = -25.3 * k, hr = 5.8 * k;
-      ctx.save(); ctx.translate(0, hy); ctx.scale(hr, hr * 0.97); ctx.fillStyle = off ? HG[0] : HG[1]; ctx.beginPath(); ctx.arc(0, 0, 1, 0, TAU); ctx.fill(); ctx.restore();
-      ctx.strokeStyle = "rgba(0,0,0,0.6)"; ctx.lineWidth = 1.1 * k; ctx.beginPath(); ctx.arc(0, hy, hr, 0, TAU); ctx.stroke();
+      ctx.save(); ctx.translate(0, hy); ctx.scale(hr, hr * 0.97); ctx.fillStyle = off ? HG[0] : HG[1]; roundRect(-1, -1, 2, 2, 0.3); ctx.fill(); ctx.restore();
+      ctx.strokeStyle = "rgba(0,0,0,0.6)"; ctx.lineWidth = 1.1 * k; roundRect(-hr, hy - hr * 0.97, 2 * hr, 1.94 * hr, hr * 0.3); ctx.stroke();
       if (back) {
-        if (stripe) ln(0, hy - hr * 0.98, 0, hy + hr * 0.5, stripe, 1.7 * k);
-        ctx.fillStyle = "#6c7690"; ctx.beginPath(); ctx.arc(-hr * 0.93, hy + 0.5 * k, 0.9 * k, 0, TAU); ctx.fill(); ctx.beginPath(); ctx.arc(hr * 0.93, hy + 0.5 * k, 0.9 * k, 0, TAU); ctx.fill();
+        if (stripe) { ctx.fillStyle = stripe; ctx.fillRect(-0.9 * k, hy - hr * 0.97, 1.8 * k, hr * 1.45); }
+        ctx.fillStyle = "#6c7690"; ctx.fillRect(-hr * 0.93 - 0.9 * k, hy - 0.4 * k, 1.8 * k, 1.8 * k); ctx.fillRect(hr * 0.93 - 0.9 * k, hy - 0.4 * k, 1.8 * k, 1.8 * k);
       } else {
-        if (stripe) ln(0, hy - hr, 0, hy - hr * 0.42, stripe, 1.7 * k);
-        ctx.fillStyle = skin; ctx.beginPath(); ctx.ellipse(0, hy + 1.3 * k, hr * 0.68, hr * 0.5, 0, 0, TAU); ctx.fill();
+        if (stripe) { ctx.fillStyle = stripe; ctx.fillRect(-0.9 * k, hy - hr * 0.97, 1.8 * k, hr * 0.55); }
+        ctx.fillStyle = skin; ctx.fillRect(-hr * 0.66, hy - 1.4 * k, hr * 1.32, hr * 0.95);
         ctx.fillStyle = "#12151e"; ctx.fillRect(-2.4 * k, hy + 0.5 * k, 1.5 * k, 1.2 * k); ctx.fillRect(0.9 * k, hy + 0.5 * k, 1.5 * k, 1.2 * k);
         ctx.strokeStyle = off ? "#dfe7f5" : "#7b88a6"; ctx.lineWidth = 0.95 * k; ctx.beginPath();
         ctx.moveTo(-hr * 0.78, hy - 0.4 * k); ctx.lineTo(-hr * 0.7, hy + 3.9 * k); ctx.lineTo(hr * 0.7, hy + 3.9 * k); ctx.lineTo(hr * 0.78, hy - 0.4 * k);
         ctx.moveTo(-hr * 0.78, hy + 0.9 * k); ctx.lineTo(hr * 0.78, hy + 0.9 * k); ctx.moveTo(-hr * 0.74, hy + 2.4 * k); ctx.lineTo(hr * 0.74, hy + 2.4 * k); ctx.moveTo(0, hy - 0.4 * k); ctx.lineTo(0, hy + 3.9 * k); ctx.stroke();
       }
-      ctx.fillStyle = "rgba(255,255,255,0.42)"; ctx.beginPath(); ctx.ellipse(-hr * 0.38, hy - hr * 0.5, hr * 0.34, hr * 0.17, -0.6, 0, TAU); ctx.fill();
+      ctx.fillStyle = "rgba(255,255,255,0.42)"; ctx.fillRect(-hr * 0.7, hy - hr * 0.78, hr * 0.62, hr * 0.26);
       ctx.restore();
     }
     // ---------------------------------------------------------------- the ball: spiral roll, orientation along its path, speed streak, tier trail
