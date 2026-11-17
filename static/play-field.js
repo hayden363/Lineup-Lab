@@ -564,20 +564,18 @@
       ctx.beginPath(); ctx.moveTo(-46 * sc, -40 * sc); ctx.quadraticCurveTo(-22 * sc, -34 * sc, 0, -48 * sc); ctx.quadraticCurveTo(22 * sc, -34 * sc, 46 * sc, -40 * sc);
       ctx.lineTo(44 * sc, 8 * sc); ctx.quadraticCurveTo(38 * sc, 36 * sc, 0, 50 * sc); ctx.quadraticCurveTo(-38 * sc, 36 * sc, -44 * sc, 8 * sc); ctx.closePath();
     }
-    function drawEmblem() {          // the midfield Daily Drive shield in the team's colors, laid flat on the turf
+    function drawEmblem() {          // the midfield shield: a soft Lineup Lab mark painted into the turf (never team colors)
       pj(0, 50); var cx = PR.x, s = PR.s; if (PR.y < -80 || PR.y > H + 80) return;
       pj(0, 43); var y0 = PR.y; pj(0, 57); var y1 = PR.y, rx = 5.6 * L.pxX * s, ry = Math.abs(y0 - y1) / 2, i;
-      var body = TU.o.jersey, band = mix(TU.o.jersey, "#000000", 0.45), ink = TU.o.num, edge = TU.o.trim;
-      ctx.save(); ctx.translate(cx, (y0 + y1) / 2); ctx.scale(rx / 50, ry / 50); ctx.globalAlpha = 0.93; ctx.lineJoin = "round";
-      shieldPath(1); ctx.fillStyle = "#f4f6fa"; ctx.fill();                                   // white outer rim
-      shieldPath(0.9); ctx.fillStyle = body; ctx.fill(); ctx.lineWidth = 2.4; ctx.strokeStyle = edge; ctx.stroke();
-      ctx.save(); shieldPath(0.9); ctx.clip(); ctx.fillStyle = band; ctx.fillRect(-50, -50, 100, 30); ctx.restore();   // the star band
-      ctx.fillStyle = "#ffffff"; for (i = 0; i < 7; i++) star(-27 + i * 9, -27, 3.1);           // one star per play
-      ctx.fillStyle = "#8a4a22"; ctx.beginPath(); ctx.ellipse(0, -46, 8, 4.4, 0, 0, TAU); ctx.fill();                   // the football on top
-      ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(-3, -46); ctx.lineTo(3, -46); ctx.moveTo(-1.5, -47.5); ctx.lineTo(-1.5, -44.5); ctx.moveTo(1.5, -47.5); ctx.lineTo(1.5, -44.5); ctx.stroke();
-      ctx.font = "800 italic 38px " + FONT; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-      ctx.lineWidth = 5; ctx.strokeStyle = edge; ctx.strokeText("DD", 0, 6); ctx.fillStyle = ink; ctx.fillText("DD", 0, 6);
-      ctx.font = "800 9px " + FONT; ctx.fillStyle = ink; ctx.fillText("DAILY DRIVE", 0, 30);
+      ctx.save(); ctx.translate(cx, (y0 + y1) / 2); ctx.scale(rx / 50, ry / 50); ctx.lineJoin = "round";
+      ctx.globalAlpha = 0.16; shieldPath(0.95); ctx.fillStyle = ACCENT; ctx.fill();
+      ctx.save(); shieldPath(0.95); ctx.clip(); ctx.globalAlpha = 0.22; ctx.fillStyle = "#04120d"; ctx.fillRect(-50, -50, 100, 30); ctx.restore();
+      ctx.globalAlpha = 0.45; shieldPath(0.95); ctx.lineWidth = 2.6; ctx.strokeStyle = "#ffffff"; ctx.stroke();
+      ctx.globalAlpha = 0.4; shieldPath(0.84); ctx.lineWidth = 1.4; ctx.strokeStyle = ACCENT; ctx.stroke();
+      ctx.globalAlpha = 0.45; ctx.fillStyle = "#ffffff"; for (i = 0; i < 7; i++) star(-27 + i * 9, -27, 2.8);    // one star per play
+      ctx.font = "800 italic 36px " + FONT; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.globalAlpha = 0.5; ctx.fillStyle = "#ffffff"; ctx.fillText("DD", 0, 6);
+      ctx.font = "800 8.5px " + FONT; ctx.globalAlpha = 0.5; ctx.fillStyle = ACCENT; ctx.fillText("LINEUP LAB", 0, 30);
       ctx.restore();
     }
     function drawBench(sd) {        // the team areas: the home bench on the left, the visitors (road whites) on the right
