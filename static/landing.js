@@ -23,32 +23,9 @@ function Ticker({value,decimals=1,prefix='',suffix='',className=''}){
 }
 
 /* ---------- logo ---------- */
-function Logo({size=40,animateKey=0}){
-  const [hov,setHov]=useState(0);
-  const k=animateKey+'-'+hov;
-  const bars=[{x:37,h:9},{x:47,h:15},{x:57,h:21}];
-  return html`<svg width=${size} height=${size} viewBox="0 0 100 100" role="img" aria-label="Lineup Lab logo" onMouseEnter=${()=>setHov(h=>h+1)} style=${{display:'block',overflow:'visible'}}>
-    <defs>
-      <linearGradient id="lgBadge" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#246B54"/><stop offset="1" stop-color="#0D2B22"/></linearGradient>
-      <linearGradient id="lgBorder" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7CF2A6" stop-opacity=".55"/><stop offset=".5" stop-color="#7CF2A6" stop-opacity=".06"/><stop offset="1" stop-color="#7CF2A6" stop-opacity=".18"/></linearGradient>
-    </defs>
-    <rect x="0" y="0" width="100" height="100" rx="26" fill="url(#lgBadge)"/>
-    <rect x="1.5" y="1.5" width="97" height="97" rx="24.5" fill="none" stroke="url(#lgBorder)" stroke-width="2"/>
-    <g transform="rotate(-18 50 50)">
-      <path d="M8 50 Q50 4 92 50 Q50 96 8 50 Z" fill="rgba(4,20,14,.35)" stroke="#fff" stroke-width="3.6" stroke-linejoin="round"/>
-      <path d="M13 38 Q27 17 50 13" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" opacity=".95"/>
-      <path d="M17 33 Q31 12 54 8" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" opacity=".5"/>
-      <path d="M87 62 Q73 83 50 87" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" opacity=".95"/>
-      <path d="M83 67 Q69 88 46 92" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" opacity=".5"/>
-      ${[38,46,54,62].map(x=>html`<line key=${x} x1=${x} y1=${x<50?30.5:30.5} y2="35.5" x2=${x} stroke="#fff" stroke-width="2.4" stroke-linecap="round"/>`)}
-      ${bars.map((b,i)=>html`<${motion.rect} key=${k+'b'+i} x=${b.x} width="6.4" rx="1.6" fill="#7CF2A6" y=${67-b.h} height=${b.h}
-        style=${{originX:.5,originY:1}} initial=${{scaleY:0}} animate=${{scaleY:1}} transition=${{delay:.15+i*.12,duration:.6,ease:[.16,1,.3,1]}}/>`)}
-      <${motion.path} key=${k+'t'} d="M33 55 L41 47.5 L46 51 L55 42 L59.5 45 L67 37" fill="none" stroke="#7CF2A6" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"
-        initial=${{pathLength:0}} animate=${{pathLength:1}} transition=${{delay:.5,duration:.8,ease:'easeInOut'}}/>
-      <${motion.path} key=${k+'a'} d="M62 36.4 L68.6 36 L68 42.6" fill="none" stroke="#7CF2A6" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"
-        initial=${{opacity:0}} animate=${{opacity:1}} transition=${{delay:1.2,duration:.2}}/>
-    </g>
-  </svg>`;
+function Logo({size=40}){   // the real Lineup Lab app icon (same file as the app, the favicon and the Daily Drive bar)
+  return html`<img src=${size>64?'/icons/icon-512.png':'/icons/icon-192.png'} width=${size} height=${size} alt="Lineup Lab logo"
+    style=${{display:'block',width:size,height:size,borderRadius:Math.round(size*.24),boxShadow:'0 0 0 1px rgba(124,242,166,.25),0 8px 24px -10px rgba(0,0,0,.8)'}}/>`;
 }
 
 /* ---------- 3D tilt wrapper ---------- */
@@ -207,9 +184,8 @@ function Nav({user,onOpenAuth,onLogout}){
 /* THE DAILY DRIVE leads the front door (owner 2026-11-17): it is the free daily reason to visit, and the way in to
    Lineup Lab. Everything on the card is real: today's opening question, its answer count and the community numbers
    come from the same /api/play endpoints the game uses; anything that fails to load simply stays hidden. */
-const DD_TIERS=[['✅','Checkdown',10,'#b3bccd'],['⚡','Quick Slant',15,'#6fd0ff'],['⛓️','Chain Mover',30,'#ff4b55'],
-  ['🚀','Chunk Play',60,'#b866ff'],['💣','Bomb',85,'#fff04d'],['🏈','Highlight Reel TD',100,'#ffab1a']];
-const DD_SAMPLE='🏈💣⛓️❌⚡✅🚀';
+const DD_TIERS=[['Checkdown',10,'#b3bccd'],['Quick Slant',15,'#6fd0ff'],['Chain Mover',30,'#ff4b55'],
+  ['Chunk Play',60,'#b866ff'],['Bomb',85,'#fff04d'],['Highlight Reel TD',100,'#ffab1a']];
 function ddLongDate(iso){const p=String(iso||'').split('-');if(p.length<3)return '';const d=new Date(Date.UTC(+p[0],+p[1]-1,+p[2]));
   return d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',timeZone:'UTC'})}
 function useDrive(){
@@ -235,10 +211,10 @@ function DriveCard({day,st,lb}){
       <span className="n mono">PLAY ${i+2}</span><span className="c">${p.category||'Locked until kickoff'}</span>${Ico('Lock',{size:13,color:'#5E7A6C'})}</div>`)}
       <div className="dd-lk"><span className="n mono">+3</span><span className="c">more plays, easy to deep cut</span>${Ico('Lock',{size:13,color:'#5E7A6C'})}</div>
     </div>
-    <div className="dd-ladder" aria-label="Yards per play, by how rare your answer is">${DD_TIERS.map(t=>html`<div className="dd-rung" key=${t[1]} style=${{'--c':t[3]}} title=${t[1]}>
-      <span className="e">${t[0]}</span><span className="y mono">+${t[2]}</span><span className="t">${t[1]}</span></div>`)}</div>
+    <div className="dd-ladder" aria-label="Yards per play, by how rare your answer is">${DD_TIERS.map((t,i)=>html`<div className="dd-rung" key=${t[0]} style=${{'--c':t[2],'--h':(30+i*14)+'%'}} title=${t[0]}>
+      <span className="bar"></span><span className="y mono">+${t[1]}</span><span className="t">${t[0]}</span></div>`)}</div>
     <div className="dd-foot">${lb?html`<div className="dd-top3"><span className="mono mint">TODAY'S TOP</span>${lb.top.slice(0,3).map(r=>html`<span key=${r.rank+r.name}>#${r.rank} <b>${r.name}</b> ${r.yards}</span>`)}</div>`
-      :html`<span className="muted">Share your drive, spoiler-free:</span><span className="dd-share">${DD_SAMPLE}</span>`}</div>
+      :html`<span className="muted">Common answer: a few yards. The one nobody thinks of: a touchdown.</span>`}</div>
   </div>`;
 }
 function msToEtMidnight(){   // time left until the next drive (the Drive's day rolls over at midnight US Eastern)
@@ -263,10 +239,14 @@ function BrandHero(){
       <//>
       <div className="lab-doors">
         <${motion.div} initial=${{opacity:0,y:24}} animate=${{opacity:1,y:0}} transition=${{delay:.6}} className="card door door-drive">
-          <div className="door-top"><span className="eyebrow">Every day · free</span><span className="door-badge">Start here</span></div>
+          <a className="door-cover" href="/play" aria-label="Play The Daily Drive">
+            <img src="/img/daily-drive-cover.webp" alt="The Daily Drive: a pixel-art night game on a football field" width="627" height="552" loading="eager"/>
+            <span className="door-badge">Start here</span>
+          </a>
+          <div className="door-top"><span className="eyebrow">Every day · free</span></div>
           <h2>The Daily Drive</h2>
+          <span className="door-k">Like Krillion, but for football</span>
           <p>Seven NFL trivia plays a day. Name a player who fits; the rarer your answer, the bigger the play. Keep your streak alive and climb today's leaderboard.</p>
-          <span className="door-emo" aria-hidden="true">${DD_SAMPLE}</span>
           <div className="door-cta">
             <a className="btn btn-mint no-underline" href="/play">${Ico('Play',{size:16})}Play today's drive</a>
             <a className="btn btn-ghost no-underline" href="#drive" onClick=${e=>jump(e,'#drive')}>How it plays</a>
@@ -276,7 +256,11 @@ function BrandHero(){
           <div className="door-top"><span className="eyebrow">For your fantasy league</span><span className="tag">Sleeper · ESPN</span></div>
           <h2>Fantasy tools</h2>
           <p>Sync your league in 30 seconds. Lineup Lab finds who to start, who to pick up, and which trades actually help your team, every week.</p>
-          <div className="door-row">${[['ArrowLeftRight','Start/Sit'],['TrendingUp','Waivers'],['Repeat','Trades'],['Tv','Live scores'],['BarChart3','Big Board']].map(c=>html`<span className="door-chip" key=${c[1]}>${Ico(c[0],{size:13,color:'#7CF2A6'})}${c[1]}</span>`)}</div>
+          <div className="door-list">${[['ArrowLeftRight','Start/Sit','Who to play this week, with the matchup and weather behind it'],
+            ['TrendingUp','Waivers','The pickups that beat your bench, from real Sleeper trends'],
+            ['Repeat','Trades','Offers that actually raise your playoff odds'],
+            ['Tv','Live scores','Your players in every game, as it happens'],
+            ['BarChart3','Big Board','Rest-of-season rankings built from real NFL data']].map(c=>html`<div className="door-li" key=${c[1]}><span className="ic">${Ico(c[0],{size:16,color:'#7CF2A6'})}</span><div><b>${c[1]}</b><span>${c[2]}</span></div></div>`)}</div>
           <div className="door-cta">
             <a className="btn btn-ghost no-underline" href=${APP_URL} style=${{borderColor:'rgba(124,242,166,.5)'}}>${Ico('Zap',{size:15})}Launch Lineup Lab free</a>
             <a className="btn btn-ghost no-underline" href="#lab" onClick=${e=>jump(e,'#lab')}>See the tools</a>
@@ -292,7 +276,7 @@ function DriveHero(){
   return html`<section id="drive" className="gutter pt-16 sm:pt-24 pb-10">
     <div className="wrap dd-hero">
       <div className="min-w-0">
-        <span className="eyebrow dd-sec-k">Lineup Lab · The Daily Drive</span>
+        <span className="eyebrow dd-sec-k">Lineup Lab · The Daily Drive · like Krillion, but for football</span>
         <${motion.h2} ...${reveal} className="dd-h2">The Daily Drive.<br/><span className="hl">7 plays. 700 yards.</span><//>
         <${motion.p} ...${reveal} className="dd-lede">
           Seven football questions a day, easiest first. Name a player who fits, and the rarer your answer, the bigger the play: a Checkdown gains 10 yards, a Highlight Reel TD gains 100. Every answer comes from real NFL data. Free, no account needed.

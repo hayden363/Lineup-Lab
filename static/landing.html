@@ -97,7 +97,8 @@ input[type=range]::-moz-range-thumb{width:12px;height:12px;border-radius:50%;bac
 .dd-lk .c{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .dd-ladder{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px;margin-top:14px}
 .dd-rung{border-radius:12px;padding:8px 4px;text-align:center;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08)}
-.dd-rung .e{font-size:20px;line-height:1.2;display:block}
+.dd-rung .bar{display:block;height:34px;margin:0 auto 6px;width:10px;border-radius:4px;background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.02));position:relative;overflow:hidden}
+.dd-rung .bar::after{content:"";position:absolute;left:0;right:0;bottom:0;height:var(--h);background:var(--c);border-radius:4px;box-shadow:0 0 10px var(--c)}
 .dd-rung .y{font-size:12px;font-weight:800;color:var(--c)}
 .dd-rung .t{display:block;font-size:9.5px;color:var(--dim);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .dd-foot{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:14px;padding-top:14px;border-top:1px dashed rgba(255,255,255,.12);font-size:13px}
@@ -129,7 +130,16 @@ section[id]{scroll-margin-top:92px}
 .door p{margin:0;color:#B6CBBF;font-size:15.5px}
 .door-row{display:flex;flex-wrap:wrap;gap:8px}
 .door-chip{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;padding:6px 10px;border-radius:999px;border:1px solid var(--line);color:#d9e8df;background:rgba(255,255,255,.03)}
-.door-emo{font-size:24px;letter-spacing:4px}
+.door-cover{position:relative;display:block;margin:-10px -8px 4px;border-radius:18px;overflow:hidden;aspect-ratio:627/552;max-height:440px;border:1px solid rgba(124,242,166,.3);box-shadow:0 18px 40px -20px #000}
+.door-cover img{width:100%;height:100%;object-fit:cover;object-position:50% 30%;display:block;transition:transform .5s}
+.door-cover:hover img{transform:scale(1.03)}
+.door-cover .door-badge{position:absolute;bottom:12px;right:12px}
+.door-k{align-self:flex-start;font-size:13px;font-weight:700;color:#04140D;background:#F5C26B;border-radius:999px;padding:5px 12px;margin-top:-4px}
+.door-list{display:grid;gap:10px;margin-top:4px}
+.door-li{display:grid;grid-template-columns:34px 1fr;gap:12px;align-items:start;padding:12px;border-radius:14px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06)}
+.door-li .ic{display:grid;place-items:center;width:34px;height:34px;border-radius:10px;background:rgba(124,242,166,.1)}
+.door-li b{display:block;font-size:15px}
+.door-li span{display:block;font-size:13.5px;color:#B6CBBF;line-height:1.4}
 .door-cta{display:flex;flex-wrap:wrap;gap:10px;margin-top:auto;padding-top:6px}
 .dd-sec-k{display:block;margin-bottom:14px}
 .dd-h2{font-weight:800;letter-spacing:-.035em;line-height:.98;font-size:clamp(38px,4.6vw,66px);margin:0}

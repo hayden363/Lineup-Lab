@@ -81,6 +81,18 @@ class LandingTests(unittest.TestCase):
         html = _r("static/landing.html")
         self.assertIn("<title>Lineup Lab", html)
 
+    def test_front_door_has_no_emojis_a_real_logo_and_a_game_cover(self):
+        """Owner 2026-11-17 (round 3): no emojis on the front door, the real app icon as the logo, a cover image of
+        the actual game on the Daily Drive door, and the Krillion comparison (as a comparison, not our name)."""
+        js = _r("static/landing.js")
+        for e in ("\u2705", "\u26a1", "\u26d3", "\u274c", "\U0001F3C8", "\U0001F4A3", "\U0001F680"):
+            self.assertNotIn(e, js)
+        self.assertIn("'/icons/icon-512.png':'/icons/icon-192.png'", js)
+        self.assertIn('src="/img/daily-drive-cover.webp"', js)
+        self.assertTrue(os.path.exists(os.path.join(ROOT, "static", "img", "daily-drive-cover.webp")))
+        self.assertIn("Like Krillion, but for football", js)
+        self.assertNotIn("krillion.io", js.lower())
+
 
 if __name__ == "__main__":
     unittest.main()
