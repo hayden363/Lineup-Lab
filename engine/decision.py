@@ -325,10 +325,15 @@ def verdict(players, mode):
     one-line pivot rule when floor and ceiling disagree."""
     if len(players) < 2:
         return None
-    pick = {m: max(players, key=lambda p: mode_value(p["outcomes"], m)) for m in MODES}
+    # A player who isn't playing (bye, Out, IR) is never the call: anyone who plays ranks ahead of him, even on a
+    # tie at zero. When nobody in the comparison plays there is no one to start, so there is no call.
+    if all(p["outcomes"].get("out") for p in players):
+        return None
+    rank = lambda m: (lambda p: (not p["outcomes"].get("out"), mode_value(p["outcomes"], m)))
+    pick = {m: max(players, key=rank(m)) for m in MODES}
     best = pick[mode]
     rest = [p for p in players if p is not best]
-    runner = max(rest, key=lambda p: mode_value(p["outcomes"], mode))
+    runner = max(rest, key=rank(mode))
     p_win = beat_prob(best["outcomes"]["_samples"], runner["outcomes"]["_samples"])
     name = lambda p: p["player_display_name"]
     if mode == "upside":

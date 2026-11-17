@@ -652,7 +652,19 @@ def start_sit(player_ids, opponents=None, season=None, scoring=None, mode="balan
         print(f"[startsit] decision layer skipped: {e}")
     _apply_recommendation_tiers(valid)
     summary = None
-    if valid:
+    nobody_plays = len(valid) >= 2 and all(r["PROJ"] == 0.0 and (r["on_bye"] or r["injury_status"] in decision.WONT_PLAY)
+                                           for r in valid)
+    if nobody_plays:
+        # Every option scores 0 this week, so naming one "the start" would be a coin flip dressed up as a call.
+        for r in results:
+            r["recommended"] = False
+        for r in valid:
+            r["tier"] = "SIT"
+            r["confidence"] = max(r.get("confidence") or 0, 90)   # no game is not a close call, same as an "Out" tag
+        why = lambda r: f"on bye (week {r['week']})" if r["on_bye"] else str(r["injury_status"]).lower()
+        summary = ("Nobody here plays this week: " + "; ".join(f"{r['player_display_name']} is {why(r)}" for r in valid)
+                   + ". Put someone with a game in this spot.")
+    elif valid:
         best = max(valid, key=lambda r: r["rank_value"])
         for r in results:
             r["recommended"] = ("error" not in r) and (r["player_id"] == best["player_id"])

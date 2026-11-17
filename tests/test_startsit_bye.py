@@ -2,7 +2,7 @@
 
 import unittest
 
-from engine import profile, tools, waivers
+from engine import data, decision, profile, tools, waivers
 
 
 class ByeStartSitTests(unittest.TestCase):
@@ -13,10 +13,18 @@ class ByeStartSitTests(unittest.TestCase):
         bye_teams = {t for t, w in byes.items() if w == slate}
         if not bye_teams:
             self.skipTest("no team is on bye in this week's slate")
+        # "Playing" means the team's next game comes with no idle week first. From Sunday to Tuesday the app's
+        # week is one most teams already played, so a team whose bye is NEXT week (next game two weeks out) is
+        # also out in Start/Sit (tools._bye_before_next_game). Excluding only `bye == slate` here once paired
+        # the bye QB with another bye QB, both at 0, and the tie went to whichever was listed first.
+        def idle(team):
+            _, next_wk = data.next_opponent(bundle["schedule"], team)
+            return next_wk is None or tools._bye_before_next_game(byes.get(team), slate, next_wk) is not None
+        idle_teams = {t for t in set(bundle["schedule"]["home_team"]) | set(bundle["schedule"]["away_team"]) if idle(t)}
         pool, _ = waivers.cached_pool(None, bundle)
         qbs = pool[(pool["position"] == "QB") & pool["injury_status"].isna()]
         on_bye = qbs[qbs["recent_team"].isin(bye_teams)].sort_values("value", ascending=False)
-        playing = qbs[~qbs["recent_team"].isin(bye_teams)].sort_values("value")
+        playing = qbs[~qbs["recent_team"].isin(idle_teams | bye_teams)].sort_values("value")
         if on_bye.empty or playing.empty:
             self.skipTest("no healthy QB on a bye team")
         res = tools.start_sit([on_bye.index[0], playing.index[len(playing) // 2]])
@@ -31,6 +39,49 @@ class ByeStartSitTests(unittest.TestCase):
         self.assertEqual(byp["PROJ"], 0.0)                 # not his next game's number
         self.assertGreater(byp["next_game_proj"], 0)
         self.assertIn("vs 0.0 for " + byp["player_display_name"], res["summary"] or "")   # the write-up compares against his real 0
+
+
+class NobodyPlaysIsNotAStart(unittest.TestCase):
+    """When no one in the comparison plays (byes, Out, IR), the app must not say "Start X": every option scores 0."""
+
+    @staticmethod
+    def playing(pid, mean):
+        import numpy as np
+        s = np.full(decision.SAMPLES, float(mean))
+        return {"player_id": pid, "player_display_name": pid,
+                "outcomes": {"p10": mean, "p50": mean, "p90": mean, "mean": mean, "p_10plus": 0, "p_20plus": 0,
+                             "_samples": s}}
+
+    @staticmethod
+    def out(pid):
+        return {"player_id": pid, "player_display_name": pid, "outcomes": decision.ruled_out()}
+
+    def test_verdict_names_no_starter_when_everyone_is_out(self):
+        for mode in ("safe", "balanced", "upside"):
+            self.assertIsNone(decision.verdict([self.out("a"), self.out("b")], mode), mode)
+
+    def test_a_player_who_plays_beats_an_out_player_even_on_a_tie(self):
+        for mode in ("safe", "balanced", "upside"):
+            call = decision.verdict([self.out("bye"), self.playing("dud", 0.0)], mode)
+            self.assertEqual(call["pick"], "dud", mode)
+            self.assertTrue(all(pid == "dud" for pid in call["by_mode"].values()), mode)
+
+    def test_start_sit_with_two_bye_players_recommends_neither(self):
+        bundle = waivers.load_bundle()
+        slate = waivers.target_week(bundle["schedule"])
+        bye_teams = {t for t, w in profile.bye_weeks(bundle["schedule"]).items() if w == slate}
+        pool, _ = waivers.cached_pool(None, bundle)
+        qbs = pool[(pool["position"] == "QB") & pool["injury_status"].isna() & pool["recent_team"].isin(bye_teams)]
+        if len(qbs) < 2:
+            self.skipTest("fewer than two healthy QBs on bye this week")
+        ids = list(qbs.sort_values("value", ascending=False).index[:2])
+        res = tools.start_sit(ids)
+        self.assertIsNone(res["decision"])
+        self.assertFalse(any(p.get("recommended") for p in res["players"]))
+        self.assertTrue(all(p["tier"] == "SIT" for p in res["players"]))
+        self.assertTrue(all(p["confidence"] >= 90 for p in res["players"]))   # sitting a bye is not a coin flip
+        self.assertNotIn("Start ", res["summary"] or "")
+        self.assertIn("plays this week", res["summary"])
 
 
 class SuggestionsSkipUnavailablePlayers(unittest.TestCase):
