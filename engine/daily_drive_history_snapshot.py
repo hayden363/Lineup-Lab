@@ -112,6 +112,7 @@ def _unpack(q, heads):
         answers.append(a)
     p = {k: v for k, v in q.items() if k not in ("rows", "stat_label")}
     p["answers"] = answers
+    p["text"] = hp.decade_years(p.get("text"), p.get("scope"))   # snapshots built before the years were spelled out
     return p
 
 

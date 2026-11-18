@@ -335,6 +335,18 @@ def scope_order(tpl, date_str, last=2025):
     return sorted(opts, key=lambda o: hashlib.sha256(f"dd-hist:{tpl['key']}:{date_str}:{o}".encode()).hexdigest())
 
 
+DECADE_LABEL = {"2000s": "2000s (2000–2009)", "2010s": "2010s (2010–2019)", "2020s": "2020s (since 2020)"}
+
+
+def decade_years(text, scope):
+    """Spell out a decade's years so '2010s drafts' can't be read as including 2020: 'the 2010s' -> 'the 2010s
+    (2010-2019)'. Idempotent; text without a decade scope comes back unchanged."""
+    label = DECADE_LABEL.get(scope)
+    if not label or not isinstance(text, str) or label in text:
+        return text
+    return text.replace(f"the {scope}", f"the {label}", 1)
+
+
 def scope_text(tpl, scope):
     s = tpl.get("scope")
     if s == "team":
@@ -542,6 +554,8 @@ def render_text(tpl, t, scope=None):
               "times": "" if t <= 1 else f" {n}+ times", "nseasons": "a season" if t == 1 else f"{n}+ seasons"}
     text = tpl["text"].format(**fields)
     text = re.sub(r"\b([Aa]) (8|11|18)(?=[\d,]*\+)", lambda m: m.group(1) + "n " + m.group(2), text)
+    if tpl.get("scope") == "decade":
+        text = decade_years(text, scope)
     return pool.tidy_text(text)
 
 

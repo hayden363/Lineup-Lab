@@ -21,6 +21,8 @@ import unicodedata
 
 import pandas as pd
 
+from engine.daily_drive_nicknames import NICKNAMES
+
 MIN_ANSWERS = 12          # a prompt is used only if at least this many answers exist
 N_FANTASY, N_HISTORY = 2, 5     # owner 2026-11-16: 2 this-season/this-week prompts + 5 NFL history prompts a day
 MIX_START = "2026-11-17"        # days before this keep the all-season mix they were built with
@@ -91,6 +93,17 @@ def norm_name(name):
     s = re.sub(r"[.'`’]", "", s.replace("-", " "))
     s = re.sub(r"[^a-z0-9 ]", " ", s)
     return " ".join(t for t in s.split() if t not in _SUFFIXES)
+
+
+def name_initials(name):
+    """'Amon-Ra St. Brown' -> 'arsb'; 'Jaxon Smith-Njigba' -> 'jsn'; 'Odell Beckham Jr.' -> 'obj' (Jr keeps its J,
+    other suffixes drop)."""
+    if not isinstance(name, str):
+        return ""
+    s = unicodedata.normalize("NFKD", name).encode("ascii", "ignore").decode().lower()
+    s = re.sub(r"[.'`’]", "", s.replace("-", " "))
+    toks = re.sub(r"[^a-z0-9 ]", " ", s).split()
+    return "".join("j" if t == "jr" else t[0] for t in toks if t == "jr" or t not in _SUFFIXES)
 
 
 # ----------------------------------------------------------------------------------------------- tiers
@@ -610,18 +623,28 @@ def check_answer(answers, typed, used=()):
     if not t:
         return {"ok": False, "reason": "type a player's name", "suggestions": []}
     used = set(used)
-    by_full, by_last, by_initial, by_alias = {}, {}, {}, {}
+    by_full, by_last, by_initial, by_alias, by_surname = {}, {}, {}, {}, {}
     for a in answers:
         n = norm_name(a["name"])
         by_full[n] = a
         toks = n.split()
         by_last.setdefault(toks[-1], []).append(a)
         by_initial.setdefault(toks[0][0] + " " + toks[-1], []).append(a)
-    for a in answers:       # optional "aliases": other accepted spellings, e.g. a team's old city; an exact alias is an exact answer
-        for al in a.get("aliases") or ():
+        for i in range(1, len(toks) - 1):   # multi-word surnames: "Smith-Njigba", "St. Brown" (after "Amon-Ra")
+            by_surname.setdefault(" ".join(toks[i:]), []).append(a)
+    for a in answers:       # optional "aliases" (a team's old city) + curated nicknames (CMC); an exact alias is an exact answer
+        for al in list(a.get("aliases") or ()) + NICKNAMES.get(a["id"], []):
             k = norm_name(al)
             if k and k not in by_full and a not in by_alias.setdefault(k, []):
                 by_alias[k].append(a)
+    inits = {}              # auto initials (ARSB, JSN, OBJ): 3+ letters and unique within this question
+    for a in answers:
+        k = name_initials(a["name"])
+        if len(k) >= 3:
+            inits.setdefault(k, []).append(a)
+    for k, pool in inits.items():
+        if len(pool) == 1 and k not in by_full and k not in by_last and k not in by_alias:
+            by_alias[k] = pool
 
     def hit(a):
         if a["id"] in used:
@@ -638,7 +661,7 @@ def check_answer(answers, typed, used=()):
                 "suggestions": [a["name"] for a in sorted(pool, key=lambda a: -a["tier"])[:4]]}
     toks = t.split()
     for pool in ((by_initial.get(toks[0][0] + " " + toks[-1], []) if len(toks) >= 2 and len(toks[0]) == 1 else []),
-                 (by_last.get(t, []) if len(toks) == 1 else [])):
+                 (by_last.get(t, []) if len(toks) == 1 else by_surname.get(t, []))):
         if len(pool) == 1:
             return hit(pool[0])
         if len(pool) > 1:
@@ -648,6 +671,8 @@ def check_answer(answers, typed, used=()):
     limit = 1 if len(t) < 6 else 2
     keyed = dict(by_full)
     for k, pool in by_alias.items():
+        if len(k) < 5:      # initials and short nicknames (JSN, CMC, AB) must be typed exactly
+            continue
         for a in pool:
             keyed.setdefault(k, a)
     dist = {}
