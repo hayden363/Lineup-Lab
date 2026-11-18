@@ -55,3 +55,23 @@ targets:
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
         INFOPLIST_KEY_UILaunchScreen_Generation: false
         ENABLE_PREVIEWS: true
+  LineupLabUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: LineupLabUITests
+    dependencies:
+      - target: LineupLab
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.haydenjohnstonwoods.lineuplab.uitests
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_TARGET_NAME: LineupLab
+schemes:
+  LineupLab:
+    build:
+      targets:
+        LineupLab: all
+    test:
+      targets:
+        - LineupLabUITests
