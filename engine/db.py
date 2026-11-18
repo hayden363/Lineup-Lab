@@ -421,6 +421,89 @@ def drive_my_day(game_date, user_id=None, device_hash=None):
         return _drive_row(row) if row else None
 
 
+def get_drive_puzzle(game_date):
+    """The frozen puzzle for one day ({date, prompts}) or None. Raises if the table is missing or the DB is down."""
+    with _conn() as c:
+        c.execute("SELECT puzzle FROM daily_drive_puzzles WHERE game_date = %s", (game_date,))
+        row = c.fetchone()
+        return row["puzzle"] if row else None
+
+
+def save_drive_puzzle(game_date, puzzle, now=None):
+    """Freeze a day's puzzle the first time it is built. A second writer (another worker, a racing request) loses
+    quietly and gets the stored one back, so every player sees the same seven prompts."""
+    now = now if now is not None else time.time()
+    with _conn() as c:
+        c.execute("INSERT INTO daily_drive_puzzles (game_date, puzzle, created_at) VALUES (%s, %s, %s) "
+                  "ON CONFLICT (game_date) DO NOTHING", (game_date, Jsonb(puzzle), now))
+        c.execute("SELECT puzzle FROM daily_drive_puzzles WHERE game_date = %s", (game_date,))
+        row = c.fetchone()
+        return row["puzzle"] if row else puzzle
+
+
+def add_drive_picks(game_date, picks):
+    """Count one saved game's answers: picks = [(prompt_id, answer_id)]."""
+    if not picks:
+        return
+    with _conn() as c:
+        for prompt_id, answer_id in picks:
+            c.execute("INSERT INTO daily_drive_picks (game_date, prompt_id, answer_id, n) VALUES (%s, %s, %s, 1) "
+                      "ON CONFLICT (game_date, prompt_id, answer_id) DO UPDATE SET n = daily_drive_picks.n + 1",
+                      (game_date, prompt_id, answer_id))
+
+
+def drive_pick_counts(game_date):
+    """{prompt_id: {answer_id: times named}} for one day."""
+    out = {}
+    with _conn() as c:
+        c.execute("SELECT prompt_id, answer_id, n FROM daily_drive_picks WHERE game_date = %s", (game_date,))
+        for r in c.fetchall():
+            out.setdefault(r["prompt_id"], {})[r["answer_id"]] = int(r["n"])
+    return out
+
+
+def log_drive_miss(game_date, prompt_id, guess):
+    """Count one rejected guess (already normalized by the caller)."""
+    with _conn() as c:
+        c.execute("INSERT INTO daily_drive_misses (game_date, prompt_id, guess, n) VALUES (%s, %s, %s, 1) "
+                  "ON CONFLICT (game_date, prompt_id, guess) DO UPDATE SET n = daily_drive_misses.n + 1",
+                  (game_date, prompt_id, guess))
+
+
+def drive_misses(game_date, limit=300):
+    """The most common rejected guesses for one day: [{prompt_id, guess, n}] most frequent first."""
+    with _conn() as c:
+        c.execute("SELECT prompt_id, guess, n FROM daily_drive_misses WHERE game_date = %s ORDER BY n DESC, guess "
+                  "LIMIT %s", (game_date, limit))
+        return [{"prompt_id": r["prompt_id"], "guess": r["guess"], "n": int(r["n"])} for r in c.fetchall()]
+
+
+def drive_league_board(game_date, user_id):
+    """Today's scores from Lineup Lab players who share a connected league with `user_id`, grouped by league:
+    [{league_id, league_name, platform, players: [{user_id, name, yards, tiers}]}], each list best first. Leagues
+    where nobody (including the caller) has played yet still come back, with an empty list."""
+    with _conn() as c:
+        c.execute("SELECT DISTINCT ON (platform, league_id) platform, league_id, league_name FROM connected_teams "
+                  "WHERE user_id = %s ORDER BY platform, league_id, created_at", (user_id,))
+        leagues = [dict(r) for r in c.fetchall()]
+        if not leagues:
+            return []
+        c.execute("SELECT DISTINCT ct.platform, ct.league_id, u.id AS user_id, u.username, s.yards, s.tiers, s.created_at "
+                  "FROM connected_teams ct JOIN daily_drive_scores s ON s.user_id = ct.user_id AND s.game_date = %s "
+                  "JOIN users u ON u.id = ct.user_id "
+                  "WHERE (ct.platform, ct.league_id) IN (SELECT platform, league_id FROM connected_teams WHERE user_id = %s)",
+                  (game_date, user_id))
+        rows = c.fetchall()
+    out = []
+    for lg in leagues:
+        ps = [r for r in rows if r["platform"] == lg["platform"] and r["league_id"] == lg["league_id"]]
+        ps.sort(key=lambda r: (-int(r["yards"]), r["created_at"]))
+        out.append({"league_id": lg["league_id"], "league_name": lg["league_name"], "platform": lg["platform"],
+                    "players": [{"user_id": r["user_id"], "name": r["username"], "yards": int(r["yards"]),
+                                 "tiers": [int(t) for t in (r["tiers"] or [])]} for r in ps]})
+    return out
+
+
 def drive_history(user_id, limit=1000):
     """A signed-in player's saved scores, newest first: [{date, yards, tiers}]."""
     with _conn() as c:

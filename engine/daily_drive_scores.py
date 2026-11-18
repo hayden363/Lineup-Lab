@@ -115,6 +115,30 @@ def score_from_tokens(date_str, tokens, prompts, key=None):
     return yards_of(tiers), tiers
 
 
+def picks_from_tokens(date_str, tokens, prompts, key=None):
+    """The (prompt_id, answer_id) each verified token names, first token per prompt (same rule as scoring). Call it
+    only after score_from_tokens accepted the same tokens; anything unverifiable is skipped."""
+    ids = {p["id"] for p in prompts}
+    out, seen = [], set()
+    for tok in tokens or []:
+        v = verify_token(date_str, tok, key)
+        if v is None or v[0] not in ids or v[0] in seen:
+            continue
+        seen.add(v[0])
+        out.append((v[0], v[1]))
+    return out
+
+
+def rarity(n, players):
+    """How rare one answer was among the day's saved games: {n, players, pct}. pct is a whole percent, at least 1 for
+    anything named at all, so a rare pick never shows as '0%'."""
+    n, players = int(n or 0), int(players or 0)
+    if players <= 0:
+        return {"n": n, "players": players, "pct": None}
+    pct = round(100 * n / players)
+    return {"n": n, "players": players, "pct": max(1, pct) if n else 0}
+
+
 def yards_of(tiers):
     return sum(dd.TIERS[t][1] for t in tiers if t)
 

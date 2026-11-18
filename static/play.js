@@ -779,6 +779,67 @@
     if (coarse && navigator.share) { navigator.share({ text: text }).catch(function () { copyText(text, btn); }); return; }
     copyText(text, btn);
   }
+  // ---------------------------------------------------------------- after the game: how rare each pick was + your league
+  // Rarity is shown only on the end screen, never during the drive (owner 2026-11-18).
+  function rarityText(r) {
+    if (!r || r.pct == null || !r.players) return "";
+    if (r.players < 10) return "named by " + r.n + " of " + r.players + (r.players === 1 ? " player" : " players");
+    return (r.pct <= 5 ? "only " : "") + r.pct + "% of players named him";
+  }
+  function yourPlays(puzzle, rec) {
+    var rows = [], box = h("div", { "class": "dd-card dd-plays" }, h("h2", null, "Your plays"));
+    puzzle.prompts.forEach(function (p, i) {
+      var t = rec.tiers[i], nm = rec.names[i];
+      var rare = h("span", { "class": "rare" });
+      rows.push(rare);
+      box.appendChild(h("div", { "class": "dd-play-row t" + (t || 0) },
+        h("span", { "class": "n" }, String(i + 1)),
+        h("div", { "class": "who" }, h("b", null, t && nm ? nm : "Sacked"), h("span", null, p.text)),
+        h("div", { "class": "tg" }, h("span", { "class": "e" }, t ? TIER[t][2] : SACK), rare)));
+    });
+    var filled = false;
+    return {
+      box: box,
+      fill: function (arr, rareLine) {
+        if (!arr || !arr.length || filled) return;
+        filled = true;
+        var best = null;
+        arr.forEach(function (r, i) {
+          if (rows[i]) rows[i].textContent = rarityText(r);
+          if (r && r.pct != null && r.players >= 2 && (!best || r.pct < best.r.pct)) best = { r: r, i: i };
+        });
+        if (rareLine && best) rareLine.textContent = "Rarest pick: " + rec.names[best.i] + ", " + rarityText(best.r) + ".";
+      }
+    };
+  }
+  function leagueCard(date, text) {
+    var box = h("div", { "class": "dd-card dd-league", style: "display:none" });
+    api("/api/play/league-board?date=" + encodeURIComponent(date)).then(function (j) {
+      if (!j || !j.signed_in || !j.leagues || !j.leagues.length) return;
+      j.leagues.forEach(function (lg) {
+        var sec = h("div", { "class": "dd-league-sec" },
+          h("div", { "class": "dd-lb-head" }, h("h2", null, "Your league: " + (lg.league_name || "League")),
+            h("span", { "class": "dd-lb-n" }, lg.players.length + (lg.players.length === 1 ? " played" : " played"))));
+        lg.players.forEach(function (r) { sec.appendChild(boardRow(r, r.me)); });
+        if (lg.players.filter(function (r) { return !r.me; }).length === 0)
+          sec.appendChild(h("p", { "class": "dd-small" }, "No one else from this league has played today. Send them your drive."));
+        if (lg.chat) {
+          var btn = h("button", { "class": "dd-btn alt", type: "button" }, "Post my drive to League Chat");
+          btn.addEventListener("click", function () {
+            btn.disabled = true; btn.textContent = "Posting...";
+            postJson("/api/chat/messages", { platform: lg.platform, league_id: lg.league_id, body: text }).then(function (r) {
+              btn.textContent = r.status === 200 ? "Posted to League Chat" : "Couldn't post. Try again";
+              if (r.status !== 200) btn.disabled = false;
+            }).catch(function () { btn.disabled = false; btn.textContent = "Couldn't post. Try again"; });
+          });
+          sec.appendChild(btn);
+        }
+        box.appendChild(sec);
+      });
+      box.style.display = "";
+    }).catch(function () { /* the league card is a bonus: no card on any failure */ });
+    return box;
+  }
   // The end screen (owner 2026-11-17): a Wordle-style top (yards, the 7-play emoji row, Share), then tabs:
   // Leaderboard / Answers / My stats. Two columns on a desktop screen, one on a phone.
   function showResults(puzzle, rec) {
@@ -797,13 +858,15 @@
     var rev = h("div", { "class": "dd-rev" }, h("p", { "class": "dd-small" }, "Loading the answer sheets..."));
     var statsBox = h("div", { "class": "dd-card dd-stats" }, h("h2", null, "How everyone drove"), h("p", { "class": "dd-small" }, "Loading community stats..."));
     var drivesBox = h("div", { "class": "dd-card dd-drives" }, h("h2", null, "Your drives"), h("p", { "class": "dd-small" }, "Loading..."));
+    var rareLine = h("p", { "class": "dd-beat dd-rare" });
+    var plays = yourPlays(puzzle, rec);
     var sum = h("div", { "class": "dd-card dd-sum" },
       h("div", { "class": "dd-kick" }, "The Daily Drive · " + prettyDate(date) + (streak ? " · streak " + streak : "")),
-      num, h("div", { "class": "dd-small dd-of" }, "yards of " + MAX_YARDS), emo, beat, share);
+      num, h("div", { "class": "dd-small dd-of" }, "yards of " + MAX_YARDS), emo, beat, rareLine, share);
     var chart = h("div", { "class": "dd-card dd-total" }, h("h2", null, "Drive chart"), driveChart(rec.tiers), legend());
     var panes = {
-      board: h("div", { "class": "dd-pane" }, lbNew(false)),
-      answers: h("div", { "class": "dd-pane" }, h("div", { "class": "dd-card" }, h("h2", null, "Every answer, by play"), rev)),
+      board: h("div", { "class": "dd-pane" }, today ? leagueCard(date, text) : null, lbNew(false)),
+      answers: h("div", { "class": "dd-pane" }, plays.box, h("div", { "class": "dd-card" }, h("h2", null, "Every answer, by play"), rev)),
       me: h("div", { "class": "dd-pane" }, statsBox, drivesBox)
     };
     var wide = window.matchMedia && window.matchMedia("(min-width: 1040px)").matches;   // desktop: the chart fills the left column
@@ -833,6 +896,7 @@
     // Today's answer sheets unlock only after the signed-in player's score is saved, so ask for them after the save.
     var saving = submitScore(puzzle, rec);
     saving.then(function (saved) {
+      if (saved && saved.rarity) plays.fill(saved.rarity, rareLine);
       loadBoard(date);
       return (saved && saved.stats ? Promise.resolve(saved.stats) : fetchStats(date));
     }).then(function (st) {
@@ -849,6 +913,12 @@
       }));
     }).then(function (all) {
       rev.textContent = "";
+      var fromSheets = all.map(function (x) {                 // past days (no score saved): rarity from the sheets
+        var mine = rec.names[x.i], hit = null;
+        x.r.tiers.forEach(function (tr) { (tr.details || []).forEach(function (d) { if (d && d.name === mine && d.pct != null) hit = d; }); });
+        return rec.tiers[x.i] && hit ? { n: hit.n, players: hit.players, pct: hit.pct } : null;
+      });
+      plays.fill(fromSheets, rareLine);
       all.forEach(function (x) {
         var t = rec.tiers[x.i], mine = rec.names[x.i];
         var d = h("details", null, h("summary", null, h("span", null, x.r.text), h("span", null, t ? TIER[t][2] : SACK)));
@@ -864,7 +934,8 @@
             shown.forEach(function (a) {
               var nm = ansName(a), o = typeof a === "object" ? a : { name: nm };
               var sub = o.stat != null && o.stat !== "" ? String(o.stat) + (o.stat_label ? " " + o.stat_label : "") : "";
-              box.appendChild(h("span", { "class": nm === mine ? "mine" : "" }, photo("", o, "u"), nm, sub ? h("em", null, sub) : null));
+              var pc = o.pct != null && o.players ? h("small", { "class": "pct", title: (o.n || 0) + " of " + o.players + " players" }, o.pct + "%") : null;
+              box.appendChild(h("span", { "class": nm === mine ? "mine" : "" }, photo("", o, "u"), nm, sub ? h("em", null, sub) : null, pc));
             });
             d.appendChild(box);
             if (more) d.appendChild(h("p", { "class": "dd-small" }, more.trim()));

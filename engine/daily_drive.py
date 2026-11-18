@@ -676,7 +676,10 @@ def check_answer(answers, typed, used=()):
         for a in pool:
             keyed.setdefault(k, a)
     dist = {}
+    multi = len(toks) >= 2
     for n, a in keyed.items():
+        if multi and " " in n and n[0] != t[0]:   # a full-name typo keeps its first letter: "st brown" is not "aj brown"
+            continue
         d = levenshtein(t, n)
         if a["id"] not in dist or d < dist[a["id"]][0]:
             dist[a["id"]] = (d, a)
@@ -715,7 +718,7 @@ def reveal_view(prompt):
     tiers = []
     for t in sorted(TIERS, reverse=True):
         inside = [a for a in prompt["answers"] if a["tier"] == t]
-        tiers.append({**tier_info(t), "answers": [a["name"] for a in inside], "details": [{"name": a["name"], **answer_details(a)} for a in inside]})
+        tiers.append({**tier_info(t), "answers": [a["name"] for a in inside], "details": [{"id": a["id"], "name": a["name"], **answer_details(a)} for a in inside]})
     return {"id": prompt["id"], "text": prompt["text"], "tiers": tiers}
 
 

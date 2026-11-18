@@ -16,6 +16,7 @@ import json
 import os
 import time
 
+from engine import daily_drive as dd
 from engine import daily_drive_history_pool as hp
 
 PATH = os.path.join(os.path.dirname(__file__), "dd_history_snapshot.json.gz")
@@ -162,6 +163,70 @@ def banded_candidates(date_str, path=PATH_BANDED):
             vs = next((got[_key(sc)] for sc in hp.scope_order(tpl, date_str, last) if _key(sc) in got), None)
         out.extend(_unpack(q, heads) for q in (vs or ()))
     return out
+
+
+# ----------------------------------------------------------------------------------------------- why a guess missed
+_NAMES = {}
+
+
+def _known_names(body):
+    """Every player name in the banded snapshot (normalized), built once: 'is this a real NFL player?'."""
+    if "set" not in _NAMES:
+        names = set()
+        for by_scope in body["prompts"].values():
+            for variants in by_scope.values():
+                for q in variants:
+                    names.update(dd.norm_name(r[1]) for r in q["rows"])
+        _NAMES["set"] = names
+    return _NAMES["set"]
+
+
+def _stat_text(v):
+    return f"{v:,}" if isinstance(v, int) else (f"{v:,.1f}" if isinstance(v, float) else str(v))
+
+
+def explain_miss(prompt, typed, path=PATH_BANDED):
+    """A friendlier reason for a rejected guess, from real data, or None to keep the default.
+    - same question at a lower bar has him: "Close: Jalen Reagor's best is 1,150 rec yds." (his real stat)
+    - another version of the question has him: "Jalen Reagor fits the 2020s (since 2020) version, not this one."
+    - he's a real player in the bank: "Jalen Reagor is a real player, but he doesn't fit this one."
+    Never names a valid answer for this prompt (the guess was rejected, so he isn't one)."""
+    try:
+        body = load(path)
+    except Exception:
+        return None
+    t = dd.norm_name(typed)
+    if not t:
+        return None
+    tpl_key = prompt.get("template")
+    tpl = next((x for x in hp.HISTORY_POOL if x["key"] == tpl_key), None) if tpl_key else None
+    if tpl and tpl_key in body["prompts"]:
+        heads = body["heads"]
+        close, other = None, None
+        for scope_key, variants in body["prompts"][tpl_key].items():
+            for q in variants:
+                if q["id"] == prompt.get("id"):
+                    continue
+                hit = dd.check_answer(_unpack(q, heads)["answers"], typed)
+                if not hit["ok"]:
+                    continue
+                a = hit["answer"]
+                same_scope = (q.get("scope") or "") == (prompt.get("scope") or "")
+                lower = q.get("threshold") is not None and prompt.get("threshold") is not None and q["threshold"] < prompt["threshold"]
+                below = isinstance(a.get("stat"), (int, float)) and a["stat"] < prompt["threshold"] if lower else False
+                if same_scope and lower and below:
+                    if close is None or q["threshold"] > close[0]:
+                        close = (q["threshold"], a["name"], a["stat"], a.get("stat_label") or q.get("stat_label") or "")
+                elif not same_scope and other is None and q.get("scope"):
+                    other = (a["name"], q["scope"])
+        if close:
+            return f"Close: {close[1]}'s best is {_stat_text(close[2])} {close[3]}".rstrip() + "."
+        if other:
+            label = hp.DECADE_LABEL.get(other[1]) if tpl.get("scope") == "decade" else hp.scope_text(tpl, other[1])
+            return f"{other[0]} fits the {label} version, not this one."
+    if t in _known_names(body):
+        return f"{typed.strip()} is a real player, but he doesn't fit this one."
+    return None
 
 
 if __name__ == "__main__":

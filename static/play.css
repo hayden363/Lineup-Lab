@@ -378,3 +378,20 @@ button { font-family: inherit; }
 /* Inside the iOS app the native tab bar replaces the Lineup Lab top bar */
 html.in-app .ll-nav { display: none; }
 html.in-app { --nav-h: 0px; --stage-top: 8px; }
+
+/* ---- after the game: your plays + rarity, your league (2026-11-18) ---- */
+.dd-rare:empty { display: none; }
+.dd-plays .dd-play-row { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 9px 2px; border-top: 1px solid var(--border); }
+.dd-plays .dd-play-row:first-of-type { border-top: 0; }
+.dd-play-row .n { font: 700 12px var(--mono); color: var(--muted); }
+.dd-play-row .who { min-width: 0; }
+.dd-play-row .who b { display: block; font-weight: 700; color: var(--text); }
+.dd-play-row .who span { display: block; font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dd-play-row.t0 .who b { color: #ff8da1; }
+.dd-play-row .tg { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; }
+.dd-play-row .tg .e { font-size: 18px; line-height: 1; }
+.dd-play-row .rare { font: 600 11.5px/1.2 var(--mono); color: var(--accent); text-align: right; max-width: 150px; }
+.dd-ans small.pct { margin-left: 6px; font: 700 10.5px/1 var(--mono); color: var(--accent); background: rgba(52, 211, 153, 0.12); border-radius: 999px; padding: 3px 6px; }
+.dd-league { margin-bottom: 14px; }
+.dd-league-sec + .dd-league-sec { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border); }
+.dd-league .dd-btn { margin-top: 10px; width: 100%; }

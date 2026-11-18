@@ -25,6 +25,7 @@ SECURITY POSTURE (see README for the full writeup):
     exposing it beyond your own network
 """
 
+import concurrent.futures
 import copy
 import datetime
 import hashlib
@@ -50,6 +51,7 @@ from pydantic import BaseModel, Field, field_validator
 from engine import chat as chat_layer
 from engine import correlation
 from engine import daily_drive
+from engine import daily_drive_history_snapshot as dd_history_snapshot
 from engine import daily_drive_scores as dd_scores
 from engine import dd_stadium
 from engine import data as data_layer
@@ -2196,7 +2198,11 @@ def _play_puzzle(date: Optional[str]):
     with _PLAY_LOCK:
         puzzle = _PLAY_MEM.get(key)
         if puzzle is None:
-            puzzle = daily_drive.get_puzzle(key, data_layer.HISTORY_DIR)
+            puzzle = _stored_puzzle(key)
+            if puzzle is None:
+                puzzle = daily_drive.get_puzzle(key, data_layer.HISTORY_DIR)
+                if len(puzzle["prompts"]) == daily_drive.day_size():
+                    puzzle = _store_puzzle(key, puzzle)
             if len(puzzle["prompts"]) == daily_drive.day_size():
                 if len(_PLAY_MEM) > 100:
                     _PLAY_MEM.clear()
@@ -2204,6 +2210,30 @@ def _play_puzzle(date: Optional[str]):
     if not puzzle["prompts"]:
         raise HTTPException(503, "today's game isn't ready yet - try again soon")
     return key, puzzle
+
+
+def _stored_puzzle(key):
+    """The day's frozen puzzle from the database, or None (no DATABASE_URL, table missing, DB down, not built yet).
+    Freezing stops a redeploy from rebuilding the day from newer data and swapping prompts mid-day."""
+    if not db.DATABASE_URL:
+        return None
+    try:
+        got = db.get_drive_puzzle(key)
+    except Exception as e:
+        print(f"[play] stored puzzle unavailable: {type(e).__name__}")
+        return None
+    return got if got and len(got.get("prompts") or []) == daily_drive.day_size() else None
+
+
+def _store_puzzle(key, puzzle):
+    """Freeze a full puzzle; returns the stored one (another worker may have won the race). Never raises."""
+    if not db.DATABASE_URL:
+        return puzzle
+    try:
+        return db.save_drive_puzzle(key, puzzle) or puzzle
+    except Exception as e:
+        print(f"[play] couldn't store the puzzle: {type(e).__name__}")
+        return puzzle
 
 
 def _play_prompt(puzzle, prompt_id):
@@ -2233,7 +2263,11 @@ def play_check(body: PlayCheck):
     prompt = _play_prompt(puzzle, body.prompt_id)
     res = daily_drive.check_answer(prompt["answers"], body.answer, body.used)
     if not res["ok"]:
-        return {"ok": False, "reason": res["reason"], "suggestions": res["suggestions"]}
+        reason = res["reason"]
+        if reason == "not in the answer bank":
+            _log_miss(key, prompt["id"], body.answer)
+            reason = dd_history_snapshot.explain_miss(prompt, body.answer) or reason
+        return {"ok": False, "reason": reason, "suggestions": res["suggestions"]}
     a = res["answer"]
     out = {"ok": True, "canonical": a["name"], "answer_id": a["id"], **daily_drive.tier_info(a["tier"]),
            **daily_drive.answer_details(a)}      # team, position, headshot, stat, stat_label for the answer card
@@ -2241,6 +2275,32 @@ def play_check(body: PlayCheck):
     if token:
         out["token"] = token
     return out
+
+
+_MISS_POOL = concurrent.futures.ThreadPoolExecutor(max_workers=2, thread_name_prefix="dd-miss")
+
+
+def _miss_key(typed):
+    """A rejected guess as stored: normalized like answer names, max 40 chars; '' means don't store."""
+    g = daily_drive.norm_name(typed)[:40].strip()
+    return g if len(g) >= 2 else ""
+
+
+def _log_miss(date_key, prompt_id, typed):
+    """Count a rejected guess for tools/dd_misses.py (missing answers, nicknames). Off the request path; never raises."""
+    g = _miss_key(typed)
+    if not g or not db.DATABASE_URL:
+        return
+
+    def run():
+        try:
+            db.log_drive_miss(date_key, prompt_id, g)
+        except Exception as e:
+            print(f"[play] miss log failed: {type(e).__name__}")
+    try:
+        _MISS_POOL.submit(run)
+    except RuntimeError:
+        pass
 
 
 PLAY_REVEAL_LOCKED = "Today's answer sheets unlock at midnight ET. Signed-in players see them right after their drive."
@@ -2263,7 +2323,16 @@ def play_reveal(request: Request, prompt_id: str, date: Optional[str] = None):
             mine = None                                           # fail closed: no DB, no early answers
         if not mine:
             raise HTTPException(403, PLAY_REVEAL_LOCKED)
-    return _clean(daily_drive.reveal_view(prompt))
+    view = daily_drive.reveal_view(prompt)
+    try:                                                   # how rare each answer was, among the day's saved games
+        counts = db.drive_pick_counts(key).get(prompt["id"], {})
+        players = len(_play_day_yards(key))
+        for tr in view["tiers"]:
+            for det in tr["details"]:
+                det.update(dd_scores.rarity(counts.get(det["id"], 0), players))
+    except Exception as e:
+        print(f"[play] rarity unavailable: {type(e).__name__}")
+    return _clean(view)
 
 
 @app.get("/api/play/practice", dependencies=[Depends(play_rate_limit)])
@@ -2340,15 +2409,35 @@ def play_score(body: PlayScore, request: Request):
         yards, tiers = dd_scores.score_from_tokens(key, body.tokens, puzzle["prompts"])
     except ValueError:
         raise HTTPException(400, "those answers couldn't be verified")
+    picks = dd_scores.picks_from_tokens(key, body.tokens, puzzle["prompts"])
     try:
         row, created = db.save_drive_score(key, yards, tiers, user["id"] if user else None, dev_hash)
+        if created:
+            try:
+                db.add_drive_picks(key, picks)
+            except Exception as e:
+                print(f"[play] couldn't count picks: {type(e).__name__}")
         _PLAY_STATS_CACHE.pop(key, None)
         stats = _play_stats_body(key, user, dev_hash, fresh=True)
     except Exception as e:
         print(f"[play] couldn't save a score: {type(e).__name__}")
         return {"available": False, "saved": False}
     return _clean({"available": True, "saved": created, "yards": row["yards"] if row else yards,
-                   "tiers": row["tiers"] if row else tiers, "stats": stats})
+                   "tiers": row["tiers"] if row else tiers, "stats": stats,
+                   "rarity": _rarity_for(key, puzzle["prompts"], picks, stats.get("players"))})
+
+
+def _rarity_for(key, prompts, picks, players):
+    """One entry per prompt for the end screen, after the game: {n, players, pct} for the answer this player named,
+    None for a sack. Empty list if the counts can't be read."""
+    try:
+        counts = db.drive_pick_counts(key)
+    except Exception as e:
+        print(f"[play] rarity unavailable: {type(e).__name__}")
+        return []
+    mine = dict(picks)
+    return [dd_scores.rarity(counts.get(p["id"], {}).get(mine[p["id"]], 0), players) if p["id"] in mine else None
+            for p in prompts]
 
 
 @app.get("/api/play/stats", dependencies=[Depends(play_rate_limit)])
@@ -2381,6 +2470,31 @@ def play_leaderboard(request: Request, date: Optional[str] = None, device_id: Op
         print(f"[play] leaderboard unavailable: {type(e).__name__}")
         return {"available": False}
     return _clean(dd_scores.leaderboard_body(top, yards, mine["yards"] if mine else None, mine.get("tiers") if mine else None))
+
+
+@app.get("/api/play/league-board", dependencies=[Depends(play_rate_limit)])
+def play_league_board(request: Request, date: Optional[str] = None):
+    """Today's drives from Lineup Lab players in the caller's connected leagues, grouped by league, plus whether the
+    caller can post to that league's chat. Signed out or no leagues: {signed_in, leagues: []}."""
+    key, _ = _play_puzzle(date)
+    user = _play_user(request)
+    if not user:
+        return {"signed_in": False, "leagues": []}
+    try:
+        leagues = db.drive_league_board(key, user["id"])
+    except Exception as e:
+        print(f"[play] league board unavailable: {type(e).__name__}")
+        return {"signed_in": True, "available": False, "leagues": []}
+    for lg in leagues:
+        try:
+            lg["chat"] = bool(chat_layer.get_member(user["id"], lg["platform"], lg["league_id"]))
+        except Exception:
+            lg["chat"] = False
+        for i, p in enumerate(lg["players"]):
+            p["rank"] = i + 1
+            p["me"] = p.pop("user_id") == user["id"]
+            p["emoji"] = dd_scores.emoji_row(p.pop("tiers"))
+    return _clean({"signed_in": True, "available": True, "date": key, "leagues": leagues})
 
 
 @app.get("/api/play/me", dependencies=[Depends(play_rate_limit)])
