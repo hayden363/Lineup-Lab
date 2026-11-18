@@ -55,7 +55,7 @@ The app identifies itself with a user-agent suffix `LineupLabApp/<version>`; the
   file is never hand-edited.
 - Needs on this Mac: **Xcode** (owner installs from the Mac App Store), **XcodeGen** (one binary from its official GitHub
   release; owner approves the download).
-- Bundle ID `com.lineuplab.app`, display name **Lineup Lab**, iOS 17+.
+- Bundle ID `com.haydenjohnstonwoods.lineuplab` (com.lineuplab.app was taken), display name **Lineup Lab**, iOS 17+.
 - Signing: automatic signing with the owner's team, done in Xcode after the owner signs in.
 
 ## Steps

@@ -9,7 +9,7 @@ environment variables, nothing in git:
     APNS_KEY_ID        the key's 10-character ID
     APNS_TEAM_ID       the developer team ID
     APNS_PRIVATE_KEY   the .p8 file's contents (BEGIN/END lines included; literal "\\n" sequences are accepted)
-    APNS_TOPIC         the app's bundle ID (default com.lineuplab.app)
+    APNS_TOPIC         the app's bundle ID (default com.haydenjohnstonwoods.lineuplab)
 Unset = push is off (every call is a quiet no-op), so the server runs exactly as before.
 
 What is sent (version 1): the daily "today's Daily Drive is live" reminder, once a day at REMINDER_HOUR_ET, only to
@@ -25,7 +25,7 @@ import jwt
 APNS_KEY_ID = os.environ.get("APNS_KEY_ID")
 APNS_TEAM_ID = os.environ.get("APNS_TEAM_ID")
 APNS_PRIVATE_KEY = (os.environ.get("APNS_PRIVATE_KEY") or "").replace("\\n", "\n") or None
-APNS_TOPIC = os.environ.get("APNS_TOPIC", "com.lineuplab.app")
+APNS_TOPIC = os.environ.get("APNS_TOPIC", "com.haydenjohnstonwoods.lineuplab")
 HOSTS = {"production": "https://api.push.apple.com", "sandbox": "https://api.sandbox.push.apple.com"}
 REMINDER_HOUR_ET = 11            # 11am Eastern: after the 12am rollover, before most people's lunch
 TOKEN_TTL = 50 * 60

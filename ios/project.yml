@@ -2,7 +2,7 @@
 # (the .xcodeproj is generated, never hand-edited; see docs/superpowers/specs/2026-11-17-ios-app-design.md)
 name: LineupLab
 options:
-  bundleIdPrefix: com.lineuplab
+  bundleIdPrefix: com.haydenjohnstonwoods
   deploymentTarget:
     iOS: "17.0"
   createIntermediateGroups: true
@@ -11,7 +11,7 @@ settings:
     MARKETING_VERSION: "1.0.0"
     CURRENT_PROJECT_VERSION: "1"
     SWIFT_VERSION: "5.0"
-    DEVELOPMENT_TEAM: ""            # set by `xcodegen` env or chosen in Xcode once Hayden signs in (automatic signing)
+    DEVELOPMENT_TEAM: Z7AKF9V84C    # HAYDEN FINLEY JOHNSTON WOODS (individual); automatic signing
     CODE_SIGN_STYLE: Automatic
 targets:
   LineupLab:
@@ -43,13 +43,13 @@ targets:
         UIApplicationSceneManifest:
           UIApplicationSupportsMultipleScenes: false
         CFBundleURLTypes:
-          - CFBundleURLName: com.lineuplab.app.auth
+          - CFBundleURLName: com.haydenjohnstonwoods.lineuplab.auth
             CFBundleURLSchemes: [lineuplab]
         UIStatusBarStyle: UIStatusBarStyleLightContent
         UIUserInterfaceStyle: Dark
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.lineuplab.app
+        PRODUCT_BUNDLE_IDENTIFIER: com.haydenjohnstonwoods.lineuplab
         TARGETED_DEVICE_FAMILY: "1,2"             # iPhone and iPad
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor

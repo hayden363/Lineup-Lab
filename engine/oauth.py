@@ -63,7 +63,7 @@ APPLE_ISSUER = "https://appleid.apple.com"
 
 # The iOS app's bundle ID: a native Sign in with Apple identity token is issued to the app itself (its `aud`), so it is
 # verified against this, with no client secret (unlike the web flow above, which needs the Services ID + .p8 key).
-APPLE_APP_BUNDLE_ID = os.environ.get("APPLE_APP_BUNDLE_ID", "com.lineuplab.app")
+APPLE_APP_BUNDLE_ID = os.environ.get("APPLE_APP_BUNDLE_ID", "com.haydenjohnstonwoods.lineuplab")
 
 _JWKS_CACHE = {}
 _JWKS_TTL = 60 * 60  # provider signing keys rotate rarely — an hour is plenty fresh
