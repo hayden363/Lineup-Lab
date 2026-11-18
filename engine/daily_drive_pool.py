@@ -143,13 +143,9 @@ POOL = [
 
     # ---- EFFICIENCY (with a volume minimum that grows with the season) --------------------------
     T("e_rb_ypc", "Efficiency", "ratio", "Name a RB averaging {t}+ yards per carry (min {min} carries)", (4.0, 4.5, 5.0, 5.5, 6.0, 6.5), "yds/carry", pos=("RB",), num="rushing_yards", den="carries", min_den_pg=6),
-    T("e_wr_ypt", "Efficiency", "ratio", "Name a WR averaging {t}+ yards per target (min {min} targets)", (7.0, 7.5, 8.0, 8.5, 9.0, 9.5, 10.0, 11.0), "yds/target", pos=("WR",), num="receiving_yards", den="targets", min_den_pg=4),
     T("e_qb_cmp", "Efficiency", "ratio", "Name a QB completing {t}%+ of his passes (min {min} attempts)", (60, 62, 64, 66, 68, 70), "comp %", pos=("QB",), num="completions", den="attempts", mult=100, min_den_pg=18),
     T("e_qb_ypa", "Efficiency", "ratio", "Name a QB averaging {t}+ yards per attempt (min {min} attempts)", (6.5, 7.0, 7.5, 8.0, 8.5, 9.0), "yds/att", pos=("QB",), num="passing_yards", den="attempts", min_den_pg=18),
     T("e_wr_ypr", "Efficiency", "ratio", "Name a WR averaging {t}+ yards per catch (min {min} catches)", (12.0, 13.0, 14.0, 15.0, 16.0, 17.0, 18.0), "yds/catch", pos=("WR",), num="receiving_yards", den="receptions", min_den_pg=2.5),
-    T("e_qb_tdpct", "Efficiency", "ratio", "Name a QB throwing a TD on {t}%+ of his attempts (min {min} attempts)", (3.0, 3.5, 4.0, 4.5, 5.0, 5.5, 6.0), "TD %", pos=("QB",), num="passing_tds", den="attempts", mult=100, min_den_pg=18),
-    T("e_qb_safe", "Efficiency", "ratio", "Name a QB with an interception rate under {t}% (min {min} attempts)", (-3.0, -2.5, -2.0, -1.5, -1.0, -0.5), "INT %", pos=("QB",), num="interceptions", den="attempts", mult=100, min_den_pg=18, neg=True),
-    T("e_wr_share", "Efficiency", "mean", "Name a WR with a {t}%+ target share (min {min} games played)", (15, 18, 20, 22, 25, 28, 30), "target share %", pos=("WR",), stat="target_share", mult=100, min_games_pg=0.7),
 
     # ---- DIVISION / CONFERENCE / TEAM SCOPED (the scope rotates by date) -----------------------
     T("sc_conf_rush_td", "Scoped to a conference", "sum", "Name an {scope} player with {t}+ rushing TDs", (1, 2, 3, 4, 5, 6, 8), "rush TD", pos="SKILL", stat="rushing_tds", scope="conference"),
@@ -166,12 +162,6 @@ POOL = [
     T("x_div_wr_100", "Game context", "max", "Name a WR with {t}+ receiving yards in a game against a division rival", (60, 80, 90, 100, 110, 120, 130, 150), "rec yds vs division", pos=("WR",), stat="receiving_yards", where=["div"]),
     T("x_night_td", "Game context", "sum", "Name a player who scored in a primetime game{times}", (1, 2, 3), "primetime TD", pos="SKILL", stat="tds", where=["night"]),
     T("x_road_rb", "Game context", "max", "Name a RB with a {t}+ yard rushing game on the road", (50, 60, 70, 80, 90, 100, 110, 125), "rush yds on the road", pos=("RB",), stat="rushing_yards", where=["road"]),
-    T("x_dome_td", "Game context", "sum", "Name a player who scored in a dome or closed-roof game{times}", (1, 2, 3), "dome TD", pos="SKILL", stat="tds", where=["dome"]),
-    T("x_ot_ppr", "Game context", "max", "Name a player with {t}+ PPR points in an overtime game", (8, 12, 15, 18, 20, 25, 30), "PPR pts in OT game", pos="SKILL", stat="fpts", where=["ot"]),
-    T("x_loss_td", "Game context", "sum", "Name a player who scored in a one-score loss (8 points or fewer){times}", (1, 2, 3), "TD in a close loss", pos="SKILL", stat="tds", where=["close_loss"]),
-    T("x_loss_ppr", "Game context", "max", "Name a player with {t}+ PPR points in a loss", (15, 20, 25, 30, 35, 40), "PPR pts in a loss", pos="SKILL", stat="fpts", where=["loss"]),
-    T("x_upset_td", "Game context", "sum", "Name a player who scored in an upset win (his team was the underdog){times}", (1, 2, 3), "TD in an upset", pos="SKILL", stat="tds", where=["upset"]),
-    T("x_shootout", "Game context", "sum", "Name a player who scored in a shootout (60+ combined points){times}", (1, 2, 3), "TD in a shootout", pos="SKILL", stat="tds", where=["shootout"]),
 
     # ---- LAST WEEK / LAST THREE WEEKS ----------------------------------------------------------
     T("w_ppr20", "Last week", "max", "Name a player with {t}+ PPR points last week", (12, 15, 18, 20, 22, 25, 30), "PPR pts last week", pos="SKILL", stat="fpts", window="last"),
@@ -201,22 +191,13 @@ POOL = [
     T("k_fg", "Kicking", "sum", "Name a kicker with {t}+ field goals made", (3, 5, 8, 10, 12, 14, 16, 18, 20, 22), "FG", pos="K", stat="fg_made", tie="val"),
     T("k_long", "Kicking", "max", "Name a kicker with a {t}+ yard field goal", (40, 45, 48, 50, 52, 54, 56, 58, 60), "long FG", pos="K", stat="fg_long", tie="val"),
     T("k_50", "Kicking", "sum", "Name a kicker with {t}+ field goals from 50 or more yards", (1, 2, 3, 4, 5), "FG 50+", pos="K", stat="fg_50p", tie="val"),
-    T("p_in20", "Kicking", "sum", "Name a punter with {t}+ punts downed inside the 20", (3, 5, 8, 10, 12, 15, 18, 20, 25), "punts inside 20", pos="P", stat="pt_inside_20", tie="val"),
 
     # ---- BALL SECURITY, SACKS AND ODDITIES -----------------------------------------------------
     T("o_qb_sacked", "Odd angles", "sum", "Name a QB who has been sacked {t}+ times", (5, 10, 15, 20, 25, 30, 35), "sacks taken", pos=("QB",), stat="sacks"),
     T("o_qb_int", "Odd angles", "sum", "Name a QB who has thrown {t}+ interceptions", (1, 2, 3, 4, 5, 6, 8, 10, 12), "INT", pos=("QB",), stat="interceptions"),
-    T("o_fum_lost", "Odd angles", "sum", "Name a player who has lost {t}+ fumbles", (1, 2, 3, 4), "fumbles lost", pos="SKILL", stat="fumlost"),
-    T("o_wr_rush", "Odd angles", "sum", "Name a WR with {t}+ rushing attempts", (1, 2, 3, 4, 5), "carries", pos=("WR",), stat="carries"),
     T("o_qb_rush_td", "Odd angles", "sum", "Name a QB who has rushed for {t}+ touchdowns", (1, 2, 3, 4, 5, 6), "rush TD", pos=("QB",), stat="rushing_tds"),
-    T("o_qb_run", "Odd angles", "sum", "Name a QB with {t}+ rushing attempts", (5, 10, 15, 20, 30, 40, 50, 60, 70, 80), "carries", pos=("QB",), stat="carries"),
-    T("o_swing", "Odd angles", "range", "Name a player whose best and worst PPR weeks are {t}+ points apart (min {min} games)", (10, 15, 20, 25, 30, 35, 40), "swing", pos="SKILL", stat="fpts", min_games_pg=0.6),
 
     # ---- FANTASY FINISHES ----------------------------------------------------------------------
-    T("f_wr1", "Fantasy finishes", "topfinish", "Name a WR who has finished a week as a top-12 WR in PPR scoring {t}+ times", (1, 2, 3, 4, 5, 6), "WR1 weeks", pos=("WR",), top=12),
-    T("f_rb1", "Fantasy finishes", "topfinish", "Name a RB who has finished a week as a top-12 RB in PPR scoring {t}+ times", (1, 2, 3, 4, 5, 6), "RB1 weeks", pos=("RB",), top=12),
-    T("f_te1", "Fantasy finishes", "topfinish", "Name a TE who has finished a week as a top-6 TE in PPR scoring {t}+ times", (1, 2, 3, 4, 5), "TE1 weeks", pos=("TE",), top=6),
-    T("f_qb1", "Fantasy finishes", "topfinish", "Name a QB who has finished a week as a top-6 QB in PPR scoring {t}+ times", (1, 2, 3, 4, 5, 6), "QB1 weeks", pos=("QB",), top=6),
 
     # ---- WARM-UPS (owner 2026-11-17: easy to put any answer in, still with deep cuts at the bottom) ---------------
     # starting QBs come from the schedule's own home_qb_id / away_qb_id of FINISHED games, never guessed
@@ -461,7 +442,21 @@ def render_text(tpl, t, through, scope=None):
     fields = {"t": fmt_threshold(t), "times": "" if t == 1 else f", {fmt_threshold(t)}+ times", "min": min_volume(tpl, through), "scope": scope_label(tpl.get("scope"), scope) if scope else ""}
     text = tpl["text"].format(**fields)
     text = re.sub(r"\b([Aa]) (8|11|18)(?=[\d,]*\+)", lambda m: m.group(1) + "n " + m.group(2), text)    # "a 80+" -> "an 80+"
-    return tidy_text(text)
+    return with_when(tidy_text(text))
+
+
+_WHEN = re.compile(r"\b(this season|last week|last three weeks)\b")
+
+
+def with_when(text):
+    """Every live question says WHEN in the question itself (owner 2026-11-18: clear-cut questions), not just in the
+    small category label: "...500+ scrimmage yards this season (rushing + receiving)"."""
+    if _WHEN.search(text):
+        return text
+    if text.endswith(")"):
+        i = text.rfind(" (")
+        return text[:i] + " this season" + text[i:]
+    return text + " this season"
 
 
 _TIDY = [

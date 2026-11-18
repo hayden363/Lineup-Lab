@@ -55,14 +55,26 @@ def _ctx(through=4):
     return pool.build_context(wk, sched, 2026, through, draft)
 
 
+# Templates retired from the daily pool (owner 2026-11-18: clear-cut questions only). The engine still supports their
+# kinds (ratio, where-flags, topfinish, range), so they stay here as fixtures for those code paths.
+_RETIRED = {t["key"]: t for t in [
+    pool.T("e_qb_safe", "Efficiency", "ratio", "Name a QB with an interception rate under {t}% (min {min} attempts)", (-3.0, -2.5, -2.0, -1.5, -1.0, -0.5), "INT %", pos=("QB",), num="interceptions", den="attempts", mult=100, min_den_pg=18, neg=True),
+    pool.T("x_dome_td", "Game context", "sum", "Name a player who scored in a dome or closed-roof game{times}", (1, 2, 3), "dome TD", pos="SKILL", stat="tds", where=["dome"]),
+    pool.T("x_ot_ppr", "Game context", "max", "Name a player with {t}+ PPR points in an overtime game", (8, 12, 15, 18, 20, 25, 30), "PPR pts in OT game", pos="SKILL", stat="fpts", where=["ot"]),
+    pool.T("o_swing", "Odd angles", "range", "Name a player whose best and worst PPR weeks are {t}+ points apart (min {min} games)", (10, 15, 20, 25, 30, 35, 40), "swing", pos="SKILL", stat="fpts", min_games_pg=0.6),
+    pool.T("f_te1", "Fantasy finishes", "topfinish", "Name a TE who has finished a week as a top-6 TE in PPR scoring {t}+ times", (1, 2, 3, 4, 5), "TE1 weeks", pos=("TE",), top=6),
+]}
+
+
 def _tpl(key):
-    return next(t for t in pool.POOL if t["key"] == key)
+    return next((t for t in pool.POOL if t["key"] == key), None) or _RETIRED[key]
 
 
 class PoolShapeTests(unittest.TestCase):
     def test_exactly_100_prompts(self):
-        """The approved 100 plus the warm-ups added for the easy -> hard days (banded_only: never on older days)."""
-        self.assertEqual(len([t for t in pool.POOL if not t.get("banded_only")]), 100)
+        """The approved 100, minus the 19 retired 2026-11-18 (clear-cut questions only), plus the warm-ups added for the
+        easy -> hard days (banded_only: never on older days)."""
+        self.assertEqual(len([t for t in pool.POOL if not t.get("banded_only")]), 81)
 
     def test_unique_keys(self):
         keys = [t["key"] for t in pool.POOL]
@@ -100,8 +112,8 @@ class PoolShapeTests(unittest.TestCase):
                 self.assertNotIn("None", s, t["key"])
 
     def test_article_fix(self):
-        self.assertEqual(pool.render_text(_tpl("te_game_yds"), 80, 10), "Name a TE with an 80+ yard receiving game")
-        self.assertEqual(pool.render_text(_tpl("te_game_yds"), 70, 10), "Name a TE with a 70+ yard receiving game")
+        self.assertEqual(pool.render_text(_tpl("te_game_yds"), 80, 10), "Name a TE with an 80+ yard receiving game this season")
+        self.assertEqual(pool.render_text(_tpl("te_game_yds"), 70, 10), "Name a TE with a 70+ yard receiving game this season")
 
     def test_scope_rotation_is_deterministic_and_covers_scopes(self):
         t = _tpl("sc_div_rec_td")

@@ -161,3 +161,26 @@ class EndpointTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ClearCutQuestionTests(unittest.TestCase):
+    """Owner 2026-11-18: clear-cut questions. Every live (this-season) question names its time frame in the text."""
+    def test_with_when(self):
+        from engine import daily_drive_pool as pp
+        self.assertEqual(pp.with_when("Name a player with 500+ scrimmage yards (rushing + receiving)"),
+                         "Name a player with 500+ scrimmage yards this season (rushing + receiving)")
+        self.assertEqual(pp.with_when("Name a QB with a 300+ yard passing game"), "Name a QB with a 300+ yard passing game this season")
+        self.assertEqual(pp.with_when("Name a RB with 100+ rushing yards last week"), "Name a RB with 100+ rushing yards last week")
+
+    def test_every_live_template_renders_a_time_frame(self):
+        from engine import daily_drive_pool as pp
+        for tpl in pp.POOL:
+            scope = pp.SCOPES[tpl["scope"]][0] if tpl.get("scope") else None
+            text = pp.render_text(tpl, tpl["ladder"][0], 10, scope)
+            self.assertRegex(text, r"this season|last week|last three weeks", tpl["key"])
+
+    def test_confusing_templates_are_gone(self):
+        from engine import daily_drive_pool as pp
+        keys = {t["key"] for t in pp.POOL}
+        for k in ("e_wr_ypt", "e_qb_safe", "x_dome_td", "x_upset_td", "o_swing", "f_te1", "p_in20"):
+            self.assertNotIn(k, keys)
