@@ -17,37 +17,47 @@ Paste-ready. Character limits from App Store Connect are in brackets.
 ## Version 1.0 text
 
 **Promotional text** [170]
-> New every day at midnight ET: The Daily Drive, 7 NFL trivia plays where the rarer your answer, the bigger the play. Then
-> let the same data set your fantasy lineup.
+> Set the lineup that wins: Start/Sit, waivers and trades for your Sleeper or ESPN league. Plus The Daily Drive, a new NFL
+> trivia game every day.
 
-**Description** [4000]
-> Lineup Lab is two things built on the same real NFL data: a daily football game you'll want to play every morning, and
-> a fantasy football lab that sets your lineup.
+**Description** [4000] (App Store Connect rejects emoji, even ⚡ and 🏈, as "invalid characters"; use caps headers and •)
+> Lineup Lab sets the fantasy lineup that wins, built on real NFL data. Plus The Daily Drive: a new NFL trivia game every day.
+>
+> CONNECT IN 30 SECONDS
+> Link your Sleeper or ESPN league and Lineup Lab works on your real roster. No spreadsheets, no typing in players.
+>
+> START/SIT
+> Who to play this week, with the matchup and weather behind every call.
+>
+> WAIVERS
+> The pickups that actually beat your bench, ranked for your roster.
+>
+> TRADES
+> See which offers raise your playoff odds before you hit accept.
+>
+> LIVE SCORES
+> Follow every one of your players during every game.
+>
+> BIG BOARD
+> Rest-of-season rankings at every position.
+>
+> LEAGUE CHAT
+> Talk trash with your leaguemates in one place.
+>
+> OUR OWN NUMBERS
+> Matchups are graded on what each defense allows to each position (pass defense for QBs, run defense for RBs), backtested on five seasons of real games. Not a copied points-allowed chart.
 >
 > THE DAILY DRIVE
-> Seven NFL trivia plays a day, easiest first. Name a player who fits each prompt. Name the star and pick up a few yards;
-> name the guy nobody remembers and it's a 100-yard Highlight Reel TD. Every answer comes from real NFL data.
-> • A new drive every day at midnight Eastern
+> Seven NFL trivia plays a day, easiest first. Name a player who fits each prompt. Name the star and pick up a few yards. Name the guy nobody remembers and it's a 100-yard Highlight Reel TD.
 > • Daily streaks and a daily leaderboard
 > • Share your drive with friends, spoiler-free
 > • Free, and you can play without an account
 >
-> FANTASY TOOLS FOR YOUR LEAGUE
-> Connect your Sleeper or ESPN league in about 30 seconds and Lineup Lab works on your real roster.
-> • Start/Sit: who to play this week, with the matchup and weather behind every call
-> • Waivers: the pickups that beat your bench
-> • Trade analysis: offers that actually raise your playoff odds
-> • Live scores for your players during every game
-> • Big Board: rest-of-season rankings
-> • League Chat with your leaguemates
->
-> OUR OWN NUMBERS
-> Matchups are graded on what each defense allows to each position, backtested on five seasons of real games, not
-> copied from a points-allowed chart.
->
 > Lineup Lab is not affiliated with the NFL, Sleeper or ESPN. Fantasy advice only; no betting.
 
-**Keywords** [100]: `fantasy,football,nfl,start sit,waiver,trade,sleeper,espn,trivia,daily,lineup,projections,draft`
+**Keywords** [100, all used]: `waiver,trade,ppr,dynasty,draft,rankings,projections,matchup,quiz,game,stats,picks,qb,rb,wr,te,league`
+(words in the name and subtitle, like fantasy, football, NFL, start, sit, daily, trivia and lineup, are already searchable, so they are left
+out; trademarked names such as Sleeper and ESPN are left out to avoid a 2.3.7 rejection)
 
 **Support URL**: https://lineup-lab-awdv.onrender.com/support
 **Marketing URL**: https://lineup-lab-awdv.onrender.com/welcome
