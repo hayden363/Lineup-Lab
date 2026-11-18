@@ -1,0 +1,44 @@
+<!doctype html><html><head><meta charset="utf-8"><link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet"><link rel="stylesheet" href="base.css"><style>
+body{background:radial-gradient(60% 50% at 50% 0%,rgba(16,185,129,.14),transparent 70%),var(--bg)}
+.top{display:flex;justify-content:space-between;align-items:center;padding:28px 56px}
+.hero{text-align:center;margin-top:6px}
+.hero h1{font-size:42px;letter-spacing:-.025em;font-weight:800}
+.hero p{color:var(--muted);font-size:16.5px;margin-top:10px}
+.tiles{display:grid;grid-template-columns:repeat(3,260px);gap:18px;justify-content:center;margin-top:30px}
+.tile{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:20px;display:flex;align-items:center;gap:14px}
+.tile.on{border-color:var(--espn);box-shadow:0 0 0 3px rgba(226,40,46,.15)}
+.logo{width:46px;height:46px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:15px;color:#fff}
+.tile b{font-size:17px;display:block}.tile span{font-size:12.5px;color:var(--muted)}
+.guide{width:1100px;margin:26px auto 0;background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:28px 32px;display:grid;grid-template-columns:1fr 1fr;gap:34px}
+.steps{display:flex;flex-direction:column;gap:20px}
+.phone{width:100%;height:100%;border-radius:16px;background:#0c0e10;border:1px solid var(--line);padding:18px;display:flex;flex-direction:column;gap:12px}
+.mock{border:1px dashed #33393f;border-radius:10px;padding:12px;font-size:13px;color:var(--muted)}
+.toggle{display:inline-block;width:38px;height:22px;border-radius:999px;background:var(--accent);position:relative;vertical-align:middle}.toggle:after{content:"";position:absolute;right:3px;top:3px;width:16px;height:16px;border-radius:50%;background:#fff}
+.ddbar{width:1100px;margin:18px auto 0;display:flex;align-items:center;gap:16px;background:var(--panel);border:1px solid rgba(52,211,153,.35);border-radius:16px;padding:12px 14px}
+.ddbar .cover{width:120px;height:54px;flex:none}
+</style></head><body>
+<div class="top"><div class="brand"><img src="../../../static/icons/icon-192.png">Lineup Lab</div><span class="btn dd">Play today's Daily Drive ▸</span></div>
+<div class="hero"><h1>Let's find your league</h1><p>Pick the app your league lives in. We'll walk you through it.</p></div>
+<div class="tiles">
+ <div class="tile"><div class="logo" style="background:#0b1d2a;color:var(--sleeper);border:1px solid #12384d">SL</div><div><b>Sleeper</b><span>Just your username</span></div></div>
+ <div class="tile on"><div class="logo" style="background:var(--espn)">ESPN</div><div><b>ESPN</b><span>League link + public setting</span></div></div>
+ <div class="tile" style="opacity:.55"><div class="logo" style="background:var(--yahoo)">Y!</div><div><b>Yahoo <span class="soon">SOON</span></b><span>Coming next</span></div></div>
+</div>
+<div class="guide">
+ <div class="steps">
+  <div class="step"><div class="num">1</div><div><h4>Open your league in ESPN Fantasy</h4><p>Use the app or the website, whichever you're signed in to.</p><div style="display:flex;gap:10px;margin-top:10px"><span class="btn ghost" style="padding:9px 14px;font-size:13.5px">Open ESPN Fantasy app ↗</span><span class="btn ghost" style="padding:9px 14px;font-size:13.5px">Open fantasy.espn.com ↗</span></div></div></div>
+  <div class="step"><div class="num">2</div><div><h4>Make sure the league is public</h4><p>Commissioner only: <span class="path">League → Settings → Basic Settings</span>, turn on <b style="color:var(--ink)">Make League Viewable to Public</b>. Not the commish? Send them this step.</p></div></div>
+  <div class="step"><div class="num">3</div><div><h4>Copy the league link and paste it here</h4><p>It looks like <span class="path">fantasy.espn.com/football/league?leagueId=<b style="color:var(--accent)">8423117</b></span>. The number alone works too.</p>
+   <div style="display:flex;gap:10px;margin-top:10px"><div class="input focus" style="padding:12px 14px">https://fantasy.espn.com/football/league?leagueId=8423117</div><span class="btn primary" style="flex:none">Connect</span></div></div></div>
+ </div>
+ <div class="phone">
+  <div class="label">What step 2 looks like on ESPN</div>
+  <div class="mock"><b style="color:var(--ink)">League</b> › Settings › <b style="color:var(--ink)">Basic Settings</b></div>
+  <div class="mock" style="display:flex;justify-content:space-between;align-items:center;border-style:solid;border-color:rgba(52,211,153,.5)"><span style="color:var(--ink);font-weight:700">Make League Viewable to Public</span><span class="toggle"></span></div>
+  <div class="note"><span>i</span><span><b>Private league?</b> You can still connect it with your ESPN sign-in cookies in Settings. We walk you through that too.</span></div>
+  <div class="note" style="background:rgba(52,211,153,.06);border-color:rgba(52,211,153,.3);color:#cdeee0"><span>✓</span><span>We only read your league. Nothing is posted, and you can turn public back off after connecting.</span></div>
+ </div>
+</div>
+<div class="ddbar"><div class="cover"></div><div style="flex:1"><b>Waiting on your commissioner?</b> <span style="color:var(--muted)">Play today's Daily Drive while you wait: 7 NFL trivia plays, no league needed.</span></div><span class="btn dd" style="padding:10px 16px">Play ▸</span></div>
+<div style="text-align:center;color:var(--dim);font-size:13px;margin-top:14px">Skip for now</div>
+</body></html>

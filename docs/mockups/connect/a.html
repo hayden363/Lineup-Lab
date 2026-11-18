@@ -1,0 +1,42 @@
+<!doctype html><html><head><meta charset="utf-8"><link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet"><link rel="stylesheet" href="base.css"><style>
+.wrap{display:grid;grid-template-columns:1fr 600px;height:900px}
+.left{padding:56px 64px;display:flex;flex-direction:column;gap:34px;background:radial-gradient(70% 60% at 20% 0%,rgba(16,185,129,.16),transparent 70%)}
+h1{font-size:46px;line-height:1.05;letter-spacing:-.025em;font-weight:800}
+h1 em{font-style:normal;color:var(--accent)}
+.feat{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.f{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px}
+.f b{display:block;font-size:15px;margin-bottom:4px}.f span{font-size:13px;color:var(--muted);line-height:1.45}
+.faces{display:flex;margin-bottom:10px}.faces .face{margin-right:-8px}
+.ddcard{display:flex;gap:18px;align-items:center;background:var(--panel);border:1px solid rgba(52,211,153,.35);border-radius:16px;padding:14px}
+.ddcard .cover{width:170px;height:96px;flex:none}
+.right{background:var(--panel);border-left:1px solid var(--line);padding:56px 52px;display:flex;flex-direction:column;gap:22px}
+.right h2{font-size:26px;letter-spacing:-.01em}
+.right .sub{color:var(--muted);font-size:14px;margin-top:6px}
+.or{display:flex;align-items:center;gap:12px;color:var(--dim);font-size:12.5px}.or:before,.or:after{content:"";flex:1;height:1px;background:var(--line)}
+.collapse{border:1px solid var(--line);border-radius:12px;padding:14px 16px;display:flex;justify-content:space-between;color:var(--muted);font-size:14px}
+</style></head><body><div class="wrap">
+<div class="left">
+ <div class="brand"><img src="../../../static/icons/icon-192.png">Lineup Lab</div>
+ <div><h1>Connect your league.<br><em>Get this week's answers.</em></h1>
+ <p style="color:var(--muted);font-size:17px;margin-top:16px;max-width:560px;line-height:1.5">Takes about 30 seconds. We only read your league; we never post or change anything.</p></div>
+ <div class="feat">
+  <div class="f"><div class="faces"><div class="face" style="background-image:url(https://static.www.nfl.com/image/upload/f_auto,q_auto/league/kaicbot8qhzrvddilbtp)"></div><div class="face" style="background-image:url(https://static.www.nfl.com/image/upload/f_auto,q_auto/league/xk1xwio0bryfxo1ylweu)"></div><div class="face" style="background-image:url(https://static.www.nfl.com/image/upload/f_auto,q_auto/league/gpwtyv3viwy9q4ewderl)"></div></div><b>Start/Sit for your roster</b><span>Who to play, with the matchup and weather behind every call.</span></div>
+  <div class="f"><b style="margin-top:4px">Waivers that beat your bench</b><span>Pickups ranked against the players you already have.</span></div>
+  <div class="f"><b>Trades that raise your odds</b><span>See if an offer helps your playoff chances before you accept.</span></div>
+  <div class="f"><b>Live scores, every game</b><span>Your players' points as they happen on Sunday.</span></div>
+ </div>
+ <div class="ddcard"><div class="cover"></div><div style="flex:1"><div class="tag">Not ready yet?</div><b style="font-size:18px;display:block;margin:4px 0">Play today's Daily Drive</b><span style="color:var(--muted);font-size:13.5px">7 NFL trivia plays. No league needed.</span></div><span class="btn dd">Play now ▸</span></div>
+</div>
+<div class="right">
+ <div><h2>Where's your league?</h2><div class="sub">Pick your app and we'll find it.</div></div>
+ <div class="tabs"><div class="tab on"><span class="dot" style="background:var(--sleeper)"></span>Sleeper</div><div class="tab"><span class="dot" style="background:var(--espn)"></span>ESPN</div><div class="tab"><span class="dot" style="background:var(--yahoo)"></span>Yahoo <span class="soon">SOON</span></div></div>
+ <div><div class="label" style="margin-bottom:8px">Your Sleeper username</div>
+ <div style="display:flex;gap:10px"><div class="input focus">hxs_football</div><span class="btn primary" style="flex:none">Find leagues</span></div>
+ <div style="font-size:12.5px;color:var(--dim);margin-top:8px">In the Sleeper app: tap your profile photo; your username is under your name.</div></div>
+ <div class="label">Your 2026 leagues</div>
+ <div class="league"><div class="av">D</div><div class="meta"><b>Dynasty Degenerates</b><span>12 teams · PPR</span></div><span class="chip">Pick</span></div>
+ <div class="league"><div class="av" style="background:linear-gradient(135deg,#a3e635,#34d399)">W</div><div class="meta"><b>Work League 2026</b><span>10 teams · Half PPR</span></div><span class="chip">Pick</span></div>
+ <div class="or">or</div>
+ <div class="collapse"><span>Paste a league link instead</span><span>▾</span></div>
+ <div style="margin-top:auto;display:flex;justify-content:space-between;color:var(--dim);font-size:13px"><span>Skip for now</span><span>Private ESPN league? Set it up in Settings</span></div>
+</div></div></body></html>

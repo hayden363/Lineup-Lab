@@ -1,0 +1,55 @@
+<!doctype html><html><head><meta charset="utf-8"><link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet"><link rel="stylesheet" href="base.css"><style>
+.top{display:flex;justify-content:space-between;align-items:center;padding:26px 56px;border-bottom:1px solid var(--line)}
+.stepper{display:flex;gap:10px;align-items:center;font-size:13.5px;font-weight:700;color:var(--dim)}
+.stepper .s{display:flex;align-items:center;gap:8px}.stepper .s .n{width:24px;height:24px;border-radius:50%;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:12px}
+.stepper .s.done{color:var(--muted)}.stepper .s.done .n{background:var(--accent);color:#062016;border-color:var(--accent)}
+.stepper .s.on{color:var(--ink)}.stepper .s.on .n{border-color:var(--accent);color:var(--accent)}
+.stepper .bar{width:40px;height:2px;background:var(--line)}
+.body{display:grid;grid-template-columns:620px 1fr;gap:48px;padding:40px 56px}
+h1{font-size:34px;letter-spacing:-.02em;font-weight:800}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:24px;margin-top:22px;display:flex;flex-direction:column;gap:18px}
+.howto{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.h{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:12px;font-size:12.5px;color:var(--muted);line-height:1.45}
+.h b{display:block;color:var(--ink);font-size:13.5px;margin:6px 0 2px}
+.preview{background:linear-gradient(180deg,#101417,#0c0f11);border:1px solid var(--line);border-radius:22px;padding:22px;position:relative;overflow:hidden}
+.preview:before{content:"PREVIEW";position:absolute;right:18px;top:18px;font-size:11px;letter-spacing:.12em;color:var(--dim);font-weight:800}
+.row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}
+.row:last-child{border:0}
+.pos{width:34px;font-size:12px;font-weight:800;color:var(--dim)}
+.row b{flex:1;font-size:14.5px}.row .opp{font-family:'JetBrains Mono',monospace;font-size:12.5px;font-weight:700}
+.go{font-size:12px;font-weight:800;border-radius:8px;padding:5px 10px}
+.blur{filter:blur(0px)}
+</style></head><body>
+<div class="top"><div class="brand"><img src="../../../static/icons/icon-192.png">Lineup Lab</div>
+<div class="stepper"><div class="s done"><span class="n">✓</span>Account</div><div class="bar"></div><div class="s on"><span class="n">2</span>Find league</div><div class="bar"></div><div class="s"><span class="n">3</span>Pick your team</div></div>
+<span class="btn dd">Play the Daily Drive ▸</span></div>
+<div class="body">
+<div>
+ <div class="tag">Step 2 of 3</div>
+ <h1 style="margin-top:8px">Find your league</h1>
+ <p style="color:var(--muted);margin-top:8px;font-size:15.5px">One minute from now, this is your Start/Sit for Week 12.</p>
+ <div class="card">
+  <div class="tabs"><div class="tab on"><span class="dot" style="background:var(--sleeper)"></span>Sleeper</div><div class="tab"><span class="dot" style="background:var(--espn)"></span>ESPN</div><div class="tab"><span class="dot" style="background:var(--yahoo)"></span>Yahoo <span class="soon">SOON</span></div></div>
+  <div><div class="label" style="margin-bottom:8px">Sleeper username or league link</div>
+  <div style="display:flex;gap:10px"><div class="input focus">hxs_football</div><span class="btn primary" style="flex:none">Find my league</span></div></div>
+  <div class="label">Where to find it</div>
+  <div class="howto">
+   <div class="h"><span class="num" style="width:22px;height:22px;font-size:12px">1</span><b>Open Sleeper</b>Tap below to jump into the app.<div style="margin-top:8px"><span class="btn ghost" style="padding:6px 10px;font-size:12px">Open Sleeper ↗</span></div></div>
+   <div class="h"><span class="num" style="width:22px;height:22px;font-size:12px">2</span><b>Your username</b>Tap your profile photo. It's the name under your picture.</div>
+   <div class="h"><span class="num" style="width:22px;height:22px;font-size:12px">3</span><b>Or the league link</b>League → ⚙ → <span class="path">Share league</span> → Copy link.</div>
+  </div>
+  <div class="note" style="background:rgba(52,211,153,.06);border-color:rgba(52,211,153,.3);color:#cdeee0"><span>✓</span><span><b style="color:var(--accent)">Sleeper leagues are always public,</b> so there's nothing to change. ESPN leagues need one setting; we'll show you where.</span></div>
+ </div>
+ <div style="display:flex;justify-content:space-between;margin-top:16px;color:var(--dim);font-size:13px"><span>← Back</span><span>Skip for now</span></div>
+</div>
+<div class="preview">
+ <div class="label">Your Start/Sit, Week 12</div>
+ <div style="font-size:22px;font-weight:800;margin:6px 0 14px">Here's what you'll get</div>
+ <div class="row"><span class="pos">QB</span><div class="face" style="background-image:url(https://static.www.nfl.com/image/upload/f_auto,q_auto/league/kaicbot8qhzrvddilbtp)"></div><b>Jared Goff</b><span class="opp" style="color:#34d399">NYG</span><span class="go" style="background:rgba(52,211,153,.15);color:var(--accent)">START</span></div>
+ <div class="row"><span class="pos">RB</span><div class="face" style="background-image:url(https://static.www.nfl.com/image/upload/f_auto,q_auto/league/xk1xwio0bryfxo1ylweu)"></div><b>De'Von Achane</b><span class="opp" style="color:#a3e635">LV</span><span class="go" style="background:rgba(52,211,153,.15);color:var(--accent)">START</span></div>
+ <div class="row"><span class="pos">RB</span><div class="face" style="background-image:url(https://static.www.nfl.com/image/upload/f_auto,q_auto/league/pb9i8clrmkhwwjs7jndy)"></div><b>Breece Hall</b><span class="opp" style="color:#f87171">BAL</span><span class="go" style="background:rgba(248,113,113,.14);color:#f87171">SIT</span></div>
+ <div class="row"><span class="pos">WR</span><div class="face" style="background-image:url(https://static.www.nfl.com/image/upload/f_auto,q_auto/league/gpwtyv3viwy9q4ewderl)"></div><b>Tee Higgins</b><span class="opp" style="color:#fbbf24">PIT</span><span class="go" style="background:rgba(251,191,36,.14);color:#fbbf24">FLEX</span></div>
+ <div class="row"><span class="pos">TE</span><div class="face" style="background-image:url(https://static.www.nfl.com/image/upload/f_auto,q_auto/league/vkicdglglkyukgyxtmpx)"></div><b>George Kittle</b><span class="opp" style="color:#34d399">CAR</span><span class="go" style="background:rgba(52,211,153,.15);color:var(--accent)">START</span></div>
+ <div style="margin-top:18px;display:flex;gap:10px;flex-wrap:wrap"><span class="chip">Waivers that beat your bench</span><span class="chip">Trade odds</span><span class="chip">Live scores</span></div>
+</div>
+</div></body></html>
