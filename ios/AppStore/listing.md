@@ -90,4 +90,4 @@ Data linked to the user, used for **App Functionality** only, **not used for tra
 
 ## Screenshots needed
 - iPhone 6.9" (1320 × 2868): welcome, Daily Drive in play, Daily Drive results, Start/Sit, My Team
-- iPad 13" (2064 × 2752): same five
+- iPad: not in 1.0 (iPhone-only build 2); add for 1.1
