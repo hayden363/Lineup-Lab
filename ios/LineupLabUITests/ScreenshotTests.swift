@@ -21,12 +21,13 @@ final class ScreenshotTests: XCTestCase {
         shot(app, "01-welcome")
         // the Daily Drive, as a guest
         app.staticTexts["The Daily Drive"].tap()
-        let kickoff = app.webViews.buttons["Kickoff"]
+        // the web button is styled uppercase, so its accessibility label is "KICKOFF"
+        let kickoff = app.webViews.buttons.matching(NSPredicate(format: "label ==[c] %@", "kickoff")).firstMatch
         XCTAssertTrue(kickoff.waitForExistence(timeout: 60))
         sleep(3)
         shot(app, "02-drive-intro")
         kickoff.tap()
-        sleep(6)                                   // 3-second snap count, then the play clock
+        sleep(7)                                   // 3-second snap count, then the play clock
         shot(app, "03-drive-play")
     }
 }
