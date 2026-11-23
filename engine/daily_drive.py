@@ -46,6 +46,13 @@ WARMUP_EASY_MIN = 30      # a template flagged warmup (QB starters, Super Bowl Q
 DAY_PLAN = (("easy", "fantasy"), ("easy", "history"), ("easy", "history"),
             ("medium", "fantasy"), ("medium", "history"),
             ("hard", "history"), ("hard", "history"))
+# ---- A LITTLE EASIER (owner 2026-11-22): from EASIER_START a day is 4 easy, 2 medium, 1 hard, and no question has fewer
+# than EASIER_MIN_ANSWERS answers. Earlier days keep DAY_PLAN, so a deploy never reshapes a day people already played.
+EASIER_START = "2026-11-23"
+EASIER_MIN_ANSWERS = 15
+DAY_PLAN_EASIER = (("easy", "fantasy"), ("easy", "history"), ("easy", "history"), ("easy", "history"),
+                   ("medium", "fantasy"), ("medium", "history"),
+                   ("hard", "history"))
 MAX_PER_POS = 2           # no position more than twice in a day
 MAX_PER_SHAPE = 1         # at most one single-game question and one season-total question a day
 # history cats that are not a stat line (draft, teams, Super Bowls, awards, records): at least one a day
@@ -494,7 +501,10 @@ def pick_day_banded(date_str, candidates, avoid_templates=()):
     nothing takes the nearest band of its kind, then the other kind. Inside a band the biggest answer set goes first."""
     rng = random.Random(_seed(date_str))
     avoid = set(avoid_templates)
-    pool = sorted((c for c in candidates if c.get("band") and playable(c["answers"])), key=lambda c: c["id"])
+    easier = date_str >= EASIER_START
+    min_answers = EASIER_MIN_ANSWERS if easier else FLOOR
+    pool = sorted((c for c in candidates if c.get("band") and playable(c["answers"]) and len(c["answers"]) >= min_answers),
+                  key=lambda c: c["id"])
     rng.shuffle(pool)
     rested = lambda c: c["template"] in avoid or c.get("group", c["template"]) in avoid
     pool.sort(key=rested)                                    # fresh templates first; stable, so the shuffle still decides
@@ -505,6 +515,8 @@ def pick_day_banded(date_str, candidates, avoid_templates=()):
             return False
         if level >= 3:
             return True
+        if easier and rested(c):             # a repeat from this week is the last rule to bend, after category and position
+            return False
         if c.get("cat") and cats.get(c["cat"], 0) >= MAX_PER_CAT:
             return False
         if level >= 2:
@@ -533,7 +545,7 @@ def pick_day_banded(date_str, candidates, avoid_templates=()):
         i = BAND_ORDER.index(band)
         return sorted(BAND_ORDER, key=lambda b: (abs(BAND_ORDER.index(b) - i), BAND_ORDER.index(b)))
 
-    plan = list(DAY_PLAN)
+    plan = list(DAY_PLAN_EASIER if easier else DAY_PLAN)
     breadth_slot = next(i for i, (b, k) in enumerate(plan) if b == "medium" and k == "history")
     for i, (band, kind) in enumerate(plan):
         got = None
@@ -857,6 +869,13 @@ def yesterday_templates(cache_dir, date_str, candidates):
 
 
 COOLDOWN_DAYS = 6          # easy -> hard days: a template rests this many days (yesterday only, before VARIETY_START)
+_puzzle_store = None       # date -> the day's frozen puzzle or None (the server's database); the disk cache resets on deploy
+
+
+def set_puzzle_store(fn):
+    """Where recent_templates looks up what really ran on a past day. fn(date_str) -> puzzle or None; must not raise."""
+    global _puzzle_store
+    _puzzle_store = fn
 
 
 def recent_templates(cache_dir, date_str, candidates, days=COOLDOWN_DAYS):
@@ -866,7 +885,7 @@ def recent_templates(cache_dir, date_str, candidates, days=COOLDOWN_DAYS):
     d = dt.date.fromisoformat(date_str)
     for i in range(1, days + 1):
         prev = (d - dt.timedelta(days=i)).isoformat()
-        puz = _read_puzzle(_puzzle_path(cache_dir, prev))
+        puz = (_puzzle_store(prev) if _puzzle_store else None) or _read_puzzle(_puzzle_path(cache_dir, prev))
         prompts = puz["prompts"] if puz else (pick_day(prev, candidates) if prev >= VARIETY_START else [])
         for p in prompts:                               # the group too: the same question asked two ways rests as one
             out |= {p["template"], p.get("group") or p["template"]}

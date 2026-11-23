@@ -52,6 +52,7 @@ from engine import chat as chat_layer
 from engine import correlation
 from engine import daily_drive
 from engine import daily_drive_history_snapshot as dd_history_snapshot
+from engine import daily_drive_pool
 from engine import daily_drive_scores as dd_scores
 from engine import dd_stadium
 from engine import data as data_layer
@@ -2203,6 +2204,7 @@ def _play_puzzle(date: Optional[str]):
                 puzzle = daily_drive.get_puzzle(key, data_layer.HISTORY_DIR)
                 if len(puzzle["prompts"]) == daily_drive.day_size():
                     puzzle = _store_puzzle(key, puzzle)
+            daily_drive_pool.say_when(puzzle)
             if len(puzzle["prompts"]) == daily_drive.day_size():
                 if len(_PLAY_MEM) > 100:
                     _PLAY_MEM.clear()
@@ -2223,6 +2225,9 @@ def _stored_puzzle(key):
         print(f"[play] stored puzzle unavailable: {type(e).__name__}")
         return None
     return got if got and len(got.get("prompts") or []) == daily_drive.day_size() else None
+
+
+daily_drive.set_puzzle_store(_stored_puzzle)   # the question cooldown reads what really ran, even after a redeploy
 
 
 def _store_puzzle(key, puzzle):

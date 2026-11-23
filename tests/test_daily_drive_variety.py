@@ -180,5 +180,56 @@ class StartsTests(unittest.TestCase):
         self.assertEqual(pool.render_text(tpl, 1, 10), "Name a QB who has started a game this season")
 
 
+class EasierDayTests(unittest.TestCase):
+    """Owner 2026-11-22: a little easier. From EASIER_START: 4 easy, 2 medium, 1 hard, and nothing under 15 answers."""
+    AFTER = "2026-11-24"
+
+    def _big_pool(self):
+        out = []
+        for k in ("fantasy", "history"):
+            for band, n in (("easy", 150), ("medium", 35), ("hard", 16)):
+                out += [_cand(f"{k[0]}{band}{i}", k, band, n + i) for i in range(12)]
+        return out
+
+    def test_new_day_shape(self):
+        day = dd.pick_day(self.AFTER, self._big_pool())
+        self.assertEqual([p["band"] for p in day], ["easy"] * 4 + ["medium"] * 2 + ["hard"])
+        self.assertEqual(sum(p["kind"] == "fantasy" for p in day), 2)
+
+    def test_no_question_under_15_answers(self):
+        thin = [_cand(f"thin{i}", "history", "hard", 11) for i in range(30)]
+        day = dd.pick_day(self.AFTER, self._big_pool() + thin)
+        self.assertGreaterEqual(min(len(p["answers"]) for p in day), dd.EASIER_MIN_ANSWERS)
+
+    def test_days_already_played_keep_their_shape(self):
+        before = (dt.date.fromisoformat(dd.EASIER_START) - dt.timedelta(days=1)).isoformat()
+        day = dd.pick_day(before, self._big_pool())
+        self.assertEqual([p["band"] for p in day], ["easy"] * 3 + ["medium"] * 2 + ["hard"] * 2)
+
+    def test_a_recent_question_stays_out_even_if_categories_repeat(self):
+        cands = [_cand(f"e{i}", "history", "easy", 150 + i, cat="same") for i in range(6)] + self._big_pool()
+        avoid = {c["template"] for c in cands if c["template"].startswith("e") and c["template"][1:].isdigit()}
+        day = dd.pick_day(self.AFTER, cands, avoid)
+        self.assertFalse({p["template"] for p in day} & avoid)
+
+    def test_cooldown_reads_the_frozen_days(self):
+        frozen = {"prompts": [{"template": "frozen_tpl", "group": "frozen_group"}]}
+        dd.set_puzzle_store(lambda d: frozen if d == "2026-11-23" else None)
+        self.addCleanup(dd.set_puzzle_store, None)
+        with tempfile.TemporaryDirectory() as tmp:
+            got = dd.recent_templates(tmp, "2026-11-24", self._big_pool())
+        self.assertTrue({"frozen_tpl", "frozen_group"} <= got)
+
+    def test_stored_this_season_questions_say_so(self):
+        from engine import daily_drive_pool as pp
+        puzzle = {"prompts": [{"id": "p:x:2026:w11:t50", "text": "Name a player who has been targeted 50+ times"},
+                              {"id": "p:y:2026:w11:t2", "text": "Name a RB with 2+ rushing TDs last week"},
+                              {"id": "hh:z:2025:t3", "text": "Name a QB with 3+ playoff wins since 2000"}]}
+        pp.say_when(pp.say_when(puzzle))                         # safe to run twice
+        self.assertEqual([p["text"] for p in puzzle["prompts"]],
+                         ["Name a player who has been targeted 50+ times this season",
+                          "Name a RB with 2+ rushing TDs last week", "Name a QB with 3+ playoff wins since 2000"])
+
+
 if __name__ == "__main__":
     unittest.main()

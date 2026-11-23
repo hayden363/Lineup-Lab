@@ -459,6 +459,15 @@ def with_when(text):
     return text + " this season"
 
 
+def say_when(puzzle):
+    """Apply with_when to a day's this-season prompts ("p:" ids), so a day frozen before the wording changed still says
+    "this season". Only the question's wording changes; its answers and id stay the same. Safe to run twice."""
+    for p in puzzle.get("prompts") or []:
+        if str(p.get("id", "")).startswith("p:"):
+            p["text"] = with_when(p["text"])
+    return puzzle
+
+
 _TIDY = [
     (r"\b1\+ (rushing|receiving|passing) TDs\b", r"a \1 TD"),       # "with 1+ rushing TDs" -> "with a rushing TD"
     (r"\b1\+ touchdowns\b", "a touchdown"),
