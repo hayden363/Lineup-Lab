@@ -244,15 +244,55 @@ def annotate(parsed, roster, scoring=None):
     return {"teams": parsed["teams"], "mine_points": round(mine_points, 1), "mine_count": mine_count}
 
 
-def game_boxscore(game_id, force=False):
+def short_stat(lines):
+    """A player's day in one short line for My Team: his main stat line, then only the yards (and TDs) of a second one.
+    '22 car, 89 yds, 1 TD · 3 rec yds'. Zero TDs, zero INTs and targets are left out."""
+    out = []
+    for ln in lines or []:
+        label, text = ln.get("label"), str(ln.get("text") or "")
+        if label not in ("Passing", "Rushing", "Receiving", "Kicking"):
+            continue
+        text = re.sub(r", 0 (TD|INT)\b", "", re.sub(r", \d+ tgt", "", text))
+        if out:
+            m = re.search(r"(-?\d+) yds(, \d+ TD)?", text)
+            if not m or (m.group(1) == "0" and not m.group(2)):
+                continue
+            text = f"{m.group(1)} {'rush' if label == 'Rushing' else 'rec'} yds{m.group(2) or ''}"
+        out.append(text)
+    return " · ".join(out)
+
+
+def stat_lines(parsed, roster):
+    """{player_id: short stat line} for the roster players found in a parsed box score, matched on name, position and
+    team like annotate() (name and team alone when the feed gave no position). `roster`: {player_id, name, position, team}."""
+    by_key, by_name = {}, {}
+    for t in (parsed or {}).get("teams", []):
+        for p in t.get("players", []):
+            team = _team(p.get("team") or t.get("abbr"))
+            by_key[(consensus.match_key(p.get("name"), p.get("position")), team)] = p
+            if not p.get("position"):
+                by_name[(consensus.normalize_name(p.get("name")), team)] = p
+    out = {}
+    for r in roster or []:
+        team = _team(r.get("team"))
+        p = by_key.get((consensus.match_key(r.get("name"), r.get("position")), team)) or by_name.get((consensus.normalize_name(r.get("name")), team))
+        text = short_stat(_line(p)) if p else ""
+        if text:
+            out[str(r.get("player_id"))] = text
+    return out
+
+
+def game_boxscore(game_id, force=False, keep_raw=True):
     """Parsed summary for one game id, cached TTL_SECONDS. Raises ValueError
     for a malformed id; a failed fetch returns the last good copy, else
-    {"teams": []} — a flaky ESPN response should never become a 500."""
+    {"teams": []} — a flaky ESPN response should never become a 500.
+    keep_raw=False (My Team's game lines) does not hold the large raw feed in memory; the game center, which needs it,
+    calls with the default and gets a fresh fetch when only the parse is cached."""
     if not valid_game_id(game_id):
         raise ValueError("bad game id")
     now = time.time()
     hit = _CACHE.get(game_id)
-    if hit and not force and now - hit[0] < TTL_SECONDS:
+    if hit and not force and now - hit[0] < TTL_SECONDS and (not keep_raw or game_id in _RAW):
         return hit[1]
     try:
         resp = requests.get(SUMMARY_URL, params={"event": game_id}, timeout=5)
@@ -263,10 +303,14 @@ def game_boxscore(game_id, force=False):
         print(f"[boxscore] couldn't fetch game {game_id}: {e}")
         return hit[1] if hit else {"teams": []}
     if len(_CACHE) >= CACHE_MAX:
-        _CACHE.pop(min(_CACHE, key=lambda k: _CACHE[k][0]))
+        oldest = min(list(_CACHE.items()), key=lambda kv: kv[1][0])[0]     # list(): several games can load at once
+        _CACHE.pop(oldest, None)
     _CACHE[game_id] = (now, parsed)
-    _RAW[game_id] = raw
-    for k in [k for k in _RAW if k not in _CACHE]:
+    if keep_raw:
+        _RAW[game_id] = raw
+    else:
+        _RAW.pop(game_id, None)
+    for k in [k for k in list(_RAW) if k not in _CACHE]:
         _RAW.pop(k, None)
     return parsed
 

@@ -1657,6 +1657,44 @@ def _live_points(user, active, base):
         return {"source": None, "by_roster": {}, "note": "live points are not available from the league site right now"}
 
 
+# My Team's game lines read one box score per started game. A finished game's stats don't change, so it is read once
+# instead of every 20 s, and only the small parsed form is kept (the raw ESPN feed is what's large).
+_GAME_LINE_POOL = concurrent.futures.ThreadPoolExecutor(max_workers=4, thread_name_prefix="game-line")
+_FINAL_BOX = {}            # game_id -> (read_at, parsed)
+FINAL_BOX_TTL = 1800
+FINAL_BOX_MAX = 32
+GAME_LINE_WAIT = 6         # seconds a poll waits; a slower game simply has no stat line until the next one
+
+
+def _read_game_box(game_id, final):
+    hit = _FINAL_BOX.get(game_id)
+    if final and hit and time.time() - hit[0] < FINAL_BOX_TTL:
+        return hit[1]
+    parsed = boxscore_layer.game_boxscore(game_id, keep_raw=False)
+    if final and parsed.get("teams"):
+        if len(_FINAL_BOX) >= FINAL_BOX_MAX:
+            _FINAL_BOX.clear()
+        _FINAL_BOX[game_id] = (time.time(), parsed)
+    return parsed
+
+
+def _game_stat_lines(base, games):
+    """{player_id: short stat line} for both rosters. Never raises: a feed that fails just means no stat line."""
+    try:
+        wanted = {g: final for g, final in myteam_live_layer.box_games(base, games).items() if boxscore_layer.valid_game_id(g)}
+        roster = myteam_live_layer.roster_of(base)
+        jobs = [_GAME_LINE_POOL.submit(_read_game_box, g, final) for g, final in wanted.items()]
+        done, _ = concurrent.futures.wait(jobs, timeout=GAME_LINE_WAIT) if jobs else (set(), set())
+        out = {}
+        for job in done:
+            if job.exception() is None:
+                out.update(boxscore_layer.stat_lines(job.result(), roster))
+        return out
+    except Exception as e:
+        print(f"[myteam/live] game lines unavailable: {type(e).__name__}")
+        return {}
+
+
 @app.get("/api/myteam/live", dependencies=[Depends(myteam_live_rate_limit)])
 def api_my_team_live(week: Optional[int] = Query(None, ge=1, le=25),
                      scoring: Optional[dict] = Depends(scoring_from_query), user=Depends(require_user)):
@@ -1666,7 +1704,7 @@ def api_my_team_live(week: Optional[int] = Query(None, ge=1, le=25),
     if base.get("live_week") is None or base.get("live_week") != base.get("week"):
         return _clean(myteam_live_layer.compose(base, [], None))
     games = live_scores_layer.live_scoreboard()
-    return _clean(myteam_live_layer.compose(base, games, _live_points(user, active, base)))
+    return _clean(myteam_live_layer.compose(base, games, _live_points(user, active, base), stats=_game_stat_lines(base, games)))
 
 
 # --------------------------------------------------- lineup inputs (Start/Sit lineup advisor) ----

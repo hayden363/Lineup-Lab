@@ -4009,7 +4009,7 @@ function rosterRowHtml(p, isBench, idx) {
   return `<div class="myteam-roster-row${isBench ? " bench" : ""}${unscored ? " unscored" : " kbd-click"}" style="--i:${idx || 0}" data-pid="${esc(p.player_id)}" ${unscored ? 'data-unscored="1"' : 'role="button" tabindex="0"'}>
     <img ${headshotAttrs(p)} alt="">
     <span class="pos-badge">${esc(p.slot || p.position)}</span>
-    <span>${esc(p.player_display_name)}${p.recent_team ? ` <span class="mt-team" data-team-page="${esc(p.recent_team)}" role="link" tabindex="0" title="Open the ${esc(p.recent_team)} team page">${esc(p.recent_team)}</span>` : ""}${statusFlagsHtml(p)}</span>
+    <span class="mt-who"><span>${esc(p.player_display_name)}${p.recent_team ? ` <span class="mt-team" data-team-page="${esc(p.recent_team)}" role="link" tabindex="0" title="Open the ${esc(p.recent_team)} team page">${esc(p.recent_team)}</span>` : ""}${statusFlagsHtml(p)}</span><span class="mt-game"></span></span>
     ${num}
   </div>`;
 }
@@ -4042,6 +4042,48 @@ function liveTeamView(team, lt) {
   if (lt.final) return { state: "post", main: lt.points_total, sub: null };
   return { state: "in", main: lt.points_total, sub: lt.live_proj_total != null ? lt.live_proj_total : lt.points_total };
 }
+
+// The small line under each player: his real NFL game, then his stats once it has started (GET /api/myteam/live game_lines).
+function gameClockLabel(g) {
+  if (/half/i.test(g.detail || "")) return "Half";
+  const q = g.period > 4 ? "OT" : `Q${g.period}`;
+  return g.clock ? `${q} ${g.clock}` : q;
+}
+
+function gameKickoffLabel(iso) {
+  const d = new Date(iso);
+  if (isNaN(d)) return "";
+  return `${d.toLocaleDateString("en-US", { weekday: "short" })} ${d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}`;
+}
+
+function gameLineHtml(g) {
+  if (!g || !g.opp) return "";
+  const where = `${g.home ? "vs" : "@"} ${esc(g.opp)}`;
+  const has = g.score != null && g.opp_score != null;
+  const score = has ? `${esc(g.score)}–${esc(g.opp_score)}` : "";
+  let top;
+  if (g.state === "post") {
+    const r = !has ? "" : g.score > g.opp_score ? "W" : g.score < g.opp_score ? "L" : "T";
+    top = has ? `<b class="mg-${r.toLowerCase()}">${r} ${score}</b> ${where}` : `Final ${where}`;
+  } else if (g.state === "in") {
+    const lead = !has ? "" : g.score > g.opp_score ? "Up " : g.score < g.opp_score ? "Down " : "Tied ";
+    top = `<i class="mg-dot" aria-hidden="true"></i><b class="mg-live">${esc(gameClockLabel(g))}</b> ${lead}${score} ${where}`;
+  } else {
+    top = `${esc(gameKickoffLabel(g.kickoff))} ${where}`;
+  }
+  const stat = g.state !== "pre" && g.stat ? `<span class="mg-stat">${esc(g.stat)}</span>` : "";
+  return `<span class="mg-top">${top}</span>${stat}`;
+}
+
+// Fills only each row's own small game line, and only when that game changed; nothing else on the page is rebuilt.
+function paintGameLines(content, lines) {
+  content.querySelectorAll(".myteam-roster-row[data-pid] .mt-game").forEach((el) => {
+    const html = gameLineHtml(lines[el.closest(".myteam-roster-row").dataset.pid]);
+    if (el._mg !== html) { el.innerHTML = html; el._mg = html; }
+  });
+  delete content.dataset.lw;      // the space held for the first paint is no longer needed
+}
+// ---- end game line
 
 // Counts el's number from `from` to `to` (tabular). A newer call cancels an older one; reduced motion jumps.
 function animateNumber(el, to, from, ms, dec) {
@@ -4272,6 +4314,7 @@ async function loadMyTeam(week, refresh) {
     html = html.replace('<div class="myteam-summary">', replacementBannerHtml(data.my_team) + '<div class="myteam-summary">');
     html += leagueMatchupsHtml(data.league_matchups, data.my_team.roster_id);
     html += `<div id="trades-panel"></div>`;
+    if (onLiveWeek) content.dataset.lw = "1"; else delete content.dataset.lw;   // holds a line per row so the list doesn't jump when games arrive
     content.innerHTML = html;
     loadTradesPanel();     // first, before any other post-render work: nothing after this line may stop the trades section from loading
     $("#mt-refresh").addEventListener("click", async (e) => {
@@ -4359,6 +4402,7 @@ function applyMyTeamLive(live) {
     const tot = card.querySelector(".mt-total");
     paintLiveNum(tot, liveTeamView(team, lt), tot, card.querySelector(".mt-total-sub"));
   });
+  paintGameLines(content, live.game_lines || {});
   if (data.opponent) {
     const wp = live.win_prob != null ? live.win_prob : data.win_prob;
     paintWinProb(content, wp, matchupMargin(data.my_team, data.opponent, live));

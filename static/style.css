@@ -5389,6 +5389,25 @@ body { font-variant-numeric: tabular-nums; background: var(--bg); }
 .myteam-roster-row img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; object-position: top; background: var(--panel); }
 .myteam-roster-row .proj-num { margin-left: auto; font-size: 17px; font-weight: 800; color: var(--text); }
 .myteam-roster-row.bench .proj-num { color: var(--muted); font-weight: 600; }
+/* The small game line under each player: his real game, then his stats once it starts */
+.mt-who { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.mt-game { display: grid; gap: 1px; font-family: var(--sans); font-size: 11.5px; font-weight: 500; line-height: 1.3; color: var(--muted); }
+.mt-game:empty { display: none; }
+#myteam-content[data-lw="1"] .mt-game:empty { display: block; min-height: 15px; }
+.mg-top b { font-weight: 800; }
+.mg-w { color: var(--pos); }
+.mg-l { color: var(--neg); }
+.mg-t { color: var(--muted); }
+.mg-live { color: var(--avg); }
+.mg-dot { display: inline-block; width: 6px; height: 6px; margin-right: 4px; border-radius: 50%; background: var(--avg); vertical-align: 1px; }
+.mg-stat { font-size: 11px; color: var(--text); opacity: .82; }
+@media (max-width: 480px) {      /* phones: a little more room so a game or stat line stays on one line */
+  .myteam-roster-row { gap: 7px; padding: 8px; }
+  .myteam-roster-row .pos-badge { min-width: 34px; }
+  .myteam-roster-row img { width: 34px; height: 34px; }
+  .mt-game { font-size: 11px; }
+  .mg-stat { font-size: 10.5px; }
+}
 .myteam-summary { gap: 12px; }
 .myteam-card .mt-total { font-size: 38px; font-weight: 800; letter-spacing: -0.02em; }
 

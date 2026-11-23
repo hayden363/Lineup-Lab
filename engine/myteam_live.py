@@ -93,8 +93,40 @@ def game_index(games, week=None):
                 "state": state, "period": g.get("period") or None, "clock": g.get("display_clock"),
                 "detail": g.get("status_detail"), "kickoff": g.get("kickoff"),
                 "seconds_left": seconds_left(state, g.get("period"), g.get("display_clock")),
-                "score_diff": diff,
+                "score_diff": diff, "game_id": g.get("game_id"), "opp": other.get("abbr"), "home": me is home,
+                "score": ms, "opp_score": os_,
             }
+    return out
+
+
+def roster_of(base):
+    """Everyone on both rosters (bench too), as {player_id, name, position, team, on_bye}."""
+    return [r for card in (base.get("my_team"), base.get("opponent")) for r in ((card or {}).get("roster") or [])]
+
+
+def box_games(base, games):
+    """{game_id: is it final} for the started games someone on either roster is playing in: the box scores to read."""
+    idx = game_index(games, base.get("week"))
+    out = {}
+    for r in roster_of(base):
+        g = idx.get(r.get("team"))
+        if g and g.get("game_id") and g["state"] in ("in", "post") and not r.get("on_bye"):
+            out[g["game_id"]] = g["state"] == "post"
+    return out
+
+
+def game_lines(base, idx, stats):
+    """{player_id: his game} for My Team's small game line. A player with no game this week (bye) has no entry; the stat
+    line only exists once his game has started."""
+    out = {}
+    for r in roster_of(base):
+        g = idx.get(r.get("team"))
+        if not g or r.get("on_bye"):
+            continue
+        pid = str(r["player_id"])
+        out[pid] = {"state": g["state"], "opp": g["opp"], "home": g["home"], "score": g["score"], "opp_score": g["opp_score"],
+                    "period": g["period"], "clock": g["clock"], "detail": g["detail"], "kickoff": g["kickoff"],
+                    "stat": (stats or {}).get(pid) if g["state"] != "pre" else None}
     return out
 
 
@@ -119,7 +151,9 @@ def make_base(result, crosswalk, platform):
             starters.append({"player_id": pid, "raw_id": str(raw), "position": pos,
                              "team": norm_team(p.get("recent_team")), "proj": p.get("PROJ"),
                              "settled": bool(p.get("final")), "on_bye": bool(p.get("on_bye"))})
-        return {"roster_id": team.get("roster_id"), "starters": starters}
+        roster = [{"player_id": p.get("player_id"), "name": p.get("player_display_name"), "position": p.get("position"),
+                   "team": norm_team(p.get("recent_team")), "on_bye": bool(p.get("on_bye"))} for p in team.get("players") or []]
+        return {"roster_id": team.get("roster_id"), "starters": starters, "roster": roster}
 
     return {"week": result.get("nfl_week"), "live_week": result.get("live_week"), "platform": platform,
             "my_team": card(result.get("my_team")), "opponent": card(result.get("opponent"))}
@@ -188,14 +222,15 @@ def _team(card, idx, by_roster):
             "final": bool(players) and all(p["game_state"] == "post" for p in players), "players": players}
 
 
-def compose(base, games, points, now=None):
-    """The /api/myteam/live body. `now` is epoch seconds (injectable for tests)."""
+def compose(base, games, points, now=None, stats=None):
+    """The /api/myteam/live body. `now` is epoch seconds (injectable for tests); `stats` is {player_id: short stat line}."""
     now = time.time() if now is None else now
     week = base.get("week")
     is_live_week = base.get("live_week") is not None and base.get("live_week") == week
     if not is_live_week:
         return {"live": False, "win_prob": None, "week": week, "reason": "not the live NFL week", "my_team": None, "opponent": None,
-                "scoreboard_ok": True, "points_source": None, "active": False, "wake_in_seconds": None, "as_of": now}
+                "scoreboard_ok": True, "points_source": None, "active": False, "wake_in_seconds": None, "as_of": now,
+                "game_lines": {}}
     idx = game_index(games, week)
     by_roster = (points or {}).get("by_roster") or {}
     mine, opp = _team(base["my_team"], idx, by_roster), _team(base["opponent"], idx, by_roster)
@@ -219,4 +254,4 @@ def compose(base, games, points, now=None):
     return {"live": True, "week": week, "platform": base.get("platform"), "scoreboard_ok": bool(idx), "win_prob": wp,
             "points_source": (points or {}).get("source"), "points_note": (points or {}).get("note"),
             "active": active, "poll_seconds": POLL_SECONDS, "wake_in_seconds": wake, "as_of": now,
-            "my_team": mine, "opponent": opp}
+            "my_team": mine, "opponent": opp, "game_lines": game_lines(base, idx, stats)}
