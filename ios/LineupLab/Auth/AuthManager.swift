@@ -27,19 +27,34 @@ final class AuthManager: NSObject, ObservableObject {
     var hasPassword: Bool { user["has_password"] as? Bool ?? false }
     var username: String { user["username"] as? String ?? "" }
 
-    /// Checks the saved session with the server (GET /api/auth/me).
+    /// Checks the saved session with the server (GET /api/auth/me). Only the server saying "not signed in" (401) signs
+    /// you out; no signal, a timeout or a server hiccup leaves you signed in.
     func refresh() async {
+        await WebSession.shared.restoreSession()
         guard await WebSession.shared.isSignedIn else { status = .signedOut; return }
         do {
             user = try await API.get("/api/auth/me")
+            await WebSession.shared.rememberSession()
             status = .signedIn
-        } catch {
+        } catch let failure as API.Failure where failure.status == 401 {
+            await WebSession.shared.forgetSession()
+            user = [:]
             status = .signedOut
+        } catch {
+            await WebSession.shared.rememberSession()
+            status = .signedIn
         }
     }
 
+    /// A page went to the signed-out front door: ask the server before believing it.
     func markSignedOut() {
-        if status == .signedIn { status = .signedOut }
+        guard status == .signedIn else { return }
+        Task { await refresh() }
+    }
+
+    /// Back in the app: fill in the account if the check at launch had no signal.
+    func refreshIfIncomplete() async {
+        if status == .signedIn && user.isEmpty { await refresh() }
     }
 
     private func didSignIn() async {

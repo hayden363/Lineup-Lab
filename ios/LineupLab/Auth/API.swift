@@ -4,6 +4,7 @@ import Foundation
 enum API {
     struct Failure: LocalizedError {
         let message: String
+        var status: Int? = nil
         var errorDescription: String? { message }
     }
 
@@ -33,7 +34,7 @@ enum API {
         let json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] ?? [:]
         guard (200..<300).contains(http.statusCode) else {
             let detail = json["detail"] as? String
-            throw Failure(message: detail ?? "Something went wrong (\(http.statusCode)). Please try again.")
+            throw Failure(message: detail ?? "Something went wrong (\(http.statusCode)). Please try again.", status: http.statusCode)
         }
         return json
     }

@@ -49,8 +49,37 @@ final class WebSession {
         }
     }
 
-    /// Signs out locally: removes every cookie and cached page for our site.
+    private func sessionCookie() async -> HTTPCookie? {
+        await cookieStore.allCookies().first { $0.name == Config.sessionCookie && !$0.value.isEmpty }
+    }
+
+    /// Keeps a Keychain copy of the current sign-in.
+    func rememberSession() async {
+        if let cookie = await sessionCookie() { SessionVault.save(cookie.value) }
+    }
+
+    /// If the cookie store lost the sign-in, puts it back from the Keychain before anything checks or loads a page.
+    func restoreSession() async {
+        SessionVault.clearIfFreshInstall()
+        guard await sessionCookie() == nil, let token = SessionVault.load(), let host = Config.baseURL.host else { return }
+        var properties: [HTTPCookiePropertyKey: Any] = [
+            .name: Config.sessionCookie, .value: token, .domain: host, .path: "/",
+            .expires: Date().addingTimeInterval(30 * 24 * 60 * 60),     // the server decides when the session really ends
+            .sameSitePolicy: HTTPCookieStringPolicy.sameSiteLax, HTTPCookiePropertyKey("HttpOnly"): "TRUE",
+        ]
+        if Config.baseURL.scheme == "https" { properties[.secure] = "TRUE" }
+        if let cookie = HTTPCookie(properties: properties) { await cookieStore.setCookie(cookie) }
+    }
+
+    /// The server said this sign-in is over: removes both copies, so the next launch shows the welcome screen.
+    func forgetSession() async {
+        SessionVault.clear()
+        if let cookie = await sessionCookie() { await cookieStore.deleteCookie(cookie) }
+    }
+
+    /// Signs out locally: removes the saved sign-in and every cookie and cached page for our site.
     func clear() async {
+        SessionVault.clear()
         for cookie in await cookieStore.allCookies() {
             await cookieStore.deleteCookie(cookie)
         }

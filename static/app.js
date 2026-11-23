@@ -6049,6 +6049,7 @@ async function main() {
     try {
       state.user = await api("/api/auth/me");
     } catch (e) {
+      if (e.status !== 401) throw e;   // no signal or a server hiccup is not "signed out": show the retry card, not the login form
       state.user = null;
     }
     renderAccountButton();
