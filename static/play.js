@@ -624,7 +624,7 @@
   // The graded answer runs its designated play on the field (a tap or key skips it), then the full-scene result moment shows with NEXT PLAY.
   function playBanner(t) { return TIER[t][0].toUpperCase() + "!"; }
   function playMoment(o) {
-    var res = o.res, t = res ? res.tier : 0, before = o.before, after = o.after, scored = after.td > before.td, settled = false, went = false, timer = 0, variant = 0, tdN = after.td;
+    var res = o.res, t = res ? res.tier : 0, before = o.before, after = o.after, scored = after.td > before.td, vaulted = false, settled = false, went = false, timer = 0, variant = 0, tdN = after.td;
     if (res && t === 6) variant = o.variant != null ? o.variant : (window.DDField ? window.DDField.hash(String(o.seed || "x")) % 3 : 0);
     root.setAttribute("data-phase", "anim");
     announce(res ? "Snap. " + res.name + "." : (o.passed ? "Passed." : "Time. Sack."));
@@ -639,7 +639,10 @@
       stage.removeEventListener("pointerdown", skip); document.removeEventListener("keydown", skip);
       nativeCall("haptic", res ? (t >= 5 ? "success" : "light") : "error");   // iOS app: a tap as the play lands
       setHud(after, { countFrom: before.yards });
-      showResult();
+      var vm = !o.practice && res && t >= 4 && window.DDVault ? DDVault.pick(t, o.seed) : null;   // a real iconic play from their team
+      vaulted = !!vm;
+      if (vm) DDVault.show(vm, stage, { haptic: function () { nativeCall("haptic", "success"); } }).then(showResult);
+      else showResult();
     }
     function showResult() {
       root.setAttribute("data-phase", "result");
@@ -672,10 +675,10 @@
       box.appendChild(acts);
       resSlot.textContent = ""; resSlot.appendChild(box);
       announce(res ? "Accepted: " + res.name + ", " + TIER[t][0] + ", plus " + res.yards + " yards." + (scored ? " Touchdown!" : "") : (o.passed ? "Passed. No yards." : "Sacked. No yards."));
-      if (res && scored) touchdown(res, tdN);
+      if (res && scored && !vaulted) touchdown(res, tdN);
       else if (res && t >= 4 && !REDUCED) { var bp = field.ballPoint(); fx.sparkle(bp.x, bp.y, TIER_COLOR[t], t === 5 ? 56 : 40); }
       if (!o.practice) {
-        timer = setTimeout(go, scored ? 5600 : 3600);
+        timer = setTimeout(go, vaulted ? 2200 : scored ? 4800 : [2200, 2300, 2400, 2800, 3200, 3400, 3400][t]);
         box.addEventListener("click", function () { go(); });
         document.addEventListener("keydown", onKey);
       }
@@ -1034,7 +1037,7 @@
       if (o.seek != null && field.seek) field.seek(o.seek);
     };
     window.ddDemo = { play: demoRun, sack: function (o) { demoRun(0, o); }, resume: function () { field.seek && field.seek(null); }, field: field,
-      team: function (code) { return loadStadium(code || ""); },
+      team: function (code) { return loadStadium(code || ""); }, vault: function (id) { return DDVault.show(DDVault.byId(id), stage); },
       list: { 1: "Checkdown", 2: "Quick Slant", 3: "Chain Mover", 4: "Chunk Play", 5: "Bomb", "6 (variant 0/1/2)": "Highlight Reel TD" } };
   }
 
@@ -1052,6 +1055,11 @@
     return api(url).then(function (r) {
       if (previewCode == null) setNavAuth(r ? !!r.signed_in : null);
       if (field.setTeam && r && (r.signed_in || previewCode != null)) field.setTeam(r.stadium || null);
+      if (r && r.stadium && !window.DDVault) {
+        var vs = document.createElement("script"); vs.src = "/play-vault.js";
+        vs.onload = function () { var l = DDVault.load("/api/play/vault?team=" + r.stadium.home.code + (previewCode != null ? "&preview=1" : "")); if (previewCode != null && /[?&]browse=1/.test(location.search)) l.then(function () { DDVault.browse(stage); }); };
+        document.head.appendChild(vs);
+      }
       return r;
     }).catch(function () { return null; });
   }

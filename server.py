@@ -55,6 +55,7 @@ from engine import daily_drive_history_snapshot as dd_history_snapshot
 from engine import daily_drive_pool
 from engine import daily_drive_scores as dd_scores
 from engine import dd_stadium
+from engine import dd_vault
 from engine import data as data_layer
 from engine import db
 from engine import espn as espn_layer
@@ -2568,14 +2569,31 @@ def play_stadium(request: Request, team: Optional[str] = None, preview: bool = F
     user = _play_user(request)
     if not user:
         return {"signed_in": False, "stadium": None}
+    return _clean({"signed_in": True, "stadium": dd_stadium.stadium(_favorite_team(user, team), today)})
+
+
+def _favorite_team(user, team):
+    """This browser's saved pick if it is a real team, else the account's saved team, else ""."""
     code = (team or "").upper()
-    if code not in dd_stadium.UNIFORMS:
-        try:
-            code = (db.get_settings(user["id"]).get("theme") or "").upper()
-        except Exception as e:
-            print(f"[play] stadium team lookup failed: {type(e).__name__}")
-            code = ""
-    return _clean({"signed_in": True, "stadium": dd_stadium.stadium(code, today)})
+    if code in dd_stadium.UNIFORMS:
+        return code
+    try:
+        return (db.get_settings(user["id"]).get("theme") or "").upper()
+    except Exception as e:
+        print(f"[play] stadium team lookup failed: {type(e).__name__}")
+        return ""
+
+
+@app.get("/api/play/vault", dependencies=[Depends(play_rate_limit)])
+def play_vault(request: Request, team: Optional[str] = None, preview: bool = False):
+    """The Team Vault: real iconic plays for the player's favorite team, shown on rare answers. Signed-in only, like the
+    team field; preview=1 is the dev demo page (/play?demo=1&team=SF), and the plays are public history."""
+    if preview:
+        return _clean({"signed_in": None, **dd_vault.for_team(team)})
+    user = _play_user(request)
+    if not user:
+        return {"signed_in": False, "moments": []}
+    return _clean({"signed_in": True, **dd_vault.for_team(_favorite_team(user, team))})
 
 
 @app.get("/play", include_in_schema=False)
@@ -2591,6 +2609,11 @@ def _play_js():
 @app.get("/play-field.js", include_in_schema=False)
 def _play_field_js():
     return FileResponse("static/play-field.js", media_type="text/javascript", headers={"Cache-Control": "no-cache"})
+
+
+@app.get("/play-vault.js", include_in_schema=False)
+def _play_vault_js():
+    return FileResponse("static/play-vault.js", media_type="text/javascript", headers={"Cache-Control": "no-cache"})
 
 
 @app.get("/play.css", include_in_schema=False)

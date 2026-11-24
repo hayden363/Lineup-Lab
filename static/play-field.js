@@ -82,14 +82,14 @@
       s.end = P2(-14.6, g); s.lag = 0.8; s.cov = { lbL: 0.5 };
     } else if (tier === 2) {                                       // Quick Slant: stem, sharp 45-degree cut inside, line drive, thin white trail, zoom on the catch
       a = splitAir(7, g, score); var st = Math.min(2.6, a * 0.4);
-      s.rk = "wrR"; s.tk = "lbR"; s.throwDur = 0.5; s.yacDur = 0.62; s.camDur = 0.55; s.arc = 13; s.bscale = 1.18; s.trail = "thin"; s.zoomAt = 1.22; s.rch = 0.62;
+      s.rk = "wrR"; s.tk = "lbR"; s.throwDur = 0.5; s.yacDur = 0.6; s.camDur = 0.4; s.arc = 13; s.bscale = 1.18; s.trail = "thin"; s.zoomAt = 1.22; s.rch = 0.62;
       s.route = makePath([seg(P2(15, 0), P2(15, st)), seg(P2(15, st), P2(15 - (a - st), a))]);
       s.catchPt = P2(15 - (a - st), a);
       s.yac = makePath([[s.catchPt, P2(s.catchPt.x - 1.2, a + (g - a) * 0.4), P2(s.catchPt.x - 2.4, a + (g - a) * 0.75), P2(s.catchPt.x - 3, g)]]);
       s.end = P2(s.catchPt.x - 3, g); s.lag = 1.1;
     } else if (tier === 3) {                                       // Chain Mover: deep dig past the first-down line, medium arc
       a = splitAir(16, g, score); var stem = Math.max(2, a - 1.5);
-      s.rk = "wrL"; s.tk = "sL"; s.throwDur = 0.8; s.yacDur = 0.66; s.arc = 58; s.bscale = 1.5; s.lead = 0.2; s.lag = 1.6; s.cov = { sL: 0.2 }; s.zoomAt = 1.14; s.rch = 0.85;
+      s.rk = "wrL"; s.tk = "sL"; s.throwDur = 0.72; s.yacDur = 0.62; s.camDur = 0.45; s.arc = 58; s.bscale = 1.5; s.lead = 0.2; s.lag = 1.6; s.cov = { sL: 0.2 }; s.zoomAt = 1.14; s.rch = 0.85;
       s.route = makePath([seg(P2(-15, 0), P2(-15, stem)), seg(P2(-15, stem), P2(-4.5, a))]);
       s.catchPt = P2(-4.5, a);
       s.yac = makePath([[s.catchPt, P2(-3, a + (g - a) * 0.4), P2(-1.5, a + (g - a) * 0.75), P2(-0.8, g)]]);
@@ -156,7 +156,7 @@
     var TU = null;     // the favorite-team skin, derived once by setTeam (null = the Lineup Lab default look)
     // Pixel-art players in a modern scene: each player is drawn small on its own sprite canvas, outlined 1px, then
     // blitted up with smoothing off so the pixels stay crisp. The field, lights, ball and effects stay smooth.
-    var PIX = false, PXC = null, PXX = null, OLC = null, OLX = null, PXN = 112, PXO = [56, 94];
+    var PIX = false, PXC = null, PXX = null, OLC = null, OLX = null, PXN = 112, PXO = [56, 94], PXCOLS = 6, PXCELL = 114;
     var GLY = ["111101101101111", "010110010010111", "111001111100111", "111001111001111", "101101111001001", "111100111001111", "111100111101111", "111001010010010", "111101111101111", "111101111001111"];
     function pixNum(str, cx, cy, fg, bg) {      // 3x5 pixel digits, with a 1px drop outline
       var m = ctx.getTransform(), ax = m.a * cx + m.c * cy + m.e, ay = m.b * cx + m.d * cy + m.f;     // snap to whole sprite pixels, upright
@@ -168,20 +168,38 @@
       }
       ctx.restore();
     }
-    function drawPix(e, sx, sy, k) {
-      if (!PXC) { PXC = document.createElement("canvas"); PXC.width = PXC.height = PXN; PXX = PXC.getContext("2d"); OLC = document.createElement("canvas"); OLC.width = OLC.height = PXN; OLX = OLC.getContext("2d"); }
-      var kp = Math.min(0.8, k), sc = k / kp, ox = PXO[0], oy = PXO[1], main = ctx;
-      PXX.setTransform(1, 0, 0, 1, 0, 0); PXX.clearRect(0, 0, PXN, PXN);
-      ctx = PXX; PIX = true; try { drawSprite(e, ox, oy, kp); } finally { ctx = main; PIX = false; }
-      e.hsx = sx + (e.hsx - ox) * sc; e.hsy = sy + (e.hsy - oy) * sc;          // the ball is pinned to the hand on screen
-      OLX.globalCompositeOperation = "source-over"; OLX.clearRect(0, 0, PXN, PXN);
+    // Every player is drawn once per frame into one shared sheet, outlined in one pass, then stamped onto the field. (Building
+    // each player on his own scratch canvas made the browser copy that canvas about 20 times a frame, the main cause of lag.)
+    function bakeSprites() {
+      var i, e, k, kp, cx, cy, ox = PXO[0], oy = PXO[1], main = ctx, rows = Math.ceil(E.length / PXCOLS), sw = PXCOLS * PXCELL, sh = rows * PXCELL;
+      if (!PXC) {
+        PXC = document.createElement("canvas"); PXC.width = sw; PXC.height = sh; PXX = PXC.getContext("2d");
+        OLC = document.createElement("canvas"); OLC.width = sw; OLC.height = sh; OLX = OLC.getContext("2d");
+      }
+      PXX.setTransform(1, 0, 0, 1, 0, 0); PXX.clearRect(0, 0, sw, sh);
+      ctx = PXX; PIX = true;
+      try {
+        for (i = 0; i < E.length; i++) {
+          e = E[i]; pj(e.wx, e.wy);
+          if (!(PR.y > -80 && PR.y < H + 120)) continue;
+          k = ksz(PR.s); kp = Math.min(0.8, k); cx = (i % PXCOLS) * PXCELL + 1; cy = ((i / PXCOLS) | 0) * PXCELL + 1; e.cx = cx; e.cy = cy;
+          ctx.save(); ctx.beginPath(); ctx.rect(cx, cy, PXN, PXN); ctx.clip(); ctx.translate(cx, cy);
+          drawSprite(e, ox, oy, kp);
+          ctx.restore();
+        }
+      } finally { ctx = main; PIX = false; }
+      OLX.globalCompositeOperation = "source-over"; OLX.clearRect(0, 0, sw, sh);
       OLX.drawImage(PXC, -1, 0); OLX.drawImage(PXC, 1, 0); OLX.drawImage(PXC, 0, -1); OLX.drawImage(PXC, 0, 1);
-      OLX.globalCompositeOperation = "source-in"; OLX.fillStyle = "#05080f"; OLX.fillRect(0, 0, PXN, PXN);
+      OLX.globalCompositeOperation = "source-in"; OLX.fillStyle = "#05080f"; OLX.fillRect(0, 0, sw, sh);
       OLX.globalCompositeOperation = "source-over"; OLX.drawImage(PXC, 0, 0);
+    }
+    function drawPix(e, sx, sy, k) {
+      var kp = Math.min(0.8, k), sc = k / kp, ox = PXO[0], oy = PXO[1];
+      e.hsx = sx + (e.hsx - ox) * sc; e.hsy = sy + (e.hsy - oy) * sc;          // the ball is pinned to the hand on screen
       var wb = e.t === "ol" || e.t === "dl" ? 1.1 : 1, shs = 1 - Math.min(0.5, e.z / 36);                 // ground shadow, snapped to whole pixels
       ctx.fillStyle = "rgba(0,0,0,0.38)"; ctx.fillRect(Math.round(sx - 7 * k * wb * shs), Math.round(sy - 1.6 * k * shs), Math.round(14 * k * wb * shs), Math.max(2, Math.round(3.4 * k * shs)));
       ctx.imageSmoothingEnabled = false;
-      ctx.drawImage(OLC, Math.round(sx - ox * sc), Math.round(sy - oy * sc), PXN * sc, PXN * sc);
+      ctx.drawImage(OLC, e.cx, e.cy, PXN, PXN, Math.round(sx - ox * sc), Math.round(sy - oy * sc), PXN * sc, PXN * sc);
       ctx.imageSmoothingEnabled = true;
     }
     var rnd = rng(7);
@@ -550,7 +568,7 @@
       var Sn = mk(4, 4); Sn.x.fillStyle = "rgba(0,0,0,0.5)"; Sn.x.fillRect(0, 0, 4, 1); scanPat = ctx.createPattern(Sn.c, "repeat");
       vignette = ctx.createRadialGradient(W / 2, H * 0.5, Math.min(W, H) * 0.34, W / 2, H * 0.5, Math.max(W, H) * 0.8); vignette.addColorStop(0, "rgba(0,0,0,0)"); vignette.addColorStop(1, "rgba(0,0,0,0.66)");
       fogG = ctx.createLinearGradient(0, 0, 0, H * 0.5); fogG.addColorStop(0, "rgba(6,12,24,0.78)"); fogG.addColorStop(0.55, "rgba(8,18,34,0.3)"); fogG.addColorStop(1, "rgba(8,18,34,0)");
-      sceneC = mk(W, H); SK[8] = 0;
+      var n = Math.max(2, Math.round(dpr * 1.5)), sc = document.createElement("canvas"); LR = dpr / n; sc.width = Math.round(W * LR); sc.height = Math.round(H * LR); sceneC = { c: sc, x: sc.getContext("2d") }; SK[8] = 0;
     }
 
     // ---------------------------------------------------------------- the field
@@ -879,6 +897,7 @@
       for (i = 0; i < E.length; i++) { IT[n].y = E[i].wy; IT[n].e = E[i]; n++; }
       if (!air) { IT[n].y = (owner ? owner.wy : g.y) - 0.02; IT[n].e = null; n++; }
       for (i = 1; i < n; i++) { var it = IT[i], j = i - 1; while (j >= 0 && IT[j].y < it.y) { IT[j + 1] = IT[j]; j--; } IT[j + 1] = it; }
+      bakeSprites();
       for (i = 0; i < n; i++) {
         e = IT[i].e;
         if (e) { pj(e.wx, e.wy); if (PR.y > -80 && PR.y < H + 120) drawPix(e, PR.x, PR.y, ksz(PR.s)); }
@@ -979,10 +998,10 @@
       if (z !== 1 || ox || oy) {
         // broadcast camera: follow the ball (or the receiver's feet), push in toward screen centre as the zoom grows
         pj(g.x, g.y); var kk = ksz(PR.s), fx = PR.x, fy = PR.y - g.h * kk * (1 - S.fLow), bl = z > 1 ? clamp((z - 1) / 0.5, 0, 1) * 0.9 : 0;
-        ctx.translate(fx + (W / 2 - fx) * bl + ox, fy + (H * 0.47 - fy) * bl + oy); ctx.scale(z, z); ctx.translate(-fx, -fy);
-        drawScene();
-      } else if (sceneUsable()) { ctx.drawImage(sceneC.c, 0, 0, W, H); }
-      else drawScene();
+        var tx = fx + (W / 2 - fx) * bl + ox, ty = fy + (H * 0.47 - fy) * bl + oy;
+        lowScene(tx, ty, z, fx, fy); SK[8] = 0; blitScene();
+        ctx.translate(tx, ty); ctx.scale(z, z); ctx.translate(-fx, -fy);
+      } else { if (sceneStale()) lowScene(); blitScene(); }
       drawCrowdFlashes(); drawEntities(); drawFx();
       ctx.restore();
       ctx.fillStyle = vignette; ctx.fillRect(0, 0, W, H);
@@ -992,13 +1011,19 @@
       if (f) { var fa = (t - f.t0) / f.dur; if (fa >= 1) S.flash = null; else { ctx.globalAlpha = f.a * (1 - fa) * (1 - fa); ctx.fillStyle = f.c; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1; } }
       if (S.fade > 0.003) { ctx.globalAlpha = S.fade; ctx.fillStyle = "#03050a"; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1; }
     }
-    // the static scene (backdrop, turf, paint, markers) is cached while the camera is still
-    function sceneUsable() {
-      if (S.time - S.fdPulse < 0.8 || !sceneC) return false;
-      var K = SK;
-      if (K[0] === S.cam && K[1] === S.los && K[2] === S.losLine && K[3] === S.fd && K[4] === (S.fdGreen ? 1 : 0) && K[5] === W && K[6] === H && K[7] === L.ay && K[8] === 1) return true;
-      K[0] = S.cam; K[1] = S.los; K[2] = S.losLine; K[3] = S.fd; K[4] = S.fdGreen ? 1 : 0; K[5] = W; K[6] = H; K[7] = L.ay; K[8] = 1;
-      var main = ctx; ctx = sceneC.x; ctx.setTransform(dpr, 0, 0, dpr, 0, 0); drawScene(); ctx = main; return true;
+    // the scene (backdrop, turf, paint, markers) is drawn small and scaled up in hard pixels, and reused while the camera is still
+    var LR = 1;
+    function lowScene(tx, ty, z, fx, fy) {
+      var main = ctx; ctx = sceneC.x; ctx.setTransform(LR, 0, 0, LR, 0, 0);
+      if (z) { ctx.translate(tx, ty); ctx.scale(z, z); ctx.translate(-fx, -fy); }
+      drawScene(); ctx = main;
+    }
+    function blitScene() { ctx.imageSmoothingEnabled = false; ctx.drawImage(sceneC.c, 0, 0, W, H); ctx.imageSmoothingEnabled = true; }
+    function sceneStale() {
+      var K = SK, pulse = S.time - S.fdPulse < 0.8;
+      if (!pulse && K[0] === S.cam && K[1] === S.los && K[2] === S.losLine && K[3] === S.fd && K[4] === (S.fdGreen ? 1 : 0) && K[5] === W && K[6] === H && K[7] === L.ay && K[8] === 1) return false;
+      K[0] = S.cam; K[1] = S.los; K[2] = S.losLine; K[3] = S.fd; K[4] = S.fdGreen ? 1 : 0; K[5] = W; K[6] = H; K[7] = L.ay; K[8] = pulse ? 0 : 1;
+      return true;
     }
     // ---------------------------------------------------------------- the loop
     function movingNow() { return !!(P || R || S.anyFx || S.flash || S.shake || S.bars > 0.01 || S.fade > 0.003 || S.fade !== S.fadeTarget); }

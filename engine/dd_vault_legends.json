@@ -1,0 +1,3023 @@
+[
+ {
+  "team": "LV",
+  "opp": "LAC",
+  "title": "THE HOLY ROLLER",
+  "date": "1978-09-10",
+  "game": "Raiders at Chargers",
+  "kind": "fumble",
+  "yards": 14,
+  "td": true,
+  "from": 14,
+  "qb": {
+   "name": "Ken Stabler",
+   "number": 12
+  },
+  "target": {
+   "name": "Dave Casper",
+   "number": 87
+  },
+  "named": true,
+  "source": "https://en.wikipedia.org/wiki/Holy_Roller_(American_football)",
+  "side": 0,
+  "leap": false,
+  "depth": 2
+ },
+ {
+  "team": "LV",
+  "opp": "MIA",
+  "title": "THE SEA OF HANDS",
+  "date": "1974-12-21",
+  "game": "AFC Divisional",
+  "kind": "pass",
+  "yards": 8,
+  "td": true,
+  "from": 8,
+  "qb": {
+   "name": "Ken Stabler",
+   "number": 12
+  },
+  "target": {
+   "name": "Clarence Davis",
+   "number": null
+  },
+  "named": true,
+  "source": "https://en.wikipedia.org/wiki/The_Sea_of_Hands",
+  "side": -1,
+  "leap": true,
+  "depth": 2
+ },
+ {
+  "team": "LV",
+  "opp": "MIN",
+  "title": "BILETNIKOFF TO THE 1",
+  "date": "1977-01-09",
+  "game": "Super Bowl XI",
+  "kind": "pass",
+  "yards": 18,
+  "td": false,
+  "from": 19,
+  "qb": {
+   "name": "Ken Stabler",
+   "number": 12
+  },
+  "target": {
+   "name": "Fred Biletnikoff",
+   "number": 25
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/Super_Bowl_XI",
+  "side": 1,
+  "leap": false,
+  "depth": 0
+ },
+ {
+  "team": "LV",
+  "opp": "WAS",
+  "title": "ALLEN'S 74",
+  "date": "1984-01-22",
+  "game": "Super Bowl XVIII",
+  "kind": "run",
+  "yards": 74,
+  "td": true,
+  "from": 74,
+  "qb": null,
+  "target": {
+   "name": "Marcus Allen",
+   "number": 32
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/Super_Bowl_XVIII",
+  "side": -1,
+  "leap": false,
+  "depth": 2
+ },
+ {
+  "team": "SF",
+  "opp": "DAL",
+  "title": "THE CATCH",
+  "date": "1982-01-10",
+  "game": "NFC Championship",
+  "kind": "pass",
+  "yards": 6,
+  "td": true,
+  "from": 6,
+  "qb": {
+   "name": "Joe Montana",
+   "number": 16
+  },
+  "target": {
+   "name": "Dwight Clark",
+   "number": 87
+  },
+  "named": true,
+  "source": "https://en.wikipedia.org/wiki/The_Catch_(American_football)",
+  "side": 1,
+  "leap": true,
+  "depth": 8
+ },
+ {
+  "team": "SF",
+  "opp": "GB",
+  "title": "THE CATCH II",
+  "date": "1999-01-03",
+  "game": "NFC Wild Card",
+  "kind": "pass",
+  "yards": 25,
+  "td": true,
+  "from": 25,
+  "qb": {
+   "name": "Steve Young",
+   "number": 8
+  },
+  "target": {
+   "name": "Terrell Owens",
+   "number": 81
+  },
+  "named": true,
+  "source": "https://en.wikipedia.org/wiki/The_Catch_II",
+  "side": 0,
+  "leap": false,
+  "depth": 1
+ },
+ {
+  "team": "SF",
+  "opp": "LAC",
+  "title": "RICE GOES DEEP",
+  "date": "1995-01-29",
+  "game": "Super Bowl XXIX",
+  "kind": "pass",
+  "yards": 44,
+  "td": true,
+  "from": 44,
+  "qb": {
+   "name": "Steve Young",
+   "number": 8
+  },
+  "target": {
+   "name": "Jerry Rice",
+   "number": 80
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/Super_Bowl_XXIX",
+  "side": -1,
+  "leap": false,
+  "depth": 3
+ },
+ {
+  "team": "SF",
+  "opp": "CIN",
+  "title": "34 SECONDS LEFT",
+  "date": "1989-01-22",
+  "game": "Super Bowl XXIII",
+  "kind": "pass",
+  "yards": 10,
+  "td": true,
+  "from": 10,
+  "qb": {
+   "name": "Joe Montana",
+   "number": 16
+  },
+  "target": {
+   "name": "John Taylor",
+   "number": 82
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/Super_Bowl_XXIII",
+  "side": 0,
+  "leap": false,
+  "depth": 2
+ },
+ {
+  "team": "PIT",
+  "opp": "LV",
+  "title": "THE IMMACULATE RECEPTION",
+  "date": "1972-12-23",
+  "game": "AFC Divisional",
+  "kind": "pass",
+  "yards": 60,
+  "td": true,
+  "from": 60,
+  "qb": {
+   "name": "Terry Bradshaw",
+   "number": 12
+  },
+  "target": {
+   "name": "Franco Harris",
+   "number": 32
+  },
+  "named": true,
+  "source": "https://en.wikipedia.org/wiki/Immaculate_Reception"
+ },
+ {
+  "team": "PIT",
+  "opp": "DAL",
+  "title": "SWANN'S LEAP",
+  "date": "1976-01-18",
+  "game": "Super Bowl X",
+  "kind": "pass",
+  "yards": 53,
+  "td": false,
+  "from": 90,
+  "qb": {
+   "name": "Terry Bradshaw",
+   "number": 12
+  },
+  "target": {
+   "name": "Lynn Swann",
+   "number": 88
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/Super_Bowl_X"
+ },
+ {
+  "team": "PIT",
+  "opp": "LA",
+  "title": "STALLWORTH'S 73-YARD TD",
+  "date": "1980-01-20",
+  "game": "Super Bowl XIV",
+  "kind": "pass",
+  "yards": 73,
+  "td": true,
+  "from": 73,
+  "qb": {
+   "name": "Terry Bradshaw",
+   "number": 12
+  },
+  "target": {
+   "name": "John Stallworth",
+   "number": 82
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/Super_Bowl_XIV"
+ },
+ {
+  "team": "PIT",
+  "opp": "SEA",
+  "title": "PARKER'S RECORD RUN",
+  "date": "2006-02-05",
+  "game": "Super Bowl XL",
+  "kind": "run",
+  "yards": 75,
+  "td": true,
+  "from": 75,
+  "qb": null,
+  "target": {
+   "name": "Willie Parker",
+   "number": 39
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/Super_Bowl_XL"
+ },
+ {
+  "team": "PIT",
+  "opp": "ARI",
+  "title": "THE TAMPA TOE TAP",
+  "date": "2009-02-01",
+  "game": "Super Bowl XLIII",
+  "kind": "pass",
+  "yards": 6,
+  "td": true,
+  "from": 6,
+  "qb": {
+   "name": "Ben Roethlisberger",
+   "number": 7
+  },
+  "target": {
+   "name": "Santonio Holmes",
+   "number": 10
+  },
+  "named": true,
+  "source": "https://en.wikipedia.org/wiki/Super_Bowl_XLIII"
+ },
+ {
+  "team": "LV",
+  "opp": "IND",
+  "title": "GHOST TO THE POST",
+  "date": "1977-12-24",
+  "game": "AFC Divisional",
+  "kind": "pass",
+  "yards": 42,
+  "td": false,
+  "from": 56,
+  "qb": {
+   "name": "Ken Stabler",
+   "number": 12
+  },
+  "target": {
+   "name": "Dave Casper",
+   "number": 87
+  },
+  "named": true,
+  "source": "https://en.wikipedia.org/wiki/Ghost_to_the_Post"
+ },
+ {
+  "team": "NE",
+  "opp": "PIT",
+  "title": "MARTIN'S 78-YARD RUN",
+  "date": "1997-01-05",
+  "game": "AFC Divisional",
+  "kind": "run",
+  "yards": 78,
+  "td": true,
+  "from": 78,
+  "qb": null,
+  "target": {
+   "name": "Curtis Martin",
+   "number": 28
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/1996%E2%80%9397_NFL_playoffs"
+ },
+ {
+  "team": "NE",
+  "opp": "NYG",
+  "title": "MOSS'S RECORD 23RD TD",
+  "date": "2007-12-29",
+  "game": "Week 17",
+  "kind": "pass",
+  "yards": 65,
+  "td": true,
+  "from": 65,
+  "qb": {
+   "name": "Tom Brady",
+   "number": 12
+  },
+  "target": {
+   "name": "Randy Moss",
+   "number": 81
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/2007_New_England_Patriots_season"
+ },
+ {
+  "team": "NE",
+  "opp": "ATL",
+  "title": "EDELMAN'S CATCH",
+  "date": "2017-02-05",
+  "game": "Super Bowl LI",
+  "kind": "pass",
+  "yards": 23,
+  "td": false,
+  "from": 64,
+  "qb": {
+   "name": "Tom Brady",
+   "number": 12
+  },
+  "target": {
+   "name": "Julian Edelman",
+   "number": 11
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/Super_Bowl_LI"
+ },
+ {
+  "team": "NE",
+  "opp": "ATL",
+  "title": "WHITE'S OVERTIME WINNER",
+  "date": "2017-02-05",
+  "game": "Super Bowl LI",
+  "kind": "run",
+  "yards": 2,
+  "td": true,
+  "from": 2,
+  "qb": null,
+  "target": {
+   "name": "James White",
+   "number": 28
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/Super_Bowl_LI"
+ },
+ {
+  "team": "MIA",
+  "opp": "WAS",
+  "title": "TWILLEY'S SUPER BOWL TD",
+  "date": "1973-01-14",
+  "game": "Super Bowl VII",
+  "kind": "pass",
+  "yards": 28,
+  "td": true,
+  "from": 28,
+  "qb": {
+   "name": "Bob Griese",
+   "number": 12
+  },
+  "target": {
+   "name": "Howard Twilley",
+   "number": 81
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/Super_Bowl_VII"
+ },
+ {
+  "team": "MIA",
+  "opp": "MIN",
+  "title": "CSONKA'S SUPER BOWL TD",
+  "date": "1974-01-13",
+  "game": "Super Bowl VIII",
+  "kind": "run",
+  "yards": 5,
+  "td": true,
+  "from": 5,
+  "qb": null,
+  "target": {
+   "name": "Larry Csonka",
+   "number": 39
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/Super_Bowl_VIII"
+ },
+ {
+  "team": "MIA",
+  "opp": "LAC",
+  "title": "STROCK'S HOOK AND LATERAL",
+  "date": "1982-01-02",
+  "game": "AFC Divisional",
+  "kind": "pass",
+  "yards": 40,
+  "td": true,
+  "from": 40,
+  "qb": {
+   "name": "Don Strock",
+   "number": 10
+  },
+  "target": {
+   "name": "Tony Nathan",
+   "number": 22
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/Epic_in_Miami"
+ },
+ {
+  "team": "MIA",
+  "opp": "NYJ",
+  "title": "THE CLOCK PLAY",
+  "date": "1994-11-27",
+  "game": "Week 13",
+  "kind": "pass",
+  "yards": 8,
+  "td": true,
+  "from": 8,
+  "qb": {
+   "name": "Dan Marino",
+   "number": 13
+  },
+  "target": {
+   "name": "Mark Ingram",
+   "number": 82
+  },
+  "named": true,
+  "source": "https://en.wikipedia.org/wiki/Clock_Play"
+ },
+ {
+  "team": "MIA",
+  "opp": "NE",
+  "title": "MIRACLE IN MIAMI",
+  "date": "2018-12-09",
+  "game": "Week 14",
+  "kind": "pass",
+  "yards": 69,
+  "td": true,
+  "from": 69,
+  "qb": {
+   "name": "Ryan Tannehill",
+   "number": 17
+  },
+  "target": {
+   "name": "Kenyan Drake",
+   "number": 32
+  },
+  "named": true,
+  "source": "https://en.wikipedia.org/wiki/Miracle_in_Miami"
+ },
+ {
+  "team": "NYJ",
+  "opp": "LV",
+  "title": "NAMATH TO MAYNARD",
+  "date": "1968-12-29",
+  "game": "AFL Championship",
+  "kind": "pass",
+  "yards": 6,
+  "td": true,
+  "from": 6,
+  "qb": {
+   "name": "Joe Namath",
+   "number": 12
+  },
+  "target": {
+   "name": "Don Maynard",
+   "number": 13
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/1968_American_Football_League_Championship_Game"
+ },
+ {
+  "team": "NYJ",
+  "opp": "IND",
+  "title": "SNELL'S SUPER BOWL III TD",
+  "date": "1969-01-12",
+  "game": "Super Bowl III",
+  "kind": "run",
+  "yards": 4,
+  "td": true,
+  "from": 4,
+  "qb": null,
+  "target": {
+   "name": "Matt Snell",
+   "number": 41
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/Super_Bowl_III"
+ },
+ {
+  "team": "NYJ",
+  "opp": "MIA",
+  "title": "WALKER'S OVERTIME WINNER",
+  "date": "1986-09-21",
+  "game": "Week 3",
+  "kind": "pass",
+  "yards": 43,
+  "td": true,
+  "from": 43,
+  "qb": {
+   "name": "Ken O'Brien",
+   "number": 7
+  },
+  "target": {
+   "name": "Wesley Walker",
+   "number": 85
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/1986_New_York_Jets_season"
+ },
+ {
+  "team": "NYJ",
+  "opp": "SEA",
+  "title": "THE PHANTOM TOUCHDOWN",
+  "date": "1998-12-06",
+  "game": "Week 14",
+  "kind": "run",
+  "yards": 5,
+  "td": true,
+  "from": 5,
+  "qb": null,
+  "target": {
+   "name": "Vinny Testaverde",
+   "number": 16
+  },
+  "named": true,
+  "source": "https://en.wikipedia.org/wiki/Vinny_Testaverde"
+ },
+ {
+  "team": "NYJ",
+  "opp": "CLE",
+  "title": "HOLMES'S OVERTIME WINNER",
+  "date": "2010-11-14",
+  "game": "Week 10",
+  "kind": "pass",
+  "yards": 37,
+  "td": true,
+  "from": 37,
+  "qb": {
+   "name": "Mark Sanchez",
+   "number": 6
+  },
+  "target": {
+   "name": "Santonio Holmes",
+   "number": 10
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/2010_New_York_Jets_season"
+ },
+ {
+  "team": "BUF",
+  "opp": "LAC",
+  "title": "WARLICK'S TITLE TD",
+  "date": "1965-12-26",
+  "game": "AFL Championship",
+  "kind": "pass",
+  "yards": 18,
+  "td": true,
+  "from": 18,
+  "qb": {
+   "name": "Jack Kemp",
+   "number": 15
+  },
+  "target": {
+   "name": "Ernie Warlick",
+   "number": 84
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/1965_American_Football_League_Championship_Game"
+ },
+ {
+  "team": "BUF",
+  "opp": "NE",
+  "title": "SIMPSON'S 80-YARD RUN",
+  "date": "1973-09-16",
+  "game": "Week 1",
+  "kind": "run",
+  "yards": 80,
+  "td": true,
+  "from": 80,
+  "qb": null,
+  "target": {
+   "name": "O. J. Simpson",
+   "number": 32
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/1973_Buffalo_Bills_season"
+ },
+ {
+  "team": "BUF",
+  "opp": "TEN",
+  "title": "REED'S COMEBACK GO-AHEAD TD",
+  "date": "1993-01-03",
+  "game": "AFC Wild Card",
+  "kind": "pass",
+  "yards": 17,
+  "td": true,
+  "from": 17,
+  "qb": {
+   "name": "Frank Reich",
+   "number": 14
+  },
+  "target": {
+   "name": "Andre Reed",
+   "number": 83
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/The_Comeback_(American_football)"
+ },
+ {
+  "team": "BUF",
+  "opp": "KC",
+  "title": "DAVIS ON 4TH AND 13",
+  "date": "2022-01-23",
+  "game": "AFC Divisional",
+  "kind": "pass",
+  "yards": 27,
+  "td": true,
+  "from": 27,
+  "qb": {
+   "name": "Josh Allen",
+   "number": 17
+  },
+  "target": {
+   "name": "Gabe Davis",
+   "number": 13
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/2021_AFC_Divisional_playoff_game_(Buffalo%E2%80%93Kansas_City)"
+ },
+ {
+  "team": "CLE",
+  "opp": "LA",
+  "title": "LAVELLI'S TITLE GAME TD",
+  "date": "1950-12-24",
+  "game": "NFL Championship",
+  "kind": "pass",
+  "yards": 39,
+  "td": true,
+  "from": 39,
+  "qb": {
+   "name": "Otto Graham",
+   "number": 60
+  },
+  "target": {
+   "name": "Dante Lavelli",
+   "number": 56
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/1950_NFL_Championship_Game"
+ },
+ {
+  "team": "CLE",
+  "opp": "DET",
+  "title": "JIM BROWN'S TITLE GAME TD",
+  "date": "1957-12-29",
+  "game": "NFL Championship",
+  "kind": "run",
+  "yards": 29,
+  "td": true,
+  "from": 29,
+  "qb": null,
+  "target": {
+   "name": "Jim Brown",
+   "number": 32
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/1957_NFL_Championship_Game"
+ },
+ {
+  "team": "CLE",
+  "opp": "IND",
+  "title": "COLLINS'S THIRD TITLE TD",
+  "date": "1964-12-27",
+  "game": "NFL Championship",
+  "kind": "pass",
+  "yards": 51,
+  "td": true,
+  "from": 51,
+  "qb": {
+   "name": "Frank Ryan",
+   "number": 13
+  },
+  "target": {
+   "name": "Gary Collins",
+   "number": 86
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/1964_NFL_Championship_Game"
+ },
+ {
+  "team": "CLE",
+  "opp": "DEN",
+  "title": "KOSAR TO BRENNAN",
+  "date": "1987-01-11",
+  "game": "AFC Championship",
+  "kind": "pass",
+  "yards": 48,
+  "td": true,
+  "from": 48,
+  "qb": {
+   "name": "Bernie Kosar",
+   "number": 19
+  },
+  "target": {
+   "name": "Brian Brennan",
+   "number": 86
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/1986_Cleveland_Browns_season"
+ },
+ {
+  "team": "DEN",
+  "opp": "CLE",
+  "title": "ELWAY TO JACKSON: THE DRIVE'S END",
+  "date": "1987-01-11",
+  "game": "AFC Championship",
+  "kind": "pass",
+  "yards": 5,
+  "td": true,
+  "from": 5,
+  "qb": {
+   "name": "John Elway",
+   "number": 7
+  },
+  "target": {
+   "name": "Mark Jackson",
+   "number": 80
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/1986_Denver_Broncos_season"
+ },
+ {
+  "team": "DEN",
+  "opp": "GB",
+  "title": "THE HELICOPTER",
+  "date": "1998-01-25",
+  "game": "Super Bowl XXXII",
+  "kind": "run",
+  "yards": 8,
+  "td": false,
+  "from": 12,
+  "qb": null,
+  "target": {
+   "name": "John Elway",
+   "number": 7
+  },
+  "named": true,
+  "source": "https://en.wikipedia.org/wiki/Super_Bowl_XXXII"
+ },
+ {
+  "team": "DEN",
+  "opp": "GB",
+  "title": "DAVIS'S WINNING TD",
+  "date": "1998-01-25",
+  "game": "Super Bowl XXXII",
+  "kind": "run",
+  "yards": 1,
+  "td": true,
+  "from": 1,
+  "qb": null,
+  "target": {
+   "name": "Terrell Davis",
+   "number": 30
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/Super_Bowl_XXXII"
+ },
+ {
+  "team": "DEN",
+  "opp": "ATL",
+  "title": "ROD SMITH'S 80-YARD TD",
+  "date": "1999-01-31",
+  "game": "Super Bowl XXXIII",
+  "kind": "pass",
+  "yards": 80,
+  "td": true,
+  "from": 80,
+  "qb": {
+   "name": "John Elway",
+   "number": 7
+  },
+  "target": {
+   "name": "Rod Smith",
+   "number": 80
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/Super_Bowl_XXXIII"
+ },
+ {
+  "team": "DEN",
+  "opp": "PIT",
+  "title": "TEBOW TO THOMAS",
+  "date": "2012-01-08",
+  "game": "AFC Wild Card",
+  "kind": "pass",
+  "yards": 80,
+  "td": true,
+  "from": 80,
+  "qb": {
+   "name": "Tim Tebow",
+   "number": 15
+  },
+  "target": {
+   "name": "Demaryius Thomas",
+   "number": 88
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/2011_Denver_Broncos_season"
+ },
+ {
+  "team": "KC",
+  "opp": "MIN",
+  "title": "65 TOSS POWER TRAP",
+  "date": "1970-01-11",
+  "game": "Super Bowl IV",
+  "kind": "run",
+  "yards": 5,
+  "td": true,
+  "from": 5,
+  "qb": null,
+  "target": {
+   "name": "Mike Garrett",
+   "number": 21
+  },
+  "named": true,
+  "source": "https://en.wikipedia.org/wiki/Super_Bowl_IV"
+ },
+ {
+  "team": "KC",
+  "opp": "MIN",
+  "title": "TAYLOR'S 46-YARD TD",
+  "date": "1970-01-11",
+  "game": "Super Bowl IV",
+  "kind": "pass",
+  "yards": 46,
+  "td": true,
+  "from": 46,
+  "qb": {
+   "name": "Len Dawson",
+   "number": 16
+  },
+  "target": {
+   "name": "Otis Taylor",
+   "number": 89
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/Super_Bowl_IV"
+ },
+ {
+  "team": "KC",
+  "opp": "SF",
+  "title": "JET CHIP WASP",
+  "date": "2020-02-02",
+  "game": "Super Bowl LIV",
+  "kind": "pass",
+  "yards": 44,
+  "td": false,
+  "from": 65,
+  "qb": {
+   "name": "Patrick Mahomes",
+   "number": 15
+  },
+  "target": {
+   "name": "Tyreek Hill",
+   "number": 10
+  },
+  "named": true,
+  "source": "https://en.wikipedia.org/wiki/Super_Bowl_LIV"
+ },
+ {
+  "team": "KC",
+  "opp": "PHI",
+  "title": "CORN DOG",
+  "date": "2023-02-12",
+  "game": "Super Bowl LVII",
+  "kind": "pass",
+  "yards": 5,
+  "td": true,
+  "from": 5,
+  "qb": {
+   "name": "Patrick Mahomes",
+   "number": 15
+  },
+  "target": {
+   "name": "Kadarius Toney",
+   "number": 19
+  },
+  "named": true,
+  "source": "https://en.wikipedia.org/wiki/Super_Bowl_LVII"
+ },
+ {
+  "team": "KC",
+  "opp": "SF",
+  "title": "TOM AND JERRY",
+  "date": "2024-02-11",
+  "game": "Super Bowl LVIII",
+  "kind": "pass",
+  "yards": 3,
+  "td": true,
+  "from": 3,
+  "qb": {
+   "name": "Patrick Mahomes",
+   "number": 15
+  },
+  "target": {
+   "name": "Mecole Hardman",
+   "number": 12
+  },
+  "named": true,
+  "source": "https://en.wikipedia.org/wiki/Super_Bowl_LVIII"
+ },
+ {
+  "team": "LAC",
+  "opp": "NE",
+  "title": "LINCOLN'S 67-YARD RUN",
+  "date": "1964-01-05",
+  "game": "AFL Championship",
+  "kind": "run",
+  "yards": 67,
+  "td": true,
+  "from": 67,
+  "qb": null,
+  "target": {
+   "name": "Keith Lincoln",
+   "number": 22
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/1963_American_Football_League_Championship_Game"
+ },
+ {
+  "team": "LAC",
+  "opp": "NE",
+  "title": "ALWORTH'S TITLE GAME TD",
+  "date": "1964-01-05",
+  "game": "AFL Championship",
+  "kind": "pass",
+  "yards": 48,
+  "td": true,
+  "from": 48,
+  "qb": {
+   "name": "Tobin Rote",
+   "number": 18
+  },
+  "target": {
+   "name": "Lance Alworth",
+   "number": 19
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/1963_American_Football_League_Championship_Game"
+ },
+ {
+  "team": "LAC",
+  "opp": "MIA",
+  "title": "WINSLOW IN THE EPIC",
+  "date": "1982-01-02",
+  "game": "AFC Divisional",
+  "kind": "pass",
+  "yards": 25,
+  "td": true,
+  "from": 25,
+  "qb": {
+   "name": "Dan Fouts",
+   "number": 14
+  },
+  "target": {
+   "name": "Kellen Winslow",
+   "number": 80
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/Epic_in_Miami"
+ },
+ {
+  "team": "LAC",
+  "opp": "PIT",
+  "title": "MARTIN'S AFC TITLE WINNER",
+  "date": "1995-01-15",
+  "game": "AFC Championship",
+  "kind": "pass",
+  "yards": 43,
+  "td": true,
+  "from": 43,
+  "qb": {
+   "name": "Stan Humphries",
+   "number": 12
+  },
+  "target": {
+   "name": "Tony Martin",
+   "number": 81
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/1994%E2%80%9395_NFL_playoffs"
+ },
+ {
+  "team": "LAC",
+  "opp": "IND",
+  "title": "SPROLES IN OVERTIME",
+  "date": "2009-01-03",
+  "game": "AFC Wild Card",
+  "kind": "run",
+  "yards": 22,
+  "td": true,
+  "from": 22,
+  "qb": null,
+  "target": {
+   "name": "Darren Sproles",
+   "number": 43
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/2008%E2%80%9309_NFL_playoffs"
+ },
+ {
+  "team": "IND",
+  "opp": "NYG",
+  "title": "AMECHE'S SUDDEN-DEATH TD",
+  "date": "1958-12-28",
+  "game": "NFL Championship",
+  "kind": "run",
+  "yards": 1,
+  "td": true,
+  "from": 1,
+  "qb": null,
+  "target": {
+   "name": "Alan Ameche",
+   "number": 35
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/1958_NFL_Championship_Game"
+ },
+ {
+  "team": "IND",
+  "opp": "DAL",
+  "title": "MACKEY'S TIPPED TD",
+  "date": "1971-01-17",
+  "game": "Super Bowl V",
+  "kind": "pass",
+  "yards": 75,
+  "td": true,
+  "from": 75,
+  "qb": {
+   "name": "Johnny Unitas",
+   "number": 19
+  },
+  "target": {
+   "name": "John Mackey",
+   "number": 88
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/Super_Bowl_V"
+ },
+ {
+  "team": "IND",
+  "opp": "LAC",
+  "title": "MANNING'S 49TH TD",
+  "date": "2004-12-26",
+  "game": "Week 16",
+  "kind": "pass",
+  "yards": 21,
+  "td": true,
+  "from": 21,
+  "qb": {
+   "name": "Peyton Manning",
+   "number": 18
+  },
+  "target": {
+   "name": "Brandon Stokley",
+   "number": 83
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/Peyton_Manning"
+ },
+ {
+  "team": "IND",
+  "opp": "CHI",
+  "title": "MANNING TO WAYNE",
+  "date": "2007-02-04",
+  "game": "Super Bowl XLI",
+  "kind": "pass",
+  "yards": 53,
+  "td": true,
+  "from": 53,
+  "qb": {
+   "name": "Peyton Manning",
+   "number": 18
+  },
+  "target": {
+   "name": "Reggie Wayne",
+   "number": 87
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/Super_Bowl_XLI"
+ },
+ {
+  "team": "TEN",
+  "opp": "LAC",
+  "title": "CANNON'S 88-YARD TITLE TD",
+  "date": "1961-01-01",
+  "game": "AFL Championship",
+  "kind": "pass",
+  "yards": 88,
+  "td": true,
+  "from": 88,
+  "qb": {
+   "name": "George Blanda",
+   "number": 16
+  },
+  "target": {
+   "name": "Billy Cannon",
+   "number": 20
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/1960_American_Football_League_Championship_Game"
+ },
+ {
+  "team": "TEN",
+  "opp": "LAC",
+  "title": "CANNON'S REPEAT TITLE TD",
+  "date": "1961-12-24",
+  "game": "AFL Championship",
+  "kind": "pass",
+  "yards": 35,
+  "td": true,
+  "from": 35,
+  "qb": {
+   "name": "George Blanda",
+   "number": 16
+  },
+  "target": {
+   "name": "Billy Cannon",
+   "number": 20
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/1961_American_Football_League_Championship_Game"
+ },
+ {
+  "team": "TEN",
+  "opp": "MIA",
+  "title": "CAMPBELL'S 81-YARD RUN",
+  "date": "1978-11-20",
+  "game": "Week 12",
+  "kind": "run",
+  "yards": 81,
+  "td": true,
+  "from": 81,
+  "qb": null,
+  "target": {
+   "name": "Earl Campbell",
+   "number": 34
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/1978_Houston_Oilers_season"
+ },
+ {
+  "team": "TEN",
+  "opp": "LA",
+  "title": "THE TACKLE",
+  "date": "2000-01-30",
+  "game": "Super Bowl XXXIV",
+  "kind": "pass",
+  "yards": 9,
+  "td": false,
+  "from": 10,
+  "qb": {
+   "name": "Steve McNair",
+   "number": 9
+  },
+  "target": {
+   "name": "Kevin Dyson",
+   "number": 87
+  },
+  "named": true,
+  "source": "https://en.wikipedia.org/wiki/Super_Bowl_XXXIV"
+ },
+ {
+  "team": "TEN",
+  "opp": "JAX",
+  "title": "HENRY'S 99-YARD RUN",
+  "date": "2018-12-06",
+  "game": "Week 14",
+  "kind": "run",
+  "yards": 99,
+  "td": true,
+  "from": 99,
+  "qb": null,
+  "target": {
+   "name": "Derrick Henry",
+   "number": 22
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/2018_Tennessee_Titans_season"
+ },
+ {
+  "team": "BAL",
+  "opp": "NE",
+  "title": "RICE'S 83-YARD RUN",
+  "date": "2010-01-10",
+  "game": "AFC Wild Card",
+  "kind": "run",
+  "yards": 83,
+  "td": true,
+  "from": 83,
+  "qb": null,
+  "target": {
+   "name": "Ray Rice",
+   "number": 27
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/2009%E2%80%9310_NFL_playoffs"
+ },
+ {
+  "team": "BAL",
+  "opp": "LV",
+  "title": "SHARPE'S 96-YARD TD",
+  "date": "2001-01-14",
+  "game": "AFC Championship",
+  "kind": "pass",
+  "yards": 96,
+  "td": true,
+  "from": 96,
+  "qb": {
+   "name": "Trent Dilfer",
+   "number": 8
+  },
+  "target": {
+   "name": "Shannon Sharpe",
+   "number": 82
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/2000%E2%80%9301_NFL_playoffs"
+ },
+ {
+  "team": "BAL",
+  "opp": "NYG",
+  "title": "STOKLEY'S SUPER BOWL TD",
+  "date": "2001-01-28",
+  "game": "Super Bowl XXXV",
+  "kind": "pass",
+  "yards": 38,
+  "td": true,
+  "from": 38,
+  "qb": {
+   "name": "Trent Dilfer",
+   "number": 8
+  },
+  "target": {
+   "name": "Brandon Stokley",
+   "number": 80
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/Super_Bowl_XXXV"
+ },
+ {
+  "team": "BAL",
+  "opp": "DEN",
+  "title": "MILE HIGH MIRACLE",
+  "date": "2013-01-12",
+  "game": "AFC Divisional",
+  "kind": "pass",
+  "yards": 70,
+  "td": true,
+  "from": 70,
+  "qb": {
+   "name": "Joe Flacco",
+   "number": 5
+  },
+  "target": {
+   "name": "Jacoby Jones",
+   "number": 12
+  },
+  "named": true,
+  "source": "https://en.wikipedia.org/wiki/Mile_High_Miracle"
+ },
+ {
+  "team": "BAL",
+  "opp": "SF",
+  "title": "JACOBY JONES'S FALLING TD",
+  "date": "2013-02-03",
+  "game": "Super Bowl XLVII",
+  "kind": "pass",
+  "yards": 56,
+  "td": true,
+  "from": 56,
+  "qb": {
+   "name": "Joe Flacco",
+   "number": 5
+  },
+  "target": {
+   "name": "Jacoby Jones",
+   "number": 12
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/Super_Bowl_XLVII"
+ },
+ {
+  "team": "CIN",
+  "opp": "SF",
+  "title": "ANDERSON'S SUPER BOWL RUN",
+  "date": "1982-01-24",
+  "game": "Super Bowl XVI",
+  "kind": "run",
+  "yards": 5,
+  "td": true,
+  "from": 5,
+  "qb": null,
+  "target": {
+   "name": "Ken Anderson",
+   "number": 14
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/Super_Bowl_XVI"
+ },
+ {
+  "team": "CIN",
+  "opp": "BAL",
+  "title": "BOYD'S LATE 49-YARD TD",
+  "date": "2017-12-31",
+  "game": "Week 17",
+  "kind": "pass",
+  "yards": 49,
+  "td": true,
+  "from": 49,
+  "qb": {
+   "name": "Andy Dalton",
+   "number": 14
+  },
+  "target": {
+   "name": "Tyler Boyd",
+   "number": 83
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/2017_Baltimore_Ravens_season"
+ },
+ {
+  "team": "CIN",
+  "opp": "LA",
+  "title": "MIXON'S HALFBACK PASS",
+  "date": "2022-02-13",
+  "game": "Super Bowl LVI",
+  "kind": "pass",
+  "yards": 6,
+  "td": true,
+  "from": 6,
+  "qb": {
+   "name": "Joe Mixon",
+   "number": 28
+  },
+  "target": {
+   "name": "Tee Higgins",
+   "number": 85
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/Super_Bowl_LVI"
+ },
+ {
+  "team": "JAX",
+  "opp": "BUF",
+  "title": "MEANS'S PLAYOFF BURST",
+  "date": "1996-12-28",
+  "game": "AFC Wild Card",
+  "kind": "run",
+  "yards": 30,
+  "td": true,
+  "from": 30,
+  "qb": null,
+  "target": {
+   "name": "Natrone Means",
+   "number": 20
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/1996%E2%80%9397_NFL_playoffs"
+ },
+ {
+  "team": "JAX",
+  "opp": "MIA",
+  "title": "TAYLOR'S 90-YARD RUN",
+  "date": "2000-01-15",
+  "game": "AFC Divisional",
+  "kind": "run",
+  "yards": 90,
+  "td": true,
+  "from": 90,
+  "qb": null,
+  "target": {
+   "name": "Fred Taylor",
+   "number": 28
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/1999_Jacksonville_Jaguars_season"
+ },
+ {
+  "team": "JAX",
+  "opp": "PIT",
+  "title": "GARRARD ON 4TH AND 2",
+  "date": "2008-01-05",
+  "game": "AFC Wild Card",
+  "kind": "run",
+  "yards": 32,
+  "td": false,
+  "from": 43,
+  "qb": null,
+  "target": {
+   "name": "David Garrard",
+   "number": 9
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/2007%E2%80%9308_NFL_playoffs"
+ },
+ {
+  "team": "HOU",
+  "opp": "DAL",
+  "title": "BRADFORD IN GAME ONE",
+  "date": "2002-09-08",
+  "game": "Week 1",
+  "kind": "pass",
+  "yards": 65,
+  "td": true,
+  "from": 65,
+  "qb": {
+   "name": "David Carr",
+   "number": 8
+  },
+  "target": {
+   "name": "Corey Bradford",
+   "number": 85
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/2002_Houston_Texans_season"
+ },
+ {
+  "team": "HOU",
+  "opp": "CIN",
+  "title": "WATSON'S 49-YARD RUN",
+  "date": "2017-09-14",
+  "game": "Week 2",
+  "kind": "run",
+  "yards": 49,
+  "td": true,
+  "from": 49,
+  "qb": null,
+  "target": {
+   "name": "Deshaun Watson",
+   "number": 4
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/2017_Cincinnati_Bengals_season"
+ },
+ {
+  "team": "HOU",
+  "opp": "BUF",
+  "title": "WATSON'S ESCAPE TO JONES",
+  "date": "2020-01-04",
+  "game": "AFC Wild Card",
+  "kind": "pass",
+  "yards": 34,
+  "td": false,
+  "from": 44,
+  "qb": {
+   "name": "Deshaun Watson",
+   "number": 4
+  },
+  "target": {
+   "name": "Taiwan Jones",
+   "number": 34
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/2019%E2%80%9320_NFL_playoffs"
+ },
+ {
+  "team": "HOU",
+  "opp": "TB",
+  "title": "STROUD TO DELL WINNER",
+  "date": "2023-11-05",
+  "game": "Week 9",
+  "kind": "pass",
+  "yards": 15,
+  "td": true,
+  "from": 15,
+  "qb": {
+   "name": "C. J. Stroud",
+   "number": 7
+  },
+  "target": {
+   "name": "Tank Dell",
+   "number": 3
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/2023_Houston_Texans_season"
+ },
+ {
+  "team": "HOU",
+  "opp": "CLE",
+  "title": "JORDAN'S 76-YARD TD",
+  "date": "2024-01-13",
+  "game": "AFC Wild Card",
+  "kind": "pass",
+  "yards": 76,
+  "td": true,
+  "from": 76,
+  "qb": {
+   "name": "C. J. Stroud",
+   "number": 7
+  },
+  "target": {
+   "name": "Brevin Jordan",
+   "number": 9
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/2023%E2%80%9324_NFL_playoffs"
+ },
+ {
+  "team": "SF",
+  "opp": "NO",
+  "title": "THE CATCH III",
+  "date": "2012-01-14",
+  "game": "NFC Divisional",
+  "kind": "pass",
+  "yards": 14,
+  "td": true,
+  "from": 14,
+  "qb": {
+   "name": "Alex Smith",
+   "number": 11
+  },
+  "target": {
+   "name": "Vernon Davis",
+   "number": 85
+  },
+  "named": true,
+  "source": "https://en.wikipedia.org/wiki/2011%E2%80%9312_NFL_playoffs"
+ },
+ {
+  "team": "DAL",
+  "opp": "MIN",
+  "title": "HAIL MARY",
+  "date": "1975-12-28",
+  "game": "NFC Divisional",
+  "kind": "pass",
+  "yards": 50,
+  "td": true,
+  "from": 50,
+  "qb": {
+   "name": "Roger Staubach",
+   "number": 12
+  },
+  "target": {
+   "name": "Drew Pearson",
+   "number": 88
+  },
+  "named": true,
+  "source": "https://en.wikipedia.org/wiki/1975%E2%80%9376_NFL_playoffs"
+ },
+ {
+  "team": "DAL",
+  "opp": "MIN",
+  "title": "DORSETT GOES 99",
+  "date": "1983-01-03",
+  "game": "Week 17",
+  "kind": "run",
+  "yards": 99,
+  "td": true,
+  "from": 99,
+  "qb": null,
+  "target": {
+   "name": "Tony Dorsett",
+   "number": 33
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/Tony_Dorsett"
+ },
+ {
+  "team": "DAL",
+  "opp": "DEN",
+  "title": "BUTCH JOHNSON DIVES",
+  "date": "1978-01-15",
+  "game": "Super Bowl XII",
+  "kind": "pass",
+  "yards": 45,
+  "td": true,
+  "from": 45,
+  "qb": {
+   "name": "Roger Staubach",
+   "number": 12
+  },
+  "target": {
+   "name": "Butch Johnson",
+   "number": 86
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/Super_Bowl_XII"
+ },
+ {
+  "team": "DAL",
+  "opp": "WAS",
+  "title": "LONGLEY THANKSGIVING BOMB",
+  "date": "1974-11-28",
+  "game": "Week 12",
+  "kind": "pass",
+  "yards": 50,
+  "td": true,
+  "from": 50,
+  "qb": {
+   "name": "Clint Longley",
+   "number": 19
+  },
+  "target": {
+   "name": "Drew Pearson",
+   "number": 88
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/Clint_Longley"
+ },
+ {
+  "team": "DAL",
+  "opp": "SEA",
+  "title": "EMMITT PASSES PAYTON",
+  "date": "2002-10-27",
+  "game": "Week 8",
+  "kind": "run",
+  "yards": 11,
+  "td": false,
+  "from": 70,
+  "qb": null,
+  "target": {
+   "name": "Emmitt Smith",
+   "number": 22
+  },
+  "named": false,
+  "source": "https://www.espn.com/nfl/news/2002/1027/1451800.html"
+ },
+ {
+  "team": "GB",
+  "opp": "DAL",
+  "title": "THE ICE BOWL",
+  "date": "1967-12-31",
+  "game": "NFL Championship",
+  "kind": "run",
+  "yards": 1,
+  "td": true,
+  "from": 1,
+  "qb": null,
+  "target": {
+   "name": "Bart Starr",
+   "number": 15
+  },
+  "named": true,
+  "source": "https://en.wikipedia.org/wiki/1967_NFL_Championship_Game"
+ },
+ {
+  "team": "GB",
+  "opp": "KC",
+  "title": "FIRST SUPER BOWL TD",
+  "date": "1967-01-15",
+  "game": "Super Bowl I",
+  "kind": "pass",
+  "yards": 37,
+  "td": true,
+  "from": 37,
+  "qb": {
+   "name": "Bart Starr",
+   "number": 15
+  },
+  "target": {
+   "name": "Max McGee",
+   "number": 85
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/Super_Bowl_I"
+ },
+ {
+  "team": "GB",
+  "opp": "NE",
+  "title": "FAVRE TO FREEMAN",
+  "date": "1997-01-26",
+  "game": "Super Bowl XXXI",
+  "kind": "pass",
+  "yards": 81,
+  "td": true,
+  "from": 81,
+  "qb": {
+   "name": "Brett Favre",
+   "number": 4
+  },
+  "target": {
+   "name": "Antonio Freeman",
+   "number": 86
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/Super_Bowl_XXXI"
+ },
+ {
+  "team": "GB",
+  "opp": "DET",
+  "title": "MIRACLE IN MOTOWN",
+  "date": "2015-12-03",
+  "game": "Week 13",
+  "kind": "pass",
+  "yards": 61,
+  "td": true,
+  "from": 61,
+  "qb": {
+   "name": "Aaron Rodgers",
+   "number": 12
+  },
+  "target": {
+   "name": "Richard Rodgers",
+   "number": 82
+  },
+  "named": true,
+  "source": "https://en.wikipedia.org/wiki/Miracle_in_Motown"
+ },
+ {
+  "team": "GB",
+  "opp": "CHI",
+  "title": "4TH AND 8",
+  "date": "2013-12-29",
+  "game": "Week 17",
+  "kind": "pass",
+  "yards": 48,
+  "td": true,
+  "from": 48,
+  "qb": {
+   "name": "Aaron Rodgers",
+   "number": 12
+  },
+  "target": {
+   "name": "Randall Cobb",
+   "number": 18
+  },
+  "named": true,
+  "source": "https://en.wikipedia.org/wiki/2013_Green_Bay_Packers_season"
+ },
+ {
+  "team": "CHI",
+  "opp": "GB",
+  "title": "PAYTON BEATS THE PACKERS",
+  "date": "1985-11-03",
+  "game": "Week 9",
+  "kind": "run",
+  "yards": 27,
+  "td": true,
+  "from": 27,
+  "qb": null,
+  "target": {
+   "name": "Walter Payton",
+   "number": 34
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/1985_Chicago_Bears_season"
+ },
+ {
+  "team": "CHI",
+  "opp": "SF",
+  "title": "SAYERS GOES 80",
+  "date": "1965-12-12",
+  "game": "Week 13",
+  "kind": "pass",
+  "yards": 80,
+  "td": true,
+  "from": 80,
+  "qb": {
+   "name": "Rudy Bukich",
+   "number": 10
+  },
+  "target": {
+   "name": "Gale Sayers",
+   "number": 40
+  },
+  "named": false,
+  "source": "https://profootballhof.com/news/sayers-scores-6"
+ },
+ {
+  "team": "CHI",
+  "opp": "NE",
+  "title": "THE FRIDGE SCORES",
+  "date": "1986-01-26",
+  "game": "Super Bowl XX",
+  "kind": "run",
+  "yards": 1,
+  "td": true,
+  "from": 1,
+  "qb": null,
+  "target": {
+   "name": "William Perry",
+   "number": 72
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/Super_Bowl_XX"
+ },
+ {
+  "team": "CHI",
+  "opp": "WAS",
+  "title": "OSMANSKI STARTS 73-0",
+  "date": "1940-12-08",
+  "game": "NFL Championship",
+  "kind": "run",
+  "yards": 68,
+  "td": true,
+  "from": 68,
+  "qb": null,
+  "target": {
+   "name": "Bill Osmanski",
+   "number": 9
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/1940_NFL_Championship_Game"
+ },
+ {
+  "team": "CHI",
+  "opp": "DET",
+  "title": "NAGURSKI TO GRANGE",
+  "date": "1932-12-18",
+  "game": "1932 NFL Playoff",
+  "kind": "pass",
+  "yards": 2,
+  "td": true,
+  "from": 2,
+  "qb": {
+   "name": "Bronko Nagurski",
+   "number": 3
+  },
+  "target": {
+   "name": "Red Grange",
+   "number": 77
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/1932_NFL_Playoff_Game"
+ },
+ {
+  "team": "DET",
+  "opp": "NYG",
+  "title": "DUTCH CLARK GOES 40",
+  "date": "1935-12-15",
+  "game": "NFL Championship",
+  "kind": "run",
+  "yards": 40,
+  "td": true,
+  "from": 40,
+  "qb": null,
+  "target": {
+   "name": "Dutch Clark",
+   "number": 7
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/1935_NFL_Championship_Game"
+ },
+ {
+  "team": "DET",
+  "opp": "CLE",
+  "title": "DOAK WALKER GOES 67",
+  "date": "1952-12-28",
+  "game": "NFL Championship",
+  "kind": "run",
+  "yards": 67,
+  "td": true,
+  "from": 67,
+  "qb": null,
+  "target": {
+   "name": "Doak Walker",
+   "number": 37
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/1952_NFL_Championship_Game"
+ },
+ {
+  "team": "DET",
+  "opp": "CLE",
+  "title": "LAYNE TO DORAN",
+  "date": "1953-12-27",
+  "game": "NFL Championship",
+  "kind": "pass",
+  "yards": 33,
+  "td": true,
+  "from": 33,
+  "qb": {
+   "name": "Bobby Layne",
+   "number": 22
+  },
+  "target": {
+   "name": "Jim Doran",
+   "number": 83
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/1953_NFL_Championship_Game"
+ },
+ {
+  "team": "DET",
+  "opp": "DAL",
+  "title": "BARRY GOES 47",
+  "date": "1992-01-05",
+  "game": "NFC Divisional",
+  "kind": "run",
+  "yards": 47,
+  "td": true,
+  "from": 47,
+  "qb": null,
+  "target": {
+   "name": "Barry Sanders",
+   "number": 20
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/1991%E2%80%9392_NFL_playoffs"
+ },
+ {
+  "team": "DET",
+  "opp": "DAL",
+  "title": "STAFFORD FAKE SPIKE",
+  "date": "2013-10-27",
+  "game": "Week 8",
+  "kind": "run",
+  "yards": 1,
+  "td": true,
+  "from": 1,
+  "qb": null,
+  "target": {
+   "name": "Matthew Stafford",
+   "number": 9
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/Matthew_Stafford"
+ },
+ {
+  "team": "MIN",
+  "opp": "NO",
+  "title": "MINNEAPOLIS MIRACLE",
+  "date": "2018-01-14",
+  "game": "NFC Divisional",
+  "kind": "pass",
+  "yards": 61,
+  "td": true,
+  "from": 61,
+  "qb": {
+   "name": "Case Keenum",
+   "number": 7
+  },
+  "target": {
+   "name": "Stefon Diggs",
+   "number": 14
+  },
+  "named": true,
+  "source": "https://en.wikipedia.org/wiki/Minneapolis_Miracle"
+ },
+ {
+  "team": "MIN",
+  "opp": "CLE",
+  "title": "MIRACLE AT THE MET",
+  "date": "1980-12-14",
+  "game": "Week 15",
+  "kind": "pass",
+  "yards": 46,
+  "td": true,
+  "from": 46,
+  "qb": {
+   "name": "Tommy Kramer",
+   "number": 9
+  },
+  "target": {
+   "name": "Ahmad Rashad",
+   "number": 28
+  },
+  "named": true,
+  "source": "https://en.wikipedia.org/wiki/Miracle_at_the_Met"
+ },
+ {
+  "team": "MIN",
+  "opp": "SF",
+  "title": "MINNEAPOLIS MIRACLE (2009)",
+  "date": "2009-09-27",
+  "game": "Week 3",
+  "kind": "pass",
+  "yards": 32,
+  "td": true,
+  "from": 32,
+  "qb": {
+   "name": "Brett Favre",
+   "number": 4
+  },
+  "target": {
+   "name": "Greg Lewis",
+   "number": 17
+  },
+  "named": true,
+  "source": "https://en.wikipedia.org/wiki/Greg_Lewis_(wide_receiver)"
+ },
+ {
+  "team": "MIN",
+  "opp": "BUF",
+  "title": "JEFFERSON ONE-HANDER",
+  "date": "2022-11-13",
+  "game": "Week 10",
+  "kind": "pass",
+  "yards": 32,
+  "td": false,
+  "from": 73,
+  "qb": {
+   "name": "Kirk Cousins",
+   "number": 8
+  },
+  "target": {
+   "name": "Justin Jefferson",
+   "number": 18
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/Justin_Jefferson"
+ },
+ {
+  "team": "MIN",
+  "opp": "DAL",
+  "title": "MOSS FLEA-FLICKER",
+  "date": "1998-11-26",
+  "game": "Week 13",
+  "kind": "pass",
+  "yards": 51,
+  "td": true,
+  "from": 51,
+  "qb": {
+   "name": "Randall Cunningham",
+   "number": 7
+  },
+  "target": {
+   "name": "Randy Moss",
+   "number": 84
+  },
+  "named": false,
+  "source": "https://www.vikings.com/news/throwin-it-back-to-98-moss-roasts-cowboys-in-dynamic-thanksgiving-performance"
+ },
+ {
+  "team": "NO",
+  "opp": "LA",
+  "title": "ARCHIE ON THE LAST PLAY",
+  "date": "1971-09-19",
+  "game": "Week 1",
+  "kind": "run",
+  "yards": 1,
+  "td": true,
+  "from": 1,
+  "qb": null,
+  "target": {
+   "name": "Archie Manning",
+   "number": 8
+  },
+  "named": false,
+  "source": "https://www.ultimate70s.com/nflbox/19710919/LA/N"
+ },
+ {
+  "team": "NO",
+  "opp": "IND",
+  "title": "THOMAS TAKES THE LEAD",
+  "date": "2010-02-07",
+  "game": "Super Bowl XLIV",
+  "kind": "pass",
+  "yards": 16,
+  "td": true,
+  "from": 16,
+  "qb": {
+   "name": "Drew Brees",
+   "number": 9
+  },
+  "target": {
+   "name": "Pierre Thomas",
+   "number": 23
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/Super_Bowl_XLIV"
+ },
+ {
+  "team": "NO",
+  "opp": "ATL",
+  "title": "BREES PASSES MARINO",
+  "date": "2011-12-26",
+  "game": "Week 16",
+  "kind": "pass",
+  "yards": 9,
+  "td": true,
+  "from": 9,
+  "qb": {
+   "name": "Drew Brees",
+   "number": 9
+  },
+  "target": {
+   "name": "Darren Sproles",
+   "number": 43
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/Drew_Brees"
+ },
+ {
+  "team": "NO",
+  "opp": "LAC",
+  "title": "BREES PASSES UNITAS",
+  "date": "2012-10-07",
+  "game": "Week 5",
+  "kind": "pass",
+  "yards": 40,
+  "td": true,
+  "from": 40,
+  "qb": {
+   "name": "Drew Brees",
+   "number": 9
+  },
+  "target": {
+   "name": "Devery Henderson",
+   "number": 19
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/Drew_Brees"
+ },
+ {
+  "team": "NO",
+  "opp": "WAS",
+  "title": "BREES PASSES MANNING",
+  "date": "2018-10-08",
+  "game": "Week 5",
+  "kind": "pass",
+  "yards": 62,
+  "td": true,
+  "from": 62,
+  "qb": {
+   "name": "Drew Brees",
+   "number": 9
+  },
+  "target": {
+   "name": "Tre'Quan Smith",
+   "number": 10
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/Tre'Quan_Smith"
+ },
+ {
+  "team": "NYG",
+  "opp": "NE",
+  "title": "THE HELMET CATCH",
+  "date": "2008-02-03",
+  "game": "Super Bowl XLII",
+  "kind": "pass",
+  "yards": 32,
+  "td": false,
+  "from": 56,
+  "qb": {
+   "name": "Eli Manning",
+   "number": 10
+  },
+  "target": {
+   "name": "David Tyree",
+   "number": 85
+  },
+  "named": true,
+  "source": "https://en.wikipedia.org/wiki/Helmet_Catch"
+ },
+ {
+  "team": "NYG",
+  "opp": "NE",
+  "title": "MANNINGHAM ON THE SIDELINE",
+  "date": "2012-02-05",
+  "game": "Super Bowl XLVI",
+  "kind": "pass",
+  "yards": 38,
+  "td": false,
+  "from": 88,
+  "qb": {
+   "name": "Eli Manning",
+   "number": 10
+  },
+  "target": {
+   "name": "Mario Manningham",
+   "number": 82
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/Super_Bowl_XLVI"
+ },
+ {
+  "team": "NYG",
+  "opp": "DAL",
+  "title": "BECKHAM ONE-HANDER",
+  "date": "2014-11-23",
+  "game": "Week 12",
+  "kind": "pass",
+  "yards": 43,
+  "td": true,
+  "from": 43,
+  "qb": {
+   "name": "Eli Manning",
+   "number": 10
+  },
+  "target": {
+   "name": "Odell Beckham Jr.",
+   "number": 13
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/2014_New_York_Giants_season"
+ },
+ {
+  "team": "NYG",
+  "opp": "BUF",
+  "title": "INGRAM ON 3RD AND 13",
+  "date": "1991-01-27",
+  "game": "Super Bowl XXV",
+  "kind": "pass",
+  "yards": 14,
+  "td": false,
+  "from": 32,
+  "qb": {
+   "name": "Jeff Hostetler",
+   "number": 15
+  },
+  "target": {
+   "name": "Mark Ingram Sr.",
+   "number": 82
+  },
+  "named": false,
+  "source": "https://www.giants.com/news/ingram-s-conversion"
+ },
+ {
+  "team": "NYG",
+  "opp": "DEN",
+  "title": "OFF BAVARO TO MCCONKEY",
+  "date": "1987-01-25",
+  "game": "Super Bowl XXI",
+  "kind": "pass",
+  "yards": 6,
+  "td": true,
+  "from": 6,
+  "qb": {
+   "name": "Phil Simms",
+   "number": 11
+  },
+  "target": {
+   "name": "Phil McConkey",
+   "number": 80
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/Super_Bowl_XXI"
+ },
+ {
+  "team": "PHI",
+  "opp": "NE",
+  "title": "PHILLY SPECIAL",
+  "date": "2018-02-04",
+  "game": "Super Bowl LII",
+  "kind": "pass",
+  "yards": 1,
+  "td": true,
+  "from": 1,
+  "qb": {
+   "name": "Trey Burton",
+   "number": 88
+  },
+  "target": {
+   "name": "Nick Foles",
+   "number": 9
+  },
+  "named": true,
+  "source": "https://en.wikipedia.org/wiki/Philly_Special"
+ },
+ {
+  "team": "PHI",
+  "opp": "GB",
+  "title": "4TH AND 26",
+  "date": "2004-01-11",
+  "game": "NFC Divisional",
+  "kind": "pass",
+  "yards": 28,
+  "td": false,
+  "from": 74,
+  "qb": {
+   "name": "Donovan McNabb",
+   "number": 5
+  },
+  "target": {
+   "name": "Freddie Mitchell",
+   "number": 84
+  },
+  "named": true,
+  "source": "https://en.wikipedia.org/wiki/4th_and_26"
+ },
+ {
+  "team": "PHI",
+  "opp": "DAL",
+  "title": "MONTGOMERY GOES 42",
+  "date": "1981-01-11",
+  "game": "NFC Championship",
+  "kind": "run",
+  "yards": 42,
+  "td": true,
+  "from": 42,
+  "qb": null,
+  "target": {
+   "name": "Wilbert Montgomery",
+   "number": 31
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/1980%E2%80%9381_NFL_playoffs"
+ },
+ {
+  "team": "PHI",
+  "opp": "ARI",
+  "title": "VAN BUREN IN THE BLIZZARD",
+  "date": "1948-12-19",
+  "game": "NFL Championship",
+  "kind": "run",
+  "yards": 5,
+  "td": true,
+  "from": 5,
+  "qb": null,
+  "target": {
+   "name": "Steve Van Buren",
+   "number": 15
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/1948_NFL_Championship_Game"
+ },
+ {
+  "team": "WAS",
+  "opp": "MIA",
+  "title": "70 CHIP",
+  "date": "1983-01-30",
+  "game": "Super Bowl XVII",
+  "kind": "run",
+  "yards": 43,
+  "td": true,
+  "from": 43,
+  "qb": null,
+  "target": {
+   "name": "John Riggins",
+   "number": 44
+  },
+  "named": true,
+  "source": "https://en.wikipedia.org/wiki/Super_Bowl_XVII"
+ },
+ {
+  "team": "WAS",
+  "opp": "DEN",
+  "title": "WILLIAMS TO SANDERS",
+  "date": "1988-01-31",
+  "game": "Super Bowl XXII",
+  "kind": "pass",
+  "yards": 80,
+  "td": true,
+  "from": 80,
+  "qb": {
+   "name": "Doug Williams",
+   "number": 17
+  },
+  "target": {
+   "name": "Ricky Sanders",
+   "number": 83
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/Super_Bowl_XXII"
+ },
+ {
+  "team": "WAS",
+  "opp": "DEN",
+  "title": "TIMMY SMITH GOES 58",
+  "date": "1988-01-31",
+  "game": "Super Bowl XXII",
+  "kind": "run",
+  "yards": 58,
+  "td": true,
+  "from": 58,
+  "qb": null,
+  "target": {
+   "name": "Timmy Smith",
+   "number": 36
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/Super_Bowl_XXII"
+ },
+ {
+  "team": "WAS",
+  "opp": "MIN",
+  "title": "RG3 GOES 76",
+  "date": "2012-10-14",
+  "game": "Week 6",
+  "kind": "run",
+  "yards": 76,
+  "td": true,
+  "from": 76,
+  "qb": null,
+  "target": {
+   "name": "Robert Griffin III",
+   "number": 10
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/Robert_Griffin_III"
+ },
+ {
+  "team": "WAS",
+  "opp": "CHI",
+  "title": "HAIL MARYLAND",
+  "date": "2024-10-27",
+  "game": "Week 8",
+  "kind": "pass",
+  "yards": 52,
+  "td": true,
+  "from": 52,
+  "qb": {
+   "name": "Jayden Daniels",
+   "number": 5
+  },
+  "target": {
+   "name": "Noah Brown",
+   "number": 85
+  },
+  "named": true,
+  "source": "https://en.wikipedia.org/wiki/Hail_Maryland"
+ },
+ {
+  "team": "SEA",
+  "opp": "NO",
+  "title": "BEAST QUAKE",
+  "date": "2011-01-08",
+  "game": "NFC Wild Card",
+  "kind": "run",
+  "yards": 67,
+  "td": true,
+  "from": 67,
+  "qb": null,
+  "target": {
+   "name": "Marshawn Lynch",
+   "number": 24
+  },
+  "named": true,
+  "source": "https://en.wikipedia.org/wiki/Beast_Quake"
+ },
+ {
+  "team": "SEA",
+  "opp": "GB",
+  "title": "FAIL MARY",
+  "date": "2012-09-24",
+  "game": "Week 3",
+  "kind": "pass",
+  "yards": 24,
+  "td": true,
+  "from": 24,
+  "qb": {
+   "name": "Russell Wilson",
+   "number": 3
+  },
+  "target": {
+   "name": "Golden Tate",
+   "number": 81
+  },
+  "named": true,
+  "source": "https://en.wikipedia.org/wiki/Fail_Mary"
+ },
+ {
+  "team": "SEA",
+  "opp": "GB",
+  "title": "KEARSE WINS IT IN OT",
+  "date": "2015-01-18",
+  "game": "NFC Championship",
+  "kind": "pass",
+  "yards": 35,
+  "td": true,
+  "from": 35,
+  "qb": {
+   "name": "Russell Wilson",
+   "number": 3
+  },
+  "target": {
+   "name": "Jermaine Kearse",
+   "number": 15
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/2014%E2%80%9315_NFL_playoffs"
+ },
+ {
+  "team": "SEA",
+  "opp": "NE",
+  "title": "KEARSE JUGGLING CATCH",
+  "date": "2015-02-01",
+  "game": "Super Bowl XLIX",
+  "kind": "pass",
+  "yards": 33,
+  "td": false,
+  "from": 38,
+  "qb": {
+   "name": "Russell Wilson",
+   "number": 3
+  },
+  "target": {
+   "name": "Jermaine Kearse",
+   "number": 15
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/Super_Bowl_XLIX"
+ },
+ {
+  "team": "SEA",
+  "opp": "DEN",
+  "title": "KRIEG TO LARGENT",
+  "date": "1983-12-24",
+  "game": "AFC Wild Card",
+  "kind": "pass",
+  "yards": 17,
+  "td": true,
+  "from": 17,
+  "qb": {
+   "name": "Dave Krieg",
+   "number": 17
+  },
+  "target": {
+   "name": "Steve Largent",
+   "number": 80
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/1983%E2%80%9384_NFL_playoffs"
+ },
+ {
+  "team": "TB",
+  "opp": "PHI",
+  "title": "JUREVICIUS GOES 71",
+  "date": "2003-01-19",
+  "game": "NFC Championship",
+  "kind": "pass",
+  "yards": 71,
+  "td": false,
+  "from": 76,
+  "qb": {
+   "name": "Brad Johnson",
+   "number": 14
+  },
+  "target": {
+   "name": "Joe Jurevicius",
+   "number": 83
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/2002%E2%80%9303_NFL_playoffs"
+ },
+ {
+  "team": "TB",
+  "opp": "PHI",
+  "title": "WILLIAMS TO GILES",
+  "date": "1979-12-29",
+  "game": "NFC Divisional",
+  "kind": "pass",
+  "yards": 9,
+  "td": true,
+  "from": 9,
+  "qb": {
+   "name": "Doug Williams",
+   "number": 12
+  },
+  "target": {
+   "name": "Jimmie Giles",
+   "number": 88
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/1979%E2%80%9380_NFL_playoffs"
+ },
+ {
+  "team": "TB",
+  "opp": "DET",
+  "title": "WILLIAMS TO HOUSE",
+  "date": "1981-12-20",
+  "game": "Week 16",
+  "kind": "pass",
+  "yards": 84,
+  "td": true,
+  "from": 84,
+  "qb": {
+   "name": "Doug Williams",
+   "number": 12
+  },
+  "target": {
+   "name": "Kevin House",
+   "number": 89
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/History_of_the_Tampa_Bay_Buccaneers"
+ },
+ {
+  "team": "TB",
+  "opp": "CHI",
+  "title": "BRADY 600TH TD",
+  "date": "2021-10-24",
+  "game": "Week 7",
+  "kind": "pass",
+  "yards": 9,
+  "td": true,
+  "from": 9,
+  "qb": {
+   "name": "Tom Brady",
+   "number": 12
+  },
+  "target": {
+   "name": "Mike Evans",
+   "number": 13
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/Tom_Brady"
+ },
+ {
+  "team": "TB",
+  "opp": "KC",
+  "title": "BRADY TO GRONK",
+  "date": "2021-02-07",
+  "game": "Super Bowl LV",
+  "kind": "pass",
+  "yards": 17,
+  "td": true,
+  "from": 17,
+  "qb": {
+   "name": "Tom Brady",
+   "number": 12
+  },
+  "target": {
+   "name": "Rob Gronkowski",
+   "number": 87
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/Super_Bowl_LV"
+ },
+ {
+  "team": "ATL",
+  "opp": "NO",
+  "title": "BIG BEN RIGHT",
+  "date": "1978-11-12",
+  "game": "Week 11",
+  "kind": "pass",
+  "yards": 57,
+  "td": true,
+  "from": 57,
+  "qb": {
+   "name": "Steve Bartkowski",
+   "number": 10
+  },
+  "target": {
+   "name": "Alfred Jackson",
+   "number": 85
+  },
+  "named": true,
+  "source": "https://www.ultimate70s.com/nflbox/19781112/ATL/N"
+ },
+ {
+  "team": "ATL",
+  "opp": "MIN",
+  "title": "VICK OVERTIME RUN",
+  "date": "2002-12-01",
+  "game": "Week 13",
+  "kind": "run",
+  "yards": 46,
+  "td": true,
+  "from": 46,
+  "qb": null,
+  "target": {
+   "name": "Michael Vick",
+   "number": 7
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/2002_Atlanta_Falcons_season"
+ },
+ {
+  "team": "ATL",
+  "opp": "MIN",
+  "title": "CHANDLER TO MATHIS",
+  "date": "1999-01-17",
+  "game": "NFC Championship",
+  "kind": "pass",
+  "yards": 16,
+  "td": true,
+  "from": 16,
+  "qb": {
+   "name": "Chris Chandler",
+   "number": 12
+  },
+  "target": {
+   "name": "Terance Mathis",
+   "number": 81
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/1998%E2%80%9399_NFL_playoffs"
+ },
+ {
+  "team": "ATL",
+  "opp": "DET",
+  "title": "RYAN FIRST NFL PASS",
+  "date": "2008-09-07",
+  "game": "Week 1",
+  "kind": "pass",
+  "yards": 62,
+  "td": true,
+  "from": 62,
+  "qb": {
+   "name": "Matt Ryan",
+   "number": 2
+  },
+  "target": {
+   "name": "Michael Jenkins",
+   "number": 12
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/Matt_Ryan_(American_football)"
+ },
+ {
+  "team": "ATL",
+  "opp": "NE",
+  "title": "JULIO SIDELINE CATCH",
+  "date": "2017-02-05",
+  "game": "Super Bowl LI",
+  "kind": "pass",
+  "yards": 27,
+  "td": false,
+  "from": 49,
+  "qb": {
+   "name": "Matt Ryan",
+   "number": 2
+  },
+  "target": {
+   "name": "Julio Jones",
+   "number": 11
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/Super_Bowl_LI"
+ },
+ {
+  "team": "CAR",
+  "opp": "LA",
+  "title": "SMITH IN DOUBLE OT",
+  "date": "2004-01-10",
+  "game": "NFC Divisional",
+  "kind": "pass",
+  "yards": 69,
+  "td": true,
+  "from": 69,
+  "qb": {
+   "name": "Jake Delhomme",
+   "number": 17
+  },
+  "target": {
+   "name": "Steve Smith Sr.",
+   "number": 89
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/2003%E2%80%9304_NFL_playoffs"
+ },
+ {
+  "team": "CAR",
+  "opp": "NE",
+  "title": "MUHAMMAD GOES 85",
+  "date": "2004-02-01",
+  "game": "Super Bowl XXXVIII",
+  "kind": "pass",
+  "yards": 85,
+  "td": true,
+  "from": 85,
+  "qb": {
+   "name": "Jake Delhomme",
+   "number": 17
+  },
+  "target": {
+   "name": "Muhsin Muhammad",
+   "number": 87
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/Super_Bowl_XXXVIII"
+ },
+ {
+  "team": "CAR",
+  "opp": "NE",
+  "title": "PROEHL TIES IT",
+  "date": "2004-02-01",
+  "game": "Super Bowl XXXVIII",
+  "kind": "pass",
+  "yards": 12,
+  "td": true,
+  "from": 12,
+  "qb": {
+   "name": "Jake Delhomme",
+   "number": 17
+  },
+  "target": {
+   "name": "Ricky Proehl",
+   "number": 81
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/Super_Bowl_XXXVIII"
+ },
+ {
+  "team": "ARI",
+  "opp": "PIT",
+  "title": "FITZGERALD GOES 64",
+  "date": "2009-02-01",
+  "game": "Super Bowl XLIII",
+  "kind": "pass",
+  "yards": 64,
+  "td": true,
+  "from": 64,
+  "qb": {
+   "name": "Kurt Warner",
+   "number": 13
+  },
+  "target": {
+   "name": "Larry Fitzgerald",
+   "number": 11
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/Super_Bowl_XLIII"
+ },
+ {
+  "team": "ARI",
+  "opp": "BUF",
+  "title": "HAIL MURRAY",
+  "date": "2020-11-15",
+  "game": "Week 10",
+  "kind": "pass",
+  "yards": 43,
+  "td": true,
+  "from": 43,
+  "qb": {
+   "name": "Kyler Murray",
+   "number": 1
+  },
+  "target": {
+   "name": "DeAndre Hopkins",
+   "number": 10
+  },
+  "named": true,
+  "source": "https://en.wikipedia.org/wiki/Hail_Murray"
+ },
+ {
+  "team": "ARI",
+  "opp": "GB",
+  "title": "FITZGERALD OT RUMBLE",
+  "date": "2016-01-16",
+  "game": "NFC Divisional",
+  "kind": "pass",
+  "yards": 75,
+  "td": false,
+  "from": 80,
+  "qb": {
+   "name": "Carson Palmer",
+   "number": 3
+  },
+  "target": {
+   "name": "Larry Fitzgerald",
+   "number": 11
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/2015%E2%80%9316_NFL_playoffs"
+ },
+ {
+  "team": "ARI",
+  "opp": "PHI",
+  "title": "TRIPPI GOES 44",
+  "date": "1947-12-28",
+  "game": "NFL Championship",
+  "kind": "run",
+  "yards": 44,
+  "td": true,
+  "from": 44,
+  "qb": null,
+  "target": {
+   "name": "Charley Trippi",
+   "number": 62
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/1947_NFL_Championship_Game"
+ },
+ {
+  "team": "ARI",
+  "opp": "PHI",
+  "title": "ANGSMAN GOES 70",
+  "date": "1947-12-28",
+  "game": "NFL Championship",
+  "kind": "run",
+  "yards": 70,
+  "td": true,
+  "from": 70,
+  "qb": null,
+  "target": {
+   "name": "Elmer Angsman",
+   "number": 7
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/1947_NFL_Championship_Game"
+ },
+ {
+  "team": "LA",
+  "opp": "TEN",
+  "title": "BRUCE GOES 73",
+  "date": "2000-01-30",
+  "game": "Super Bowl XXXIV",
+  "kind": "pass",
+  "yards": 73,
+  "td": true,
+  "from": 73,
+  "qb": {
+   "name": "Kurt Warner",
+   "number": 13
+  },
+  "target": {
+   "name": "Isaac Bruce",
+   "number": 80
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/Super_Bowl_XXXIV"
+ },
+ {
+  "team": "LA",
+  "opp": "CLE",
+  "title": "VAN BROCKLIN TO FEARS",
+  "date": "1951-12-23",
+  "game": "NFL Championship",
+  "kind": "pass",
+  "yards": 73,
+  "td": true,
+  "from": 73,
+  "qb": {
+   "name": "Norm Van Brocklin",
+   "number": null
+  },
+  "target": {
+   "name": "Tom Fears",
+   "number": 55
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/1951_NFL_Championship_Game"
+ },
+ {
+  "team": "LA",
+  "opp": "NYG",
+  "title": "FLIPPER IN OVERTIME",
+  "date": "1990-01-07",
+  "game": "NFC Divisional",
+  "kind": "pass",
+  "yards": 30,
+  "td": true,
+  "from": 30,
+  "qb": {
+   "name": "Jim Everett",
+   "number": 11
+  },
+  "target": {
+   "name": "Flipper Anderson",
+   "number": 83
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/1989%E2%80%9390_NFL_playoffs"
+ },
+ {
+  "team": "LA",
+  "opp": "DAL",
+  "title": "DICKERSON GOES 55",
+  "date": "1986-01-04",
+  "game": "NFC Divisional",
+  "kind": "run",
+  "yards": 55,
+  "td": true,
+  "from": 55,
+  "qb": null,
+  "target": {
+   "name": "Eric Dickerson",
+   "number": 29
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/1985%E2%80%9386_NFL_playoffs"
+ },
+ {
+  "team": "LA",
+  "opp": "CIN",
+  "title": "KUPP WINS IT",
+  "date": "2022-02-13",
+  "game": "Super Bowl LVI",
+  "kind": "pass",
+  "yards": 1,
+  "td": true,
+  "from": 1,
+  "qb": {
+   "name": "Matthew Stafford",
+   "number": 9
+  },
+  "target": {
+   "name": "Cooper Kupp",
+   "number": 10
+  },
+  "named": false,
+  "source": "https://en.wikipedia.org/wiki/Super_Bowl_LVI"
+ }
+]
